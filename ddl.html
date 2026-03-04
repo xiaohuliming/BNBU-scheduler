@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iSpace To-Do List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="check-square" class="w-8 h-8 text-blue-600"></i>
+                iSpace To-Do List
+            </h1>
+            <a href="/" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Scheduler
+            </a>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-section" class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Login to iSpace</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username (Student ID)</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., t330025032" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Your iSpace password" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition flex justify-center items-center gap-2">
+                    <span id="btn-text">Sync Tasks</span>
+                    <i id="btn-spinner" data-lucide="loader-2" class="w-4 h-4 animate-spin hidden"></i>
+                </button>
+                <p id="error-msg" class="text-red-500 text-sm hidden text-center"></p>
+            </form>
+        </div>
+
+        <!-- Todo List -->
+        <div id="todo-section" class="hidden space-y-4">
+            <div class="flex justify-between items-center text-sm text-gray-500 mb-2">
+                <span id="last-updated"></span>
+                <button id="refresh-btn" class="flex items-center gap-1 hover:text-blue-600">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
+                </button>
+            </div>
+            <div id="todo-container" class="grid gap-4 md:grid-cols-2">
+                <!-- Items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const loginForm = document.getElementById('login-form');
+        const loginSection = document.getElementById('login-section');
+        const todoSection = document.getElementById('todo-section');
+        const todoContainer = document.getElementById('todo-container');
+        const errorMsg = document.getElementById('error-msg');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const refreshBtn = document.getElementById('refresh-btn');
+
+        // Check for stored credentials
+        const storedUser = localStorage.getItem('ispace_user');
+        const storedPass = localStorage.getItem('ispace_pass'); // Note: In production, don't store plain passwords
+        
+        if (storedUser) document.getElementById('username').value = storedUser;
+        if (storedPass) document.getElementById('password').value = storedPass;
+
+        async function fetchTodos(username, password) {
+            btnText.textContent = 'Syncing...';
+            btnSpinner.classList.remove('hidden');
+            errorMsg.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/ddl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) throw new Error(data.error || 'Failed to fetch');
+                
+                renderTodos(data);
+                
+                // Save credentials if successful
+                localStorage.setItem('ispace_user', username);
+                localStorage.setItem('ispace_pass', password);
+                
+                loginSection.classList.add('hidden');
+                todoSection.classList.remove('hidden');
+                document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+                
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.classList.remove('hidden');
+                loginSection.classList.remove('hidden'); // Show login on error
+            } finally {
+                btnText.textContent = 'Sync Tasks';
+                btnSpinner.classList.add('hidden');
+            }
+        }
+
+        function renderTodos(todos) {
+            todoContainer.innerHTML = '';
+            
+            if (todos.length === 0) {
+                todoContainer.innerHTML = `
+                    <div class="col-span-2 text-center py-12 text-gray-500">
+                        <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500"></i>
+                        <p class="text-lg">All caught up! No pending tasks.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // Sort by due date
+            todos.sort((a, b) => a.due_date - b.due_date);
+
+            todos.forEach(todo => {
+                const dueDate = new Date(todo.due_date * 1000);
+                const now = new Date();
+                const diffTime = dueDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let badgeClass = 'bg-blue-100 text-blue-800';
+                let timeText = `Due in ${diffDays} days`;
+                
+                if (diffDays < 0) {
+                    badgeClass = 'bg-red-100 text-red-800';
+                    timeText = 'Overdue';
+                } else if (diffDays <= 1) {
+                    badgeClass = 'bg-red-100 text-red-800';
+                    timeText = 'Due Today/Tomorrow';
+                } else if (diffDays <= 7) {
+                    badgeClass = 'bg-orange-100 text-orange-800';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-5 border-l-4 ' + (diffDays <= 3 ? 'border-red-500' : 'border-blue-500');
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="px-2 py-1 rounded text-xs font-semibold ${badgeClass}">
+                            ${timeText}
+                        </span>
+                        <span class="text-xs text-gray-500 flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-1">${todo.name}</h3>
+                    <p class="text-sm text-gray-600 mb-4 flex items-center gap-1">
+                        <i data-lucide="book-open" class="w-3 h-3"></i>
+                        ${todo.course || 'Unknown Course'}
+                    </p>
+                    <a href="${todo.url}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                        Go to Task <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                `;
+                todoContainer.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            fetchTodos(u, p);
+        });
+
+        refreshBtn.addEventListener('click', () => {
+            const u = localStorage.getItem('ispace_user');
+            const p = localStorage.getItem('ispace_pass');
+            if (u && p) fetchTodos(u, p);
+            else {
+                loginSection.classList.remove('hidden');
+                todoSection.classList.add('hidden');
+            }
+        });
+        
+        // Auto-load if credentials exist
+        if (storedUser && storedPass) {
+             // Optional: Auto-fetch on load? Maybe better to let user click to be safe/explicit
+             // fetchTodos(storedUser, storedPass);
+        }
+    </script>
+</body>
+</html>

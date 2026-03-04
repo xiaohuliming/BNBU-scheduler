@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduler Max</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Icon Component ---
+        const Icon = ({ name, className }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!ref.current || !window.lucide) return;
+                const iconDef = window.lucide.icons[name];
+                if (iconDef) {
+                    ref.current.innerHTML = '';
+                    if (window.lucide.createElement) {
+                        const svg = window.lucide.createElement(iconDef);
+                        if (className) svg.setAttribute('class', (svg.getAttribute('class') || '') + ' ' + className);
+                        ref.current.appendChild(svg);
+                    }
+                }
+            }, [name, className]);
+            return <span ref={ref} className={className} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} />;
+        };
+
+        const Plus = (p) => <Icon name="Plus" {...p} />;
+        const Trash2 = (p) => <Icon name="Trash2" {...p} />;
+        const Calendar = (p) => <Icon name="Calendar" {...p} />;
+        const Clock = (p) => <Icon name="Clock" {...p} />;
+        const Award = (p) => <Icon name="Award" {...p} />;
+        const Calculator = (p) => <Icon name="Calculator" {...p} />;
+        const BookOpen = (p) => <Icon name="BookOpen" {...p} />;
+        const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
+        const RefreshCcw = (p) => <Icon name="RefreshCcw" {...p} />;
+        const User = (p) => <Icon name="User" {...p} />;
+        const Tag = (p) => <Icon name="Tag" {...p} />;
+        const Info = (p) => <Icon name="Info" {...p} />;
+        const X = (p) => <Icon name="X" {...p} />;
+        const Search = (p) => <Icon name="Search" {...p} />;
+        const MapPin = (p) => <Icon name="MapPin" {...p} />;
+        const ExternalLink = (p) => <Icon name="ExternalLink" {...p} />;
+        const CheckSquare = (p) => <Icon name="CheckSquare" {...p} />;
+        const Loader2 = (p) => <Icon name="Loader2" {...p} />;
+        const RefreshCw = (p) => <Icon name="RefreshCw" {...p} />;
+        const Menu = (p) => <Icon name="Menu" {...p} />;
+        const LogOut = (p) => <Icon name="LogOut" {...p} />;
+        const LogIn = (p) => <Icon name="LogIn" {...p} />;
+        const UserPlus = (p) => <Icon name="UserPlus" {...p} />;
+        const ChevronDown = (p) => <Icon name="ChevronDown" {...p} />;
+        const Globe = (p) => <Icon name="Globe" {...p} />;
+        const Bell = (p) => <Icon name="Bell" {...p} />;
+        const Star = (p) => <Icon name="Star" {...p} />;
+        const UserCheck = (p) => <Icon name="UserCheck" {...p} />;
+
+        const Settings = (p) => <Icon name="Settings" {...p} />;
+
+        // --- Explorer View ---
+        const ExplorerView = ({ availableCourses, onAddCourse, switchToOptimizer, onViewTeacher }) => {
+            const [searchQuery, setSearchQuery] = useState('');
+            const [filters, setFilters] = useState({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
+            const [currentPage, setCurrentPage] = useState(1);
+            const ITEMS_PER_PAGE = 50;
+
+            const allOfferings = useMemo(() => {
+                if (!availableCourses) return [];
+                const offerings = [];
+                availableCourses.forEach(course => {
+                    if (!course.details) return;
+                    course.details.forEach(row => {
+                         const titleAndSession = row['Course Title & Session'] || course.name;
+                         let session = "";
+                         const sessionMatch = titleAndSession.match(/\((\d+)\)$/);
+                         if (sessionMatch) session = sessionMatch[1];
+
+                         offerings.push({
+                             code: row['Course Code'] || course.code,
+                             title: titleAndSession,
+                             name: course.name,
+                             session: session,
+                             units: row['Units'],
+                             teacher: row['Teachers'],
+                             schedule: row['Class Schedule'],
+                             classroom: row['Classroom'],
+                             curriculumType: row['Curriculum Type'],
+                             electiveType: row['Elective Type'],
+                             offeringUnit: row['Offering Unit'],
+                             offeringProgramme: row['Offering Programme'],
+                             requirements: row['Requirements'],
+                             hours: row['Hours']
+                         });
+                    });
+                });
+                return offerings;
+            }, [availableCourses]);
+
+            const uniqueOptions = useMemo(() => {
+                const units = new Set();
+                const programmes = new Set();
+                const types = new Set();
+                const hoursList = new Set();
+                const sessions = new Set();
+                allOfferings.forEach(o => {
+                    if(o.offeringUnit) units.add(o.offeringUnit);
+                    if(o.offeringProgramme) programmes.add(o.offeringProgramme);
+                    if(o.curriculumType) types.add(o.curriculumType);
+                    if(o.hours) hoursList.add(o.hours);
+                    if(o.session) sessions.add(o.session);
+                });
+                return {
+                    units: Array.from(units).sort(),
+                    programmes: Array.from(programmes).sort(),
+                    types: Array.from(types).sort(),
+                    hours: Array.from(hoursList).sort((a,b) => parseFloat(a) - parseFloat(b)),
+                    sessions: Array.from(sessions).sort()
+                };
+            }, [allOfferings]);
+
+            const hasActiveSearch = searchQuery.length > 0 || Object.values(filters).some(Boolean);
+
+            const filteredDatabase = useMemo(() => {
+                if (!hasActiveSearch) return [];
+                let result = allOfferings;
+                const lowerQuery = searchQuery.toLowerCase();
+
+                if (searchQuery) {
+                    result = result.filter(item => 
+                        String(item.code).toLowerCase().includes(lowerQuery) ||
+                        String(item.title).toLowerCase().includes(lowerQuery) ||
+                        String(item.teacher).toLowerCase().includes(lowerQuery) ||
+                        String(item.classroom).toLowerCase().includes(lowerQuery)
+                    );
+                }
+                if (filters.unit) result = result.filter(item => item.offeringUnit === filters.unit);
+                if (filters.programme) result = result.filter(item => item.offeringProgramme === filters.programme);
+                if (filters.type) result = result.filter(item => item.curriculumType === filters.type);
+                if (filters.hours) result = result.filter(item => String(item.hours) === filters.hours);
+                if (filters.day) result = result.filter(item => item.schedule && item.schedule.includes(filters.day));
+                if (filters.session) result = result.filter(item => item.session === filters.session);
+                return result; 
+            }, [searchQuery, filters, allOfferings, hasActiveSearch]);
+
+            useEffect(() => setCurrentPage(1), [searchQuery, filters]);
+
+            const paginatedResults = useMemo(() => {
+                const start = (currentPage - 1) * ITEMS_PER_PAGE;
+                return filteredDatabase.slice(start, start + ITEMS_PER_PAGE);
+            }, [filteredDatabase, currentPage]);
+
+            const totalPages = Math.ceil(filteredDatabase.length / ITEMS_PER_PAGE);
+
+            const clearFilters = () => {
+                setFilters({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
+                setSearchQuery('');
+            };
+
+            return (
+                <div className={`transition-all duration-500 ${hasActiveSearch ? 'space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
+                    <div className={`bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full scale-110'}`}>
+                        <h2 className="text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
+                            FIND YOUR <span className="text-[#ec4899]">TARGET</span>
+                        </h2>
+                        <div className="relative mb-4">
+                            <input 
+                                type="text" 
+                                placeholder="搜索 Code / 课程名 / 老师 / 教室 ..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-gray-100 border-2 border-black p-4 pl-14 font-bold text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
+                            />
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold">
+                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Offering Unit</option>
+                                {uniqueOptions.units.map(u => <option key={u} value={u}>{u}</option>)}
+                             </select>
+                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Programme</option>
+                                {uniqueOptions.programmes.map(p => <option key={p} value={p}>{p}</option>)}
+                             </select>
+                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Type</option>
+                                {uniqueOptions.types.map(t => <option key={t} value={t}>{t}</option>)}
+                             </select>
+                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Day</option>
+                                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <option key={d} value={d}>{d}</option>)}
+                             </select>
+                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Hours</option>
+                                {uniqueOptions.hours.map(h => <option key={h} value={h}>{h}</option>)}
+                             </select>
+                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <option value="">Session</option>
+                                {uniqueOptions.sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                             </select>
+                        </div>
+                        {hasActiveSearch && (
+                            <div className="mt-4 flex justify-between items-center">
+                                <span className="text-xs font-bold text-gray-500">Found {filteredDatabase.length} results</span>
+                                <button onClick={clearFilters} className="text-xs font-bold underline hover:text-red-600 flex items-center gap-1"><X className="w-3 h-3"/> Clear Filters</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {hasActiveSearch && (
+                    <React.Fragment>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                        {paginatedResults.length === 0 ? (
+                           <div className="col-span-full text-center py-20 opacity-40">
+                              <Search className="w-20 h-20 mx-auto mb-4" />
+                              <p className="text-2xl font-black">NO RESULTS FOUND</p>
+                           </div>
+                        ) : (
+                          paginatedResults.map((course, idx) => (
+                            <div key={idx} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="bg-black text-white px-2 py-1 font-black text-lg">{course.code}</span>
+                                <span className="bg-[#a3e635] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
+                              </div>
+                              <h3 className="font-black text-xl leading-tight mb-3 min-h-[3rem]">{course.title}</h3>
+                              <div className="space-y-2 text-sm font-bold text-gray-700 flex-grow">
+                                <div className="flex items-center gap-2">
+                                   <User className="w-4 h-4 shrink-0" /> 
+                                   <button 
+                                       onClick={() => onViewTeacher(course.teacher)}
+                                       className="truncate hover:text-[#3b82f6] hover:underline text-left"
+                                       title="View Teacher Profile"
+                                   >
+                                       {course.teacher} <ExternalLink className="w-3 h-3 inline ml-1" />
+                                   </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                   <Clock className="w-4 h-4 shrink-0" /> 
+                                   <span className="bg-gray-100 px-1 border border-gray-300">{course.schedule || 'TBA'}</span>
+                                </div>
+                                 <div className="flex items-center gap-2">
+                                   <MapPin className="w-4 h-4 shrink-0" /> 
+                                   <span>{course.classroom || 'TBA'}</span>
+                                </div>
+                              </div>
+                              <button onClick={() => { onAddCourse({ code: course.code, name: course.name }, course.teacher); switchToOptimizer(); }}
+                                className="mt-4 w-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-2">
+                                <Plus className="w-5 h-5" /> 添加到排课
+                              </button>
+                            </div>
+                          ))
+                        )}
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 py-8">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">Prev</button>
+                            <span className="font-bold">Page {currentPage} of {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">Next</button>
+                        </div>
+                    )}
+                    </React.Fragment>
+                    )}
+                </div>
+            );
+        };
+
+        const CourseDetailsModal = ({ course, onClose }) => {
+            if (!course) return null;
+            const columns = ["Course Title & Session", "Offering Unit", "Offering Programme", "Units", "Curriculum Type", "Elective Type", "Teachers", "Class Schedule", "Hours", "Classroom", "Requirements"];
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
+                    <div className="relative bg-white w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="bg-black text-white p-4 flex justify-between items-center shrink-0">
+                            <h2 className="text-xl font-bold">{course.code} - {course.name}</h2>
+                            <button onClick={onClose} className="hover:text-red-400 bg-white text-black p-1 rounded transition-transform hover:scale-110"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="overflow-auto p-4 custom-scrollbar bg-white grow">
+                            {(!course.details || course.details.length === 0) ? (
+                                <div className="text-center py-10 text-red-500 font-bold">No details available.</div>
+                            ) : (
+                                <table className="w-full text-sm border-collapse border border-black">
+                                    <thead className="bg-gray-100 sticky top-0 z-10">
+                                        <tr>{columns.map(col => <th key={col} className="border border-black p-2 text-left whitespace-nowrap bg-gray-100 font-bold shadow-sm">{col}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {course.details.map((row, idx) => (
+                                            <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                                                {columns.map(col => <td key={col} className="border border-black p-2 whitespace-nowrap max-w-[300px] overflow-hidden text-ellipsis" title={row[col]}>{row[col]}</td>)}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TodoDetailsModal = ({ todo, onClose, onUpdate }) => {
+            const [description, setDescription] = useState(todo.description || '');
+            const [saving, setSaving] = useState(false);
+
+            const handleSave = async () => {
+                setSaving(true);
+                try {
+                    const res = await fetch(`/api/todos/${todo.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description })
+                    });
+                    if (res.ok) {
+                        onUpdate();
+                        onClose();
+                    }
+                } catch (e) { console.error(e); }
+                setSaving(false);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
+                    <div className="relative bg-white w-full max-w-2xl flex flex-col border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="bg-black text-white p-4 flex justify-between items-center shrink-0">
+                            <h2 className="text-xl font-bold truncate pr-4">{todo.title}</h2>
+                            <button onClick={onClose} className="hover:text-red-400 bg-white text-black p-1 rounded transition-transform hover:scale-110"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="p-6 bg-white grow">
+                            <div className="mb-4">
+                                <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Course</span>
+                                <span className="font-bold text-lg">{todo.course || 'Personal Task'}</span>
+                            </div>
+                            <div className="mb-4">
+                                <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Due Date</span>
+                                <span className="font-bold text-lg">{new Date(todo.due_date * 1000).toLocaleString()}</span>
+                            </div>
+                            <div className="mb-6">
+                                <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Notes</span>
+                                <textarea 
+                                    className="w-full h-40 border-2 border-black p-3 font-bold focus:outline-none focus:bg-blue-50 resize-none"
+                                    placeholder="Add notes or description here..."
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-4">
+                                <button onClick={onClose} className="px-6 py-2 font-bold border-2 border-black hover:bg-gray-100">Cancel</button>
+                                <button onClick={handleSave} disabled={saving} className="px-6 py-2 font-bold bg-black text-white border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors flex items-center gap-2">
+                                    {saving ? <Loader2 className="animate-spin w-4 h-4"/> : <React.Fragment><CheckSquare className="w-4 h-4"/> Save Notes</React.Fragment>}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TeacherProfileModal = ({ teacherName, onClose }) => {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [submitting, setSubmitting] = useState(false);
+            const [userRating, setUserRating] = useState(null);
+            const [comment, setComment] = useState("");
+            const [isAnonymous, setIsAnonymous] = useState(false);
+            const [selectedCourse, setSelectedCourse] = useState("");
+            const [showAllReviews, setShowAllReviews] = useState(false);
+
+            useEffect(() => {
+                fetch(`/api/teachers/${encodeURIComponent(teacherName)}`)
+                    .then(res => res.json())
+                    .then(d => {
+                        setData(d);
+                        setUserRating(d.user_rating);
+                        if(d.user_comment) setComment(d.user_comment);
+                        if(d.user_is_anonymous) setIsAnonymous(d.user_is_anonymous);
+                        if(d.user_course) setSelectedCourse(d.user_course);
+                        setLoading(false);
+                    })
+                    .catch(e => { console.error(e); setLoading(false); });
+            }, [teacherName]);
+
+            const handleSubmit = async () => {
+                if(!userRating) {
+                    alert("Please select a rating first.");
+                    return;
+                }
+                
+                setSubmitting(true);
+                try {
+                    const res = await fetch(`/api/teachers/${encodeURIComponent(teacherName)}/rate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            rating: userRating,
+                            comment: comment,
+                            is_anonymous: isAnonymous,
+                            course: selectedCourse
+                        })
+                    });
+                    if (res.ok) {
+                        // Refresh data
+                        const newData = await fetch(`/api/teachers/${encodeURIComponent(teacherName)}`).then(r => r.json());
+                        setData(newData);
+                        alert("Rating & Comment Saved!");
+                    } else {
+                        const err = await res.json();
+                        if (err.error === "Unauthorized") alert("Please login to rate teachers.");
+                        else alert(err.error);
+                    }
+                } catch(e) { console.error(e); }
+                setSubmitting(false);
+            };
+
+            const ratingLabels = [
+                { val: 5, label: "🔥 夯", color: "bg-[#a3e635]" },
+                { val: 4, label: "🌟 顶级", color: "bg-purple-200" },
+                { val: 3, label: "🧐 人上人", color: "bg-blue-200" },
+                { val: 2, label: "😐 NPC", color: "bg-yellow-200" },
+                { val: 1, label: "💩 拉完了", color: "bg-gray-300" }
+            ];
+
+            const officialUrl = `https://www.bnbu.edu.cn/faculty.htm#/list/people/cn.html?name=${encodeURIComponent(teacherName)}`;
+
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="relative bg-white w-full max-w-5xl max-h-[90vh] flex flex-col border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] animate-fade-in overflow-hidden">
+                        
+                        {/* Header */}
+                        <div className="bg-[#ec4899] text-white p-6 border-b-4 border-black flex justify-between items-start shrink-0">
+                            <div>
+                                <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">{teacherName}</h2>
+                                <div className="flex flex-wrap items-center gap-4">
+                                    <div className="bg-black text-[#a3e635] px-3 py-1 font-black text-xl border-2 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                                        RATING: {data ? (data.average_rating ? data.average_rating.toFixed(1) : "N/A") : "..."}
+                                    </div>
+                                    <span className="font-bold text-sm bg-white text-black px-2 py-1">{data ? data.rating_count : 0} VOTES</span>
+                                    <a href={officialUrl} target="_blank" rel="noopener noreferrer" className="bg-white text-blue-600 px-3 py-1 font-black border-2 border-black hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none">
+                                        <Globe className="w-4 h-4" /> Official Profile
+                                    </a>
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="bg-white text-black p-2 border-2 border-black hover:bg-black hover:text-white transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto p-6 bg-[#fff1f2] grow custom-scrollbar">
+                            {loading ? (
+                                <div className="flex justify-center py-20"><Loader2 className="w-12 h-12 animate-spin" /></div>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    {/* Left: Rating Panel */}
+                                    <div className="lg:col-span-1 space-y-6">
+                                        <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                                            <h3 className="text-xl font-black mb-4 flex items-center gap-2 uppercase"><Star className="w-6 h-6 fill-current" /> Rate & Comment</h3>
+                                            
+                                            {/* Rating Buttons */}
+                                            <div className="space-y-2 mb-4">
+                                                {ratingLabels.map((r) => (
+                                                    <button 
+                                                        key={r.val}
+                                                        onClick={() => setUserRating(r.val)}
+                                                        className={`w-full text-left px-4 py-3 font-bold border-2 border-black flex justify-between items-center transition-all 
+                                                            ${userRating === r.val ? `${r.color} translate-x-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]` : 'bg-white hover:bg-gray-50 hover:translate-x-1'}
+                                                        `}
+                                                    >
+                                                        <span>{r.label}</span>
+                                                        {userRating === r.val && <CheckSquare className="w-5 h-5" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Comment Section */}
+                                            <div className="border-t-2 border-black pt-4 space-y-3">
+                                                <div>
+                                                    <label className="block text-xs font-black uppercase mb-1">Related Course (Optional)</label>
+                                                    <select 
+                                                        value={selectedCourse} 
+                                                        onChange={e => setSelectedCourse(e.target.value)}
+                                                        className="w-full border-2 border-black p-2 font-bold text-sm bg-white focus:bg-blue-50 focus:outline-none"
+                                                    >
+                                                        <option value="">-- Select Course --</option>
+                                                        {data.courses.map((c, idx) => (
+                                                            <option key={idx} value={c.code}>{c.code} - {c.title}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                
+                                                <div>
+                                                    <label className="block text-xs font-black uppercase mb-1">Your Comment (Optional)</label>
+                                                    <textarea 
+                                                        className="w-full border-2 border-black p-2 font-bold text-sm focus:bg-blue-50 focus:outline-none min-h-[80px] resize-none"
+                                                        placeholder="Share your thoughts..."
+                                                        value={comment}
+                                                        onChange={e => setComment(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-col gap-3">
+                                                    <label className="flex items-center gap-2 font-bold text-sm cursor-pointer select-none">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isAnonymous} 
+                                                            onChange={e => setIsAnonymous(e.target.checked)}
+                                                            className="w-4 h-4 border-2 border-black rounded-none accent-black"
+                                                        />
+                                                        Anonymous
+                                                    </label>
+                                                    <button 
+                                                        onClick={handleSubmit}
+                                                        disabled={submitting || !userRating}
+                                                        className="w-full bg-black text-white px-4 py-3 font-black text-lg border-2 border-black hover:bg-[#a3e635] hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                    >
+                                                        {submitting ? <Loader2 className="animate-spin" /> : "SUBMIT REVIEW"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Courses & Comments */}
+                                    <div className="lg:col-span-2 space-y-8">
+                                        {/* Courses */}
+                                        <div>
+                                            <h3 className="text-2xl font-black mb-4 uppercase flex items-center gap-2 bg-black text-white px-4 py-2 inline-block -rotate-1">
+                                                <BookOpen className="w-6 h-6" /> Teaching This Semester
+                                            </h3>
+                                            
+                                            {data.courses.length === 0 ? (
+                                                <div className="bg-white border-4 border-black p-6 font-bold text-gray-500 text-center">No courses found for this semester.</div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {data.courses.map((c, idx) => (
+                                                        <div key={idx} className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform cursor-pointer" onClick={() => setSelectedCourse(c.code)}>
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <span className="bg-black text-white px-2 py-0.5 text-sm font-bold">{c.code}</span>
+                                                                <span className="font-black text-sm">{c.units} Units</span>
+                                                            </div>
+                                                            <h4 className="font-black text-lg leading-tight mb-3">{c.title}</h4>
+                                                            <div className="grid grid-cols-1 gap-1 text-sm font-bold text-gray-700">
+                                                                <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> {c.schedule}</div>
+                                                                <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {c.classroom}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Comments List */}
+                                        <div>
+                                            <div className="flex justify-between items-end mb-4">
+                                                <h3 className="text-2xl font-black uppercase flex items-center gap-2 bg-white border-4 border-black px-4 py-2 inline-block rotate-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                                    <UserCheck className="w-6 h-6" /> Student Reviews
+                                                </h3>
+                                                {data.comments && data.comments.length > 3 && (
+                                                    <button 
+                                                        onClick={() => setShowAllReviews(!showAllReviews)}
+                                                        className="text-sm font-black underline hover:text-blue-600"
+                                                    >
+                                                        {showAllReviews ? "Show Less" : `View All (${data.comments.length})`}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                {(!data.comments || data.comments.length === 0) ? (
+                                                     <div className="text-center font-bold text-gray-500 py-4 italic">No reviews yet. Be the first!</div>
+                                                ) : (
+                                                    (showAllReviews ? data.comments : data.comments.slice(0, 3)).map((c, idx) => (
+                                                        <div key={idx} className="bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-black text-sm uppercase bg-yellow-200 border border-black px-2">{c.user}</span>
+                                                                        <span className="text-xs font-bold text-gray-500">{new Date(c.date).toLocaleDateString()}</span>
+                                                                    </div>
+                                                                    {c.course && (
+                                                                        <span className="text-xs font-bold text-gray-600 bg-gray-100 px-1 inline-block w-fit">Course: {c.course}</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 bg-black text-white px-2 text-xs font-bold">
+                                                                    <Star className="w-3 h-3 fill-white" /> {c.rating}
+                                                                </div>
+                                                            </div>
+                                                            <p className="font-bold text-gray-800 text-sm whitespace-pre-wrap">{c.comment}</p>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- DDL View Component (Modified) ---
+        const DDLView = ({ user, onLoginRequest }) => {
+            const [todos, setTodos] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [syncing, setSyncing] = useState(false);
+            const [error, setError] = useState(null);
+            const [selectedTodo, setSelectedTodo] = useState(null);
+            const [showNotifOptions, setShowNotifOptions] = useState(false);
+            
+            // Filters & Views
+            const [viewMode, setViewMode] = useState('active'); // 'active' | 'completed'
+            const [filterCourse, setFilterCourse] = useState('');
+            const [filterTime, setFilterTime] = useState(''); // 'overdue' | 'today' | '3days' | '7days'
+            
+            // Manual Add Form
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [newTodo, setNewTodo] = useState({ title: '', course: '', due_date: '', due_time: '', description: '' });
+
+            useEffect(() => {
+                if (user) fetchTodos();
+            }, [user]);
+
+            const fetchTodos = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch('/api/todos');
+                    if (res.ok) {
+                        const data = await res.json();
+                        setTodos(data);
+                    }
+                } catch (e) { console.error(e); }
+                setLoading(false);
+            };
+
+            const handleSync = async () => {
+                if (!user.ispace_username) {
+                    alert("Please login with iSpace account first or link your account.");
+                    return;
+                }
+                const password = prompt("Please confirm your iSpace password to sync:");
+                if (!password) return;
+
+                setSyncing(true);
+                try {
+                    const res = await fetch('/api/todos/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: user.ispace_username, password })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        alert(`Synced ${data.added} new tasks.`);
+                        fetchTodos();
+                    } else {
+                        alert(data.error || "Sync failed");
+                    }
+                } catch (e) { alert("Sync error"); }
+                setSyncing(false);
+            };
+            
+            const handleAddTodo = async (e) => {
+                e.preventDefault();
+                if (!newTodo.title || !newTodo.due_date) return;
+                
+                // Combine date and time
+                const dateStr = newTodo.due_time ? `${newTodo.due_date}T${newTodo.due_time}` : `${newTodo.due_date}T23:59`;
+                
+                try {
+                    const res = await fetch('/api/todos/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: newTodo.title,
+                            course: newTodo.course,
+                            description: newTodo.description,
+                            due_date: dateStr
+                        })
+                    });
+                    if (res.ok) {
+                        setShowAddForm(false);
+                        setNewTodo({ title: '', course: '', due_date: '', due_time: '', description: '' });
+                        fetchTodos();
+                    } else {
+                        alert("Failed to add task");
+                    }
+                } catch(e) { console.error(e); }
+            };
+            
+            const toggleComplete = async (todo) => {
+                const endpoint = todo.is_completed ? 'incomplete' : 'complete';
+                try {
+                    const res = await fetch(`/api/todos/${todo.id}/${endpoint}`, { method: 'POST' });
+                    if (res.ok) fetchTodos();
+                } catch(e) { console.error(e); }
+            };
+            
+            const deleteTodo = async (id) => {
+                if(!confirm("Are you sure you want to delete this task?")) return;
+                try {
+                    const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+                    if (res.ok) fetchTodos();
+                } catch(e) { console.error(e); }
+            };
+
+            const filteredTodos = useMemo(() => {
+                let result = todos;
+                
+                // Filter by view mode
+                if (viewMode === 'active') {
+                    result = result.filter(t => !t.is_completed);
+                } else {
+                    result = result.filter(t => t.is_completed);
+                }
+                
+                // Filter by course
+                if (filterCourse) {
+                    result = result.filter(t => t.course && t.course.toLowerCase().includes(filterCourse.toLowerCase()));
+                }
+
+                // Filter by time
+                if (filterTime) {
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+                    
+                    if (filterTime === 'overdue') {
+                         result = result.filter(t => t.due_date < (now.getTime() / 1000));
+                    } else if (filterTime === 'today') {
+                         result = result.filter(t => {
+                             const d = new Date(t.due_date * 1000);
+                             return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                         });
+                    } else if (filterTime === '3days') {
+                         const limit = today + (3 * 24 * 60 * 60);
+                         result = result.filter(t => t.due_date >= today && t.due_date <= limit);
+                    } else if (filterTime === '7days') {
+                         const limit = today + (7 * 24 * 60 * 60);
+                         result = result.filter(t => t.due_date >= today && t.due_date <= limit);
+                    }
+                }
+                
+                return result;
+            }, [todos, viewMode, filterCourse, filterTime]);
+            
+            const uniqueCourses = useMemo(() => {
+                const courses = new Set(todos.map(t => t.course).filter(Boolean));
+                return Array.from(courses).sort();
+            }, [todos]);
+
+            if (!user) {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+                        <CheckSquare className="w-24 h-24 text-gray-300 mb-6" />
+                        <h2 className="text-3xl font-black mb-4">LOGIN REQUIRED</h2>
+                        <p className="mb-8 font-bold text-gray-500">Please login to access your To-Do List and sync with iSpace.</p>
+                        <button onClick={onLoginRequest} className="bg-black text-white font-black py-3 px-8 border-2 border-black hover:bg-[#ec4899] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            LOGIN NOW
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 mt-8">
+                    <header className="mb-8 border-b-4 border-black pb-4">
+                        <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
+                            <h1 className="text-4xl font-black uppercase mb-1 flex items-center gap-3">
+                                <CheckSquare className="w-10 h-10" /> My Tasks
+                            </h1>
+                            <div className="flex gap-4 flex-wrap">
+                                <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 font-bold hover:text-[#a3e635] bg-black text-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
+                                    <Plus className="w-5 h-5" /> Add Task
+                                </button>
+                                <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 font-bold hover:text-[#3b82f6] bg-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
+                                    <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} /> 
+                                    {syncing ? 'Syncing...' : 'Sync iSpace'}
+                                </button>
+                                <div className="relative">
+                                    <button onClick={() => setShowNotifOptions(!showNotifOptions)} className="flex items-center gap-2 font-bold hover:text-[#ec4899] bg-white border-2 border-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
+                                        <Bell className="w-5 h-5" />
+                                    </button>
+                                    {showNotifOptions && (
+                                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50">
+                                            <div className="p-3 border-b-2 border-gray-100">
+                                                <div className="font-bold text-sm mb-1">WeChat Mini Program</div>
+                                                <div className="text-xs text-gray-500 font-bold bg-gray-100 inline-block px-1">Under Development</div>
+                                            </div>
+                                            <div className="p-3">
+                                                <div className="font-bold text-sm mb-1">Email Notification</div>
+                                                <div className="text-xs text-gray-500 font-bold bg-gray-100 inline-block px-1">Under Development</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Filters & Tabs */}
+                        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-100 p-4 border-2 border-black">
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setViewMode('active')}
+                                    className={`px-4 py-1 font-bold border-2 border-black transition-all ${viewMode === 'active' ? 'bg-[#3b82f6] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-gray-200'}`}
+                                >
+                                    Active
+                                </button>
+                                <button 
+                                    onClick={() => setViewMode('completed')}
+                                    className={`px-4 py-1 font-bold border-2 border-black transition-all ${viewMode === 'completed' ? 'bg-[#a3e635] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-gray-200'}`}
+                                >
+                                    Completed
+                                </button>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <span className="font-bold text-xs uppercase">Time:</span>
+                                <select 
+                                    value={filterTime} 
+                                    onChange={(e) => setFilterTime(e.target.value)}
+                                    className="border-2 border-black p-1 font-bold text-sm bg-white focus:outline-none focus:bg-[#ec4899] focus:text-white transition-colors flex-grow md:flex-grow-0"
+                                >
+                                    <option value="">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="3days">Next 3 Days</option>
+                                    <option value="7days">Next 7 Days</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <span className="font-bold text-xs uppercase">Course:</span>
+                                <select 
+                                    value={filterCourse} 
+                                    onChange={(e) => setFilterCourse(e.target.value)}
+                                    className="border-2 border-black p-1 font-bold text-sm bg-white focus:outline-none focus:bg-[#ec4899] focus:text-white transition-colors flex-grow md:flex-grow-0 max-w-[200px]"
+                                >
+                                    <option value="">All Courses</option>
+                                    {uniqueCourses.map(c => <option key={c} value={c}>{c.length > 25 ? c.substring(0, 25) + '...' : c}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    {/* Add Form */}
+                    {showAddForm && (
+                        <div className="mb-8 bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-fade-in relative">
+                            <button onClick={() => setShowAddForm(false)} className="absolute top-2 right-2 hover:bg-red-100 p-1"><X className="w-5 h-5"/></button>
+                            <h3 className="font-black text-xl mb-4 flex items-center gap-2"><Plus className="w-6 h-6"/> NEW TASK</h3>
+                            <form onSubmit={handleAddTodo} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="col-span-full">
+                                    <label className="block text-xs font-bold uppercase mb-1">Title</label>
+                                    <input type="text" required value={newTodo.title} onChange={e => setNewTodo({...newTodo, title: e.target.value})} className="w-full border-2 border-black p-2 font-bold focus:bg-blue-50 focus:outline-none" placeholder="Task description..."/>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase mb-1">Course (Optional)</label>
+                                    <input type="text" value={newTodo.course} onChange={e => setNewTodo({...newTodo, course: e.target.value})} className="w-full border-2 border-black p-2 font-bold focus:bg-blue-50 focus:outline-none" placeholder="e.g. ACCT4043"/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
+                                        <input type="date" required value={newTodo.due_date} onChange={e => setNewTodo({...newTodo, due_date: e.target.value})} className="w-full border-2 border-black p-2 font-bold focus:bg-blue-50 focus:outline-none"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase mb-1">Time</label>
+                                        <input type="time" value={newTodo.due_time} onChange={e => setNewTodo({...newTodo, due_time: e.target.value})} className="w-full border-2 border-black p-2 font-bold focus:bg-blue-50 focus:outline-none"/>
+                                    </div>
+                                </div>
+                                <div className="col-span-full">
+                                    <label className="block text-xs font-bold uppercase mb-1">Notes (Optional)</label>
+                                    <textarea 
+                                        className="w-full h-20 border-2 border-black p-2 font-bold focus:bg-blue-50 focus:outline-none resize-none"
+                                        placeholder="Add notes or description here..."
+                                        value={newTodo.description}
+                                        onChange={e => setNewTodo({...newTodo, description: e.target.value})}
+                                    />
+                                </div>
+                                <button type="submit" className="col-span-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors">ADD TASK</button>
+                            </form>
+                        </div>
+                    )}
+
+                    {filteredTodos.length === 0 ? (
+                        <div className="text-center py-20 opacity-50">
+                            <CheckSquare className="w-24 h-24 mx-auto mb-4" />
+                            <p className="text-3xl font-black">ALL CAUGHT UP!</p>
+                            <p className="font-bold">No tasks found in this view.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredTodos.map(todo => {
+                                const dueDate = new Date(todo.due_date * 1000);
+                                const now = new Date();
+                                const diffMs = dueDate - now;
+                                const diffHrs = Math.ceil(diffMs / (1000 * 60 * 60));
+                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                
+                                let badgeColor = 'bg-blue-100 text-blue-800 border-blue-500';
+                                let statusText = '';
+                                
+                                if (todo.is_completed) {
+                                    badgeColor = 'bg-gray-100 text-gray-500 border-gray-400';
+                                    statusText = 'Completed';
+                                } else if (diffMs < 0) {
+                                    badgeColor = 'bg-red-100 text-red-800 border-red-500';
+                                    statusText = 'Overdue';
+                                } else if (diffHrs < 24) {
+                                    badgeColor = 'bg-red-100 text-red-800 border-red-500';
+                                    statusText = `Due in ${diffHrs}h`;
+                                } else {
+                                    const d = Math.floor(diffHrs / 24);
+                                    const h = diffHrs % 24;
+                                    statusText = `Due in ${d}d ${h}h`;
+                                    if (d <= 1) {
+                                        badgeColor = 'bg-red-100 text-red-800 border-red-500';
+                                    } else if (d <= 7) {
+                                        badgeColor = 'bg-orange-100 text-orange-800 border-orange-500';
+                                    }
+                                }
+                                
+                                return (
+                                    <div key={todo.id} onClick={() => setSelectedTodo(todo)} className={`cursor-pointer bg-white border-4 border-black p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform relative group flex flex-col ${todo.is_completed ? 'opacity-60 grayscale' : ''}`}>
+                                        <div className="flex justify-between items-start mb-3">
+                                            <span className={`px-2 py-0.5 text-xs font-black uppercase border-2 ${badgeColor}`}>{statusText}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3"/> {dueDate.toLocaleDateString()}</span>
+                                                <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="text-gray-400 hover:text-red-600 transition-colors" title="Delete Task"><Trash2 className="w-4 h-4"/></button>
+                                            </div>
+                                        </div>
+                                        
+                                        <h3 className="font-bold text-lg leading-tight mb-2 h-[2.85rem] overflow-hidden line-clamp-2">
+                                            {todo.title}
+                                        </h3>
+                                        
+                                        <div className="text-sm font-bold text-gray-600 mb-4 flex items-start gap-2 min-h-[2.5rem]">
+                                            <BookOpen className="w-4 h-4 mt-0.5 shrink-0" />
+                                            <span className="line-clamp-2">{todo.course || 'Personal Task'}</span>
+                                        </div>
+                                        
+                                        <div className="mt-auto flex gap-2">
+                                            {todo.url && (
+                                                <a href={todo.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex-1 text-center bg-black text-white font-bold py-2 hover:bg-[#3b82f6] transition-colors flex items-center justify-center gap-2 text-xs" title="Opens iSpace in a new tab. You may need to login.">
+                                                    GO TO TASK <ExternalLink className="w-3 h-3" />
+                                                </a>
+                                            )}
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
+                                                className={`flex-1 text-center font-bold py-2 border-2 border-black transition-colors flex items-center justify-center gap-2 text-xs ${todo.is_completed ? 'bg-gray-200 hover:bg-gray-300' : 'bg-[#a3e635] hover:bg-green-400'}`}
+                                            >
+                                                {todo.is_completed ? 'UNDO' : 'DONE'} <CheckSquare className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {selectedTodo && <TodoDetailsModal todo={selectedTodo} onClose={() => setSelectedTodo(null)} onUpdate={fetchTodos} />}
+                </div>
+            );
+        };
+
+        // --- Teacher List View ---
+        const TeacherListView = ({ onViewTeacher }) => {
+            const [teachers, setTeachers] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [search, setSearch] = useState("");
+
+            useEffect(() => {
+                fetch('/api/teachers')
+                    .then(res => res.json())
+                    .then(data => {
+                        setTeachers(data);
+                        setLoading(false);
+                    })
+                    .catch(e => setLoading(false));
+            }, []);
+
+            const filteredTeachers = teachers.filter(t => 
+                t.name.toLowerCase().includes(search.toLowerCase())
+            );
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 mt-8">
+                    <header className="mb-8 border-b-4 border-black pb-4 flex flex-col md:flex-row justify-between items-end gap-4">
+                        <h1 className="text-4xl font-black uppercase mb-1 flex items-center gap-3">
+                            <UserCheck className="w-10 h-10" /> Teacher Ratings
+                        </h1>
+                        <div className="relative w-full md:w-64">
+                            <input 
+                                type="text" 
+                                placeholder="Search Teachers..." 
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="w-full bg-white border-2 border-black p-2 pl-10 font-bold focus:outline-none focus:bg-[#a3e635] transition-colors"
+                            />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        </div>
+                    </header>
+
+                    {loading ? (
+                        <div className="flex justify-center py-20"><Loader2 className="w-12 h-12 animate-spin" /></div>
+                    ) : filteredTeachers.length === 0 ? (
+                        <div className="text-center py-20 font-bold text-gray-500">No teachers found.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
+                            {filteredTeachers.map((t, idx) => (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => onViewTeacher(t.name)}
+                                    className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-pointer group flex flex-col"
+                                >
+                                    <h3 className="text-xl font-black mb-3 truncate group-hover:text-blue-600 transition-colors">{t.name}</h3>
+                                    
+                                    <div className="flex justify-between items-center mt-auto">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`px-2 py-1 font-black text-sm border-2 border-black ${t.rating_count > 0 ? (t.average_rating >= 4 ? 'bg-[#a3e635]' : t.average_rating >= 3 ? 'bg-blue-200' : 'bg-yellow-200') : 'bg-gray-100 text-gray-500'}`}>
+                                                {t.rating_count > 0 ? t.average_rating.toFixed(1) : "N/A"}
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-500">{t.rating_count} ratings</span>
+                                        </div>
+                                        <span className="text-xs font-bold bg-black text-white px-2 py-1">{t.course_count} Courses</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- Settings View Component ---
+        const SettingsView = ({ user, onLogout }) => {
+            const [deleting, setDeleting] = useState(false);
+            const [displayName, setDisplayName] = useState(user ? (user.display_name || user.username) : '');
+            const [updating, setUpdating] = useState(false);
+
+            useEffect(() => {
+                if (user) setDisplayName(user.display_name || user.username);
+            }, [user]);
+
+            const handleUpdateProfile = async () => {
+                if (!displayName.trim()) {
+                    alert("Display name cannot be empty");
+                    return;
+                }
+                setUpdating(true);
+                try {
+                    const res = await fetch('/api/user/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ display_name: displayName })
+                    });
+                    if (res.ok) {
+                        alert("Profile updated successfully!");
+                        // Ideally we should update the parent user state, but a page refresh or re-fetch will do.
+                        // For better UX, we can trigger a reload or callback.
+                        window.location.reload(); 
+                    } else {
+                        const data = await res.json();
+                        alert("Update failed: " + (data.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    alert("Network error");
+                }
+                setUpdating(false);
+            };
+
+            const handleDeleteAccount = async () => {
+                if (!confirm("⚠️ 警告：确定要注销账号吗？\n\n这将永久删除您的：\n1. iSpace 登录信息\n2. 所有保存的 DDL/待办事项\n\n您的教师评价将保留（转为匿名）。\n此操作无法撤销！")) return;
+                
+                const doubleCheck = prompt("请输入 'DELETE' 确认删除账户：");
+                if (doubleCheck !== 'DELETE') return;
+
+                setDeleting(true);
+                try {
+                    const res = await fetch('/api/user/delete', { method: 'DELETE' });
+                    if (res.ok) {
+                        alert("账号已成功注销。");
+                        onLogout();
+                    } else {
+                        const data = await res.json();
+                        alert("删除失败: " + (data.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    alert("网络错误，请稍后重试");
+                }
+                setDeleting(false);
+            };
+
+            if (!user) {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+                        <User className="w-24 h-24 text-gray-300 mb-6" />
+                        <h2 className="text-3xl font-black mb-4">LOGIN REQUIRED</h2>
+                        <p className="mb-8 font-bold text-gray-500">Please login to access settings.</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 mt-8">
+                    <header className="mb-8 border-b-4 border-black pb-4">
+                        <h1 className="text-4xl font-black uppercase mb-1 flex items-center gap-3">
+                            <Settings className="w-10 h-10" /> Settings
+                        </h1>
+                    </header>
+
+                    <div className="space-y-8">
+                        {/* Account Info */}
+                        <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 uppercase">
+                                <User className="w-6 h-6" /> Account Profile
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-black uppercase mb-1 text-gray-500">Display Name</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            className="flex-1 border-2 border-black p-2 font-bold focus:bg-[#a3e635] focus:outline-none transition-colors"
+                                            placeholder="Enter display name"
+                                        />
+                                        <button 
+                                            onClick={handleUpdateProfile}
+                                            disabled={updating || displayName === user.display_name}
+                                            className="bg-black text-white px-4 font-bold border-2 border-black hover:bg-[#a3e635] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {updating ? <Loader2 className="animate-spin w-4 h-4" /> : "SAVE"}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1 font-bold">This name will be shown on your reviews.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase mb-1 text-gray-500">Username</label>
+                                    <div className="font-bold text-xl p-2 bg-gray-100 border-2 border-gray-200 text-gray-500 select-none cursor-not-allowed">{user.username}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase mb-1 text-gray-500">iSpace Linked</label>
+                                    <div className="font-bold text-xl flex items-center gap-2 p-2">
+                                        {user.ispace_username ? (
+                                            <span className="text-green-600 flex items-center gap-1"><CheckSquare className="w-4 h-4" /> {user.ispace_username}</span>
+                                        ) : (
+                                            <span className="text-gray-400">Not linked</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Danger Zone */}
+                        <div className="bg-red-50 border-4 border-red-500 p-6 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]">
+                            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 uppercase text-red-600">
+                                <AlertCircle className="w-6 h-6" /> Danger Zone
+                            </h2>
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div>
+                                    <h3 className="font-bold text-lg mb-1">Delete Account & Data</h3>
+                                    <p className="text-sm font-bold text-gray-600 max-w-md">
+                                        Permanently delete your account, login credentials, and all saved DDLs. 
+                                        Your teacher ratings will be preserved anonymously.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={handleDeleteAccount} 
+                                    disabled={deleting}
+                                    className="bg-red-600 text-white font-black px-6 py-3 border-4 border-black hover:bg-red-700 hover:scale-105 transition-transform shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none whitespace-nowrap"
+                                >
+                                    {deleting ? "DELETING..." : "DELETE ACCOUNT"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Auth Modal ---
+        const AuthModal = ({ onClose, onLoginSuccess }) => {
+            const [activeTab, setActiveTab] = useState('login'); // login, register, ispace
+            const [formData, setFormData] = useState({ username: '', password: '' });
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                
+                let url = '/api/login';
+                if (activeTab === 'register') url = '/api/register';
+                if (activeTab === 'ispace') url = '/api/login/ispace';
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        if (activeTab === 'register') {
+                            alert("Registration successful! Please login.");
+                            setActiveTab('login');
+                        } else {
+                            onLoginSuccess(data.user);
+                            onClose();
+                        }
+                    } else {
+                        setError(data.error || 'Operation failed');
+                    }
+                } catch (err) {
+                    setError('Network error');
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="relative bg-white w-full max-w-md border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] p-8 animate-fade-in">
+                        <button onClick={onClose} className="absolute top-4 right-4 hover:bg-red-100 p-1 border-2 border-transparent hover:border-black transition-all">
+                            <X className="w-6 h-6" />
+                        </button>
+                        
+                        <h2 className="text-3xl font-black mb-6 uppercase text-center">
+                            {activeTab === 'login' ? 'Welcome Back' : activeTab === 'register' ? 'Join Us' : 'iSpace Login'}
+                        </h2>
+
+                        <div className="flex border-b-4 border-black mb-6">
+                            <button onClick={() => setActiveTab('login')} className={`flex-1 py-2 font-bold ${activeTab === 'login' ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>LOGIN</button>
+                            <button onClick={() => setActiveTab('register')} className={`flex-1 py-2 font-bold ${activeTab === 'register' ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>REGISTER</button>
+                            <button onClick={() => setActiveTab('ispace')} className={`flex-1 py-2 font-bold ${activeTab === 'ispace' ? 'bg-[#3b82f6] text-white border-l-2 border-black' : 'hover:bg-gray-100 border-l-2 border-black'}`}>iSPACE</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-black uppercase mb-1">Username / Student ID</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    className="w-full border-2 border-black p-3 font-bold focus:bg-[#ec4899] focus:text-white focus:outline-none transition-colors"
+                                    value={formData.username}
+                                    onChange={e => setFormData({...formData, username: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black uppercase mb-1">Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    className="w-full border-2 border-black p-3 font-bold focus:bg-[#ec4899] focus:text-white focus:outline-none transition-colors"
+                                    value={formData.password}
+                                    onChange={e => setFormData({...formData, password: e.target.value})}
+                                />
+                            </div>
+                            {error && <div className="bg-red-100 border-2 border-red-500 text-red-700 p-2 text-sm font-bold text-center">{error}</div>}
+                            
+                            {(activeTab === 'login' || activeTab === 'register') && (
+                                <button 
+                                    type="button"
+                                    onClick={() => setActiveTab('ispace')}
+                                    className="w-full bg-[#3b82f6] text-white font-bold py-3 rounded-full border-2 border-black hover:bg-blue-600 hover:scale-105 transition-all mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none flex justify-center items-center gap-2"
+                                >
+                                    <Globe className="w-5 h-5" /> Login with iSpace
+                                </button>
+                            )}
+
+                            <button disabled={loading} className="w-full bg-black text-white font-black py-4 text-xl border-2 border-black hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:-translate-y-1 transition-all flex justify-center items-center gap-2">
+                                {loading ? <Loader2 className="animate-spin" /> : 'SUBMIT'}
+                            </button>
+                        </form>
+                        
+                        {activeTab === 'ispace' && (
+                            <p className="mt-4 text-xs text-gray-500 font-bold text-center">
+                                * Using iSpace login will automatically sync your deadlines and create an account if you don't have one.
+                            </p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [currentView, setCurrentView] = useState('optimizer'); 
+            const [availableCourses, setAvailableCourses] = useState([]);
+            const [selectedCodes, setSelectedCodes] = useState([]);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [viewingCourse, setViewingCourse] = useState(null);
+            const [viewingTeacher, setViewingTeacher] = useState(null);
+            const [startTime, setStartTime] = useState("08:00");
+            const [endTime, setEndTime] = useState("22:00");
+            const [blockedSlots, setBlockedSlots] = useState([]);
+            const [newBlockDay, setNewBlockDay] = useState("Mon");
+            const [newBlockStart, setNewBlockStart] = useState("08:00");
+            const [newBlockEnd, setNewBlockEnd] = useState("10:00");
+            const [optimalSchedule, setOptimalSchedule] = useState(null);
+            const [isCalculating, setIsCalculating] = useState(false);
+            const [loadingCourses, setLoadingCourses] = useState(true);
+            const [error, setError] = useState(null);
+
+            // New State
+            const [user, setUser] = useState(null);
+            const [showAuthModal, setShowAuthModal] = useState(false);
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+            useEffect(() => {
+                // Check session
+                fetch('/api/user').then(res => res.json()).then(data => {
+                    if (data.user) setUser(data.user);
+                });
+
+                fetch('/api/courses')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        setAvailableCourses(data);
+                        setLoadingCourses(false);
+                    })
+                    .catch(err => {
+                        setError("无法加载课程数据");
+                        setLoadingCourses(false);
+                    });
+            }, []);
+
+            const logout = () => {
+                fetch('/api/logout', { method: 'POST' }).then(() => setUser(null));
+            };
+
+            // ... Existing Logic ...
+            const filteredCourses = useMemo(() => {
+                if (!searchQuery) return [];
+                return availableCourses.filter(c => 
+                    String(c.code).toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    String(c.name).toLowerCase().includes(searchQuery.toLowerCase())
+                ).slice(0, 10);
+            }, [searchQuery, availableCourses]);
+
+            const addCourse = (course, preferredTeacher = "") => {
+                const existing = selectedCodes.find(c => c.code === course.code);
+                if (existing) {
+                    if (preferredTeacher && existing.preferredTeacher !== preferredTeacher) {
+                         updatePreferredTeacher(course.code, preferredTeacher);
+                    }
+                    return;
+                }
+                const randomColor = ['bg-pink-400', 'bg-lime-400', 'bg-cyan-400', 'bg-yellow-400', 'bg-orange-400', 'bg-purple-400', 'bg-emerald-400', 'bg-rose-400'][selectedCodes.length % 8];
+                let teacherList = course.teachers || [];
+                if (teacherList.length === 0 && availableCourses.length > 0) {
+                     const found = availableCourses.find(ac => ac.code === course.code);
+                     if (found && found.teachers) teacherList = found.teachers;
+                }
+                setSelectedCodes([...selectedCodes, { ...course, color: randomColor, preferredTeacher: preferredTeacher, teachers: teacherList }]);
+                setSearchQuery("");
+                setOptimalSchedule(null);
+            };
+
+            const updatePreferredTeacher = (code, teacher) => {
+                setSelectedCodes(selectedCodes.map(c => c.code === code ? { ...c, preferredTeacher: teacher } : c));
+                setOptimalSchedule(null);
+            };
+
+            const removeCourse = (code) => {
+                setSelectedCodes(selectedCodes.filter(c => c.code !== code));
+                setOptimalSchedule(null);
+            };
+            
+            const addBlockedSlot = () => {
+                setBlockedSlots([...blockedSlots, { day: newBlockDay, start: newBlockStart, end: newBlockEnd, id: Date.now() }]);
+            };
+            const removeBlockedSlot = (id) => setBlockedSlots(blockedSlots.filter(b => b.id !== id));
+
+            const calculateOptimal = () => {
+                setIsCalculating(true);
+                setOptimalSchedule(null);
+                const teachersMap = {};
+                selectedCodes.forEach(c => { if (c.preferredTeacher) teachersMap[c.code] = c.preferredTeacher; });
+
+                fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codes: selectedCodes.map(c => c.code), startTime, endTime, blocked: blockedSlots, teachers: teachersMap })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setIsCalculating(false);
+                    if (data.error) { alert(data.error); return; }
+                    if (!data.found) { alert("无法找到不冲突的组合！\n缺失课程: " + (data.missing || []).join(", ")); return; }
+                    
+                    const coloredCourses = data.courses.map((c) => {
+                        const original = selectedCodes.find(sc => sc.code === c.code);
+                        return { ...c, color: original ? original.color : 'bg-gray-400' };
+                    });
+                    
+                    const flat = [];
+                    const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
+                    coloredCourses.forEach(c => {
+                        c.schedules.forEach(s => {
+                            flat.push({ ...s, courseCode: c.code, courseName: c.name, teacher: c.teacher, color: c.color, id: c.id });
+                        });
+                    });
+                    flat.sort((a, b) => {
+                        if (a.day !== b.day) return dayOrder[a.day] - dayOrder[b.day];
+                        return a.start.localeCompare(b.start);
+                    });
+                    setOptimalSchedule({ courses: coloredCourses, flatSchedule: flat, totalUnits: data.totalUnits });
+                })
+                .catch(err => { setIsCalculating(false); alert("计算请求失败: " + err.message); });
+            };
+
+            return (
+                <div className="min-h-screen bg-[#fff1f2] font-sans selection:bg-black selection:text-white pb-8">
+                    {/* Navigation Bar */}
+                    <nav className="bg-black text-white p-4 sticky top-0 z-50 border-b-4 border-[#a3e635] shadow-[0_4px_0_0_rgba(0,0,0,0.1)]">
+                        <div className="max-w-6xl mx-auto flex justify-between items-center relative">
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('optimizer')}>
+                                <span className="text-2xl font-black tracking-tighter uppercase">
+                                    SCHEDULER<span className="text-[#ec4899]">MAX</span>
+                                </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                {/* Auth Section */}
+                                {user ? (
+                                    <div className="flex items-center gap-3">
+                                        <span className="hidden md:inline font-bold text-[#a3e635]">{user.username}</span>
+                                        <button onClick={logout} className="hover:text-red-400 transition-colors" title="Logout"><LogOut className="w-5 h-5"/></button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1 font-bold hover:text-[#a3e635] transition-colors">
+                                        <LogIn className="w-5 h-5" /> LOGIN
+                                    </button>
+                                )}
+
+                                {/* Menu Dropdown */}
+                                <div 
+                                    className="relative z-50"
+                                    onMouseEnter={() => setIsMenuOpen(true)}
+                                    onMouseLeave={() => setIsMenuOpen(false)}
+                                >
+                                    <button 
+                                        className="flex items-center gap-1 font-bold bg-white text-black px-3 py-1 border-2 border-white hover:bg-[#ec4899] hover:border-[#ec4899] hover:text-white transition-all"
+                                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                    >
+                                        MENU <ChevronDown className="w-4 h-4" />
+                                    </button>
+                                    <div className={`absolute right-0 top-full pt-2 w-48 flex flex-col ${isMenuOpen ? 'flex' : 'hidden md:group-hover:flex'}`}>
+                                        <div className="bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+                                            <button onClick={() => { setCurrentView('optimizer'); setIsMenuOpen(false); }} className="text-left px-4 py-3 font-bold text-black hover:bg-[#a3e635] border-b-2 border-gray-100 flex items-center gap-2">
+                                                <Calculator className="w-4 h-4" /> 排课工具
+                                            </button>
+                                            <button onClick={() => { setCurrentView('explorer'); setIsMenuOpen(false); }} className="text-left px-4 py-3 font-bold text-black hover:bg-[#ec4899] hover:text-white border-b-2 border-gray-100 flex items-center gap-2">
+                                                <BookOpen className="w-4 h-4" /> 课程详情
+                                            </button>
+                                            <button onClick={() => { setCurrentView('teachers'); setIsMenuOpen(false); }} className="text-left px-4 py-3 font-bold text-black hover:bg-yellow-400 border-b-2 border-gray-100 flex items-center gap-2">
+                                                <UserCheck className="w-4 h-4" /> 师资评价
+                                            </button>
+                                            <button onClick={() => { setCurrentView('ddl'); setIsMenuOpen(false); }} className="text-left px-4 py-3 font-bold text-black hover:bg-[#3b82f6] hover:text-white border-b-2 border-gray-100 flex items-center gap-2">
+                                                <CheckSquare className="w-4 h-4" /> To-Do List
+                                            </button>
+                                            <button onClick={() => { setCurrentView('settings'); setIsMenuOpen(false); }} className="text-left px-4 py-3 font-bold text-black hover:bg-gray-800 hover:text-white flex items-center gap-2">
+                                                <Settings className="w-4 h-4" /> 设置
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Views */}
+                    {currentView === 'explorer' ? (
+                        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8">
+                             <ExplorerView 
+                                availableCourses={availableCourses} 
+                                onAddCourse={addCourse} 
+                                switchToOptimizer={() => setCurrentView('optimizer')} 
+                                onViewTeacher={(name) => setViewingTeacher(name)}
+                             />
+                        </div>
+                    ) : currentView === 'teachers' ? (
+                        <TeacherListView onViewTeacher={(name) => setViewingTeacher(name)} />
+                    ) : currentView === 'ddl' ? (
+                        <DDLView user={user} onLoginRequest={() => setShowAuthModal(true)} />
+                    ) : currentView === 'settings' ? (
+                        <SettingsView user={user} onLogout={() => { setUser(null); setCurrentView('optimizer'); }} />
+                    ) : (
+                        <React.Fragment>
+                        <header className="mb-10 text-center mt-8">
+                            <h1 className="text-5xl md:text-7xl font-black text-black tracking-tighter uppercase mb-4 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                SCHEDULER<span className="text-[#ec4899]">MAX</span>
+                            </h1>
+                            <p className="text-xl font-bold text-gray-800 bg-[#a3e635] inline-block px-4 py-1 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rotate-[-2deg]">
+                                智能排课 · 自动优化
+                            </p>
+                        </header>
+
+                        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 px-4">
+                            {/* LEFT COLUMN */}
+                            <div className="lg:col-span-5 space-y-8">
+                                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 relative overflow-visible z-20">
+                                    <div className="absolute top-0 right-0 bg-black text-white px-3 py-1 font-bold text-sm">STEP 01</div>
+                                    <h2 className="text-2xl font-black mb-6 flex items-center gap-2"><BookOpen className="w-6 h-6" /> 选择课程</h2>
+                                    <div className="relative">
+                                        <label className="block font-bold mb-1 text-xs uppercase flex items-center gap-1"><Tag className="w-3 h-3"/> Search Course Code/Name</label>
+                                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-gray-100 border-2 border-black p-2 font-bold focus:outline-none focus:bg-[#3b82f6] focus:text-white transition-colors uppercase" placeholder="e.g. ACCT4043" disabled={loadingCourses} />
+                                        {loadingCourses && <div className="text-xs text-gray-500 mt-1">正在读取Excel数据...</div>}
+                                        {searchQuery && filteredCourses.length > 0 && (
+                                            <div className="absolute top-full left-0 w-full bg-white border-2 border-black border-t-0 shadow-lg max-h-60 overflow-y-auto z-50">
+                                                {filteredCourses.map(c => (
+                                                    <div key={c.code} onClick={() => addCourse(c)} className="p-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0">
+                                                        <div className="font-bold text-sm">{c.code}</div>
+                                                        <div className="text-xs text-gray-600 truncate">{c.name}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#e5e7eb] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-black flex items-center gap-2"><Clock className="w-6 h-6" /> 待排课程 ({selectedCodes.length})</h2>
+                                        {selectedCodes.length > 0 && <button onClick={() => setSelectedCodes([])} className="text-xs font-bold underline hover:text-red-600">清空</button>}
+                                    </div>
+                                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {selectedCodes.length === 0 ? (
+                                            <div className="text-center py-10 text-gray-500 font-bold italic border-2 border-dashed border-gray-400">请从上方添加课程...</div>
+                                        ) : (
+                                            selectedCodes.map(course => (
+                                                <div key={course.code} className={`relative group border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-1 bg-white`}>
+                                                    <div className={`absolute top-0 left-0 w-2 h-full ${course.color} border-r-2 border-black`}></div>
+                                                    <div className="pl-4 flex-1">
+                                                        <div className="flex justify-between items-start w-full">
+                                                            <span className="font-bold text-xs bg-black text-white px-1 mb-1 inline-block">{course.code}</span>
+                                                            <div className="flex gap-2">
+                                                                <button className="text-black opacity-40 hover:opacity-100 hover:text-blue-600 transition-opacity" onClick={(e) => { e.stopPropagation(); setViewingCourse(course); }} title="View Details"><Info className="w-4 h-4" /></button>
+                                                                <button className="text-black opacity-20 group-hover:opacity-100 group-hover:text-red-600 transition-opacity" onClick={(e) => { e.stopPropagation(); removeCourse(course.code); }}><Trash2 className="w-4 h-4" /></button>
+                                                            </div>
+                                                        </div>
+                                                        <h3 className="font-black text-lg leading-tight truncate pr-4">{course.name}</h3>
+                                                        <div className="mt-2">
+                                                            <select className="w-full text-xs border border-gray-300 rounded p-1 bg-gray-50 focus:outline-none focus:border-black" value={course.preferredTeacher} onChange={(e) => updatePreferredTeacher(course.code, e.target.value)}>
+                                                                <option value="">Any Teacher</option>
+                                                                {course.teachers && course.teachers.map((t, idx) => <option key={idx} value={t}>{t}</option>)}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 relative">
+                                    <div className="absolute top-0 right-0 bg-black text-white px-3 py-1 font-bold text-sm">STEP 02</div>
+                                    <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Clock className="w-6 h-6" /> 时间限制</h2>
+                                    <div className="p-4 mb-6 rounded-lg border-2 border-black/10 inline-block text-left w-full bg-gray-50">
+                                        <div className="text-black font-bold mb-2 text-sm uppercase">Global Time Range</div>
+                                        <div className="flex gap-4 items-center mb-4">
+                                            <div><label className="block text-xs font-bold text-black mb-1">Earliest</label><input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="bg-white border-2 border-black px-2 py-1 font-bold rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-full"/></div>
+                                            <div className="font-black">-</div>
+                                            <div><label className="block text-xs font-bold text-black mb-1">Latest</label><input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="bg-white border-2 border-black px-2 py-1 font-bold rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-full"/></div>
+                                        </div>
+                                        <div className="border-t border-black/10 my-4"></div>
+                                        <div className="text-black font-bold mb-2 text-sm uppercase">Blocked Slots</div>
+                                        <div className="flex gap-2 items-end mb-3">
+                                            <div className="flex-1">
+                                                <select value={newBlockDay} onChange={(e) => setNewBlockDay(e.target.value)} className="bg-white border-2 border-black px-2 py-1 font-bold rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[34px] w-full">
+                                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <option key={d} value={d}>{d}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="w-24"><input type="time" value={newBlockStart} onChange={(e) => setNewBlockStart(e.target.value)} className="bg-white border-2 border-black px-1 py-1 font-bold rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[34px] w-full text-sm"/></div>
+                                            <div className="w-24"><input type="time" value={newBlockEnd} onChange={(e) => setNewBlockEnd(e.target.value)} className="bg-white border-2 border-black px-1 py-1 font-bold rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[34px] w-full text-sm"/></div>
+                                            <button onClick={addBlockedSlot} className="bg-black text-white px-3 h-[34px] font-bold border-2 border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none shrink-0"><Plus className="w-4 h-4" /></button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {blockedSlots.map(b => (
+                                                <div key={b.id} className="bg-red-100 border border-red-500 text-red-700 px-2 py-1 text-xs font-bold flex items-center gap-1 rounded">
+                                                    <span>{b.day} {b.start}-{b.end}</span>
+                                                    <button onClick={() => removeBlockedSlot(b.id)} className="hover:text-red-900"><X className="w-3 h-3" /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RIGHT COLUMN */}
+                            <div className="lg:col-span-7 flex flex-col gap-8">
+                                <div className="bg-[#3b82f6] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                                    <h2 className="text-3xl font-black text-white mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">开始计算</h2>
+                                    <p className="font-bold text-black mb-6">系统将自动尝试所有Session组合以避免时间冲突</p>
+                                    <button onClick={calculateOptimal} disabled={selectedCodes.length === 0 || isCalculating} className="bg-[#a3e635] text-black font-black text-2xl py-6 px-12 border-4 border-black hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:-translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                                        {isCalculating ? <React.Fragment><RefreshCcw className="animate-spin w-8 h-8" /> 计算中...</React.Fragment> : <React.Fragment><Calculator className="w-8 h-8" /> 计算最优课表</React.Fragment>}
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 bg-black border-4 border-black shadow-[8px_8px_0px_0px_rgba(100,100,100,1)] p-6 md:p-8 min-h-[400px] relative">
+                                    <div className="absolute top-0 right-0 bg-[#ec4899] text-white px-3 py-1 font-bold text-sm z-10 border-l-4 border-b-4 border-black">RESULT</div>
+                                    {!optimalSchedule ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-[#333]">
+                                            <Award className="w-24 h-24 mb-4 text-[#333]" />
+                                            <p className="text-2xl font-black text-white opacity-20">等待计算结果...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="animate-fade-in">
+                                            <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b-4 border-white pb-4 gap-4">
+                                                <div><h2 className="text-4xl font-black text-white mb-2">最佳方案</h2><p className="text-gray-400 font-bold">成功排入 {optimalSchedule.courses.length} 门课程</p></div>
+                                                <div className="bg-[#ec4899] text-white p-4 border-2 border-white shadow-[4px_4px_0px_0px_#fff] rotate-1"><span className="block text-sm font-bold uppercase">Total Units</span><span className="block text-5xl font-black">{optimalSchedule.totalUnits}</span></div>
+                                            </div>
+                                            <div className="grid gap-4">
+                                                {optimalSchedule.flatSchedule.map((slot, idx) => (
+                                                    <div key={`${slot.id}-${idx}`} className="bg-white border-4 border-transparent hover:border-[#a3e635] p-4 flex flex-col md:flex-row justify-between items-center transition-all">
+                                                        <div className="flex items-center gap-4 w-full md:w-auto">
+                                                            <div className={`w-3 h-full self-stretch ${slot.color} border-r-2 border-black mr-2 hidden md:block`}></div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2 mb-1"><span className="bg-black text-white text-xs font-bold px-1.5 py-0.5">{slot.courseCode}</span>{slot.teacher && <span className="text-xs font-bold text-gray-500">{slot.teacher}</span>}</div>
+                                                                <h3 className="font-black text-xl leading-tight">{slot.courseName}</h3>
+                                                                <div className="flex gap-3 text-sm font-bold mt-1 text-gray-700">
+                                                                    <span className="bg-gray-200 px-2 py-0.5 rounded-sm flex items-center gap-1"><Calendar className="w-3 h-3"/> {slot.day}</span>
+                                                                    <span className="bg-gray-200 px-2 py-0.5 rounded-sm flex items-center gap-1"><Clock className="w-3 h-3"/> {slot.start} - {slot.end}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        </React.Fragment>
+                    )}
+
+                    {viewingCourse && <CourseDetailsModal course={viewingCourse} onClose={() => setViewingCourse(null)} />}
+                    {viewingTeacher && <TeacherProfileModal teacherName={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
+                    {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={setUser} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
