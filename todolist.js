@@ -1,0 +1,20 @@
+const todoData = [
+    {
+        "id": 91903,
+        "name": "Group Formation &amp; Group photo: Friday, 6 March 2026 is due",
+        "course": "Principles of Marketing Management (1011) (Dr. Angela Kit Fong MA) [Semester 2 of 2025-2026]",
+        "due_date": 1772787600,
+        "formatted_date": "2026-03-06 09:00:00",
+        "url": "https://ispace.uic.edu.cn/mod/assign/view.php?id=304871",
+        "actionable": false
+    },
+    {
+        "id": 94920,
+        "name": "Group Project Presentation PPTs Submisison is due",
+        "course": "Strategic Management (1001)(1002) (Dr. Amber Yu CHANG) [Semester 2 of 2025-2026]",
+        "due_date": 1778428740,
+        "formatted_date": "2026-05-10 15:59:00",
+        "url": "https://ispace.uic.edu.cn/mod/assign/view.php?id=314024",
+        "actionable": false
+    }
+];
