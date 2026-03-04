@@ -1,0 +1,619 @@
+import React, { useState, useMemo } from 'react';
+import { Plus, Trash2, Calendar, Clock, Award, Calculator, BookOpen, AlertCircle, RefreshCcw, User, Tag, Hash, Search, MapPin, Briefcase, Info, Layout, Filter } from 'lucide-react';
+
+// --- 模拟 CSV 数据源 ---
+const MOCK_DATABASE = [
+  {
+    code: 'ACCT4043',
+    title: 'Advanced Accounting I (1001)',
+    offeringUnit: 'FBM',
+    offeringProgramme: 'ACCT',
+    units: 3,
+    curriculumType: 'MR',
+    electiveType: '',
+    teacher: 'Dr. Man Hung Alvin CHENG',
+    schedule: 'Mon 15:00-16:50',
+    classroom: 'T6-705',
+    requirements: '修读过ACCT3033 同时 修读过ACCT3043',
+    remarks: 'Y3'
+  },
+  {
+    code: 'ACCT4043',
+    title: 'Advanced Accounting I (1001)',
+    offeringUnit: 'FBM',
+    offeringProgramme: 'ACCT',
+    units: 3,
+    curriculumType: 'MR',
+    electiveType: '',
+    teacher: 'Dr. Man Hung Alvin CHENG',
+    schedule: 'Thu 11:00-11:50',
+    classroom: 'T4-604',
+    requirements: '修读过ACCT3033 同时 修读过ACCT3043',
+    remarks: 'Y3'
+  },
+  {
+    code: 'ACCT4043',
+    title: 'Advanced Accounting I (1002)',
+    offeringUnit: 'FBM',
+    offeringProgramme: 'ACCT',
+    units: 3,
+    curriculumType: 'MR',
+    electiveType: '',
+    teacher: 'Mr. Robert Yick Tak CHAN',
+    schedule: 'Thu 16:00-17:50',
+    classroom: 'T6-605',
+    requirements: '修读过ACCT3033 同时 修读过ACCT3043',
+    remarks: 'Y3'
+  },
+  {
+    code: 'ENG1083',
+    title: 'Writing about Infographics (1005)',
+    offeringUnit: 'SGE',
+    offeringProgramme: 'CFL',
+    units: 3,
+    curriculumType: 'FE',
+    electiveType: 'FE Y1-Y4',
+    teacher: 'Mr. Duncan Roy WOOD',
+    schedule: 'Tue 14:00-14:50',
+    classroom: 'T7-601',
+    requirements: '未曾修读过ENG1063',
+    remarks: 'Y4&Y3&Y2&Y1'
+  },
+  {
+    code: 'ENG1083',
+    title: 'Writing about Infographics (1006)',
+    offeringUnit: 'SGE',
+    offeringProgramme: 'CFL',
+    units: 3,
+    curriculumType: 'FE',
+    electiveType: 'FE Y1-Y4',
+    teacher: 'Ms. Gil Lu WANG',
+    schedule: 'Tue 08:00-09:50',
+    classroom: 'T7-501',
+    requirements: '未曾修读过ENG1063',
+    remarks: 'Y4&Y3&Y2&Y1'
+  },
+  {
+    code: 'COMP3013',
+    title: 'Database Management Systems (1001)',
+    offeringUnit: 'FST',
+    offeringProgramme: 'CST',
+    units: 3,
+    curriculumType: 'MR',
+    electiveType: '',
+    teacher: 'Dr. ZHANG San',
+    schedule: 'Wed 09:00-11:50',
+    classroom: 'T2-303',
+    requirements: 'COMP1003',
+    remarks: ''
+  }
+];
+
+const App = () => {
+  const [currentView, setCurrentView] = useState('explorer'); // 'optimizer' | 'explorer'
+
+  // --- Optimizer State ---
+  const [courses, setCourses] = useState([]);
+  const [newCourse, setNewCourse] = useState({
+    code: '',
+    name: '',
+    teacher: '',
+    scheduleStr: '',
+  });
+  const [optimalSchedule, setOptimalSchedule] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // --- Explorer State ---
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredDatabase = useMemo(() => {
+    if (!searchQuery) return MOCK_DATABASE;
+    const lowerQuery = searchQuery.toLowerCase();
+    return MOCK_DATABASE.filter(item => 
+      item.code.toLowerCase().includes(lowerQuery) ||
+      item.title.toLowerCase().includes(lowerQuery) ||
+      item.teacher.toLowerCase().includes(lowerQuery) ||
+      item.classroom.toLowerCase().includes(lowerQuery) ||
+      item.offeringUnit.toLowerCase().includes(lowerQuery) ||
+      item.offeringProgramme.toLowerCase().includes(lowerQuery) ||
+      item.curriculumType.toLowerCase().includes(lowerQuery)
+    );
+  }, [searchQuery]);
+
+  // --- Shared / Helper Functions ---
+  const colorPool = [
+    'bg-pink-400', 'bg-lime-400', 'bg-cyan-400', 'bg-yellow-400', 
+    'bg-orange-400', 'bg-purple-400', 'bg-emerald-400', 'bg-rose-400'
+  ];
+
+  const parseScheduleString = (str) => {
+    try {
+      const parts = str.trim().split(' ');
+      if (parts.length < 2) return null;
+      const day = parts[0];
+      const timeRange = parts[1];
+      const [start, end] = timeRange.split('-');
+      if (!day || !start || !end) return null;
+      const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      if (!validDays.includes(day)) return null;
+      return { day, start, end };
+    } catch (e) { return null; }
+  };
+
+  const addCourse = (courseData = null) => {
+    // 支持手动添加或从探索器添加
+    const target = courseData || newCourse;
+    
+    if (!target.code || !target.scheduleStr) return;
+    const parsedSchedule = parseScheduleString(target.scheduleStr);
+
+    if (!parsedSchedule) {
+      if(!courseData) alert("时间格式错误！");
+      return;
+    }
+
+    const existingCourseIndex = courses.findIndex(
+      c => c.code === target.code && c.teacher === target.teacher
+    );
+
+    if (existingCourseIndex >= 0) {
+      const updatedCourses = [...courses];
+      // 避免重复添加完全相同的时间段
+      const isDuplicateSlot = updatedCourses[existingCourseIndex].schedules.some(
+        s => s.day === parsedSchedule.day && s.start === parsedSchedule.start
+      );
+      if (!isDuplicateSlot) {
+        updatedCourses[existingCourseIndex].schedules.push(parsedSchedule);
+        setCourses(updatedCourses);
+      }
+    } else {
+      const randomColor = colorPool[Math.floor(Math.random() * colorPool.length)];
+      setCourses([
+        ...courses, 
+        { 
+          id: `${target.code}-${target.teacher}-${Date.now()}`,
+          code: target.code,
+          name: target.name || target.title, // 兼容字段名
+          teacher: target.teacher,
+          units: 3, 
+          color: randomColor,
+          schedules: [parsedSchedule]
+        }
+      ]);
+    }
+    
+    if (!courseData) {
+      setNewCourse({ ...newCourse, scheduleStr: '' });
+    } else {
+      // 如果是从探索器添加，切换视图并提示
+      setCurrentView('optimizer');
+    }
+    setOptimalSchedule(null);
+  };
+
+  const deleteCourse = (id) => {
+    setCourses(courses.filter(c => c.id !== id));
+    setOptimalSchedule(null);
+  };
+
+  const timeToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const hasConflict = (courseA, courseB) => {
+    if (courseA.id === courseB.id) return false;
+    if (courseA.code === courseB.code) return true;
+    for (let slotA of courseA.schedules) {
+      for (let slotB of courseB.schedules) {
+        if (slotA.day === slotB.day) {
+          const startA = timeToMinutes(slotA.start);
+          const endA = timeToMinutes(slotA.end);
+          const startB = timeToMinutes(slotB.start);
+          const endB = timeToMinutes(slotB.end);
+          if (startA < endB && startB < endA) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const calculateOptimal = () => {
+    setIsCalculating(true);
+    setTimeout(() => {
+      let maxUnits = 0;
+      let bestCombination = [];
+      const backtrack = (index, currentSelection, currentUnits) => {
+        if (index === courses.length) {
+          if (currentUnits > maxUnits) {
+            maxUnits = currentUnits;
+            bestCombination = [...currentSelection];
+          }
+          return;
+        }
+        const courseToAdd = courses[index];
+        const isCompatible = !currentSelection.some(selected => hasConflict(selected, courseToAdd));
+        if (isCompatible) {
+          backtrack(index + 1, [...currentSelection, courseToAdd], currentUnits + courseToAdd.units);
+        }
+        backtrack(index + 1, currentSelection, currentUnits);
+      };
+      backtrack(0, [], 0);
+
+      const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
+      let flatSchedule = [];
+      bestCombination.forEach(course => {
+        course.schedules.forEach(slot => {
+          flatSchedule.push({
+            ...slot,
+            courseName: course.name,
+            courseCode: course.code,
+            teacher: course.teacher,
+            color: course.color,
+            id: course.id 
+          });
+        });
+      });
+      flatSchedule.sort((a, b) => {
+        if (a.day !== b.day) return dayOrder[a.day] - dayOrder[b.day];
+        return timeToMinutes(a.start) - timeToMinutes(b.start);
+      });
+      setOptimalSchedule({
+        courses: bestCombination, 
+        flatSchedule: flatSchedule, 
+        totalUnits: maxUnits
+      });
+      setIsCalculating(false);
+    }, 600);
+  };
+
+  // --- Render Components ---
+
+  const Navbar = () => (
+    <nav className="bg-black text-white p-4 border-b-4 border-black mb-8 sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="text-xl md:text-2xl font-black tracking-tighter uppercase">
+          SCHEDULER<span className="text-[#ec4899]">MAX</span>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setCurrentView('explorer')}
+            className={`px-4 py-2 font-bold border-2 border-white transition-all ${currentView === 'explorer' ? 'bg-[#a3e635] text-black shadow-[4px_4px_0px_0px_#fff]' : 'hover:bg-gray-800'}`}
+          >
+            课程探索
+          </button>
+          <button 
+             onClick={() => setCurrentView('optimizer')}
+             className={`px-4 py-2 font-bold border-2 border-white transition-all ${currentView === 'optimizer' ? 'bg-[#3b82f6] text-black shadow-[4px_4px_0px_0px_#fff]' : 'hover:bg-gray-800'}`}
+          >
+            排课神器
+            {courses.length > 0 && <span className="ml-2 bg-red-500 text-white px-1.5 rounded-full text-xs">{courses.length}</span>}
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+
+  const ExplorerView = () => (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Search Bar */}
+      <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <h2 className="text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+          FIND YOUR <span className="text-[#ec4899]">TARGET</span>
+        </h2>
+        <div className="relative">
+          <input 
+            type="text" 
+            placeholder="搜索 Code / 课程名 / 老师 / 教室 / 学院 ..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-100 border-2 border-black p-4 pl-12 font-bold text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
+          />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500" strokeWidth={3} />
+        </div>
+        <div className="mt-3 flex gap-2 text-xs font-bold uppercase text-gray-500 flex-wrap">
+           <span className="bg-gray-200 px-2 py-1">Try:</span>
+           <span className="bg-gray-200 px-2 py-1 cursor-pointer hover:bg-black hover:text-white" onClick={()=>setSearchQuery('ACCT')}>ACCT</span>
+           <span className="bg-gray-200 px-2 py-1 cursor-pointer hover:bg-black hover:text-white" onClick={()=>setSearchQuery('Cheng')}>Dr. Cheng</span>
+           <span className="bg-gray-200 px-2 py-1 cursor-pointer hover:bg-black hover:text-white" onClick={()=>setSearchQuery('T6')}>T6-705</span>
+           <span className="bg-gray-200 px-2 py-1 cursor-pointer hover:bg-black hover:text-white" onClick={()=>setSearchQuery('MR')}>MR (Major Required)</span>
+        </div>
+      </div>
+
+      {/* Results Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredDatabase.length === 0 ? (
+           <div className="col-span-full text-center py-20 opacity-40">
+              <Search className="w-20 h-20 mx-auto mb-4" />
+              <p className="text-2xl font-black">NO RESULTS FOUND</p>
+           </div>
+        ) : (
+          filteredDatabase.map((course, idx) => (
+            <div key={idx} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all flex flex-col h-full group">
+              {/* Header: Code & Unit */}
+              <div className="flex justify-between items-start mb-2">
+                <span className="bg-black text-white px-2 py-1 font-black text-lg">{course.code}</span>
+                <span className="bg-[#a3e635] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
+              </div>
+              
+              {/* Title */}
+              <h3 className="font-black text-xl leading-tight mb-3 min-h-[3rem]">{course.title}</h3>
+              
+              {/* Details List */}
+              <div className="space-y-2 text-sm font-bold text-gray-700 flex-grow">
+                <div className="flex items-center gap-2">
+                   <User className="w-4 h-4 shrink-0" /> 
+                   <span className="truncate" title={course.teacher}>{course.teacher}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <Clock className="w-4 h-4 shrink-0" /> 
+                   <span className="bg-gray-100 px-1 border border-gray-300">{course.schedule}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                   <MapPin className="w-4 h-4 shrink-0" /> 
+                   <span>{course.classroom}</span>
+                </div>
+                
+                {/* Extra Metadata */}
+                <div className="pt-2 mt-2 border-t-2 border-gray-200 grid grid-cols-2 gap-2 text-xs">
+                   <div>
+                     <span className="text-gray-400 block uppercase text-[10px]">Type</span>
+                     <span>{course.curriculumType} {course.electiveType && `/ ${course.electiveType}`}</span>
+                   </div>
+                   <div>
+                     <span className="text-gray-400 block uppercase text-[10px]">Offering</span>
+                     <span>{course.offeringUnit} / {course.offeringProgramme}</span>
+                   </div>
+                </div>
+
+                {course.requirements && (
+                  <div className="bg-yellow-100 p-2 text-xs border border-yellow-300 mt-2">
+                    <span className="text-yellow-600 block uppercase text-[10px] mb-0.5">Requirements</span>
+                    {course.requirements}
+                  </div>
+                )}
+              </div>
+
+              {/* Action */}
+              <button 
+                onClick={() => addCourse({
+                  code: course.code,
+                  name: course.title, // 数据源title对应name
+                  teacher: course.teacher,
+                  scheduleStr: course.schedule
+                })}
+                className="mt-4 w-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-5 h-5" /> 添加到排课
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  const OptimizerView = () => (
+    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in slide-in-from-right-4 duration-500">
+        
+      {/* 左侧：输入与列表 */}
+      <div className="lg:col-span-5 space-y-8">
+        
+        {/* 输入卡片 */}
+        <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 bg-black text-white px-3 py-1 font-bold text-sm">MANUAL ADD</div>
+          <h2 className="text-2xl font-black mb-6 flex items-center gap-2">
+            <BookOpen className="w-6 h-6" /> 手动添加课程
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-4">
+                <label className="block font-bold mb-1 text-xs uppercase flex items-center gap-1"><Tag className="w-3 h-3"/>Code</label>
+                <input 
+                  type="text" 
+                  value={newCourse.code}
+                  onChange={(e) => setNewCourse({...newCourse, code: e.target.value})}
+                  className="w-full bg-gray-100 border-2 border-black p-2 font-bold focus:outline-none focus:bg-[#3b82f6] focus:text-white transition-colors uppercase"
+                  placeholder="ACCT4043"
+                />
+              </div>
+              <div className="col-span-8">
+                <label className="block font-bold mb-1 text-xs uppercase">Course Title</label>
+                <input 
+                  type="text" 
+                  value={newCourse.name}
+                  onChange={(e) => setNewCourse({...newCourse, name: e.target.value})}
+                  className="w-full bg-gray-100 border-2 border-black p-2 font-bold focus:outline-none focus:bg-[#ec4899] focus:text-white transition-colors"
+                  placeholder="Advanced Accounting"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold mb-1 text-xs uppercase flex items-center gap-1"><User className="w-3 h-3"/> Teacher</label>
+              <input 
+                type="text" 
+                value={newCourse.teacher}
+                onChange={(e) => setNewCourse({...newCourse, teacher: e.target.value})}
+                className="w-full bg-gray-100 border-2 border-black p-2 font-bold focus:outline-none focus:bg-purple-400 focus:text-white transition-colors"
+                placeholder="Dr. Alvin CHENG"
+              />
+            </div>
+
+            <div className="bg-gray-50 border-2 border-black p-3 relative mt-2">
+                <label className="absolute -top-3 left-2 bg-black text-white px-2 text-xs font-bold">CLASS SCHEDULE</label>
+                <div className="mt-2">
+                  <label className="block font-bold mb-1 text-xs uppercase text-gray-500">Copy from Table (e.g. Mon 15:00-16:50)</label>
+                  <input 
+                    type="text" 
+                    value={newCourse.scheduleStr}
+                    onChange={(e) => setNewCourse({...newCourse, scheduleStr: e.target.value})}
+                    className="w-full bg-white border-2 border-black p-2 font-bold focus:outline-none focus:bg-yellow-400 text-sm"
+                    placeholder="Mon 15:00-16:50"
+                  />
+                </div>
+            </div>
+
+            <button 
+              onClick={() => addCourse()}
+              className="w-full bg-black text-white font-black text-xl py-4 mt-4 hover:bg-[#3b82f6] hover:translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-0 active:translate-y-0 active:shadow-none border-2 border-black"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Plus strokeWidth={4} /> ADD TO LIST
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* 课程列表 */}
+        <div className="bg-[#e5e7eb] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+          <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-black flex items-center gap-2">
+              <Clock className="w-6 h-6" /> 候选池 ({courses.length})
+            </h2>
+            {courses.length > 0 && (
+                <button onClick={() => setCourses([])} className="text-xs font-bold underline hover:text-red-600">清空</button>
+            )}
+          </div>
+          
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {courses.length === 0 ? (
+              <div className="text-center py-10 text-gray-500 font-bold italic border-2 border-dashed border-gray-400">
+                暂无课程数据...
+                <br/>
+                <button onClick={() => setCurrentView('explorer')} className="text-[#3b82f6] underline mt-2">去探索课程?</button>
+              </div>
+            ) : (
+              courses.map(course => (
+                <div key={course.id} className={`relative group border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-1 bg-white`}>
+                  <div className={`absolute top-0 left-0 w-2 h-full ${course.color} border-r-2 border-black`}></div>
+                  <div className="pl-4">
+                    <div className="flex justify-between items-start w-full">
+                        <span className="font-bold text-xs bg-black text-white px-1 mb-1 inline-block">{course.code}</span>
+                        <span className="text-black opacity-20 group-hover:opacity-100 group-hover:text-red-600 transition-opacity cursor-pointer" onClick={() => deleteCourse(course.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </span>
+                    </div>
+                    <h3 className="font-black text-lg leading-tight truncate pr-4">{course.name}</h3>
+                    {course.teacher && <div className="text-xs text-gray-500 font-bold mt-0.5 truncate">{course.teacher}</div>}
+                    
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {course.schedules.map((slot, idx) => (
+                          <span key={idx} className="text-xs font-bold bg-gray-100 border border-black px-1 py-0.5 whitespace-nowrap">
+                            {slot.day} {slot.start}-{slot.end}
+                          </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 右侧：计算与结果 */}
+      <div className="lg:col-span-7 flex flex-col gap-8">
+        <div className="bg-[#3b82f6] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+          <h2 className="text-3xl font-black text-white mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+            准备好了吗？
+          </h2>
+          <p className="font-bold text-black mb-6">算法将确保【同Code课程】只选一个最优班次</p>
+          
+          <button 
+            onClick={calculateOptimal}
+            disabled={courses.length === 0 || isCalculating}
+            className={`
+              bg-[#a3e635] text-black font-black text-2xl py-6 px-12 border-4 border-black
+              hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:-translate-y-2 transition-all
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
+              flex items-center justify-center gap-3 mx-auto w-full md:w-auto
+            `}
+          >
+            {isCalculating ? (
+              <React.Fragment>
+                <RefreshCcw className="animate-spin w-8 h-8" /> 计算中...
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <Calculator className="w-8 h-8" /> 计算最优课表
+              </React.Fragment>
+            )}
+          </button>
+        </div>
+
+        <div className="flex-1 bg-black border-4 border-black shadow-[8px_8px_0px_0px_rgba(100,100,100,1)] p-6 md:p-8 min-h-[400px]">
+            <div className="absolute top-0 right-0 bg-[#ec4899] text-white px-3 py-1 font-bold text-sm z-10 border-l-4 border-b-4 border-black">RESULT</div>
+          
+          {!optimalSchedule ? (
+            <div className="h-full flex flex-col items-center justify-center text-[#333]">
+              <Award className="w-24 h-24 mb-4 text-[#333]" />
+              <p className="text-2xl font-black text-white opacity-20">等待计算结果...</p>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b-4 border-white pb-4 gap-4">
+                <div>
+                  <h2 className="text-4xl font-black text-white mb-2">最佳方案</h2>
+                  <p className="text-gray-400 font-bold">包含 {optimalSchedule.courses.length} 门课程</p>
+                </div>
+                <div className="bg-[#ec4899] text-white p-4 border-2 border-white shadow-[4px_4px_0px_0px_#fff] rotate-1">
+                  <span className="block text-sm font-bold uppercase">Total Units</span>
+                  <span className="block text-5xl font-black">{optimalSchedule.totalUnits}</span>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {optimalSchedule.flatSchedule.map((slot, idx) => (
+                  <div 
+                    key={`${slot.id}-${idx}`} 
+                    className="bg-white border-4 border-transparent hover:border-[#a3e635] p-4 flex flex-col md:flex-row justify-between items-center transition-all"
+                  >
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className={`w-3 h-full self-stretch ${slot.color} border-r-2 border-black mr-2 hidden md:block`}></div>
+                      
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-black text-white text-xs font-bold px-1.5 py-0.5">{slot.courseCode}</span>
+                          {slot.teacher && <span className="text-xs font-bold text-gray-500">{slot.teacher}</span>}
+                        </div>
+                        <h3 className="font-black text-xl leading-tight">{slot.courseName}</h3>
+                        <div className="flex gap-3 text-sm font-bold mt-1 text-gray-700">
+                            <span className="bg-gray-200 px-2 py-0.5 rounded-sm flex items-center gap-1">
+                              <Calendar className="w-3 h-3"/> {slot.day}
+                            </span>
+                            <span className="bg-gray-200 px-2 py-0.5 rounded-sm flex items-center gap-1">
+                              <Clock className="w-3 h-3"/> {slot.start} - {slot.end}
+                            </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {optimalSchedule.courses.length === 0 && (
+                  <div className="text-white text-center py-10 font-bold text-xl flex flex-col items-center">
+                      <AlertCircle className="w-12 h-12 mb-2 text-red-500" />
+                      无法选择任何课程 (可能时间全部冲突或输入有误)
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#fff1f2] font-sans selection:bg-black selection:text-white pb-8">
+      <Navbar />
+      <div className="max-w-6xl mx-auto px-4 md:px-8">
+         {currentView === 'explorer' ? <ExplorerView /> : <OptimizerView />}
+      </div>
+    </div>
+  );
+};
+
+export default App;
