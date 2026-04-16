@@ -1,0 +1,5 @@
+.DS_Store
+.codex/
+.flask_secret_key
+__pycache__/
+venv/

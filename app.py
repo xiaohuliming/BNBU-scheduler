@@ -2,19 +2,68 @@ import os
 import glob
 import json
 import sqlite3
+import secrets
 import time
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
-from maximize_credits import load_timetable, maximize_credits, fmt_meeting
+from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
 from crawler import fetch_timeline
-
-app = Flask(__name__, static_folder='.', static_url_path='')
-app.secret_key = os.urandom(24)  # For session management
 
 # Database setup
 DB_PATH = 'maxcourse.db'
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+SECRET_KEY_FILE = os.path.join(APP_ROOT, '.flask_secret_key')
+SESSION_LIFETIME_DAYS = 36500
+DAY_SEQUENCE = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+DAY_MAP = {day: index for index, day in enumerate(DAY_SEQUENCE)}
+DAY_LABELS = {
+    "Mon": "周一",
+    "Tue": "周二",
+    "Wed": "周三",
+    "Thu": "周四",
+    "Fri": "周五",
+    "Sat": "周六",
+    "Sun": "周日",
+}
+SCHOOL_DAY_END_MINUTES = 21 * 60 + 50
+
+
+def load_or_create_secret_key():
+    env_key = os.getenv('MAXCOURSE_SECRET_KEY')
+    if env_key:
+        return env_key
+
+    try:
+        with open(SECRET_KEY_FILE, 'r', encoding='utf-8') as file:
+            secret_key = file.read().strip()
+            if secret_key:
+                return secret_key
+    except FileNotFoundError:
+        pass
+
+    secret_key = secrets.token_hex(32)
+    with open(SECRET_KEY_FILE, 'w', encoding='utf-8') as file:
+        file.write(secret_key)
+
+    try:
+        os.chmod(SECRET_KEY_FILE, 0o600)
+    except OSError:
+        pass
+
+    return secret_key
+
+
+app = Flask(__name__, static_folder='.', static_url_path='')
+app.secret_key = load_or_create_secret_key()
+app.config.update(
+    PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_LIFETIME_DAYS),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_REFRESH_EACH_REQUEST=True,
+)
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -75,6 +124,17 @@ def init_db():
             c.execute('ALTER TABLE users ADD COLUMN display_name TEXT')
         except sqlite3.OperationalError:
             pass
+
+        try:
+            c.execute('ALTER TABLE todos ADD COLUMN is_stale BOOLEAN DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
+
+        c.execute('CREATE INDEX IF NOT EXISTS idx_todos_user_ispace_lookup ON todos (user_id, ispace_id)')
+        try:
+            c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_user_ispace_unique ON todos (user_id, ispace_id) WHERE ispace_id IS NOT NULL')
+        except sqlite3.IntegrityError:
+            pass
             
         conn.commit()
 
@@ -87,6 +147,101 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def set_authenticated_session(user_id, username, display_name):
+    session.permanent = True
+    session['user_id'] = user_id
+    session['username'] = username
+    session['display_name'] = display_name
+
+
+def sync_ispace_todos_for_user(conn, user_id, items):
+    c = conn.cursor()
+    added = 0
+    updated = 0
+    seen_ids = []
+
+    for item in items:
+        ispace_id = item.get('id')
+        if ispace_id is None:
+            continue
+
+        seen_ids.append(ispace_id)
+        title = item.get('name')
+        course = item.get('course')
+        due_date = item.get('due_date')
+        url = item.get('url')
+
+        c.execute(
+            '''
+            SELECT id, title, course, due_date, url, COALESCE(is_stale, 0) AS is_stale
+            FROM todos
+            WHERE user_id = ? AND ispace_id = ?
+            ORDER BY id ASC
+            LIMIT 1
+            ''',
+            (user_id, ispace_id),
+        )
+        existing = c.fetchone()
+
+        if existing:
+            c.execute(
+                '''
+                UPDATE todos
+                SET title = ?, course = ?, due_date = ?, url = ?, is_stale = 0
+                WHERE user_id = ? AND ispace_id = ?
+                ''',
+                (title, course, due_date, url, user_id, ispace_id),
+            )
+            if (
+                existing['title'] != title
+                or existing['course'] != course
+                or existing['due_date'] != due_date
+                or existing['url'] != url
+                or existing['is_stale']
+            ):
+                updated += 1
+        else:
+            c.execute(
+                '''
+                INSERT INTO todos (user_id, ispace_id, title, course, due_date, url, is_stale)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
+                ''',
+                (user_id, ispace_id, title, course, due_date, url),
+            )
+            added += 1
+
+    if seen_ids:
+        placeholders = ','.join('?' for _ in seen_ids)
+        c.execute(
+            f'''
+            UPDATE todos
+            SET is_stale = 1
+            WHERE user_id = ?
+              AND ispace_id IS NOT NULL
+              AND ispace_id NOT IN ({placeholders})
+              AND COALESCE(is_stale, 0) = 0
+            ''',
+            [user_id, *seen_ids],
+        )
+    else:
+        c.execute(
+            '''
+            UPDATE todos
+            SET is_stale = 1
+            WHERE user_id = ?
+              AND ispace_id IS NOT NULL
+              AND COALESCE(is_stale, 0) = 0
+            ''',
+            (user_id,),
+        )
+
+    return {
+        "added": added,
+        "updated": updated,
+        "stale": c.rowcount,
+    }
 
 def get_excel_file():
     files = glob.glob("*.xlsx") + glob.glob("*.xls")
@@ -111,6 +266,83 @@ def get_df():
     df_cache = load_timetable(file_path)
     return df_cache
 
+
+def time_to_minutes(value):
+    hours, minutes = str(value).strip().split(':')
+    return int(hours) * 60 + int(minutes)
+
+
+def minutes_to_time(value):
+    return f"{value // 60:02d}:{value % 60:02d}"
+
+
+def extract_building(room):
+    room = str(room).strip()
+    if '-' not in room:
+        return room
+    return room.split('-', 1)[0]
+
+
+def is_room_like(room):
+    room = str(room).strip()
+    return bool(room) and room.lower() != 'nil' and '-' in room and ' ' not in room
+
+
+def normalize_room_tokens(raw_room):
+    seen = set()
+    rooms = []
+    for part in str(raw_room or '').split('/'):
+        room = part.strip()
+        if is_room_like(room) and room not in seen:
+            seen.add(room)
+            rooms.append(room)
+    return rooms
+
+
+def serialize_room_event(event):
+    return {
+        "course_code": event["course_code"],
+        "title": event["title"],
+        "teacher": event["teacher"],
+        "start": minutes_to_time(event["start_min"]),
+        "end": minutes_to_time(event["end_min"]),
+    }
+
+
+def build_classroom_index():
+    df = get_df()
+    room_index = {}
+    room_entries = {}
+
+    for _, row in df.iterrows():
+        meeting = parse_schedule(str(row.get('Class Schedule', '')).strip())
+        if meeting is None:
+            continue
+
+        rooms = normalize_room_tokens(row.get('Classroom', ''))
+        if not rooms:
+            continue
+
+        day_index, start_min, end_min = meeting
+        event = {
+            "day_index": day_index,
+            "start_min": start_min,
+            "end_min": end_min,
+            "course_code": str(row.get('Course Code', '')).strip(),
+            "title": str(row.get('Course Title & Session', '')).strip(),
+            "teacher": str(row.get('Teachers', '')).strip(),
+        }
+
+        for room in rooms:
+            room_entries.setdefault(room, []).append(event)
+            room_index.setdefault(room, {"room": room, "building": extract_building(room)})
+
+    for room, events in room_entries.items():
+        events.sort(key=lambda item: (item["day_index"], item["start_min"], item["end_min"], item["course_code"]))
+
+    rooms = [room_index[key] for key in sorted(room_index.keys(), key=lambda room: (extract_building(room), room))]
+    return rooms, room_entries
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -122,6 +354,12 @@ def ddl_page():
 @app.route('/favicon.ico')
 def favicon():
     return "", 204
+
+
+@app.before_request
+def refresh_logged_in_session():
+    if 'user_id' in session:
+        session.permanent = True
 
 # --- Auth Endpoints ---
 
@@ -158,10 +396,11 @@ def login():
     user = c.fetchone()
     conn.close()
     
-    if user and check_password_hash(user['password_hash'], password):
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['display_name'] = user['display_name'] if user['display_name'] else user['ispace_username'] or user['username']
+    stored_password_hash = user['password_hash'] if user else None
+
+    if user and stored_password_hash and check_password_hash(stored_password_hash, password):
+        display_name = user['display_name'] if user['display_name'] else user['ispace_username'] or user['username']
+        set_authenticated_session(user['id'], user['username'], display_name)
         return jsonify({"success": True, "user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": session['display_name']}})
     
     return jsonify({"error": "Invalid credentials"}), 401
@@ -218,24 +457,18 @@ def login_ispace():
         user_id = c.lastrowid
         
     # 4. Sync DDLs to Todos
-    for item in ddls:
-        # Check if exists
-        c.execute('SELECT id FROM todos WHERE user_id = ? AND ispace_id = ?', (user_id, item['id']))
-        exists = c.fetchone()
-        if not exists:
-            c.execute('''
-                INSERT INTO todos (user_id, ispace_id, title, course, due_date, url)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (user_id, item['id'], item['name'], item['course'], item['due_date'], item['url']))
-            
+    sync_stats = sync_ispace_todos_for_user(conn, user_id, ddls)
+
     conn.commit()
     conn.close()
     
-    session['user_id'] = user_id
-    session['username'] = username
-    session['display_name'] = display_name
+    set_authenticated_session(user_id, username, display_name)
     
-    return jsonify({"success": True, "user": {"id": user_id, "username": username, "ispace_username": username, "display_name": display_name}})
+    return jsonify({
+        "success": True,
+        "user": {"id": user_id, "username": username, "ispace_username": username, "display_name": display_name},
+        "sync": sync_stats,
+    })
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -505,7 +738,7 @@ def get_todos():
         
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM todos WHERE user_id = ? ORDER BY due_date ASC', (session['user_id'],))
+    c.execute('SELECT * FROM todos WHERE user_id = ? AND COALESCE(is_stale, 0) = 0 ORDER BY due_date ASC, id ASC', (session['user_id'],))
     todos = [dict(row) for row in c.fetchall()]
     conn.close()
     
@@ -531,20 +764,12 @@ def sync_todos():
     c = conn.cursor()
     user_id = session['user_id']
     
-    count = 0
-    for item in result:
-        c.execute('SELECT id FROM todos WHERE user_id = ? AND ispace_id = ?', (user_id, item['id']))
-        if not c.fetchone():
-            c.execute('''
-                INSERT INTO todos (user_id, ispace_id, title, course, due_date, url)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (user_id, item['id'], item['name'], item['course'], item['due_date'], item['url']))
-            count += 1
-            
+    sync_stats = sync_ispace_todos_for_user(conn, user_id, result)
+
     conn.commit()
     conn.close()
     
-    return jsonify({"success": True, "added": count})
+    return jsonify({"success": True, **sync_stats})
 
 @app.route('/api/todos/add', methods=['POST'])
 def add_todo():
@@ -649,6 +874,92 @@ def get_ddl():
         return jsonify(result), 400
         
     return jsonify(result)
+
+
+@app.route('/api/free-classrooms', methods=['GET'])
+def get_free_classrooms():
+    day = str(request.args.get('day', 'Mon')).strip()
+    start = str(request.args.get('start', '08:00')).strip()
+    end = str(request.args.get('end', '08:50')).strip()
+
+    if day not in DAY_MAP:
+        return jsonify({"error": "Invalid day"}), 400
+
+    try:
+        start_min = time_to_minutes(start)
+        end_min = time_to_minutes(end)
+    except Exception:
+        return jsonify({"error": "Invalid time format, expected HH:MM"}), 400
+
+    if end_min <= start_min:
+        return jsonify({"error": "End time must be later than start time"}), 400
+
+    rooms, room_entries = build_classroom_index()
+    day_index = DAY_MAP[day]
+
+    free_rooms = []
+    building_totals = Counter()
+    free_buildings = Counter()
+
+    for room_info in rooms:
+        room = room_info["room"]
+        building = room_info["building"]
+        building_totals[building] += 1
+
+        entries = [entry for entry in room_entries.get(room, []) if entry["day_index"] == day_index]
+        has_conflict = any(start_min < entry["end_min"] and entry["start_min"] < end_min for entry in entries)
+        if has_conflict:
+            continue
+
+        previous_busy = None
+        next_busy = None
+
+        for entry in entries:
+            if entry["end_min"] <= start_min:
+                if previous_busy is None or entry["end_min"] > previous_busy["end_min"]:
+                    previous_busy = entry
+            if entry["start_min"] >= end_min:
+                if next_busy is None or entry["start_min"] < next_busy["start_min"]:
+                    next_busy = entry
+
+        free_buildings[building] += 1
+        free_rooms.append({
+            "room": room,
+            "building": building,
+            "free_until": minutes_to_time(next_busy["start_min"]) if next_busy else minutes_to_time(SCHOOL_DAY_END_MINUTES),
+            "previous_busy": serialize_room_event(previous_busy) if previous_busy else None,
+            "next_busy": serialize_room_event(next_busy) if next_busy else None,
+        })
+
+    free_rooms.sort(key=lambda item: (item["building"], item["room"]))
+    total_rooms = len(rooms)
+
+    building_summary = []
+    for building in sorted(building_totals.keys()):
+        total = building_totals[building]
+        free = free_buildings.get(building, 0)
+        building_summary.append({
+            "building": building,
+            "total_rooms": total,
+            "free_rooms": free,
+            "occupied_rooms": total - free,
+        })
+
+    return jsonify({
+        "query": {
+            "day": day,
+            "day_label": DAY_LABELS.get(day, day),
+            "start": minutes_to_time(start_min),
+            "end": minutes_to_time(end_min),
+        },
+        "summary": {
+            "total_rooms": total_rooms,
+            "free_rooms": len(free_rooms),
+            "occupied_rooms": total_rooms - len(free_rooms),
+        },
+        "buildings": building_summary,
+        "rooms": free_rooms,
+    })
 
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
@@ -761,7 +1072,7 @@ def optimize():
                 "name": c['title'],
                 "teacher": c['teacher'],
                 "session": c['session'],
-                "units": 0, # Note: We might need to look up units again if important
+                "units": c.get('units', 0),
                 "schedules": schedules,
                 "id": f"{c['course_code']}-{c['session']}"
             })
