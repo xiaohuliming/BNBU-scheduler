@@ -5,6 +5,7 @@ import re
 import sqlite3
 import secrets
 import time
+import uuid
 from collections import Counter
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, session
@@ -122,6 +123,19 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS page_views (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                visitor_id TEXT,
+                user_id INTEGER,
+                view_name TEXT,
+                path TEXT,
+                referrer TEXT,
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        ''')
         # Check if description column exists, add if not (migration)
         try:
             c.execute('ALTER TABLE todos ADD COLUMN description TEXT')
@@ -152,6 +166,9 @@ def init_db():
             pass
 
         c.execute('CREATE INDEX IF NOT EXISTS idx_todos_user_ispace_lookup ON todos (user_id, ispace_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_view_name ON page_views (view_name)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_visitor_id ON page_views (visitor_id)')
         try:
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_user_ispace_unique ON todos (user_id, ispace_id) WHERE ispace_id IS NOT NULL')
         except sqlite3.IntegrityError:
@@ -405,6 +422,13 @@ def favicon():
 def refresh_logged_in_session():
     if 'user_id' in session:
         session.permanent = True
+
+
+def get_analytics_visitor_id():
+    if 'analytics_visitor_id' not in session:
+        session['analytics_visitor_id'] = uuid.uuid4().hex
+        session.permanent = True
+    return session['analytics_visitor_id']
 
 # --- Auth Endpoints ---
 
@@ -919,6 +943,61 @@ def get_ddl():
         return jsonify(result), 400
         
     return jsonify(result)
+
+
+@app.route('/api/analytics/track', methods=['POST'])
+def track_page_view():
+    data = request.get_json(silent=True) or {}
+    view_name = str(data.get('view') or 'unknown').strip()[:80]
+    path = str(data.get('path') or request.referrer or '').strip()[:300]
+    referrer = str(data.get('referrer') or request.referrer or '').strip()[:300]
+    user_agent = str(request.headers.get('User-Agent') or '').strip()[:300]
+    visitor_id = get_analytics_visitor_id()
+    user_id = session.get('user_id')
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        '''
+        INSERT INTO page_views (visitor_id, user_id, view_name, path, referrer, user_agent)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        (visitor_id, user_id, view_name, path, referrer, user_agent),
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+@app.route('/api/analytics/summary', methods=['GET'])
+def get_analytics_summary():
+    conn = get_db()
+    c = conn.cursor()
+
+    total_views = c.execute('SELECT COUNT(*) FROM page_views').fetchone()[0]
+    unique_visitors = c.execute('SELECT COUNT(DISTINCT visitor_id) FROM page_views').fetchone()[0]
+    today_views = c.execute(
+        "SELECT COUNT(*) FROM page_views WHERE date(created_at) = date('now')"
+    ).fetchone()[0]
+
+    c.execute(
+        '''
+        SELECT view_name, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
+        FROM page_views
+        GROUP BY view_name
+        ORDER BY views DESC, view_name ASC
+        '''
+    )
+    by_view = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    return jsonify({
+        "totalViews": total_views,
+        "uniqueVisitors": unique_visitors,
+        "todayViews": today_views,
+        "byView": by_view,
+    })
 
 
 @app.route('/api/free-classrooms', methods=['GET'])

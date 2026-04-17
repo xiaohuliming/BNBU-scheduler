@@ -1885,6 +1885,20 @@
                     });
             }, []);
 
+            useEffect(() => {
+                if (window.location.protocol === 'file:') return;
+
+                fetch('/api/analytics/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        view: currentView,
+                        path: `${window.location.pathname}${window.location.hash}`,
+                        referrer: document.referrer,
+                    }),
+                }).catch(() => {});
+            }, [currentView]);
+
             const logout = () => {
                 fetch('/api/logout', { method: 'POST' }).then(() => {
                     setUser(null);

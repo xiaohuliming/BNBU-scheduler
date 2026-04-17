@@ -56,6 +56,25 @@ class AppTestCase(unittest.TestCase):
         self.assertTrue(response.is_json)
         self.assertEqual(response.get_json()['status'], 404)
 
+    def test_analytics_tracks_views_and_reports_summary(self):
+        first = self.client.post('/api/analytics/track', json={'view': 'home', 'path': '/'})
+        second = self.client.post('/api/analytics/track', json={'view': 'classrooms', 'path': '/#classrooms'})
+        summary = self.client.get('/api/analytics/summary')
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(summary.status_code, 200)
+
+        data = summary.get_json()
+        self.assertEqual(data['totalViews'], 2)
+        self.assertEqual(data['uniqueVisitors'], 1)
+        self.assertGreaterEqual(data['todayViews'], 2)
+
+        views_by_name = {item['view_name']: item for item in data['byView']}
+        self.assertEqual(views_by_name['home']['views'], 1)
+        self.assertEqual(views_by_name['classrooms']['views'], 1)
+        self.assertEqual(views_by_name['home']['visitors'], 1)
+
     def test_login_creates_long_lived_session_cookie(self):
         self.insert_user(
             'regular-user',
