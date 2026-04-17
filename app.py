@@ -1,12 +1,14 @@
 import os
 import glob
 import json
+import re
 import sqlite3
 import secrets
 import time
 from collections import Counter
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, session
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
@@ -29,6 +31,8 @@ DAY_LABELS = {
     "Sun": "周日",
 }
 SCHOOL_DAY_END_MINUTES = 21 * 60 + 50
+EXCLUDED_FREE_CLASSROOM_BUILDINGS = {'V22', 'V20', 'UC', 'SP'}
+PRIORITY_BUILDING_ORDER = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29']
 
 
 def load_or_create_secret_key():
@@ -64,6 +68,23 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_REFRESH_EACH_REQUEST=True,
 )
+
+
+@app.errorhandler(Exception)
+def handle_api_errors(error):
+    if not request.path.startswith('/api/'):
+        return error
+
+    if isinstance(error, HTTPException):
+        return jsonify({
+            "error": error.description,
+            "status": error.code,
+            "path": request.path,
+        }), error.code
+
+    app.logger.exception("Unhandled API error")
+    return jsonify({"error": "Internal server error"}), 500
+
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -279,8 +300,25 @@ def minutes_to_time(value):
 def extract_building(room):
     room = str(room).strip()
     if '-' not in room:
-        return room
-    return room.split('-', 1)[0]
+        return room.upper()
+    return room.split('-', 1)[0].strip().upper()
+
+
+def building_sort_key(building):
+    building = str(building or '').strip().upper()
+
+    if building in PRIORITY_BUILDING_ORDER:
+        return (0, PRIORITY_BUILDING_ORDER.index(building), 0, '', 0, building)
+
+    if building == 'CC':
+        return (2, 0, 0, '', 0, building)
+
+    match = re.match(r'^([A-Z]+)(\d+)$', building)
+    if match:
+        prefix, number = match.groups()
+        return (1, 0, 0, prefix, int(number), building)
+
+    return (1, 1, 1, building, 0, building)
 
 
 def is_room_like(room):
@@ -340,7 +378,14 @@ def build_classroom_index():
     for room, events in room_entries.items():
         events.sort(key=lambda item: (item["day_index"], item["start_min"], item["end_min"], item["course_code"]))
 
-    rooms = [room_index[key] for key in sorted(room_index.keys(), key=lambda room: (extract_building(room), room))]
+    rooms = [
+        room_index[key]
+        for key in sorted(
+            room_index.keys(),
+            key=lambda room: (building_sort_key(extract_building(room)), room)
+        )
+        if extract_building(key) not in EXCLUDED_FREE_CLASSROOM_BUILDINGS
+    ]
     return rooms, room_entries
 
 @app.route('/')
@@ -931,11 +976,11 @@ def get_free_classrooms():
             "next_busy": serialize_room_event(next_busy) if next_busy else None,
         })
 
-    free_rooms.sort(key=lambda item: (item["building"], item["room"]))
+    free_rooms.sort(key=lambda item: (building_sort_key(item["building"]), item["room"]))
     total_rooms = len(rooms)
 
     building_summary = []
-    for building in sorted(building_totals.keys()):
+    for building in sorted(building_totals.keys(), key=building_sort_key):
         total = building_totals[building]
         free = free_buildings.get(building, 0)
         building_summary.append({

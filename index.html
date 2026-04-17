@@ -160,10 +160,97 @@
             { slot: 'P12', start: '20:00', end: '20:50' },
             { slot: 'P13', start: '21:00', end: '21:50' }
         ];
+        const PRIORITY_BUILDINGS = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29'];
 
         const timeToMinutes = (value) => {
             const [hours, minutes] = String(value).split(':').map(Number);
             return hours * 60 + minutes;
+        };
+
+        const getBuildingSortKey = (building) => {
+            const normalized = String(building || '').trim().toUpperCase();
+            const priorityIndex = PRIORITY_BUILDINGS.indexOf(normalized);
+
+            if (priorityIndex !== -1) {
+                return [0, priorityIndex, 0, '', 0, normalized];
+            }
+
+            if (normalized === 'CC') {
+                return [2, 0, 0, '', 0, normalized];
+            }
+
+            const matched = normalized.match(/^([A-Z]+)(\d+)$/);
+            if (matched) {
+                return [1, 0, 0, matched[1], Number(matched[2]), normalized];
+            }
+
+            return [1, 1, 1, normalized, 0, normalized];
+        };
+
+        const compareBuildingOrder = (left, right) => {
+            const leftKey = getBuildingSortKey(left);
+            const rightKey = getBuildingSortKey(right);
+
+            for (let index = 0; index < Math.max(leftKey.length, rightKey.length); index += 1) {
+                if (leftKey[index] < rightKey[index]) return -1;
+                if (leftKey[index] > rightKey[index]) return 1;
+            }
+
+            return 0;
+        };
+
+        const getRoomLocationMeta = (roomCode) => {
+            const room = String(roomCode || '').trim().toUpperCase();
+            const matched = room.match(/^([A-Z0-9]+)-(\d+)([A-Z]*)$/);
+
+            if (!matched) {
+                return {
+                    room,
+                    building: room,
+                    floorNumber: null,
+                    floorLabel: 'Other',
+                    detailLabel: room,
+                    roomSuffix: room,
+                };
+            }
+
+            const [, building, numericPart] = matched;
+            const floorNumber = numericPart.length >= 3 ? Number(numericPart[0]) : null;
+
+            return {
+                room,
+                building,
+                floorNumber,
+                floorLabel: floorNumber !== null ? `${floorNumber}F` : 'Other',
+                detailLabel: floorNumber !== null ? `${building} 教学楼 · ${floorNumber}F` : `${building} 教学楼`,
+                roomSuffix: numericPart,
+            };
+        };
+
+        const compareRoomCode = (left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+
+        const fetchJson = async (url, options = {}) => {
+            const response = await fetch(url, options);
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                const normalized = text.trim().toLowerCase();
+                const looksHtml = normalized.startsWith('<!doctype') || normalized.startsWith('<html');
+
+                if (looksHtml) {
+                    throw new Error('接口返回了 HTML 页面。请重启 Flask 服务，确认后端已加载到包含该 API 的最新代码。');
+                }
+
+                throw new Error(`接口返回了非 JSON 响应 (${response.status})`);
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || `请求失败 (${response.status})`);
+            }
+
+            return data;
         };
 
         // --- Explorer View ---
@@ -1097,11 +1184,9 @@
                 setLoading(true);
                 setError(null);
 
-                fetch(`/api/free-classrooms?${params.toString()}`)
-                    .then(res => res.json().then(data => ({ ok: res.ok, data })))
-                    .then(({ ok, data }) => {
+                fetchJson(`/api/free-classrooms?${params.toString()}`)
+                    .then((data) => {
                         if (ignore) return;
-                        if (!ok) throw new Error(data.error || 'Failed to load classroom availability');
                         setResult(data);
                         setLoading(false);
                     })
@@ -1134,10 +1219,47 @@
             const groupedRooms = useMemo(() => {
                 const groups = {};
                 filteredRooms.forEach(room => {
-                    if (!groups[room.building]) groups[room.building] = [];
-                    groups[room.building].push(room);
+                    const location = getRoomLocationMeta(room.room);
+
+                    if (!groups[room.building]) {
+                        groups[room.building] = {
+                            building: room.building,
+                            roomCount: 0,
+                            floors: {},
+                        };
+                    }
+
+                    if (!groups[room.building].floors[location.floorLabel]) {
+                        groups[room.building].floors[location.floorLabel] = {
+                            floorLabel: location.floorLabel,
+                            floorNumber: location.floorNumber,
+                            rooms: [],
+                        };
+                    }
+
+                    groups[room.building].roomCount += 1;
+                    groups[room.building].floors[location.floorLabel].rooms.push({
+                        ...room,
+                        location,
+                    });
                 });
-                return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+
+                return Object.values(groups)
+                    .map(group => ({
+                        ...group,
+                        floors: Object.values(group.floors)
+                            .map(floorGroup => ({
+                                ...floorGroup,
+                                rooms: floorGroup.rooms.sort((a, b) => compareRoomCode(a.room, b.room)),
+                            }))
+                            .sort((a, b) => {
+                                if (a.floorNumber === null && b.floorNumber === null) return 0;
+                                if (a.floorNumber === null) return 1;
+                                if (b.floorNumber === null) return -1;
+                                return a.floorNumber - b.floorNumber;
+                            }),
+                    }))
+                    .sort((a, b) => compareBuildingOrder(a.building, b.building));
             }, [filteredRooms]);
 
             return (
@@ -1179,9 +1301,14 @@
                                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">Start</label>
-                                        <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 font-bold text-white focus:outline-none focus:border-[#d6ff62]">
+                                        <select
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            className="mt-2 w-full rounded-2xl border border-[#d6ff62]/25 bg-[#f4efe6] px-4 py-3 font-bold text-[#101820] focus:outline-none focus:border-[#d6ff62]"
+                                            style={{ color: '#101820', backgroundColor: '#f4efe6' }}
+                                        >
                                             {SCHOOL_PERIODS.map(period => (
-                                                <option key={period.start} value={period.start} className="text-black">
+                                                <option key={period.start} value={period.start} style={{ color: '#101820', backgroundColor: '#f4efe6' }}>
                                                     {period.slot} · {period.start}
                                                 </option>
                                             ))}
@@ -1189,9 +1316,14 @@
                                     </div>
                                     <div>
                                         <label className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">End</label>
-                                        <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 font-bold text-white focus:outline-none focus:border-[#d6ff62]">
+                                        <select
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="mt-2 w-full rounded-2xl border border-[#d6ff62]/25 bg-[#f4efe6] px-4 py-3 font-bold text-[#101820] focus:outline-none focus:border-[#d6ff62]"
+                                            style={{ color: '#101820', backgroundColor: '#f4efe6' }}
+                                        >
                                             {endOptions.map(period => (
-                                                <option key={period.end} value={period.end} className="text-black">
+                                                <option key={period.end} value={period.end} style={{ color: '#101820', backgroundColor: '#f4efe6' }}>
                                                     {period.slot} · {period.end}
                                                 </option>
                                             ))}
@@ -1199,18 +1331,6 @@
                                     </div>
                                 </div>
 
-                                <div className="mt-6 rounded-2xl bg-white/6 border border-white/8 p-4">
-                                    <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">School Rhythm</div>
-                                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-bold text-white/72">
-                                        {SCHOOL_PERIODS.slice(0, 4).map(period => (
-                                            <div key={period.slot}>{period.slot} · {period.start}-{period.end}</div>
-                                        ))}
-                                        <div className="col-span-2 text-[#d6ff62]">Lunch · 12:00-13:00</div>
-                                        {SCHOOL_PERIODS.slice(4).map(period => (
-                                            <div key={period.slot}>{period.slot} · {period.start}-{period.end}</div>
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
                         </aside>
 
@@ -1293,54 +1413,66 @@
                                 </div>
                             ) : (
                                 <div className="space-y-5">
-                                    {groupedRooms.map(([building, rooms]) => (
-                                        <section key={building} className="rounded-[28px] overflow-hidden bg-white/80 border border-black/10">
+                                    {groupedRooms.map((group) => (
+                                        <section key={group.building} className="rounded-[28px] overflow-hidden bg-white/80 border border-black/10">
                                             <div className="px-6 py-4 border-b border-black/10 flex items-center justify-between gap-4">
                                                 <div>
                                                     <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/42">Building</div>
-                                                    <h3 className="mt-1 text-2xl font-bold tracking-[-0.05em] text-[#101820]">{building}</h3>
+                                                    <h3 className="mt-1 text-2xl font-bold tracking-[-0.05em] text-[#101820]">{group.building}</h3>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/42">Free Rooms</div>
-                                                    <div className="mt-1 text-2xl font-bold tracking-[-0.05em] text-[#101820]">{rooms.length}</div>
+                                                    <div className="mt-1 text-2xl font-bold tracking-[-0.05em] text-[#101820]">{group.roomCount}</div>
                                                 </div>
                                             </div>
-                                            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-px bg-black/6">
-                                                {rooms.map(room => (
-                                                    <div key={room.room} className="bg-white px-5 py-5">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div>
-                                                                <div className="text-2xl font-bold tracking-[-0.05em] text-[#101820]">{room.room}</div>
-                                                                <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/42 mt-1">{room.building}</div>
-                                                            </div>
-                                                            <div className="rounded-full bg-[#d6ff62] px-3 py-1 text-xs font-black text-[#101820]">
-                                                                空闲至 {room.free_until}
-                                                            </div>
+                                            <div className="divide-y divide-black/8">
+                                                {group.floors.map((floorGroup) => (
+                                                    <div key={`${group.building}-${floorGroup.floorLabel}`} className="grid lg:grid-cols-[120px_minmax(0,1fr)] gap-0">
+                                                        <div className="px-6 py-5 bg-[#fbf8f2] border-b border-black/6 lg:border-b-0 lg:border-r border-black/6">
+                                                            <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Floor</div>
+                                                            <div className="mt-2 text-2xl font-bold tracking-[-0.05em] text-[#101820]">{floorGroup.floorLabel}</div>
+                                                            <div className="mt-2 text-sm text-black/52">{floorGroup.rooms.length} 间空闲教室</div>
                                                         </div>
 
-                                                        <div className="mt-5 space-y-3 text-sm">
-                                                            {room.next_busy ? (
-                                                                <div className="rounded-2xl bg-[#fbf8f2] border border-black/8 px-4 py-3">
-                                                                    <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Next Class</div>
-                                                                    <div className="mt-2 font-bold text-[#101820]">
-                                                                        {room.next_busy.start} - {room.next_busy.end}
+                                                        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-px bg-black/6">
+                                                            {floorGroup.rooms.map(room => (
+                                                                <div key={room.room} className="bg-white px-5 py-5">
+                                                                    <div className="flex items-start justify-between gap-3">
+                                                                        <div>
+                                                                            <div className="text-2xl font-bold tracking-[-0.05em] text-[#101820]">{room.room}</div>
+                                                                            <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/42 mt-1">{room.location.detailLabel}</div>
+                                                                        </div>
+                                                                        <div className="rounded-full bg-[#d6ff62] px-3 py-1 text-xs font-black text-[#101820]">
+                                                                            空闲至 {room.free_until}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="mt-1 text-black/62">
-                                                                        {room.next_busy.course_code} {room.next_busy.title}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="rounded-2xl bg-[#101820] text-white px-4 py-3">
-                                                                    <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">Status</div>
-                                                                    <div className="mt-2 font-bold">今天后续没有排课</div>
-                                                                </div>
-                                                            )}
 
-                                                            {room.previous_busy && (
-                                                                <div className="text-black/52">
-                                                                    上一节课结束于 {room.previous_busy.end} · {room.previous_busy.course_code}
+                                                                    <div className="mt-5 space-y-3 text-sm">
+                                                                        {room.next_busy ? (
+                                                                            <div className="rounded-2xl bg-[#fbf8f2] border border-black/8 px-4 py-3">
+                                                                                <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Next Class</div>
+                                                                                <div className="mt-2 font-bold text-[#101820]">
+                                                                                    {room.next_busy.start} - {room.next_busy.end}
+                                                                                </div>
+                                                                                <div className="mt-1 text-black/62">
+                                                                                    {room.next_busy.course_code} {room.next_busy.title}
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="rounded-2xl bg-[#101820] text-white px-4 py-3">
+                                                                                <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">Status</div>
+                                                                                <div className="mt-2 font-bold">今天后续没有排课</div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {room.previous_busy && (
+                                                                            <div className="text-black/52">
+                                                                                上一节课结束于 {room.previous_busy.end} · {room.previous_busy.course_code}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            )}
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1572,274 +1704,44 @@
             );
         };
 
-        const HomeView = ({ user, availableCourses, teacherCount, selectedCount, onNavigate, onOpenLogin }) => {
-            const tools = [
-                {
-                    key: 'optimizer',
-                    code: '01',
-                    title: '排课优化',
-                    subtitle: 'Conflict-free planner',
-                    description: '把候选课程放进工作台，系统会自动试遍可选 session，输出一份能落地的课表。',
-                    status: selectedCount > 0 ? `${selectedCount} 门课程已加入待排清单` : '先从课程库里挑课，再开始计算',
-                    Icon: Calculator,
-                    accent: 'text-[#d6ff62]'
-                },
-                {
-                    key: 'explorer',
-                    code: '02',
-                    title: '课程探索',
-                    subtitle: 'Course database',
-                    description: '按课程号、老师、课室、时段和项目筛选，先看清楚开课情况，再决定要不要排进去。',
-                    status: availableCourses.length > 0 ? `${availableCourses.length} 门课程已载入本地数据库` : '正在读取课程数据',
-                    Icon: Search,
-                    accent: 'text-[#ffae5b]'
-                },
-                {
-                    key: 'ddl',
-                    code: '03',
-                    title: 'DDL 同步',
-                    subtitle: 'iSpace deadlines',
-                    description: '登录 iSpace 后把 deadline 收进统一待办池，课程任务和个人待办可以放在一起管理。',
-                    status: user ? '已登录，可直接同步 iSpace 任务' : '未登录，进入后可绑定 iSpace',
-                    Icon: CheckSquare,
-                    accent: 'text-[#7dc2ff]'
-                },
-                {
-                    key: 'classrooms',
-                    code: '04',
-                    title: '空闲教室',
-                    subtitle: 'Room availability',
-                    description: '按周几和时间段查整段空着的教室，支持楼栋筛选，适合自习、讨论或临时开会找房间。',
-                    status: '基于当前学期课表实时排除占用教室',
-                    Icon: Building2,
-                    accent: 'text-[#9cf0e3]'
-                },
-                {
-                    key: 'teachers',
-                    code: '05',
-                    title: '教师评价',
-                    subtitle: 'Teaching references',
-                    description: '查老师口碑、补充修读体验，把老师维度的信息也纳入选课决策，而不只是看时间表。',
-                    status: teacherCount > 0 ? `${teacherCount} 位老师可检索` : '课程数据加载后会显示老师索引',
-                    Icon: UserCheck,
-                    accent: 'text-[#f8a8cf]'
-                }
-            ];
-
-            const quickStats = [
-                { label: 'tools', value: '05' },
-                { label: 'courses', value: String(availableCourses.length || 0).padStart(3, '0') },
-                { label: 'teachers', value: String(teacherCount || 0).padStart(3, '0') },
-                { label: 'sync', value: user ? 'ON' : 'OFF' }
-            ];
-
-            const workflow = [
-                {
-                    step: '01',
-                    title: '先查，再选',
-                    text: '从课程探索页筛出真正要考虑的 session，而不是在排课页里盲选。'
-                },
-                {
-                    step: '02',
-                    title: '加限制，再计算',
-                    text: '把老师偏好、可上课时段和 blocked slots 一起丢给优化器，得到能执行的方案。'
-                },
-                {
-                    step: '03',
-                    title: '查房间，再落地',
-                    text: '如果你要自习、开组会或做展示，可以直接切到空闲教室页，按时段筛出真正能用的房间。'
-                }
-            ];
-
+        const HomeView = ({ user, onNavigate }) => {
             return (
-                <div className="relative">
-                    <section className="relative overflow-hidden border-b border-black/10">
-                        <div className="absolute inset-0 home-grid opacity-60"></div>
-                        <div className="absolute -left-16 top-16 h-72 w-72 rounded-full bg-[#d6ff62]/60 blur-3xl"></div>
-                        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-[#ffb270]/25 blur-3xl"></div>
+                <div className="relative overflow-hidden min-h-[calc(100svh-86px)]">
+                    <div className="absolute inset-0 home-grid opacity-55"></div>
+                    <div className="absolute -left-20 top-16 h-80 w-80 rounded-full bg-[#d6ff62]/55 blur-3xl"></div>
+                    <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-[#ffb270]/20 blur-3xl"></div>
 
-                        <div className="relative max-w-7xl mx-auto px-4 md:px-8 xl:px-12 min-h-[calc(100svh-86px)] py-12 md:py-16 lg:py-20 grid lg:grid-cols-[minmax(0,1.03fr)_minmax(320px,0.97fr)] gap-10 items-end">
-                            <div className="max-w-2xl">
-                                <div className="section-kicker tool-reveal">BNBU Campus Toolkit</div>
+                    <section className="relative max-w-6xl mx-auto px-4 md:px-8 xl:px-12 min-h-[calc(100svh-86px)] flex items-center">
+                        <div className="w-full max-w-4xl py-16 md:py-20">
+                            <div className="section-kicker tool-reveal">Campus Toolkit</div>
 
-                                <div className="tool-reveal reveal-delay-1">
-                                    <div className="mt-6 text-[clamp(3.8rem,10vw,8rem)] leading-[0.88] font-black tracking-[-0.08em] text-[#101820]">
-                                        MAXCOURSE
-                                    </div>
-                                    <h1 className="mt-5 text-[clamp(2rem,4vw,4.4rem)] leading-[1] font-bold max-w-4xl text-[#101820]">
-                                        把查课、排课、DDL 和教师信息放进一个更像工具的首页。
-                                    </h1>
-                                </div>
-
-                                <p className="tool-reveal reveal-delay-2 mt-6 text-lg md:text-xl leading-relaxed text-black/72 max-w-xl">
-                                    这里不只是一页排课助手。它更像一个学期工作台，让你先搜索、再决策、再同步任务。
-                                </p>
-
-                                <div className="tool-reveal reveal-delay-3 mt-8 flex flex-wrap gap-3">
-                                    <button
-                                        onClick={() => onNavigate('optimizer')}
-                                        className="bg-[#101820] text-white px-6 py-3 rounded-full font-bold border border-[#101820] hover:bg-[#d6ff62] hover:text-[#101820] transition-colors"
-                                    >
-                                        打开排课优化
-                                    </button>
-                                    <button
-                                        onClick={() => onNavigate('explorer')}
-                                        className="bg-white/70 text-[#101820] px-6 py-3 rounded-full font-bold border border-black/10 hover:bg-white transition-colors"
-                                    >
-                                        浏览课程数据库
-                                    </button>
-                                    <button
-                                        onClick={() => onNavigate('ddl')}
-                                        className="bg-transparent text-[#101820] px-6 py-3 rounded-full font-bold border border-black/10 hover:border-[#101820] hover:bg-white/70 transition-colors"
-                                    >
-                                        {user ? '进入 DDL 工作台' : '同步 iSpace DDL'}
-                                    </button>
-                                </div>
-
-                                <div className="tool-reveal reveal-delay-3 mt-10 grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-4 pt-6 border-t border-black/10">
-                                    {quickStats.map((stat) => (
-                                        <div key={stat.label}>
-                                            <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/48">{stat.label}</div>
-                                            <div className="mt-1 text-2xl md:text-3xl font-bold tracking-[-0.06em] text-[#101820]">{stat.value}</div>
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="tool-reveal reveal-delay-1 mt-8 text-[clamp(4rem,12vw,9rem)] leading-[0.86] font-black tracking-[-0.1em] text-[#101820]">
+                                MAXCOURSE
                             </div>
 
-                            <div className="relative tool-reveal reveal-delay-2">
-                                <div className="absolute inset-0 translate-x-4 translate-y-4 rounded-[30px] bg-[#101820]"></div>
-                                <div className="relative rounded-[30px] border border-black/10 bg-[#0d161c] text-white p-6 md:p-8 overflow-hidden">
-                                    <div className="absolute inset-x-0 top-0 h-px bg-white/20"></div>
-                                    <div className="flex items-center justify-between gap-4 mb-6">
-                                        <div>
-                                            <div className="mono-ui text-[11px] uppercase tracking-[0.2em] text-white/50">Tool Directory</div>
-                                            <h2 className="mt-2 text-3xl font-bold tracking-[-0.05em]">按任务进入，不按页面猜。</h2>
-                                        </div>
-                                        <div className="mono-ui text-xs text-white/55 text-right">
-                                            <div>Local dataset</div>
-                                            <div className="mt-1 text-lg text-white">{availableCourses.length || 0} courses</div>
-                                        </div>
-                                    </div>
+                            <h1 className="tool-reveal reveal-delay-2 mt-8 text-xl md:text-2xl font-bold leading-relaxed text-black/72 max-w-2xl">
+                                查课、排课、DDL 和教师信息等工具页。
+                            </h1>
 
-                                    <div className="divide-y divide-white/10">
-                                        {tools.map((tool) => {
-                                            const ToolIcon = tool.Icon;
-                                            return (
-                                                <button
-                                                    key={tool.key}
-                                                    onClick={() => onNavigate(tool.key)}
-                                                    className="w-full py-5 first:pt-0 last:pb-0 text-left hover:bg-white/5 transition-colors"
-                                                >
-                                                    <div className="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto] gap-4 items-start">
-                                                        <div className="mt-0.5">
-                                                            <ToolIcon className={`w-5 h-5 ${tool.accent}`} />
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                                                <span className="text-xl font-bold tracking-[-0.04em]">{tool.title}</span>
-                                                                <span className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/45">{tool.subtitle}</span>
-                                                            </div>
-                                                            <p className="mt-2 text-sm leading-relaxed text-white/72 max-w-xl">{tool.description}</p>
-                                                        </div>
-                                                        <div className="hidden md:block text-right">
-                                                            <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-white/38">Status</div>
-                                                            <div className="mt-2 text-sm leading-snug text-white/72 max-w-[11rem]">{tool.status}</div>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-16 md:py-20">
-                        <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16 items-start">
-                            <div>
-                                <div className="section-kicker">Quick Entry</div>
-                                <h2 className="mt-6 text-4xl md:text-5xl font-bold leading-[0.98] tracking-[-0.06em] text-[#101820]">
-                                    网站首页先回答“我要做什么”，而不是只给一个排课入口。
-                                </h2>
-                                <p className="mt-5 text-lg leading-relaxed text-black/68 max-w-md">
-                                    每个入口都对应一项具体任务：查课、排课、同步 deadline、看老师。首页只负责让你快速进入正确的工具。
-                                </p>
-                            </div>
-
-                            <div className="border-y border-black/10">
-                                {tools.map((tool) => (
-                                    <button
-                                        key={tool.key}
-                                        onClick={() => onNavigate(tool.key)}
-                                        className="w-full text-left py-6 border-b border-black/10 last:border-b-0 grid md:grid-cols-[88px_1.1fr_0.9fr_auto] gap-4 items-start hover:translate-x-1 transition-transform"
-                                    >
-                                        <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/42 pt-1">
-                                            Tool {tool.code}
-                                        </div>
-                                        <div>
-                                            <div className="text-2xl font-bold tracking-[-0.05em] text-[#101820]">{tool.title}</div>
-                                            <div className="mono-ui text-xs uppercase tracking-[0.16em] text-black/42 mt-1">{tool.subtitle}</div>
-                                        </div>
-                                        <div className="text-sm leading-relaxed text-black/64">{tool.description}</div>
-                                        <div className="text-sm font-bold text-[#101820] pt-1">Open</div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="border-y border-black/10 bg-white/40 backdrop-blur-sm">
-                        <div className="max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-16 md:py-20">
-                            <div className="section-kicker">Suggested Flow</div>
-                            <div className="mt-8 grid md:grid-cols-3 gap-10">
-                                {workflow.map((item) => (
-                                    <div key={item.step} className="pt-5 border-t border-black/15">
-                                        <div className="mono-ui text-xs uppercase tracking-[0.18em] text-black/40">{item.step}</div>
-                                        <h3 className="mt-4 text-3xl font-bold tracking-[-0.05em] text-[#101820]">{item.title}</h3>
-                                        <p className="mt-4 text-base leading-relaxed text-black/65 max-w-sm">{item.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-16 md:py-20">
-                        <div className="rounded-[32px] overflow-hidden bg-[#101820] text-white px-6 md:px-10 py-10 md:py-12 relative">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(214,255,98,0.18),transparent_28%)]"></div>
-                            <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
-                                <div className="max-w-2xl">
-                                    <div className="section-kicker bg-white/10 border-white/10 text-white">Start Here</div>
-                                    <h2 className="mt-6 text-4xl md:text-5xl font-bold tracking-[-0.06em] leading-[0.98]">
-                                        先进入正确的工具，再决定这学期怎么安排。
-                                    </h2>
-                                    <p className="mt-4 text-white/72 text-lg leading-relaxed">
-                                        如果你已经知道目标课程，直接去排课优化。还在比较课程、老师和 deadline，就先从工具目录开始。
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3 lg:justify-end">
-                                    <button
-                                        onClick={() => onNavigate('optimizer')}
-                                        className="bg-[#d6ff62] text-[#101820] px-5 py-3 rounded-full font-bold hover:bg-white transition-colors"
-                                    >
-                                        进入排课优化
-                                    </button>
-                                    <button
-                                        onClick={() => onNavigate('teachers')}
-                                        className="bg-white/10 text-white px-5 py-3 rounded-full font-bold border border-white/10 hover:bg-white/18 transition-colors"
-                                    >
-                                        看教师评价
-                                    </button>
-                                    {!user && (
-                                        <button
-                                            onClick={onOpenLogin}
-                                            className="bg-transparent text-white px-5 py-3 rounded-full font-bold border border-white/18 hover:bg-white/10 transition-colors"
-                                        >
-                                            登录并同步 DDL
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="tool-reveal reveal-delay-3 mt-10 flex flex-col sm:flex-row sm:flex-wrap gap-4 max-w-3xl">
+                                <button
+                                    onClick={() => onNavigate('optimizer')}
+                                    className="bg-[#101820] text-white px-7 py-4 rounded-full font-bold border border-[#101820] hover:bg-[#d6ff62] hover:text-[#101820] transition-colors"
+                                >
+                                    打开排课优化
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('explorer')}
+                                    className="bg-white/75 text-[#101820] px-7 py-4 rounded-full font-bold border border-black/10 hover:bg-white transition-colors"
+                                >
+                                    浏览课程数据库
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('ddl')}
+                                    className="bg-transparent text-[#101820] px-7 py-4 rounded-full font-bold border border-black/12 hover:border-[#101820] hover:bg-white/75 transition-colors"
+                                >
+                                    同步 iSpace DDL
+                                </button>
                             </div>
                         </div>
                     </section>
