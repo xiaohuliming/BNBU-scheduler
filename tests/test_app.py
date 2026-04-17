@@ -49,6 +49,13 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json()['error'], 'Invalid credentials')
 
+    def test_unknown_api_route_returns_json_error(self):
+        response = self.client.get('/api/not-a-real-endpoint')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(response.is_json)
+        self.assertEqual(response.get_json()['status'], 404)
+
     def test_login_creates_long_lived_session_cookie(self):
         self.insert_user(
             'regular-user',
@@ -222,6 +229,86 @@ class AppTestCase(unittest.TestCase):
         self.assertIn('T4-101', later_rooms)
         self.assertNotIn('T4-102', later_rooms)
         self.assertNotIn('T4-103', later_rooms)
+
+    def test_free_classrooms_buildings_follow_custom_display_order(self):
+        sample_df = app_module.pd.DataFrame(
+            [
+                {
+                    'Course Code': 'COMP2001',
+                    'Course Title & Session': 'Algo (1001)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'T8-201',
+                },
+                {
+                    'Course Code': 'COMP2002',
+                    'Course Title & Session': 'Algo (1002)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'T6-301',
+                },
+                {
+                    'Course Code': 'COMP2003',
+                    'Course Title & Session': 'Algo (1003)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'T4-401',
+                },
+                {
+                    'Course Code': 'COMP2004',
+                    'Course Title & Session': 'Algo (1004)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'T29-101',
+                },
+                {
+                    'Course Code': 'COMP2005',
+                    'Course Title & Session': 'Algo (1005)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'T11-101',
+                },
+                {
+                    'Course Code': 'COMP2006',
+                    'Course Title & Session': 'Algo (1006)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'A3-201',
+                },
+                {
+                    'Course Code': 'COMP2007',
+                    'Course Title & Session': 'Algo (1007)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'CC-128',
+                },
+                {
+                    'Course Code': 'COMP2008',
+                    'Course Title & Session': 'Algo (1008)',
+                    'Teachers': 'Dr. T',
+                    'Class Schedule': 'Mon 10:00-10:50',
+                    'Classroom': 'V20-101/UC-201/SP-301/V22-101',
+                },
+            ]
+        )
+
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df):
+            response = self.client.get('/api/free-classrooms?day=Mon&start=08:00&end=08:50')
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(
+            [item['building'] for item in data['buildings']],
+            ['T8', 'T6', 'T4', 'T29', 'A3', 'T11', 'CC'],
+        )
+        self.assertEqual(
+            [room['building'] for room in data['rooms']],
+            ['T8', 'T6', 'T4', 'T29', 'A3', 'T11', 'CC'],
+        )
+        self.assertNotIn('V20', [item['building'] for item in data['buildings']])
+        self.assertNotIn('UC', [item['building'] for item in data['buildings']])
+        self.assertNotIn('SP', [item['building'] for item in data['buildings']])
+        self.assertNotIn('V22', [item['building'] for item in data['buildings']])
 
 
 if __name__ == '__main__':
