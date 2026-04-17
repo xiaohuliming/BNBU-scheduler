@@ -1271,9 +1271,6 @@
                                 <h1 className="mt-5 text-4xl md:text-5xl font-bold tracking-[-0.06em] leading-[0.95] text-[#101820]">
                                     查询一段时间里整段空着的教室。
                                 </h1>
-                                <p className="mt-4 text-base leading-relaxed text-black/65">
-                                    课表按每节 50 分钟、课间 10 分钟处理，午休默认视为 12:00-13:00。选择周几和时间段后，只返回整段都没有课程冲突的房间。
-                                </p>
                             </div>
 
                             <div className="bg-[#101820] text-white rounded-[28px] p-6">
@@ -1343,9 +1340,6 @@
                                     <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-[-0.05em] text-[#101820]">
                                         {loading ? '正在读取空闲教室...' : error ? '查询失败' : `找到 ${filteredRooms.length} 间当前可用教室`}
                                     </h2>
-                                    <p className="mt-3 text-base leading-relaxed text-black/62">
-                                        结果只显示整个查询时间段内都没有课程冲突的房间。联合教室会拆开占用判断，避免误报。
-                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-3">
@@ -1365,7 +1359,7 @@
                             </div>
 
                             <div className="bg-white/75 backdrop-blur-sm border border-black/10 rounded-[28px] p-5 md:p-6">
-                                <div className="grid md:grid-cols-[minmax(0,1fr)_220px_220px] gap-4">
+                                <div className="grid md:grid-cols-[minmax(0,1fr)_220px] gap-4">
                                     <div>
                                         <label className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Room Search</label>
                                         <input
@@ -1386,11 +1380,6 @@
                                                 </option>
                                             ))}
                                         </select>
-                                    </div>
-                                    <div className="rounded-2xl border border-black/10 bg-[#fbf8f2] px-4 py-3">
-                                        <div className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Rule</div>
-                                        <div className="mt-2 font-bold text-[#101820]">只返回整段空闲房间</div>
-                                        <div className="mt-1 text-sm text-black/55">不是“某个片段空一下”，而是整个查询窗口都空着。</div>
                                     </div>
                                 </div>
                             </div>
