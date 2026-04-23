@@ -415,7 +415,7 @@ def ddl_page():
 
 @app.route('/favicon.ico')
 def favicon():
-    return "", 204
+    return send_from_directory('.', 'favicon.png', mimetype='image/png')
 
 
 @app.before_request
