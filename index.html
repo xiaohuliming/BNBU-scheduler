@@ -866,6 +866,8 @@
                     if (data.success) {
                         alert(`Synced ${data.added} new tasks.`);
                         fetchTodos();
+                    } else if (res.status === 403) {
+                        alert("当前登录用户绑定的 iSpace 账号与同步账号不一致。请退出后使用正确的 iSpace 账号重新登录，再同步 DDL。");
                     } else {
                         alert(data.error || "Sync failed");
                     }

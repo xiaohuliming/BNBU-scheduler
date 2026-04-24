@@ -27,14 +27,14 @@ class AppTestCase(unittest.TestCase):
         app_module.app.config.update(TESTING=self.original_testing)
         self.tempdir.cleanup()
 
-    def insert_user(self, username, password_hash=None, display_name=None):
+    def insert_user(self, username, password_hash=None, display_name=None, ispace_username=None):
         with sqlite3.connect(app_module.DB_PATH) as conn:
             conn.execute(
                 '''
-                INSERT INTO users (username, password_hash, display_name)
-                VALUES (?, ?, ?)
+                INSERT INTO users (username, password_hash, display_name, ispace_username)
+                VALUES (?, ?, ?, ?)
                 ''',
-                (username, password_hash, display_name),
+                (username, password_hash, display_name, ispace_username),
             )
             conn.commit()
 
@@ -95,7 +95,11 @@ class AppTestCase(unittest.TestCase):
                 self.assertEqual(flask_session['user_id'], 1)
 
     def test_sync_updates_existing_todos_and_hides_stale_items(self):
-        self.insert_user('sync-user', password_hash=app_module.generate_password_hash('pw'))
+        self.insert_user(
+            'sync-user',
+            password_hash=app_module.generate_password_hash('pw'),
+            ispace_username='sync-user',
+        )
 
         with sqlite3.connect(app_module.DB_PATH) as conn:
             conn.execute(
@@ -163,6 +167,34 @@ class AppTestCase(unittest.TestCase):
         todos = todos_response.get_json()
         self.assertEqual(len(todos), 1)
         self.assertEqual(todos[0]['ispace_id'], 101)
+
+    def test_sync_rejects_mismatched_ispace_account(self):
+        self.insert_user(
+            'sync-user',
+            password_hash=app_module.generate_password_hash('pw'),
+            ispace_username='sync-user',
+        )
+
+        with self.client.session_transaction() as flask_session:
+            flask_session['user_id'] = 1
+            flask_session['username'] = 'sync-user'
+            flask_session['display_name'] = 'sync-user'
+            flask_session.permanent = True
+
+        with mock.patch.object(app_module, 'fetch_timeline') as mocked_fetch:
+            response = self.client.post(
+                '/api/todos/sync',
+                json={'username': 'other-ispace-user', 'password': 'pw'},
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('mismatch', response.get_json()['error'])
+        mocked_fetch.assert_not_called()
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            todo_count = conn.execute('SELECT COUNT(*) FROM todos WHERE user_id = ?', (1,)).fetchone()[0]
+
+        self.assertEqual(todo_count, 0)
 
     def test_optimize_returns_real_course_units(self):
         mocked_result = {
