@@ -824,14 +824,28 @@ def sync_todos():
     
     if not ispace_user or not ispace_pass:
          return jsonify({"error": "Credentials required"}), 400
-         
+
+    user_id = session['user_id']
+    submitted_ispace_user = str(ispace_user).strip()
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT ispace_username FROM users WHERE id = ?', (user_id,))
+    user = c.fetchone()
+    conn.close()
+
+    linked_ispace_user = str(user['ispace_username']).strip() if user and user['ispace_username'] else ''
+    if not linked_ispace_user or linked_ispace_user != submitted_ispace_user:
+        return jsonify({
+            "error": "iSpace account mismatch. Please log in with the matching iSpace account before syncing."
+        }), 403
+
     result = fetch_timeline(ispace_user, ispace_pass)
     if isinstance(result, dict) and "error" in result:
         return jsonify(result), 400
         
     conn = get_db()
     c = conn.cursor()
-    user_id = session['user_id']
     
     sync_stats = sync_ispace_todos_for_user(conn, user_id, result)
 
