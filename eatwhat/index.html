@@ -49,7 +49,7 @@
         #celebration-layer {
             position: fixed;
             inset: 0;
-            z-index: 30;
+            z-index: 70;
             overflow: hidden;
             pointer-events: none;
         }
@@ -229,6 +229,107 @@
             white-space: nowrap;
         }
 
+        .result-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: grid;
+            align-items: end;
+            padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+            background: rgba(31, 41, 55, 0.42);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s ease;
+        }
+
+        .result-modal[hidden] {
+            display: none;
+        }
+
+        .result-modal[aria-hidden="false"] {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .result-modal-backdrop {
+            position: absolute;
+            inset: 0;
+        }
+
+        .result-modal-sheet {
+            position: relative;
+            width: 100%;
+            max-height: min(88dvh, 720px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: var(--paper);
+            border: 4px solid var(--ink);
+            border-radius: 24px 18px 20px 16px/16px 22px 18px 24px;
+            box-shadow: 7px 7px 0 var(--ink);
+            transform: translateY(24px) scale(0.98);
+            transition: transform 0.26s cubic-bezier(0.2, 1.15, 0.3, 1);
+        }
+
+        .result-modal[aria-hidden="false"] .result-modal-sheet {
+            transform: translateY(0) scale(1);
+        }
+
+        .result-modal-open {
+            overflow: hidden;
+        }
+
+        .result-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: grid;
+            width: 44px;
+            height: 44px;
+            place-items: center;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            border-radius: 999px;
+            box-shadow: 3px 3px 0 var(--ink);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+
+        .result-modal-close:focus-visible {
+            outline: 3px solid #38bdf8;
+            outline-offset: 3px;
+        }
+
+        .mobile-result-total {
+            color: var(--red);
+            font-size: clamp(2rem, 10vw, 3.2rem);
+            line-height: 0.95;
+            text-shadow: 2px 2px 0 var(--ink);
+        }
+
+        .mobile-result-card {
+            background: #fff7ed;
+            border: 3px solid var(--ink);
+            border-radius: 14px;
+        }
+
+        .mobile-result-card img,
+        .mobile-result-card .image-placeholder {
+            width: 56px;
+            height: 56px;
+            flex: 0 0 auto;
+            object-fit: cover;
+            border: 3px solid var(--ink);
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
+        .mobile-result-card .stat-pill {
+            min-height: 24px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+        }
+
         .toggle {
             display: inline-flex;
             align-items: center;
@@ -353,8 +454,17 @@
         @media (prefers-reduced-motion: reduce) {
             .confetti-piece,
             .celebrate-pop,
-            .screen-flash {
+            .screen-flash,
+            .result-modal,
+            .result-modal-sheet {
                 animation: none;
+                transition: none;
+            }
+        }
+
+        @media (min-width: 721px) {
+            .result-modal {
+                display: none !important;
             }
         }
 
@@ -379,6 +489,13 @@
 <body>
     <canvas id="threejs-canvas"></canvas>
     <div id="celebration-layer" aria-hidden="true"></div>
+    <div id="mobile-result-modal" class="result-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="mobile-result-title" hidden>
+        <div class="result-modal-backdrop" data-close-result></div>
+        <article class="result-modal-sheet p-3">
+            <button id="mobile-result-close" class="result-modal-close" type="button" aria-label="关闭结果弹窗">×</button>
+            <div id="mobile-result-content"></div>
+        </article>
+    </div>
 
     <main class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 md:px-6">
         <header class="flex flex-col items-center gap-3 md:flex-row md:items-end md:justify-between">
@@ -517,6 +634,7 @@
 
         const ITEM_HEIGHT_DESKTOP = 126;
         const ITEM_HEIGHT_MOBILE = 112;
+        const MOBILE_RESULT_QUERY = "(max-width: 720px)";
 
         const state = {
             shops: [],
@@ -555,6 +673,9 @@
             rerollDrinkBtn: document.getElementById("reroll-drink-btn"),
             rerollAddonBtn: document.getElementById("reroll-addon-btn"),
             resultSection: document.getElementById("result-section"),
+            mobileResultModal: document.getElementById("mobile-result-modal"),
+            mobileResultContent: document.getElementById("mobile-result-content"),
+            mobileResultClose: document.getElementById("mobile-result-close"),
             tracks: {
                 shop: document.getElementById("track-shop"),
                 food: document.getElementById("track-food"),
@@ -814,15 +935,7 @@
             setTimeout(() => windowEl.classList.add("win-anim"), duration);
         }
 
-        function renderResult(combo) {
-            if (!combo) {
-                els.resultSection.innerHTML = `
-                    <div class="comic-panel col-span-full bg-white p-5 text-center text-xl">
-                        这组筛选太严格了
-                    </div>
-                `;
-                return;
-            }
+        function resultCards(combo) {
             const cards = [
                 {
                     label: "店铺",
@@ -846,11 +959,66 @@
                 });
             }
             cards.push({
-                    label: "饮品",
-                    title: combo.drink ? combo.drink.name : "这家先不配饮品",
-                    img: combo.drink ? combo.drink.image : "",
-                    stats: combo.drink ? drinkStats(combo) : ["可以只换饮品", "或关掉同店限制"]
+                label: "饮品",
+                title: combo.drink ? combo.drink.name : "这家先不配饮品",
+                img: combo.drink ? combo.drink.image : "",
+                stats: combo.drink ? drinkStats(combo) : ["可以只换饮品", "或关掉同店限制"]
             });
+            return cards;
+        }
+
+        function resultImageHTML(card, placeholderClass) {
+            if (card.img) {
+                return `<img src="${escapeHTML(card.img)}" alt="${escapeHTML(card.title)}" loading="lazy">`;
+            }
+            return `<div class="${placeholderClass}" aria-hidden="true">?</div>`;
+        }
+
+        function resultCardHTML(card) {
+            return `
+                <article class="result-card p-3">
+                    <div class="flex min-w-0 gap-3">
+                        ${resultImageHTML(card, "grid h-[74px] w-[74px] place-items-center rounded-xl border-[3px] border-gray-800 bg-white text-3xl")}
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-1 inline-block rounded-full border-2 border-gray-800 bg-yellow-200 px-2 py-0.5 text-sm font-bold">${escapeHTML(card.label)}</div>
+                            <h2 class="line-clamp-2 text-xl leading-tight">${escapeHTML(card.title)}</h2>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        ${card.stats.map(stat => `<span class="stat-pill">${escapeHTML(stat)}</span>`).join("")}
+                    </div>
+                </article>
+            `;
+        }
+
+        function mobileResultCardHTML(card) {
+            return `
+                <article class="mobile-result-card p-2">
+                    <div class="flex min-w-0 gap-2">
+                        ${resultImageHTML(card, "image-placeholder grid place-items-center text-2xl")}
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-1 inline-block rounded-full border-2 border-gray-800 bg-yellow-200 px-2 py-0.5 text-sm font-bold">${escapeHTML(card.label)}</div>
+                            <h3 class="line-clamp-2 text-lg leading-tight">${escapeHTML(card.title)}</h3>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        ${card.stats.map(stat => `<span class="stat-pill">${escapeHTML(stat)}</span>`).join("")}
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderResult(combo) {
+            if (!combo) {
+                els.resultSection.innerHTML = `
+                    <div class="comic-panel col-span-full bg-white p-5 text-center text-xl">
+                        这组筛选太严格了
+                    </div>
+                `;
+                els.mobileResultContent.innerHTML = "";
+                return;
+            }
+            const cards = resultCards(combo);
             const total = comboTotal(combo);
             els.resultSection.innerHTML = `
                 <article class="total-card p-4 md:col-span-full">
@@ -864,20 +1032,29 @@
                         </div>
                     </div>
                 </article>
-            ` + cards.map(card => `
-                <article class="result-card p-3">
-                    <div class="flex min-w-0 gap-3">
-                        ${card.img ? `<img src="${escapeHTML(card.img)}" alt="">` : `<div class="grid h-[74px] w-[74px] place-items-center rounded-xl border-[3px] border-gray-800 bg-white text-3xl">?</div>`}
-                        <div class="min-w-0 flex-1">
-                            <div class="mb-1 inline-block rounded-full border-2 border-gray-800 bg-yellow-200 px-2 py-0.5 text-sm font-bold">${escapeHTML(card.label)}</div>
-                            <h2 class="line-clamp-2 text-xl leading-tight">${escapeHTML(card.title)}</h2>
-                        </div>
+            ` + cards.map(resultCardHTML).join("");
+            renderMobileResult(combo, cards);
+        }
+
+        function renderMobileResult(combo, cards) {
+            const total = comboTotal(combo);
+            els.mobileResultContent.innerHTML = `
+                <div class="pr-14">
+                    <div class="font-sans text-xs font-black uppercase tracking-wide text-gray-500">抽选结果</div>
+                    <h2 id="mobile-result-title" class="mt-1 text-xl leading-tight">今天就吃这套</h2>
+                </div>
+                <div class="mt-3 rounded-2xl border-[3px] border-gray-800 bg-green-100 p-3">
+                    <div class="font-sans text-xs font-bold text-gray-600">预估总金额</div>
+                    <div class="mobile-result-total">￥${total.toFixed(2)}</div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        ${totalBreakdown(combo).map(item => `<span class="stat-pill">${escapeHTML(item)}</span>`).join("")}
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        ${card.stats.map(stat => `<span class="stat-pill">${escapeHTML(stat)}</span>`).join("")}
-                    </div>
-                </article>
-            `).join("");
+                </div>
+                <div class="mt-3 grid gap-2">
+                    ${cards.map(mobileResultCardHTML).join("")}
+                </div>
+                <button class="comic-btn mt-3 w-full px-5 py-3 text-xl font-bold" type="button" data-close-result>收下这单</button>
+            `;
         }
 
         function comboTotal(combo) {
@@ -907,8 +1084,33 @@
             }[char]));
         }
 
+        function isMobileResultView() {
+            return window.matchMedia(MOBILE_RESULT_QUERY).matches;
+        }
+
+        function openMobileResultModal() {
+            if (!isMobileResultView() || !state.result) return;
+            els.mobileResultModal.hidden = false;
+            document.body.classList.add("result-modal-open");
+            window.requestAnimationFrame(() => {
+                els.mobileResultModal.setAttribute("aria-hidden", "false");
+                els.mobileResultClose.focus({ preventScroll: true });
+            });
+        }
+
+        function closeMobileResultModal() {
+            els.mobileResultModal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("result-modal-open");
+            window.setTimeout(() => {
+                if (els.mobileResultModal.getAttribute("aria-hidden") === "true") {
+                    els.mobileResultModal.hidden = true;
+                }
+            }, 230);
+        }
+
         function spin(combo) {
             if (!combo || state.spinning) return;
+            closeMobileResultModal();
             state.spinning = true;
             els.spinBtn.disabled = true;
             els.spinBtn.textContent = "疯狂洗牌中";
@@ -971,6 +1173,7 @@
                 updatePoolStatus();
                 renderResult(combo);
                 celebrateResult();
+                openMobileResultModal();
                 stopSpinSound();
                 playResultSound();
                 slowDown3D();
@@ -1057,6 +1260,26 @@
             els.spinBtn.addEventListener("click", () => spin(pickCombo()));
             els.rerollDrinkBtn.addEventListener("click", rerollDrink);
             els.rerollAddonBtn.addEventListener("click", rerollAddon);
+            els.mobileResultModal.addEventListener("click", event => {
+                if (event.target.closest("[data-close-result]")) {
+                    closeMobileResultModal();
+                }
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape" && !els.mobileResultModal.hidden) {
+                    closeMobileResultModal();
+                }
+            });
+
+            const mobileResultMedia = window.matchMedia(MOBILE_RESULT_QUERY);
+            const handleMobileResultChange = event => {
+                if (!event.matches) closeMobileResultModal();
+            };
+            if (mobileResultMedia.addEventListener) {
+                mobileResultMedia.addEventListener("change", handleMobileResultChange);
+            } else {
+                mobileResultMedia.addListener(handleMobileResultChange);
+            }
         }
 
         function updateAddonUI() {
