@@ -1125,6 +1125,20 @@
             return parts.join(" · ");
         }
 
+        function trackEatwhatVisit() {
+            if (window.location.protocol === "file:") return;
+            fetch("/api/analytics/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    view: "eatwhat",
+                    path: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+                    referrer: document.referrer
+                }),
+                keepalive: true
+            }).catch(() => {});
+        }
+
         async function initData() {
             try {
                 const [shopRows, dishRows] = await Promise.all([loadCSV(CSV_PATHS.shops), loadCSV(CSV_PATHS.dishes)]);
@@ -1145,6 +1159,7 @@
 
         bindControls();
         updateAddonUI();
+        trackEatwhatVisit();
         initData();
 
         const canvas = document.getElementById("threejs-canvas");
