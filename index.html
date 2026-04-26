@@ -1746,28 +1746,29 @@
         const HomeView = ({ user, onNavigate }) => {
             const quickActions = [
                 {
+                    key: 'classrooms',
+                    title: '空教室查询',
+                    detail: '按时间和教学楼查看可用教室。',
+                    Icon: Building2
+                },
+                {
+                    key: 'eatwhat',
+                    title: '今天吃什么',
+                    detail: '随机抽取店铺、主食、加料和饮品。',
+                    Icon: Utensils,
+                    href: '/eatwhat/index.html'
+                },
+                {
                     key: 'optimizer',
                     title: '排课优化',
                     detail: '选择课程和空闲时间，生成不冲突课表。',
                     Icon: Calculator
                 },
                 {
-                    key: 'explorer',
-                    title: '课程数据库',
-                    detail: '搜索课程、教师和时间安排。',
-                    Icon: BookOpen
-                },
-                {
                     key: 'ddl',
                     title: 'iSpace DDL',
                     detail: '同步作业截止日期和待办事项。',
                     Icon: CheckSquare
-                },
-                {
-                    key: 'toolbox',
-                    title: '工具箱',
-                    detail: '打开 EatWhat 和之后的小工具。',
-                    Icon: Wrench
                 }
             ];
 
@@ -1798,10 +1799,10 @@
                                         开始排课
                                     </button>
                                     <button
-                                        onClick={() => onNavigate('toolbox')}
+                                        onClick={() => { window.location.href = '/eatwhat/index.html'; }}
                                         className="rounded-2xl border border-[#2f261f]/12 bg-[#fffaf2]/82 px-5 py-3 text-left font-semibold text-[#2f261f] transition-colors hover:bg-white"
                                     >
-                                        打开工具箱
+                                        今天吃什么
                                     </button>
                                 </div>
                             </div>
@@ -1824,7 +1825,7 @@
                                             return (
                                                 <button
                                                     key={action.key}
-                                                    onClick={() => onNavigate(action.key)}
+                                                    onClick={() => action.href ? (window.location.href = action.href) : onNavigate(action.key)}
                                                     className="group flex w-full items-center gap-3 rounded-2xl border border-transparent bg-white/58 p-3 text-left transition-all hover:border-[#b86f4c]/22 hover:bg-white"
                                                 >
                                                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#efe3d3] text-[#6b4a35] transition-colors group-hover:bg-[#d97757] group-hover:text-white">
