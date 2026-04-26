@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么？</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1f2937;
+            --paper: #fffdf5;
+            --yellow: #ffe66d;
+            --red: #ef4444;
+            --blue: #7dd3fc;
+            --mint: #86efac;
+            --pink: #f9a8d4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--ink);
+            background: #fef08a;
+            font-family: "ZCOOL KuaiLe", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        #threejs-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #celebration-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .comic-box {
+            background-color: var(--paper);
+            border: 4px solid var(--ink);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 8px 8px 0 var(--ink);
+        }
+
+        .comic-panel {
+            background-color: #ffffff;
+            border: 4px solid var(--ink);
+            border-radius: 14px 10px 16px 12px/12px 16px 10px 14px;
+            box-shadow: 7px 7px 0 var(--ink);
+        }
+
+        .comic-btn {
+            min-height: 58px;
+            color: var(--ink);
+            background-color: #fbbf24;
+            border: 4px solid var(--ink);
+            border-radius: 10px 14px 8px 12px/14px 10px 12px 8px;
+            box-shadow: 6px 6px 0 var(--ink);
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        .comic-btn:hover {
+            background-color: #f59e0b;
+        }
+
+        .comic-btn:active {
+            transform: translate(6px, 6px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+
+        .comic-btn:disabled {
+            opacity: 0.72;
+            cursor: wait;
+        }
+
+        .filter-tag {
+            min-height: 42px;
+            background-color: #f3f4f6;
+            border: 3px solid var(--ink);
+            border-radius: 20px 8px 18px 10px/10px 18px 8px 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .filter-tag.active {
+            color: #ffffff;
+            background-color: var(--red);
+            box-shadow: 3px 3px 0 var(--ink);
+            transform: translateY(-2px);
+        }
+
+        .range {
+            accent-color: #ef4444;
+            width: 100%;
+        }
+
+        .slot-window {
+            position: relative;
+            height: 126px;
+            overflow: hidden;
+            background: #f3f4f6;
+            border: 3px solid var(--ink);
+            border-radius: 10px;
+            box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        .slot-window::before,
+        .slot-window::after {
+            position: absolute;
+            right: 0;
+            left: 0;
+            z-index: 10;
+            height: 20px;
+            content: "";
+            pointer-events: none;
+        }
+
+        .slot-window::before {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(243, 244, 246, 1), rgba(243, 244, 246, 0));
+        }
+
+        .slot-window::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(243, 244, 246, 1), rgba(243, 244, 246, 0));
+        }
+
+        .slot-track {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            will-change: transform;
+        }
+
+        .slot-item {
+            display: grid;
+            place-items: center;
+            height: 126px;
+            padding: 12px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .slot-title {
+            display: -webkit-box;
+            max-width: 100%;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            font-size: clamp(1.1rem, 1rem + 0.5vw, 1.45rem);
+            line-height: 1.15;
+            word-break: break-word;
+        }
+
+        .slot-meta {
+            max-width: 100%;
+            margin-top: 6px;
+            overflow: hidden;
+            color: #4b5563;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 0.78rem;
+            line-height: 1.2;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .result-card {
+            min-width: 0;
+            background: #fff7ed;
+            border: 3px solid var(--ink);
+            border-radius: 12px 16px 10px 14px/16px 10px 14px 12px;
+        }
+
+        .total-card {
+            background: #dcfce7;
+            border: 4px solid var(--ink);
+            border-radius: 16px 12px 18px 10px/10px 18px 12px 16px;
+            box-shadow: 6px 6px 0 var(--ink);
+        }
+
+        .result-card img {
+            width: 74px;
+            height: 74px;
+            object-fit: cover;
+            border: 3px solid var(--ink);
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .stat-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 3px 9px;
+            background: #ffffff;
+            border: 2px solid var(--ink);
+            border-radius: 999px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 36px;
+            padding: 5px 10px;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            border-radius: 999px;
+            cursor: pointer;
+        }
+
+        .toggle input {
+            width: 18px;
+            height: 18px;
+            accent-color: #ef4444;
+        }
+
+        @keyframes pulse-win {
+            0% {
+                transform: scale(1);
+                background-color: #f3f4f6;
+            }
+
+            50% {
+                transform: scale(1.035);
+                background-color: #bbf7d0;
+            }
+
+            100% {
+                transform: scale(1);
+                background-color: #f3f4f6;
+            }
+        }
+
+        .win-anim {
+            animation: pulse-win 0.5s ease-in-out 3;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            top: -18px;
+            left: var(--x);
+            width: var(--w);
+            height: var(--h);
+            background: var(--c);
+            border: 2px solid rgba(31, 41, 55, 0.65);
+            border-radius: 3px;
+            transform: rotate(var(--r));
+            animation: confetti-fall var(--d) cubic-bezier(0.18, 0.78, 0.35, 1) forwards;
+        }
+
+        .confetti-piece.burst {
+            top: var(--y);
+            left: 50%;
+            animation-name: confetti-burst;
+        }
+
+        .celebrate-pop {
+            animation: result-pop 0.72s cubic-bezier(0.2, 1.35, 0.3, 1);
+        }
+
+        .screen-flash {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.75);
+            animation: flash-out 0.42s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                opacity: 1;
+                transform: translate3d(0, -20px, 0) rotate(var(--r));
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate3d(var(--dx), 112vh, 0) rotate(var(--end-r));
+            }
+        }
+
+        @keyframes confetti-burst {
+            0% {
+                opacity: 1;
+                transform: translate3d(-50%, 0, 0) scale(0.7) rotate(var(--r));
+            }
+
+            70% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate3d(calc(-50% + var(--dx)), var(--dy), 0) scale(1.05) rotate(var(--end-r));
+            }
+        }
+
+        @keyframes result-pop {
+            0% {
+                transform: translateY(10px) scale(0.96);
+            }
+
+            55% {
+                transform: translateY(-5px) scale(1.025);
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes flash-out {
+            0% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .confetti-piece,
+            .celebrate-pop,
+            .screen-flash {
+                animation: none;
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                overflow-y: auto;
+            }
+
+            .comic-box,
+            .comic-panel {
+                box-shadow: 5px 5px 0 var(--ink);
+            }
+
+            .slot-window,
+            .slot-item {
+                height: 112px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="threejs-canvas"></canvas>
+    <div id="celebration-layer" aria-hidden="true"></div>
+
+    <main class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 md:px-6">
+        <header class="flex flex-col items-center gap-3 md:flex-row md:items-end md:justify-between">
+            <div class="comic-box px-6 py-3 text-center md:-rotate-2">
+                <h1 class="text-4xl font-bold text-red-500 md:text-5xl" style="text-shadow: 2px 2px 0 var(--ink);">
+                    今天吃什么？
+                </h1>
+            </div>
+            <div class="comic-panel bg-sky-100 px-4 py-3 text-center font-sans text-sm font-bold md:text-right">
+                <div id="data-status">正在读取菜单...</div>
+                <div id="pool-status" class="mt-1 text-gray-600">候选池准备中</div>
+                <div class="mt-1 text-xs text-gray-500">数据来源于 25 度外卖平台，更新截至 2026-04-26。</div>
+            </div>
+        </header>
+
+        <section class="comic-panel bg-white p-4">
+            <div class="flex flex-wrap justify-center gap-2" id="scene-filters">
+                <button class="filter-tag active px-4 py-2 text-lg" data-scene="all">随便</button>
+                <button class="filter-tag px-4 py-2 text-lg" data-scene="meal">正餐</button>
+                <button class="filter-tag px-4 py-2 text-lg" data-scene="light">轻食</button>
+                <button class="filter-tag px-4 py-2 text-lg" data-scene="spicy">辣一点</button>
+                <button class="filter-tag px-4 py-2 text-lg" data-scene="sweet">甜品</button>
+                <button class="filter-tag px-4 py-2 text-lg" data-scene="night">夜宵</button>
+            </div>
+
+            <div class="mt-4 grid gap-4 font-sans md:grid-cols-[1fr_1.35fr]">
+                <label class="comic-panel block bg-yellow-100 p-3 shadow-none">
+                    <div class="mb-2 flex items-center justify-between font-bold">
+                        <span>单品预算</span>
+                        <span id="price-label">35 元内</span>
+                    </div>
+                    <input id="price-range" class="range" type="range" min="8" max="80" step="1" value="35">
+                </label>
+
+                <div class="comic-panel flex flex-wrap items-center justify-center gap-2 bg-pink-100 p-3 shadow-none">
+                    <label class="toggle">
+                        <input id="same-shop-drink" type="checkbox" checked>
+                        <span>同店配饮品</span>
+                    </label>
+                    <label class="toggle">
+                        <input id="hide-placeholders" type="checkbox" checked>
+                        <span>过滤公告</span>
+                    </label>
+                    <label class="toggle">
+                        <input id="open-only" type="checkbox" checked>
+                        <span>只看营业</span>
+                    </label>
+                    <label class="toggle">
+                        <input id="include-addon" type="checkbox">
+                        <span>抽加料</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <section class="comic-box rotate-1 bg-white p-5 md:p-7">
+            <div id="slot-grid" class="grid w-full grid-cols-1 gap-5 md:grid-cols-3">
+                <div class="flex min-w-0 flex-col items-center">
+                    <span class="-rotate-3 mb-2 rounded-full border-2 border-gray-800 bg-yellow-300 px-3 py-1 text-lg font-bold">选店铺</span>
+                    <div class="slot-window w-full" id="slot-window-shop">
+                        <div class="slot-track" id="track-shop">
+                            <div class="slot-item">
+                                <div>
+                                    <div class="slot-title">等待抽取</div>
+                                    <div class="slot-meta">先调筛选</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex min-w-0 flex-col items-center">
+                    <span class="rotate-2 mb-2 rounded-full border-2 border-gray-800 bg-blue-300 px-3 py-1 text-lg font-bold">选主食</span>
+                    <div class="slot-window w-full" id="slot-window-food">
+                        <div class="slot-track" id="track-food">
+                            <div class="slot-item">
+                                <div>
+                                    <div class="slot-title">等待抽取</div>
+                                    <div class="slot-meta">同店餐食</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="addon-column" class="hidden min-w-0 flex-col items-center">
+                    <span class="rotate-1 mb-2 rounded-full border-2 border-gray-800 bg-green-300 px-3 py-1 text-lg font-bold">加料区</span>
+                    <div class="slot-window w-full" id="slot-window-addon">
+                        <div class="slot-track" id="track-addon">
+                            <div class="slot-item">
+                                <div>
+                                    <div class="slot-title">等待抽取</div>
+                                    <div class="slot-meta">同店加料</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex min-w-0 flex-col items-center">
+                    <span class="-rotate-1 mb-2 rounded-full border-2 border-gray-800 bg-pink-300 px-3 py-1 text-lg font-bold">配饮品</span>
+                    <div class="slot-window w-full" id="slot-window-drink">
+                        <div class="slot-track" id="track-drink">
+                            <div class="slot-item">
+                                <div>
+                                    <div class="slot-title">等待抽取</div>
+                                    <div class="slot-meta">可关掉同店限制</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col items-center gap-3 md:flex-row md:justify-center">
+                <button id="spin-btn" class="comic-btn w-full px-10 py-3 text-2xl font-bold md:w-auto">
+                    听天由命
+                </button>
+                <button id="reroll-drink-btn" class="filter-tag bg-white px-4 py-2 text-lg" disabled>
+                    只换饮品
+                </button>
+                <button id="reroll-addon-btn" class="filter-tag bg-white px-4 py-2 text-lg hidden" disabled>
+                    只换加料
+                </button>
+            </div>
+        </section>
+
+        <section id="result-section" class="grid gap-4 md:grid-cols-3" aria-live="polite"></section>
+    </main>
+
+    <script>
+        const CSV_PATHS = {
+            shops: "clean_output/shops_clean.csv",
+            dishes: "clean_output/dishes_clean.csv"
+        };
+
+        const ITEM_HEIGHT_DESKTOP = 126;
+        const ITEM_HEIGHT_MOBILE = 112;
+
+        const state = {
+            shops: [],
+            dishes: [],
+            dishesByShop: new Map(),
+            scene: "all",
+            priceMax: 35,
+            sameShopDrink: true,
+            hidePlaceholders: true,
+            openOnly: true,
+            includeAddon: false,
+            result: null,
+            loading: true,
+            spinning: false
+        };
+
+        const els = {
+            dataStatus: document.getElementById("data-status"),
+            poolStatus: document.getElementById("pool-status"),
+            sceneFilters: document.getElementById("scene-filters"),
+            priceRange: document.getElementById("price-range"),
+            priceLabel: document.getElementById("price-label"),
+            sameShopDrink: document.getElementById("same-shop-drink"),
+            hidePlaceholders: document.getElementById("hide-placeholders"),
+            openOnly: document.getElementById("open-only"),
+            includeAddon: document.getElementById("include-addon"),
+            slotGrid: document.getElementById("slot-grid"),
+            addonColumn: document.getElementById("addon-column"),
+            celebrationLayer: document.getElementById("celebration-layer"),
+            spinBtn: document.getElementById("spin-btn"),
+            rerollDrinkBtn: document.getElementById("reroll-drink-btn"),
+            rerollAddonBtn: document.getElementById("reroll-addon-btn"),
+            resultSection: document.getElementById("result-section"),
+            tracks: {
+                shop: document.getElementById("track-shop"),
+                food: document.getElementById("track-food"),
+                addon: document.getElementById("track-addon"),
+                drink: document.getElementById("track-drink")
+            },
+            windows: {
+                shop: document.getElementById("slot-window-shop"),
+                food: document.getElementById("slot-window-food"),
+                addon: document.getElementById("slot-window-addon"),
+                drink: document.getElementById("slot-window-drink")
+            }
+        };
+
+        const drinkRegex = /饮品|饮料|茶饮|果茶|奶茶|咖啡|果汁|柠檬茶|柠檬水|手打柠|可乐|汽水|气泡水|矿泉水|纯净水|苏打水|白开水|酒|豆浆|乌龙|酸梅|奶昔|奶盖|拿铁|美式咖啡|雪碧|芬达|维他|茉莉|红茶|绿茶|鲜奶|牛奶|椰汁|椰水|冷泡|桶装/i;
+        const sweetRegex = /甜|蛋糕|面包|吐司|布丁|糖水|水果|果切|水果捞|酸奶|奶酪|麻糍|冰沙|冰粉|咖啡|奶茶|茶|柠檬|巧克力|芋圆|仙草/i;
+        const spicyRegex = /辣|麻辣|冒菜|火锅|螺蛳|川|湘|重庆|酸辣|香锅|小面|鸡公煲|花甲粉|土豆粉/i;
+        const lightRegex = /轻食|沙拉|健康|糙米|三明治|贝果|低卡|低脂|健身|素|水果|粥|汤饭|蒸|蔬/i;
+        const nightRegex = /烧鸟|烧烤|炸|鸡排|汉堡|串|夜宵|小吃|烤|卤味|鸭货|热狗|关东煮|麻辣烫/i;
+        const mealRegex = /饭|粉|面|粥|堡|饺|云吞|鸡|肉|鱼|菜|包|肠粉|煲|汤|沙拉|串|饼|套餐|主食|盖饭|便当|丼|炒|蒸|拌饭|馄饨|烧腊/i;
+        const standaloneMealRegex = /饭|粉|面|粥|饺|云吞|馄饨|肠粉|汉堡|三明治|手抓饼|煎饼|烤冷面|鸡公煲|冒菜|麻辣烫|沙拉|轻食盒|便当|丼|汤|煲|意面|米线|河粉|拉面|小面|公仔面|车仔面|鲜包|汤包|包子|套餐|双拼|单人份|主食|烧腊|蒸笼/i;
+        const stapleOnlyRegex = /^(白米饭|米饭|紫米饭|香米饭)$/i;
+        const sideOnlyNameRegex = /^(加.*|多加.*|.*小料.*|.*(辣椒酱|芝麻酱|酱料|酱一盒|甜辣酱|番茄酱|沙拉酱|生抽|陈醋).*|.*卤蛋.*|.*煎蛋.*|.*水煮蛋.*|.*鸡蛋$|.*青菜.*|.*娃娃菜.*|.*土豆片.*|.*粉丝$|.*方便面$|.*面饼.*|.*年糕.*|.*丸.*|.*肠.*|.*鱼蛋.*|.*鱼豆腐.*|.*蟹.*|.*午餐肉.*|.*培根$|.*芝士片.*|.*油条.*|.*腐竹.*|.*海带.*|.*豆皮.*|.*魔芋.*)$/i;
+        const sideDishRegex = /加料|配菜|小料|丸子|肉肠|香肠|热狗肠|鱼蛋|鱼丸|贡丸|牛肉丸|蟹柳|午餐肉|火腿|培根|芝士片|煎蛋|鸡蛋|太阳蛋|卤蛋|水煮蛋|青菜|生菜|白菜|娃娃菜|藕片|土豆片|冻豆腐|豆皮|腐竹|海带|魔芋|年糕|宽粉|粉丝|方便面|面饼|油条|辣条|酱料|葱花|香菜|米饭$|白米饭|餐盒|餐具/i;
+        const placeholderRegex = /公告|通知|联系|客服|须知|提示|问题|售后|营业时间|发票|必看|下单|备注|口味备注|餐盒|打包|餐具|谢谢|可备注|点我|勿拍|勿下单|加料都是|介绍|活动|会员|储值|默认|预定单/i;
+
+        function parseCSV(text) {
+            const rows = [];
+            let row = [];
+            let field = "";
+            let inQuotes = false;
+            const source = text.replace(/^\uFEFF/, "");
+
+            for (let i = 0; i < source.length; i++) {
+                const char = source[i];
+                const next = source[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && next === '"') {
+                        field += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === "," && !inQuotes) {
+                    row.push(field);
+                    field = "";
+                } else if ((char === "\n" || char === "\r") && !inQuotes) {
+                    if (char === "\r" && next === "\n") i++;
+                    row.push(field);
+                    if (row.some(value => value.length > 0)) rows.push(row);
+                    row = [];
+                    field = "";
+                } else {
+                    field += char;
+                }
+            }
+
+            row.push(field);
+            if (row.some(value => value.length > 0)) rows.push(row);
+            const headers = rows.shift() || [];
+            return rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
+        }
+
+        async function loadCSV(path) {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error(`${path} ${response.status}`);
+            return parseCSV(await response.text());
+        }
+
+        const toNumber = value => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : 0;
+        };
+
+        function normalizeShop(row) {
+            return {
+                id: String(row.merchant_id),
+                name: row.merchant_name || "未命名店铺",
+                photo: row.photo || "",
+                address: row.address || "",
+                distance: toNumber(row.distance),
+                score: toNumber(row.merchant_score),
+                sales: toNumber(row.sales),
+                totalSales: toNumber(row.total_sales),
+                goodsNum: toNumber(row.goods_num),
+                delivery: toNumber(row.takeout_delivery_price),
+                floorPrice: toNumber(row.takeout_floor_price),
+                businessStatus: String(row.business_status),
+                isBusiness: String(row.is_business)
+            };
+        }
+
+        function normalizeDish(row) {
+            const category = row.classify_name || "";
+            const name = row.goods_name || "未命名餐品";
+            const text = `${category} ${name}`;
+            const price = toNumber(row.price_min);
+            const mealCategory = /套餐|主食|正餐|快餐|现炒|盖饭|便当|蒸饭|煲仔饭|石板饭|碟头饭|双拼饭|饭类|粉面|面类|肠粉|汤饭|沙县小吃|早餐预定/i.test(category);
+            const isMealCombo = mealCategory && mealRegex.test(name);
+            const isDrink = drinkRegex.test(text) && !isMealCombo;
+            const hasMealName = standaloneMealRegex.test(name) || (mealCategory && standaloneMealRegex.test(text));
+            const isForcedSide = stapleOnlyRegex.test(name) || (sideOnlyNameRegex.test(name) && !hasMealName);
+            const isStandaloneMeal = hasMealName && !isForcedSide;
+            const isSideDish = (sideDishRegex.test(text) || isForcedSide) && !isStandaloneMeal;
+            return {
+                id: String(row.goods_id),
+                shopId: String(row.merchant_id),
+                shopName: row.merchant_name || "",
+                category,
+                name,
+                image: row.image || "",
+                price,
+                priceMax: toNumber(row.price_max),
+                monthSales: toNumber(row.month_sales),
+                totalSales: toNumber(row.total_sales),
+                stockStatus: String(row.stock_status),
+                manySpec: String(row.many_spec),
+                isDrink,
+                isSideDish,
+                isFood: !isDrink && !isSideDish && mealRegex.test(text),
+                isSweet: sweetRegex.test(text),
+                isSpicy: spicyRegex.test(text),
+                isLight: lightRegex.test(text),
+                isNight: nightRegex.test(text),
+                isPlaceholder: placeholderRegex.test(text) || price >= 200 || text.trim().length <= 1
+            };
+        }
+
+        function buildIndexes() {
+            state.dishesByShop = new Map();
+            for (const dish of state.dishes) {
+                if (!state.dishesByShop.has(dish.shopId)) state.dishesByShop.set(dish.shopId, []);
+                state.dishesByShop.get(dish.shopId).push(dish);
+            }
+        }
+
+        function dishMatchesScene(dish, role) {
+            if (role === "drink") return dish.isDrink;
+            if (role === "addon") return dish.isSideDish && !dish.isDrink;
+            if (state.scene === "sweet") return dish.isSweet && !dish.isDrink && !dish.isSideDish;
+            if (state.scene === "spicy") return dish.isSpicy && !dish.isDrink && !dish.isSideDish;
+            if (state.scene === "light") return dish.isLight && !dish.isDrink && !dish.isSideDish;
+            if (state.scene === "night") return dish.isNight && !dish.isDrink && !dish.isSideDish;
+            if (state.scene === "meal") return dish.isFood;
+            return dish.isFood;
+        }
+
+        function candidateDishesForShop(shop, role = "food") {
+            const dishes = state.dishesByShop.get(shop.id) || [];
+            return dishes.filter(dish => {
+                if (state.hidePlaceholders && dish.isPlaceholder) return false;
+                if (dish.price <= 0 || dish.price > state.priceMax) return false;
+                if (String(dish.stockStatus) === "1") return false;
+                return dishMatchesScene(dish, role);
+            });
+        }
+
+        function getCandidatePool() {
+            const shops = state.shops.filter(shop => {
+                if (state.openOnly && shop.businessStatus !== "1") return false;
+                const foods = candidateDishesForShop(shop, "food");
+                if (!foods.length) return false;
+                if (state.sameShopDrink && !candidateDishesForShop(shop, "drink").length) return false;
+                return true;
+            });
+            const foodCount = shops.reduce((sum, shop) => sum + candidateDishesForShop(shop, "food").length, 0);
+            const drinkCount = state.sameShopDrink
+                ? shops.reduce((sum, shop) => sum + candidateDishesForShop(shop, "drink").length, 0)
+                : state.dishes.filter(dish => {
+                    if (state.hidePlaceholders && dish.isPlaceholder) return false;
+                    return dish.isDrink && dish.price > 0 && dish.price <= state.priceMax;
+                }).length;
+            const addonCount = state.includeAddon
+                ? shops.reduce((sum, shop) => sum + candidateDishesForShop(shop, "addon").length, 0)
+                : 0;
+            return { shops, foodCount, drinkCount, addonCount };
+        }
+
+        function randomItem(items) {
+            return items[Math.floor(Math.random() * items.length)];
+        }
+
+        function weightedShop(shops) {
+            const weights = shops.map(shop => Math.max(1, Math.log10(shop.totalSales + 10) * Math.max(1, shop.score || 1)));
+            const total = weights.reduce((sum, weight) => sum + weight, 0);
+            let cursor = Math.random() * total;
+            for (let i = 0; i < shops.length; i++) {
+                cursor -= weights[i];
+                if (cursor <= 0) return shops[i];
+            }
+            return shops[shops.length - 1];
+        }
+
+        function pickCombo() {
+            const { shops } = getCandidatePool();
+            if (!shops.length) return null;
+            const shop = weightedShop(shops);
+            const foods = candidateDishesForShop(shop, "food");
+            const food = randomItem(foods);
+            const drinks = state.sameShopDrink
+                ? candidateDishesForShop(shop, "drink")
+                : state.dishes.filter(dish => {
+                    if (state.hidePlaceholders && dish.isPlaceholder) return false;
+                    return dish.isDrink && dish.price > 0 && dish.price <= state.priceMax;
+                });
+            const drink = drinks.length ? randomItem(drinks) : null;
+            const addons = state.includeAddon ? candidateDishesForShop(shop, "addon") : [];
+            const addon = addons.length ? randomItem(addons) : null;
+            return { shop, food, addon, drink };
+        }
+
+        function updatePoolStatus() {
+            if (state.loading) return;
+            const pool = getCandidatePool();
+            const addonText = state.includeAddon ? ` / ${pool.addonCount} 个加料` : "";
+            els.poolStatus.textContent = `候选 ${pool.shops.length} 家店 / ${pool.foodCount} 个餐食 / ${pool.drinkCount} 个饮品${addonText}`;
+            els.spinBtn.disabled = pool.shops.length === 0 || state.spinning;
+        }
+
+        function currentItemHeight() {
+            return window.matchMedia("(max-width: 720px)").matches ? ITEM_HEIGHT_MOBILE : ITEM_HEIGHT_DESKTOP;
+        }
+
+        function slotHTML(title, meta = "") {
+            return `
+                <div>
+                    <div class="slot-title">${escapeHTML(title)}</div>
+                    <div class="slot-meta">${escapeHTML(meta)}</div>
+                </div>
+            `;
+        }
+
+        function buildTrack(track, items, target, formatter) {
+            track.innerHTML = "";
+            track.style.transition = "none";
+            track.style.transform = "translateY(0)";
+
+            const spinCount = 28;
+            for (let i = 0; i < spinCount; i++) {
+                const div = document.createElement("div");
+                div.className = "slot-item";
+                div.innerHTML = formatter(randomItem(items));
+                track.appendChild(div);
+            }
+
+            const finalDiv = document.createElement("div");
+            finalDiv.className = "slot-item text-red-600";
+            finalDiv.innerHTML = formatter(target);
+            track.appendChild(finalDiv);
+            return spinCount;
+        }
+
+        function spinTrack(track, targetIndex, duration, windowEl) {
+            track.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.85, 0.25, 1)`;
+            track.style.transform = `translateY(${-targetIndex * currentItemHeight()}px)`;
+            setTimeout(() => windowEl.classList.add("win-anim"), duration);
+        }
+
+        function renderResult(combo) {
+            if (!combo) {
+                els.resultSection.innerHTML = `
+                    <div class="comic-panel col-span-full bg-white p-5 text-center text-xl">
+                        这组筛选太严格了
+                    </div>
+                `;
+                return;
+            }
+            const cards = [
+                {
+                    label: "店铺",
+                    title: combo.shop.name,
+                    img: combo.shop.photo,
+                    stats: [`${combo.shop.score || "-"} 分`, `月售 ${combo.shop.sales}`, `起送 ￥${combo.shop.floorPrice.toFixed(0)}`]
+                },
+                {
+                    label: "餐食",
+                    title: combo.food.name,
+                    img: combo.food.image,
+                    stats: [`￥${combo.food.price.toFixed(2)}`, combo.food.category, `月售 ${combo.food.monthSales}`]
+                }
+            ];
+            if (state.includeAddon) {
+                cards.push({
+                    label: "加料",
+                    title: combo.addon ? combo.addon.name : "这家不加料",
+                    img: combo.addon ? combo.addon.image : "",
+                    stats: combo.addon ? [`￥${combo.addon.price.toFixed(2)}`, combo.addon.category, `月售 ${combo.addon.monthSales}`] : ["同店暂无可抽加料"]
+                });
+            }
+            cards.push({
+                    label: "饮品",
+                    title: combo.drink ? combo.drink.name : "这家先不配饮品",
+                    img: combo.drink ? combo.drink.image : "",
+                    stats: combo.drink ? drinkStats(combo) : ["可以只换饮品", "或关掉同店限制"]
+            });
+            const total = comboTotal(combo);
+            els.resultSection.innerHTML = `
+                <article class="total-card p-4 md:col-span-full">
+                    <div class="flex flex-col gap-2 text-center md:flex-row md:items-center md:justify-between md:text-left">
+                        <div>
+                            <div class="text-sm font-bold text-gray-600">预估总金额</div>
+                            <div class="text-4xl font-bold text-red-500" style="text-shadow: 1.5px 1.5px 0 var(--ink);">￥${total.toFixed(2)}</div>
+                        </div>
+                        <div class="flex flex-wrap justify-center gap-2 md:justify-end">
+                            ${totalBreakdown(combo).map(item => `<span class="stat-pill">${escapeHTML(item)}</span>`).join("")}
+                        </div>
+                    </div>
+                </article>
+            ` + cards.map(card => `
+                <article class="result-card p-3">
+                    <div class="flex min-w-0 gap-3">
+                        ${card.img ? `<img src="${escapeHTML(card.img)}" alt="">` : `<div class="grid h-[74px] w-[74px] place-items-center rounded-xl border-[3px] border-gray-800 bg-white text-3xl">?</div>`}
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-1 inline-block rounded-full border-2 border-gray-800 bg-yellow-200 px-2 py-0.5 text-sm font-bold">${escapeHTML(card.label)}</div>
+                            <h2 class="line-clamp-2 text-xl leading-tight">${escapeHTML(card.title)}</h2>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        ${card.stats.map(stat => `<span class="stat-pill">${escapeHTML(stat)}</span>`).join("")}
+                    </div>
+                </article>
+            `).join("");
+        }
+
+        function comboTotal(combo) {
+            return [
+                combo.food,
+                state.includeAddon ? combo.addon : null,
+                combo.drink
+            ].reduce((sum, item) => sum + (item ? item.price : 0), 0);
+        }
+
+        function totalBreakdown(combo) {
+            const parts = [`餐食 ￥${combo.food.price.toFixed(2)}`];
+            if (state.includeAddon) {
+                parts.push(combo.addon ? `加料 ￥${combo.addon.price.toFixed(2)}` : "加料 ￥0.00");
+            }
+            parts.push(combo.drink ? `饮品 ￥${combo.drink.price.toFixed(2)}` : "饮品 ￥0.00");
+            return parts;
+        }
+
+        function escapeHTML(value) {
+            return String(value ?? "").replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+            }[char]));
+        }
+
+        function spin(combo) {
+            if (!combo || state.spinning) return;
+            state.spinning = true;
+            els.spinBtn.disabled = true;
+            els.spinBtn.textContent = "疯狂洗牌中";
+            Object.values(els.windows).forEach(windowEl => windowEl.classList.remove("win-anim"));
+
+            const pool = getCandidatePool();
+            const shopIndex = buildTrack(
+                els.tracks.shop,
+                pool.shops,
+                combo.shop,
+                shop => slotHTML(shop.name, `${shop.score || "-"} 分 · 月售 ${shop.sales}`)
+            );
+            const foodIndex = buildTrack(
+                els.tracks.food,
+                candidateDishesForShop(combo.shop, "food"),
+                combo.food,
+                dish => slotHTML(dish.name, `￥${dish.price.toFixed(2)} · ${dish.category}`)
+            );
+            const addonItems = state.includeAddon ? candidateDishesForShop(combo.shop, "addon") : [];
+            const addonTarget = combo.addon || { name: "这家不加料", price: 0, category: "同店暂无可抽加料" };
+            let addonIndex = 0;
+            if (state.includeAddon) {
+                addonIndex = buildTrack(
+                    els.tracks.addon,
+                    addonItems.length ? addonItems : [addonTarget],
+                    addonTarget,
+                    dish => slotHTML(dish.name, dish.price ? `￥${dish.price.toFixed(2)} · ${dish.category}` : dish.category)
+                );
+            }
+            const drinkItems = state.sameShopDrink
+                ? candidateDishesForShop(combo.shop, "drink")
+                : state.dishes.filter(dish => {
+                    if (state.hidePlaceholders && dish.isPlaceholder) return false;
+                    return dish.isDrink && dish.price > 0 && dish.price <= state.priceMax;
+                });
+            const drinkTarget = combo.drink || { name: "不配饮品", price: 0, category: "跳过" };
+            const drinkIndex = buildTrack(
+                els.tracks.drink,
+                drinkItems.length ? drinkItems : [drinkTarget],
+                drinkTarget,
+                dish => slotHTML(dish.name, drinkSlotMeta(dish, combo.shop))
+            );
+
+            speedUp3D();
+            void els.tracks.shop.offsetWidth;
+            spinTrack(els.tracks.shop, shopIndex, 2200, els.windows.shop);
+            spinTrack(els.tracks.food, foodIndex, 3100, els.windows.food);
+            if (state.includeAddon) {
+                spinTrack(els.tracks.addon, addonIndex, 3600, els.windows.addon);
+            }
+            spinTrack(els.tracks.drink, drinkIndex, state.includeAddon ? 4500 : 4000, els.windows.drink);
+
+            setTimeout(() => {
+                state.result = combo;
+                state.spinning = false;
+                els.spinBtn.textContent = "再次抽选";
+                els.rerollDrinkBtn.disabled = false;
+                els.rerollAddonBtn.disabled = !state.includeAddon;
+                updatePoolStatus();
+                renderResult(combo);
+                celebrateResult();
+                slowDown3D();
+            }, state.includeAddon ? 4550 : 4050);
+        }
+
+        function rerollDrink() {
+            if (!state.result || state.spinning) return;
+            const drinkItems = state.sameShopDrink
+                ? candidateDishesForShop(state.result.shop, "drink")
+                : state.dishes.filter(dish => {
+                    if (state.hidePlaceholders && dish.isPlaceholder) return false;
+                    return dish.isDrink && dish.price > 0 && dish.price <= state.priceMax;
+                });
+            if (!drinkItems.length) return;
+            const combo = { ...state.result, drink: randomItem(drinkItems) };
+            state.result = combo;
+            els.windows.drink.classList.remove("win-anim");
+            const index = buildTrack(
+                els.tracks.drink,
+                drinkItems,
+                combo.drink,
+                dish => slotHTML(dish.name, drinkSlotMeta(dish, combo.shop))
+            );
+            spinTrack(els.tracks.drink, index, 1500, els.windows.drink);
+            setTimeout(() => renderResult(combo), 1550);
+        }
+
+        function rerollAddon() {
+            if (!state.result || state.spinning || !state.includeAddon) return;
+            const addonItems = candidateDishesForShop(state.result.shop, "addon");
+            if (!addonItems.length) return;
+            const combo = { ...state.result, addon: randomItem(addonItems) };
+            state.result = combo;
+            els.windows.addon.classList.remove("win-anim");
+            const index = buildTrack(
+                els.tracks.addon,
+                addonItems,
+                combo.addon,
+                dish => slotHTML(dish.name, `￥${dish.price.toFixed(2)} · ${dish.category}`)
+            );
+            spinTrack(els.tracks.addon, index, 1500, els.windows.addon);
+            setTimeout(() => renderResult(combo), 1550);
+        }
+
+        function bindControls() {
+            els.sceneFilters.addEventListener("click", event => {
+                const button = event.target.closest("[data-scene]");
+                if (!button) return;
+                state.scene = button.dataset.scene;
+                els.sceneFilters.querySelectorAll(".filter-tag").forEach(tag => tag.classList.remove("active"));
+                button.classList.add("active");
+                updatePoolStatus();
+            });
+
+            els.priceRange.addEventListener("input", () => {
+                state.priceMax = Number(els.priceRange.value);
+                els.priceLabel.textContent = `${state.priceMax} 元内`;
+                updatePoolStatus();
+            });
+
+            els.sameShopDrink.addEventListener("change", () => {
+                state.sameShopDrink = els.sameShopDrink.checked;
+                updatePoolStatus();
+            });
+
+            els.hidePlaceholders.addEventListener("change", () => {
+                state.hidePlaceholders = els.hidePlaceholders.checked;
+                updatePoolStatus();
+            });
+
+            els.openOnly.addEventListener("change", () => {
+                state.openOnly = els.openOnly.checked;
+                updatePoolStatus();
+            });
+
+            els.includeAddon.addEventListener("change", () => {
+                state.includeAddon = els.includeAddon.checked;
+                updateAddonUI();
+                updatePoolStatus();
+                if (state.result) renderResult(state.result);
+            });
+
+            els.spinBtn.addEventListener("click", () => spin(pickCombo()));
+            els.rerollDrinkBtn.addEventListener("click", rerollDrink);
+            els.rerollAddonBtn.addEventListener("click", rerollAddon);
+        }
+
+        function updateAddonUI() {
+            els.addonColumn.classList.toggle("hidden", !state.includeAddon);
+            els.addonColumn.classList.toggle("flex", state.includeAddon);
+            els.rerollAddonBtn.classList.toggle("hidden", !state.includeAddon);
+            els.rerollAddonBtn.disabled = !state.includeAddon || !state.result || state.spinning;
+            els.slotGrid.classList.toggle("md:grid-cols-3", !state.includeAddon);
+            els.slotGrid.classList.toggle("md:grid-cols-4", state.includeAddon);
+            els.resultSection.classList.toggle("md:grid-cols-3", !state.includeAddon);
+            els.resultSection.classList.toggle("md:grid-cols-4", state.includeAddon);
+        }
+
+        function celebrateResult() {
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+            els.celebrationLayer.innerHTML = "";
+
+            const flash = document.createElement("div");
+            flash.className = "screen-flash";
+            els.celebrationLayer.appendChild(flash);
+
+            const colors = ["#ef4444", "#fbbf24", "#22c55e", "#38bdf8", "#f472b6", "#a78bfa", "#fb923c"];
+            const total = window.innerWidth < 720 ? 62 : 96;
+
+            for (let i = 0; i < total; i++) {
+                const piece = document.createElement("i");
+                const isBurst = i < Math.floor(total * 0.42);
+                piece.className = `confetti-piece${isBurst ? " burst" : ""}`;
+                piece.style.setProperty("--c", colors[Math.floor(Math.random() * colors.length)]);
+                piece.style.setProperty("--w", `${6 + Math.random() * 9}px`);
+                piece.style.setProperty("--h", `${10 + Math.random() * 16}px`);
+                piece.style.setProperty("--r", `${Math.random() * 360}deg`);
+                piece.style.setProperty("--end-r", `${360 + Math.random() * 720}deg`);
+                piece.style.setProperty("--d", `${900 + Math.random() * 950}ms`);
+
+                if (isBurst) {
+                    piece.style.setProperty("--x", "50%");
+                    piece.style.setProperty("--y", `${32 + Math.random() * 20}%`);
+                    piece.style.setProperty("--dx", `${(Math.random() - 0.5) * 92}vw`);
+                    piece.style.setProperty("--dy", `${28 + Math.random() * 46}vh`);
+                } else {
+                    piece.style.setProperty("--x", `${Math.random() * 100}%`);
+                    piece.style.setProperty("--dx", `${(Math.random() - 0.5) * 34}vw`);
+                }
+
+                els.celebrationLayer.appendChild(piece);
+            }
+
+            els.resultSection.classList.remove("celebrate-pop");
+            void els.resultSection.offsetWidth;
+            els.resultSection.classList.add("celebrate-pop");
+
+            window.setTimeout(() => {
+                els.celebrationLayer.innerHTML = "";
+                els.resultSection.classList.remove("celebrate-pop");
+            }, 2100);
+        }
+
+        function drinkStats(combo) {
+            const stats = [`￥${combo.drink.price.toFixed(2)}`, combo.drink.category, `月售 ${combo.drink.monthSales}`];
+            if (!state.sameShopDrink && combo.drink.shopId !== combo.shop.id) {
+                stats.push(combo.drink.shopName);
+            }
+            return stats;
+        }
+
+        function drinkSlotMeta(dish, currentShop) {
+            if (!dish.price) return dish.category;
+            const parts = [`￥${dish.price.toFixed(2)}`, dish.category];
+            if (!state.sameShopDrink && currentShop && dish.shopId !== currentShop.id) {
+                parts.push(dish.shopName);
+            }
+            return parts.join(" · ");
+        }
+
+        async function initData() {
+            try {
+                const [shopRows, dishRows] = await Promise.all([loadCSV(CSV_PATHS.shops), loadCSV(CSV_PATHS.dishes)]);
+                state.shops = shopRows.map(normalizeShop).filter(shop => shop.goodsNum > 0);
+                state.dishes = dishRows.map(normalizeDish);
+                buildIndexes();
+                state.loading = false;
+                els.dataStatus.textContent = `已读取 ${state.shops.length} 家店、${state.dishes.length} 个菜品`;
+                updatePoolStatus();
+            } catch (error) {
+                state.loading = false;
+                els.dataStatus.textContent = "菜单读取失败";
+                els.poolStatus.textContent = "请通过本地服务器打开 eatwhat/index.html";
+                els.spinBtn.disabled = true;
+                console.error(error);
+            }
+        }
+
+        bindControls();
+        updateAddonUI();
+        initData();
+
+        const canvas = document.getElementById("threejs-canvas");
+        let renderer;
+        let scene;
+        let camera;
+        let clock;
+        let isSpeedingUp = false;
+        let globalRotationSpeed = 0.001;
+        const objects = [];
+
+        function checkWebGLSupport() {
+            try {
+                const testCanvas = document.createElement("canvas");
+                return !!(window.WebGLRenderingContext && (testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl")));
+            } catch {
+                return false;
+            }
+        }
+
+        let isWebGLSupported = checkWebGLSupport();
+
+        function init3D() {
+            if (!isWebGLSupported || typeof THREE === "undefined") {
+                canvas.style.display = "none";
+                return;
+            }
+            try {
+                renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                scene = new THREE.Scene();
+                scene.fog = new THREE.FogExp2(0xfef08a, 0.02);
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+                camera.position.z = 15;
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(10, 20, 10);
+                scene.add(dirLight);
+
+                const geometries = [
+                    new THREE.TorusGeometry(1, 0.4, 8, 20),
+                    new THREE.CylinderGeometry(0.8, 1, 1.5, 12),
+                    new THREE.SphereGeometry(1.15, 16, 16),
+                    new THREE.BoxGeometry(1.45, 1.45, 1.45)
+                ];
+                const colors = [0xff595e, 0xffca3a, 0x8ac926, 0x1982c4, 0xf472b6];
+
+                for (let i = 0; i < 26; i++) {
+                    const mesh = new THREE.Mesh(
+                        randomItem(geometries),
+                        new THREE.MeshToonMaterial({ color: randomItem(colors) })
+                    );
+                    mesh.position.x = (Math.random() - 0.5) * 40;
+                    mesh.position.y = (Math.random() - 0.5) * 30;
+                    mesh.position.z = (Math.random() - 0.5) * 20 - 5;
+                    mesh.rotation.x = Math.random() * Math.PI;
+                    mesh.rotation.y = Math.random() * Math.PI;
+                    mesh.userData = {
+                        rotSpeedX: (Math.random() - 0.5) * 0.02,
+                        rotSpeedY: (Math.random() - 0.5) * 0.02,
+                        baseY: mesh.position.y,
+                        timeOffset: Math.random() * 100
+                    };
+                    scene.add(mesh);
+                    objects.push(mesh);
+                }
+
+                clock = new THREE.Clock();
+                animate();
+            } catch (error) {
+                console.warn("WebGL 初始化失败，已降级为纯色背景。", error);
+                isWebGLSupported = false;
+                canvas.style.display = "none";
+            }
+        }
+
+        function speedUp3D() {
+            isSpeedingUp = true;
+        }
+
+        function slowDown3D() {
+            isSpeedingUp = false;
+        }
+
+        function animate() {
+            if (!isWebGLSupported) return;
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+            globalRotationSpeed = THREE.MathUtils.lerp(globalRotationSpeed, isSpeedingUp ? 0.045 : 0.001, isSpeedingUp ? 0.05 : 0.02);
+            scene.rotation.y += globalRotationSpeed;
+            objects.forEach(obj => {
+                obj.rotation.x += obj.userData.rotSpeedX + (isSpeedingUp ? 0.045 : 0);
+                obj.rotation.y += obj.userData.rotSpeedY + (isSpeedingUp ? 0.045 : 0);
+                obj.position.y = obj.userData.baseY + Math.sin(time * 2 + obj.userData.timeOffset) * 0.5;
+            });
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener("resize", () => {
+            if (!isWebGLSupported) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init3D();
+    </script>
+</body>
+
+</html>
