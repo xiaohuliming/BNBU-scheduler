@@ -150,6 +150,8 @@
         const UserCheck = (p) => <Icon name="UserCheck" {...p} />;
         const House = (p) => <Icon name="House" {...p} />;
         const Building2 = (p) => <Icon name="Building2" {...p} />;
+        const Wrench = (p) => <Icon name="Wrench" {...p} />;
+        const Utensils = (p) => <Icon name="Utensils" {...p} />;
 
         const Settings = (p) => <Icon name="Settings" {...p} />;
 
@@ -1748,10 +1750,92 @@
                                 >
                                     同步 iSpace DDL
                                 </button>
+                                <button
+                                    onClick={() => onNavigate('toolbox')}
+                                    className="bg-[#d6ff62] text-[#101820] px-7 py-4 rounded-full font-bold border border-[#101820]/20 hover:bg-white transition-colors"
+                                >
+                                    打开工具箱
+                                </button>
                             </div>
                         </div>
                     </section>
                 </div>
+            );
+        };
+
+        const TOOLBOX_ITEMS = [
+            {
+                key: 'eatwhat',
+                title: '今天吃什么',
+                subtitle: '随机抽取店铺、餐食、加料和饮品',
+                description: '基于 25 度外卖菜单快照，适合选择困难时快速生成一餐搭配。',
+                href: '/eatwhat/index.html',
+                badge: 'Food Picker',
+                Icon: Utensils,
+                accent: 'bg-[#ff7a1f]'
+            }
+        ];
+
+        const ToolboxView = () => {
+            return (
+                <main className="max-w-6xl mx-auto px-4 md:px-8 xl:px-12 py-10">
+                    <section className="mb-8">
+                        <div className="section-kicker">Toolbox</div>
+                        <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <h1 className="text-4xl md:text-6xl font-black tracking-[-0.08em] text-[#101820]">
+                                    工具箱
+                                </h1>
+                            </div>
+                            <div className="rounded-3xl border border-black/10 bg-white/70 px-4 py-3 mono-ui text-xs uppercase tracking-[0.16em] text-black/45">
+                                {TOOLBOX_ITEMS.length} tool ready
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                        {TOOLBOX_ITEMS.map((tool) => {
+                            const ToolIcon = tool.Icon;
+                            return (
+                                <a
+                                    key={tool.key}
+                                    href={tool.href}
+                                    className="group block rounded-[2rem] border border-black/10 bg-white/78 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className={`grid h-14 w-14 place-items-center rounded-2xl border border-black/10 ${tool.accent} text-white shadow-[4px_4px_0px_rgba(16,24,32,1)]`}>
+                                            <ToolIcon className="w-7 h-7" />
+                                        </div>
+                                        <span className="mono-ui rounded-full border border-black/10 bg-[#f4efe6] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-black/55">
+                                            {tool.badge}
+                                        </span>
+                                    </div>
+                                    <h2 className="mt-6 text-2xl font-black tracking-[-0.04em] text-[#101820]">
+                                        {tool.title}
+                                    </h2>
+                                    <p className="mt-1 text-sm font-bold text-[#ff7a1f]">
+                                        {tool.subtitle}
+                                    </p>
+                                    <p className="mt-4 min-h-[3.5rem] text-sm leading-6 text-black/58">
+                                        {tool.description}
+                                    </p>
+                                    <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820]">
+                                        打开工具 <ExternalLink className="w-4 h-4" />
+                                    </div>
+                                </a>
+                            );
+                        })}
+
+                        <div className="rounded-[2rem] border border-dashed border-black/20 bg-white/35 p-5">
+                            <div className="grid h-14 w-14 place-items-center rounded-2xl border border-black/10 bg-white text-black/45">
+                                <Plus className="w-7 h-7" />
+                            </div>
+                            <h2 className="mt-6 text-2xl font-black tracking-[-0.04em] text-black/55">
+                                下一个工具
+                            </h2>
+                        </div>
+                    </section>
+                </main>
             );
         };
 
@@ -1955,6 +2039,7 @@
                 { key: 'classrooms', label: '空教室', Icon: Building2 },
                 { key: 'ddl', label: 'DDL', Icon: CheckSquare },
                 { key: 'teachers', label: '老师', Icon: UserCheck },
+                { key: 'toolbox', label: '工具箱', Icon: Wrench },
                 { key: 'settings', label: '设置', Icon: Settings }
             ];
 
@@ -2145,6 +2230,8 @@
                         <FreeClassroomView />
                     ) : currentView === 'ddl' ? (
                         <DDLView user={user} onLoginRequest={() => setShowAuthModal(true)} />
+                    ) : currentView === 'toolbox' ? (
+                        <ToolboxView />
                     ) : currentView === 'settings' ? (
                         <SettingsView user={user} onLogout={() => { setUser(null); goToView('home'); }} />
                     ) : (

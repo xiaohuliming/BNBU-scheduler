@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么？ - 卡通老虎机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 引入卡通风格中文字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'ZCOOL KuaiLe', cursive, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            /* 防止ThreeJS画布出现滚动条 */
+            background-color: #fef08a;
+            /* 温暖的手绘底色 */
+            user-select: none;
+        }
+
+        /* 核心手绘漫画风格盒子 */
+        .comic-box {
+            background-color: #ffffff;
+            border: 4px solid #1f2937;
+            /* 利用不规则的圆角模拟手绘的随性边缘 */
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 8px 8px 0px #1f2937;
+        }
+
+        /* 手绘风格按钮 */
+        .comic-btn {
+            background-color: #fbbf24;
+            color: #1f2937;
+            border: 4px solid #1f2937;
+            border-radius: 10px 14px 8px 12px/14px 10px 12px 8px;
+            box-shadow: 6px 6px 0px #1f2937;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .comic-btn:hover {
+            background-color: #f59e0b;
+        }
+
+        .comic-btn:active {
+            transform: translate(6px, 6px);
+            box-shadow: 0px 0px 0px #1f2937;
+        }
+
+        /* 筛选标签的手绘风格 */
+        .filter-tag {
+            background-color: #e5e7eb;
+            border: 3px solid #1f2937;
+            border-radius: 20px 8px 18px 10px/10px 18px 8px 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .filter-tag.active {
+            background-color: #ef4444;
+            color: white;
+            box-shadow: 3px 3px 0px #1f2937;
+            transform: translateY(-2px);
+        }
+
+        /* 老虎机轨道遮罩 */
+        .slot-window {
+            height: 120px;
+            overflow: hidden;
+            position: relative;
+            background: #f3f4f6;
+            border: 3px solid #1f2937;
+            border-radius: 10px;
+            /* 内部阴影制造深度 */
+            box-shadow: inset 0px 6px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 顶部和底部的渐变遮罩，让滚动显得更立体 */
+        .slot-window::before,
+        .slot-window::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 20px;
+            z-index: 10;
+        }
+
+        .slot-window::before {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(243, 244, 246, 1), rgba(243, 244, 246, 0));
+        }
+
+        .slot-window::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(243, 244, 246, 1), rgba(243, 244, 246, 0));
+        }
+
+        /* 轨道动画设置 */
+        .slot-track {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            /* 动画将通过JS动态改变transform来控制 */
+            will-change: transform;
+        }
+
+        .slot-item {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            flex-shrink: 0;
+        }
+
+        #threejs-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            /* 置于底层 */
+        }
+
+        /* 中奖高亮动画 */
+        @keyframes pulse-win {
+            0% {
+                transform: scale(1);
+                background-color: #f3f4f6;
+            }
+
+            50% {
+                transform: scale(1.05);
+                background-color: #bbf7d0;
+            }
+
+            100% {
+                transform: scale(1);
+                background-color: #f3f4f6;
+            }
+        }
+
+        .win-anim {
+            animation: pulse-win 0.5s ease-in-out 3;
+        }
+    </style>
+</head>
+
+<body class="relative min-h-screen flex items-center justify-center">
+
+    <!-- Three.js 背景画布 -->
+    <canvas id="threejs-canvas"></canvas>
+
+    <!-- UI 主容器 -->
+    <div class="relative z-10 w-full max-w-4xl px-4 flex flex-col items-center">
+
+        <!-- 标题区域 -->
+        <div class="comic-box px-8 py-4 mb-6 transform -rotate-2">
+            <h1 class="text-4xl md:text-5xl font-bold text-red-500 tracking-wider"
+                style="text-shadow: 2px 2px 0px #1f2937;">
+                🍔 今天吃什么？🥤
+            </h1>
+        </div>
+
+        <!-- 筛选区域 (Sirus: 在这里对接你的分类接口) -->
+        <div class="flex flex-wrap justify-center gap-3 mb-8 w-full max-w-2xl">
+            <button class="filter-tag active px-4 py-2 text-lg" data-filter="all">全部</button>
+            <button class="filter-tag px-4 py-2 text-lg" data-filter="chinese">🍱 中餐</button>
+            <button class="filter-tag px-4 py-2 text-lg" data-filter="western">🍕 西餐快餐</button>
+            <button class="filter-tag px-4 py-2 text-lg" data-filter="dessert">🍰 下午茶</button>
+            <button class="filter-tag px-4 py-2 text-lg" data-filter="spicy">🌶️ 无辣不欢</button>
+        </div>
+
+        <!-- 老虎机主体区域 -->
+        <div class="comic-box p-6 md:p-8 w-full flex flex-col items-center bg-white transform rotate-1">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
+                <!-- 店铺列 -->
+                <div class="flex flex-col items-center">
+                    <span
+                        class="bg-yellow-300 px-3 py-1 border-2 border-gray-800 rounded-full font-bold mb-2 transform -rotate-3">📍
+                        选店铺</span>
+                    <div class="slot-window w-full" id="slot-window-0">
+                        <div class="slot-track" id="track-shop">
+                            <div class="slot-item">等待抽取...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 餐食列 -->
+                <div class="flex flex-col items-center">
+                    <span
+                        class="bg-blue-300 px-3 py-1 border-2 border-gray-800 rounded-full font-bold mb-2 transform rotate-2">🍛
+                        选主食</span>
+                    <div class="slot-window w-full" id="slot-window-1">
+                        <div class="slot-track" id="track-food">
+                            <div class="slot-item">等待抽取...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 饮料列 -->
+                <div class="flex flex-col items-center">
+                    <span
+                        class="bg-pink-300 px-3 py-1 border-2 border-gray-800 rounded-full font-bold mb-2 transform -rotate-1">🍹
+                        选饮品</span>
+                    <div class="slot-window w-full" id="slot-window-2">
+                        <div class="slot-track" id="track-drink">
+                            <div class="slot-item">等待抽取...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 抽奖按钮 -->
+            <button id="spin-btn"
+                class="comic-btn text-3xl font-bold px-12 py-4 flex items-center justify-center gap-2 w-full md:w-auto">
+                <span>🎰 听天由命 (开始抽选) 🎰</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        // ==========================================
+        // 1. 模拟数据中心 (Sirus：后期替换为你的数据接口)
+        // ==========================================
+        const mockData = {
+            shops: ["沙县大酒店", "麦当劳", "肯德基", "老乡鸡", "海底捞", "兰州拉面", "外婆家", "萨莉亚"],
+            foods: ["鸭腿饭", "巨无霸", "原味鸡", "老母鸡汤", "虾滑", "牛肉拉面", "麻婆豆腐", "意大利面"],
+            drinks: ["冰可乐", "珍珠奶茶", "酸梅汤", "拿铁咖啡", "柠檬水", "无糖乌龙茶", "鲜榨橙汁", "白开水"]
+        };
+
+        // 当前激活的过滤器 (仅作 UI 演示，实际中需根据 filter 过滤数据)
+        let currentFilter = 'all';
+
+        // ==========================================
+        // 2. 筛选器交互逻辑
+        // ==========================================
+        const filterTags = document.querySelectorAll('.filter-tag');
+        filterTags.forEach(tag => {
+            tag.addEventListener('click', (e) => {
+                // 移除所有 active
+                filterTags.forEach(t => t.classList.remove('active'));
+                // 添加当前 active
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.filter;
+                console.log("当前筛选:", currentFilter);
+                // Sirus: 这里可以触发重新获取数据列表的逻辑
+            });
+        });
+
+        // ==========================================
+        // 3. 老虎机滚动逻辑
+        // ==========================================
+        let isSpinning = false;
+        const ITEM_HEIGHT = 120; // 必须和 CSS 中 .slot-item 的 height 保持一致
+
+        // 获取 DOM 元素
+        const tracks = {
+            shop: document.getElementById('track-shop'),
+            food: document.getElementById('track-food'),
+            drink: document.getElementById('track-drink')
+        };
+        const btn = document.getElementById('spin-btn');
+        const slotWindows = [
+            document.getElementById('slot-window-0'),
+            document.getElementById('slot-window-1'),
+            document.getElementById('slot-window-2')
+        ];
+
+        // 随机获取数组中的一个元素
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // 构建滚动轨道 (为了实现滚动动画，需要生成一段很长的假数据，最后停在真实结果上)
+        function buildTrack(trackElement, dataArray, targetResult) {
+            trackElement.innerHTML = ''; // 清空现有轨道
+            trackElement.style.transition = 'none'; // 取消过渡效果以便瞬间复位
+            trackElement.style.transform = `translateY(0px)`;
+
+            // 生成 30 个随机项作为滚动过程中的视觉残影
+            const spinCount = 30;
+            for (let i = 0; i < spinCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'slot-item';
+                div.textContent = getRandomItem(dataArray);
+                trackElement.appendChild(div);
+            }
+
+            // 最后压入我们真正抽中的结果
+            const finalDiv = document.createElement('div');
+            finalDiv.className = 'slot-item text-red-600 font-extrabold text-2xl'; // 给中奖结果特殊样式
+            finalDiv.textContent = targetResult;
+            trackElement.appendChild(finalDiv);
+
+            return spinCount; // 返回滚动的索引深度
+        }
+
+        btn.addEventListener('click', () => {
+            if (isSpinning) return;
+            isSpinning = true;
+            btn.textContent = "🔄 疯狂洗牌中...";
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+
+            // 移除中奖动画
+            slotWindows.forEach(w => w.classList.remove('win-anim'));
+
+            // Sirus: 此处可以替换为你从后端抽取的真实组合
+            const resultShop = getRandomItem(mockData.shops);
+            const resultFood = getRandomItem(mockData.foods);
+            const resultDrink = getRandomItem(mockData.drinks);
+
+            // 构建新轨道
+            const targetIndexShop = buildTrack(tracks.shop, mockData.shops, resultShop);
+            const targetIndexFood = buildTrack(tracks.food, mockData.foods, resultFood);
+            const targetIndexDrink = buildTrack(tracks.drink, mockData.drinks, resultDrink);
+
+            // ThreeJS 提速特效
+            speedUp3D();
+
+            // 强制重绘以应用 initial state (translateY:0)
+            void tracks.shop.offsetWidth;
+
+            // 执行滚动动画 (利用 CSS transition)
+            // 给每一列设置不同的动画时长，产生停顿的层次感
+            spinTrack(tracks.shop, targetIndexShop, 2500, 0);
+            spinTrack(tracks.food, targetIndexFood, 3500, 1);
+            spinTrack(tracks.drink, targetIndexDrink, 4500, 2);
+
+            // 全部停止后的回调
+            setTimeout(() => {
+                isSpinning = false;
+                btn.textContent = "🎰 再次抽选 🎰";
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                slowDown3D();
+            }, 4500);
+        });
+
+        function spinTrack(trackElement, targetIndex, duration, colIndex) {
+            // CSS cubic-bezier 实现开始快，最后慢慢停止的物理效果
+            trackElement.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.85, 0.25, 1)`;
+            const targetY = -(targetIndex * ITEM_HEIGHT);
+            trackElement.style.transform = `translateY(${targetY}px)`;
+
+            // 每列停止时加个小高亮动效
+            setTimeout(() => {
+                slotWindows[colIndex].classList.add('win-anim');
+            }, duration);
+        }
+
+        // ==========================================
+        // 4. Three.js 背景特效 (包含错误降级处理)
+        // ==========================================
+        const canvas = document.getElementById('threejs-canvas');
+        let renderer, scene, camera, clock;
+        const objects = [];
+        let globalRotationSpeed = 0.001;
+        let isSpeedingUp = false;
+
+        // 预先检测 WebGL 支持情况，避免直接实例化 Renderer 触发底层红字报错
+        function checkWebGLSupport() {
+            try {
+                const testCanvas = document.createElement('canvas');
+                return !!(window.WebGLRenderingContext && (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        let isWebGLSupported = checkWebGLSupport();
+
+        if (isWebGLSupported) {
+            try {
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                scene = new THREE.Scene();
+                // 给场景加上淡黄色的雾气，融入背景
+                scene.fog = new THREE.FogExp2(0xfef08a, 0.02);
+
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+                camera.position.z = 15;
+
+                // 添加灯光，渲染出卡通材质感 (Toon Material需要光照)
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(10, 20, 10);
+                scene.add(dirLight);
+
+                // 创建抽象的食物几何体 (模拟甜甜圈、汉堡等形状)
+                const geometries = [
+                    new THREE.TorusGeometry(1, 0.4, 8, 20), // 甜甜圈
+                    new THREE.CylinderGeometry(1, 1, 1.5, 12), // 饮料杯
+                    new THREE.SphereGeometry(1.2, 16, 16), // 丸子
+                    new THREE.BoxGeometry(1.5, 1.5, 1.5) // 便当盒
+                ];
+
+                // 鲜艳的手绘风色彩
+                const colors = [0xff595e, 0xffca3a, 0x8ac926, 0x1982c4, 0x6a4c93];
+
+                for (let i = 0; i < 25; i++) {
+                    const geo = geometries[Math.floor(Math.random() * geometries.length)];
+                    // 使用 MeshToonMaterial 获得卡通渲染风格
+                    const mat = new THREE.MeshToonMaterial({
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+
+                    // 随机散布在背景中
+                    mesh.position.x = (Math.random() - 0.5) * 40;
+                    mesh.position.y = (Math.random() - 0.5) * 30;
+                    mesh.position.z = (Math.random() - 0.5) * 20 - 5;
+
+                    mesh.rotation.x = Math.random() * Math.PI;
+                    mesh.rotation.y = Math.random() * Math.PI;
+
+                    // 存入自定义的动画数据
+                    mesh.userData = {
+                        rotSpeedX: (Math.random() - 0.5) * 0.02,
+                        rotSpeedY: (Math.random() - 0.5) * 0.02,
+                        floatSpeed: (Math.random() - 0.5) * 0.02,
+                        baseY: mesh.position.y,
+                        timeOffset: Math.random() * 100
+                    };
+
+                    scene.add(mesh);
+                    objects.push(mesh);
+                }
+
+                clock = new THREE.Clock();
+            } catch (e) {
+                console.warn("WebGL 初始化失败，已自动降级。3D 背景将被隐藏，仅保留核心UI交互。", e);
+                isWebGLSupported = false;
+                if (canvas) {
+                    canvas.style.display = 'none';
+                }
+            }
+        } else {
+            console.warn("当前浏览器环境不支持 WebGL。3D 背景已被自动隐藏，安全降级为纯色UI。");
+            if (canvas) {
+                canvas.style.display = 'none';
+            }
+        }
+
+        // 抽奖时加速背景旋转
+        function speedUp3D() {
+            if (isWebGLSupported) isSpeedingUp = true;
+        }
+        function slowDown3D() {
+            if (isWebGLSupported) isSpeedingUp = false;
+        }
+
+        // 渲染循环
+        function animate() {
+            if (!isWebGLSupported) return;
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 抽奖时整体摄像机/场景微微转动
+            if (isSpeedingUp) {
+                globalRotationSpeed = THREE.MathUtils.lerp(globalRotationSpeed, 0.05, 0.05);
+            } else {
+                globalRotationSpeed = THREE.MathUtils.lerp(globalRotationSpeed, 0.001, 0.02);
+            }
+            scene.rotation.y += globalRotationSpeed;
+
+            // 单个物体的自转与上下浮动
+            objects.forEach(obj => {
+                obj.rotation.x += obj.userData.rotSpeedX + (isSpeedingUp ? 0.05 : 0);
+                obj.rotation.y += obj.userData.rotSpeedY + (isSpeedingUp ? 0.05 : 0);
+                // 正弦函数实现呼吸悬浮感
+                obj.position.y = obj.userData.baseY + Math.sin(time * 2 + obj.userData.timeOffset) * 0.5;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            if (!isWebGLSupported) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 启动 Three.js 动画循环
+        window.onload = function () {
+            if (isWebGLSupported) {
+                animate();
+            }
+        };
+
+    </script>
+</body>
+
+</html>
