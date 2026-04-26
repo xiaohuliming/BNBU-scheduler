@@ -533,6 +533,11 @@
             spinning: false
         };
 
+        const audioState = {
+            context: null,
+            spinTimer: null
+        };
+
         const els = {
             dataStatus: document.getElementById("data-status"),
             poolStatus: document.getElementById("pool-status"),
@@ -908,6 +913,7 @@
             els.spinBtn.disabled = true;
             els.spinBtn.textContent = "疯狂洗牌中";
             Object.values(els.windows).forEach(windowEl => windowEl.classList.remove("win-anim"));
+            startSpinSound(state.includeAddon ? 4550 : 4050);
 
             const pool = getCandidatePool();
             const shopIndex = buildTrack(
@@ -965,6 +971,8 @@
                 updatePoolStatus();
                 renderResult(combo);
                 celebrateResult();
+                stopSpinSound();
+                playResultSound();
                 slowDown3D();
             }, state.includeAddon ? 4550 : 4050);
         }
@@ -1106,6 +1114,117 @@
                 els.celebrationLayer.innerHTML = "";
                 els.resultSection.classList.remove("celebrate-pop");
             }, 2100);
+        }
+
+        function getAudioContext() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!audioState.context) {
+                audioState.context = new AudioContextClass();
+            }
+            if (audioState.context.state === "suspended") {
+                audioState.context.resume().catch(() => {});
+            }
+            return audioState.context;
+        }
+
+        function playTone(frequency, duration = 0.08, type = "sine", gainValue = 0.04, delay = 0) {
+            const context = getAudioContext();
+            if (!context) return;
+
+            const startAt = context.currentTime + delay;
+            const endAt = startAt + duration;
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, startAt);
+            gain.gain.setValueAtTime(0.0001, startAt);
+            gain.gain.exponentialRampToValueAtTime(gainValue, startAt + Math.min(0.012, duration * 0.4));
+            gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.addEventListener("ended", () => {
+                oscillator.disconnect();
+                gain.disconnect();
+            });
+            oscillator.start(startAt);
+            oscillator.stop(endAt + 0.02);
+        }
+
+        function playNoiseBurst(delay = 0) {
+            const context = getAudioContext();
+            if (!context) return;
+
+            const duration = 0.18;
+            const length = Math.floor(context.sampleRate * duration);
+            const buffer = context.createBuffer(1, length, context.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < length; i++) {
+                const fade = 1 - i / length;
+                data[i] = (Math.random() * 2 - 1) * fade;
+            }
+
+            const source = context.createBufferSource();
+            const filter = context.createBiquadFilter();
+            const gain = context.createGain();
+            const startAt = context.currentTime + delay;
+
+            source.buffer = buffer;
+            filter.type = "highpass";
+            filter.frequency.setValueAtTime(1200, startAt);
+            gain.gain.setValueAtTime(0.0001, startAt);
+            gain.gain.linearRampToValueAtTime(0.025, startAt + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(context.destination);
+            source.addEventListener("ended", () => {
+                source.disconnect();
+                filter.disconnect();
+                gain.disconnect();
+            });
+            source.start(startAt);
+            source.stop(startAt + duration + 0.02);
+        }
+
+        function startSpinSound(durationMs) {
+            stopSpinSound();
+            const startedAt = performance.now();
+
+            const tick = () => {
+                if (!state.spinning) return;
+                const elapsed = performance.now() - startedAt;
+                if (elapsed >= durationMs) return;
+
+                const progress = Math.min(1, elapsed / durationMs);
+                const frequency = 320 + progress * 360 + Math.random() * 80;
+                const gain = 0.018 + progress * 0.01;
+                playTone(frequency, 0.035, "square", gain);
+
+                const nextGap = 46 + progress * 92 + Math.random() * 18;
+                audioState.spinTimer = window.setTimeout(tick, nextGap);
+            };
+
+            tick();
+        }
+
+        function stopSpinSound() {
+            if (!audioState.spinTimer) return;
+            window.clearTimeout(audioState.spinTimer);
+            audioState.spinTimer = null;
+        }
+
+        function playResultSound() {
+            stopSpinSound();
+            playNoiseBurst(0);
+            [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+                const isFinal = index === 3;
+                playTone(frequency, isFinal ? 0.18 : 0.12, isFinal ? "triangle" : "sine", isFinal ? 0.06 : 0.044, 0.04 + index * 0.075);
+            });
         }
 
         function drinkStats(combo) {
