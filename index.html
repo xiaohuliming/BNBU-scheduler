@@ -30,16 +30,45 @@
             color: var(--ink);
             font-family: 'Space Grotesk', sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(214, 255, 98, 0.35), transparent 28%),
-                radial-gradient(circle at top right, rgba(255, 122, 31, 0.14), transparent 24%),
-                linear-gradient(180deg, #fbf8f2 0%, var(--paper) 100%);
+                linear-gradient(115deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 38%),
+                repeating-linear-gradient(0deg, rgba(16, 24, 32, 0.018) 0 1px, transparent 1px 6px),
+                repeating-linear-gradient(90deg, rgba(16, 24, 32, 0.014) 0 1px, transparent 1px 9px),
+                linear-gradient(180deg, #fbf7ef 0%, #f3eadf 100%);
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.38;
+            background-image:
+                radial-gradient(circle at 18% 22%, rgba(16, 24, 32, 0.045) 0 0.7px, transparent 0.9px),
+                radial-gradient(circle at 72% 34%, rgba(16, 24, 32, 0.035) 0 0.6px, transparent 0.8px),
+                radial-gradient(circle at 44% 78%, rgba(255, 122, 31, 0.08) 0 0.8px, transparent 1px);
+            background-size: 18px 18px, 23px 23px, 31px 31px;
+            contain: strict;
+            transform: translateZ(0);
+            will-change: transform;
         }
         .mono-ui { font-family: 'IBM Plex Mono', monospace; }
         .home-grid {
             background-image:
-                linear-gradient(to right, rgba(16, 24, 32, 0.08) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(16, 24, 32, 0.08) 1px, transparent 1px);
-            background-size: 72px 72px;
+                linear-gradient(180deg, rgba(251, 247, 239, 0) 0%, rgba(251, 247, 239, 0.18) 62%, rgba(251, 247, 239, 0.9) 100%),
+                linear-gradient(to right, rgba(16, 24, 32, 0.045) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(16, 24, 32, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 56px 56px, 56px 56px;
+            contain: paint;
+            transform: translateZ(0);
+        }
+        .paper-wash {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,255,255,0.12)),
+                linear-gradient(180deg, rgba(214,255,98,0.08), rgba(255,122,31,0.06));
+            border: 1px solid rgba(16, 24, 32, 0.08);
+            box-shadow: 0 26px 70px rgba(16, 24, 32, 0.08);
+            contain: paint;
+            transform: translateZ(0);
         }
         .section-kicker {
             display: inline-flex;
@@ -54,6 +83,8 @@
             font-size: 0.72rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+            contain: paint;
+            transform: translateZ(0);
         }
         .room-select {
             appearance: none;
@@ -1713,49 +1744,102 @@
         };
 
         const HomeView = ({ user, onNavigate }) => {
+            const quickActions = [
+                {
+                    key: 'optimizer',
+                    title: '排课优化',
+                    detail: '选择课程和空闲时间，生成不冲突课表。',
+                    Icon: Calculator
+                },
+                {
+                    key: 'explorer',
+                    title: '课程数据库',
+                    detail: '搜索课程、教师和时间安排。',
+                    Icon: BookOpen
+                },
+                {
+                    key: 'ddl',
+                    title: 'iSpace DDL',
+                    detail: '同步作业截止日期和待办事项。',
+                    Icon: CheckSquare
+                },
+                {
+                    key: 'toolbox',
+                    title: '工具箱',
+                    detail: '打开 EatWhat 和之后的小工具。',
+                    Icon: Wrench
+                }
+            ];
+
             return (
                 <div className="relative overflow-hidden min-h-[calc(100svh-86px)]">
-                    <div className="absolute inset-0 home-grid opacity-55"></div>
-                    <div className="absolute -left-20 top-16 h-80 w-80 rounded-full bg-[#d6ff62]/55 blur-3xl"></div>
-                    <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-[#ffb270]/20 blur-3xl"></div>
+                    <div className="absolute inset-0 home-grid opacity-45"></div>
+                    <div className="paper-wash absolute -left-28 top-24 h-80 w-72 rotate-[-7deg] rounded-[2rem]"></div>
+                    <div className="paper-wash absolute right-[-5rem] top-16 h-72 w-80 rotate-[6deg] rounded-[2.5rem]"></div>
 
                     <section className="relative max-w-6xl mx-auto px-4 md:px-8 xl:px-12 min-h-[calc(100svh-86px)] flex items-center">
-                        <div className="w-full max-w-4xl py-16 md:py-20">
-                            <div className="section-kicker tool-reveal">Campus Toolkit</div>
+                        <div className="grid w-full gap-8 py-14 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-20">
+                            <div className="tool-reveal">
+                                <div className="section-kicker bg-[#faf4ea]/80">Campus Toolkit</div>
 
-                            <div className="tool-reveal reveal-delay-1 mt-8 text-[clamp(4rem,12vw,9rem)] leading-[0.86] font-black tracking-[-0.1em] text-[#101820]">
-                                MAXCOURSE
+                                <h1 className="mt-7 max-w-3xl text-[clamp(3rem,7vw,6.4rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-[#2a211b]">
+                                    MAXCOURSE
+                                </h1>
+
+                                <p className="mt-6 max-w-xl text-lg leading-8 text-[#5f5147] md:text-xl">
+                                    把查课、排课、DDL、空教室和校园小工具收在一个安静的工作台里。
+                                </p>
+
+                                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                                    <button
+                                        onClick={() => onNavigate('optimizer')}
+                                        className="rounded-2xl bg-[#2f261f] px-5 py-3 text-left font-semibold text-white shadow-[0_14px_32px_rgba(47,38,31,0.18)] transition-colors hover:bg-[#4b3a30]"
+                                    >
+                                        开始排课
+                                    </button>
+                                    <button
+                                        onClick={() => onNavigate('toolbox')}
+                                        className="rounded-2xl border border-[#2f261f]/12 bg-[#fffaf2]/82 px-5 py-3 text-left font-semibold text-[#2f261f] transition-colors hover:bg-white"
+                                    >
+                                        打开工具箱
+                                    </button>
+                                </div>
                             </div>
 
-                            <h1 className="tool-reveal reveal-delay-2 mt-8 text-xl md:text-2xl font-bold leading-relaxed text-black/72 max-w-2xl">
-                                查课、排课、DDL 和教师信息等工具页。
-                            </h1>
+                            <div className="tool-reveal reveal-delay-2 rounded-[2rem] border border-[#2f261f]/10 bg-[#fffaf2]/92 p-3 shadow-[0_24px_70px_rgba(47,38,31,0.10)]">
+                                <div className="rounded-[1.5rem] border border-[#2f261f]/8 bg-[#fbf5ec] p-4 md:p-5">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <div className="text-sm font-semibold text-[#2f261f]">常用入口</div>
+                                            <div className="mono-ui mt-1 text-[11px] uppercase tracking-[0.16em] text-[#8a7666]">Quick tools</div>
+                                        </div>
+                                        <div className="rounded-full bg-[#e8dccc] px-3 py-1 text-xs font-semibold text-[#6b4a35]">
+                                            {quickActions.length}
+                                        </div>
+                                    </div>
 
-                            <div className="tool-reveal reveal-delay-3 mt-10 flex flex-col sm:flex-row sm:flex-wrap gap-4 max-w-3xl">
-                                <button
-                                    onClick={() => onNavigate('optimizer')}
-                                    className="bg-[#101820] text-white px-7 py-4 rounded-full font-bold border border-[#101820] hover:bg-[#d6ff62] hover:text-[#101820] transition-colors"
-                                >
-                                    打开排课优化
-                                </button>
-                                <button
-                                    onClick={() => onNavigate('explorer')}
-                                    className="bg-white/75 text-[#101820] px-7 py-4 rounded-full font-bold border border-black/10 hover:bg-white transition-colors"
-                                >
-                                    浏览课程数据库
-                                </button>
-                                <button
-                                    onClick={() => onNavigate('ddl')}
-                                    className="bg-transparent text-[#101820] px-7 py-4 rounded-full font-bold border border-black/12 hover:border-[#101820] hover:bg-white/75 transition-colors"
-                                >
-                                    同步 iSpace DDL
-                                </button>
-                                <button
-                                    onClick={() => onNavigate('toolbox')}
-                                    className="bg-[#d6ff62] text-[#101820] px-7 py-4 rounded-full font-bold border border-[#101820]/20 hover:bg-white transition-colors"
-                                >
-                                    打开工具箱
-                                </button>
+                                    <div className="space-y-2">
+                                        {quickActions.map((action) => {
+                                            const ActionIcon = action.Icon;
+                                            return (
+                                                <button
+                                                    key={action.key}
+                                                    onClick={() => onNavigate(action.key)}
+                                                    className="group flex w-full items-center gap-3 rounded-2xl border border-transparent bg-white/58 p-3 text-left transition-all hover:border-[#b86f4c]/22 hover:bg-white"
+                                                >
+                                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#efe3d3] text-[#6b4a35] transition-colors group-hover:bg-[#d97757] group-hover:text-white">
+                                                        <ActionIcon className="w-5 h-5" />
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block font-semibold text-[#2f261f]">{action.title}</span>
+                                                        <span className="mt-0.5 block text-sm leading-5 text-[#7a6a5d]">{action.detail}</span>
+                                                    </span>
+                                                    <ChevronDown className="w-4 h-4 rotate-[-90deg] text-[#a08c7d] transition-transform group-hover:translate-x-1" />
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -2116,30 +2200,30 @@
             };
 
             return (
-                <div className="min-h-screen bg-transparent font-sans selection:bg-[#101820] selection:text-[#d6ff62] pb-8">
-                    <nav className="sticky top-0 z-50 border-b border-black/10 bg-[rgba(251,248,242,0.78)] backdrop-blur-xl">
+                <div className="min-h-screen bg-transparent font-sans selection:bg-[#6b4a35] selection:text-white pb-8">
+                    <nav className="sticky top-0 z-50 border-b border-[#2f261f]/8 bg-[rgba(250,244,234,0.94)] shadow-[0_1px_0_rgba(47,38,31,0.04)]">
                         <div className="max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-4 flex justify-between items-center relative gap-4">
                             <div className="flex items-center gap-4 min-w-0">
                                 <button className="text-left shrink-0" onClick={() => goToView('home')}>
-                                    <span className="block text-2xl font-black tracking-[-0.08em] uppercase text-[#101820]">
-                                        MAX<span className="text-[#ff7a1f]">COURSE</span>
+                                    <span className="block text-2xl font-semibold tracking-[-0.055em] uppercase text-[#2f261f]">
+                                        MAX<span className="text-[#9a5a3f]">COURSE</span>
                                     </span>
-                                    <span className="mono-ui hidden md:block text-[11px] uppercase tracking-[0.18em] text-black/44">
+                                    <span className="mono-ui hidden md:block text-[11px] uppercase tracking-[0.18em] text-[#8a7666]">
                                         Campus Toolkit
                                     </span>
                                 </button>
 
-                                <div className="hidden lg:flex items-center gap-1 rounded-full border border-black/10 bg-white/70 p-1">
+                                <div className="hidden lg:flex items-center gap-1 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 p-1">
                                     {navItems.map((item) => {
                                         const isActive = currentView === item.key;
                                         return (
                                             <button
                                                 key={item.key}
                                                 onClick={() => goToView(item.key)}
-                                                className={`px-4 py-2 rounded-full font-bold text-sm transition-colors ${
+                                                className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors ${
                                                     isActive
-                                                        ? 'bg-[#101820] text-white'
-                                                        : 'text-[#101820] hover:bg-white'
+                                                        ? 'bg-[#6b4a35] text-white'
+                                                        : 'text-[#5f5147] hover:bg-white hover:text-[#2f261f]'
                                                 }`}
                                             >
                                                 {item.label}
@@ -2151,39 +2235,39 @@
                             
                             <div className="flex items-center gap-3">
                                 {user ? (
-                                    <div className="hidden md:flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-3 py-2">
-                                        <span className="mono-ui text-[11px] uppercase tracking-[0.18em] text-black/40">Session</span>
-                                        <span className="font-bold text-[#101820] max-w-[11rem] truncate">{user.display_name || user.username}</span>
+                                    <div className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-3 py-2">
+                                        <span className="mono-ui text-[11px] uppercase tracking-[0.18em] text-[#8a7666]">Session</span>
+                                        <span className="font-semibold text-[#2f261f] max-w-[11rem] truncate">{user.display_name || user.username}</span>
                                     </div>
                                 ) : (
-                                    <button onClick={() => setShowAuthModal(true)} className="hidden md:flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-4 py-2 font-bold text-[#101820] hover:bg-white transition-colors">
+                                    <button onClick={() => setShowAuthModal(true)} className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-4 py-2 font-semibold text-[#2f261f] hover:bg-white transition-colors">
                                         <LogIn className="w-4 h-4" /> 登录
                                     </button>
                                 )}
 
                                 {user && (
-                                    <button onClick={logout} className="hidden md:flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-4 py-2 font-bold text-[#101820] hover:bg-white transition-colors" title="Logout">
+                                    <button onClick={logout} className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-4 py-2 font-semibold text-[#2f261f] hover:bg-white transition-colors" title="Logout">
                                         <LogOut className="w-4 h-4" /> 退出
                                     </button>
                                 )}
 
                                 <div className="lg:hidden relative z-50">
                                     <button 
-                                        className="flex items-center gap-2 font-bold bg-[#101820] text-white px-4 py-2 rounded-full transition-colors hover:bg-black"
+                                        className="flex items-center gap-2 font-semibold bg-[#6b4a35] text-white px-4 py-2 rounded-full transition-colors hover:bg-[#4b3a30]"
                                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                                     >
                                         <Menu className="w-4 h-4" /> MENU
                                     </button>
                                     <div className={`absolute right-0 top-full mt-3 w-56 ${isMenuOpen ? 'block' : 'hidden'}`}>
-                                        <div className="bg-white border border-black/10 shadow-[0_20px_50px_rgba(16,24,32,0.18)] rounded-3xl overflow-hidden">
+                                        <div className="bg-[#fffaf2] border border-[#2f261f]/10 shadow-[0_20px_50px_rgba(47,38,31,0.14)] rounded-3xl overflow-hidden">
                                             {navItems.map((item) => {
                                                 const ItemIcon = item.Icon;
                                                 return (
                                                     <button
                                                         key={item.key}
                                                         onClick={() => goToView(item.key)}
-                                                        className={`w-full text-left px-4 py-3 font-bold flex items-center gap-3 border-b border-black/6 last:border-b-0 ${
-                                                            currentView === item.key ? 'bg-[#101820] text-white' : 'text-[#101820] hover:bg-[#f5f1e8]'
+                                                        className={`w-full text-left px-4 py-3 font-semibold flex items-center gap-3 border-b border-[#2f261f]/6 last:border-b-0 ${
+                                                            currentView === item.key ? 'bg-[#6b4a35] text-white' : 'text-[#2f261f] hover:bg-[#f5efe5]'
                                                         }`}
                                                     >
                                                         <ItemIcon className="w-4 h-4" /> {item.label}
@@ -2191,11 +2275,11 @@
                                                 );
                                             })}
                                             {!user ? (
-                                                <button onClick={() => { setShowAuthModal(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 font-bold text-[#101820] flex items-center gap-3 border-t border-black/6 hover:bg-[#f5f1e8]">
+                                                <button onClick={() => { setShowAuthModal(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 font-semibold text-[#2f261f] flex items-center gap-3 border-t border-[#2f261f]/6 hover:bg-[#f5efe5]">
                                                     <LogIn className="w-4 h-4" /> 登录
                                                 </button>
                                             ) : (
-                                                <button onClick={logout} className="w-full text-left px-4 py-3 font-bold text-[#101820] flex items-center gap-3 border-t border-black/6 hover:bg-[#f5f1e8]">
+                                                <button onClick={logout} className="w-full text-left px-4 py-3 font-semibold text-[#2f261f] flex items-center gap-3 border-t border-[#2f261f]/6 hover:bg-[#f5efe5]">
                                                     <LogOut className="w-4 h-4" /> 退出
                                                 </button>
                                             )}
