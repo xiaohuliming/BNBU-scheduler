@@ -1857,7 +1857,20 @@
                 href: '/eatwhat/index.html',
                 badge: 'Food Picker',
                 Icon: Utensils,
-                accent: 'bg-[#ff7a1f]'
+                accent: 'bg-[#ff7a1f]',
+                cta: '打开工具'
+            },
+            {
+                key: 'ispace-ddl-helper',
+                title: 'iSpace DDL Helper',
+                subtitle: '把 Autolab DDL 同步到 iSpace Timeline',
+                description: 'Chrome 扩展：自动检测 Autolab 链接，一键同步截止日期，并支持完成归档。访问 Autolab 时需要校园网或 VPN。',
+                href: 'https://github.com/xiaohuliming/BNBU-ispace-ddl-helper',
+                badge: 'Chrome Plugin',
+                Icon: Bell,
+                accent: 'bg-[#ec4899]',
+                external: true,
+                cta: '查看插件'
             }
         ];
 
@@ -1885,6 +1898,8 @@
                                 <a
                                     key={tool.key}
                                     href={tool.href}
+                                    target={tool.external ? '_blank' : undefined}
+                                    rel={tool.external ? 'noopener noreferrer' : undefined}
                                     className="group block rounded-[2rem] border border-black/10 bg-white/78 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]"
                                 >
                                     <div className="flex items-start justify-between gap-4">
@@ -1905,7 +1920,7 @@
                                         {tool.description}
                                     </p>
                                     <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820]">
-                                        打开工具 <ExternalLink className="w-4 h-4" />
+                                        {tool.cta || '打开工具'} <ExternalLink className="w-4 h-4" />
                                     </div>
                                 </a>
                             );
