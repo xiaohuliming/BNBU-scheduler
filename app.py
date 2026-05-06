@@ -186,6 +186,10 @@ def init_db():
             c.execute('ALTER TABLE users ADD COLUMN unsubscribe_token TEXT')
         except sqlite3.OperationalError:
             pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN email_unsubscribed_at TIMESTAMP')
+        except sqlite3.OperationalError:
+            pass
 
         try:
             c.execute('ALTER TABLE todos ADD COLUMN is_stale BOOLEAN DEFAULT 0')
@@ -369,13 +373,17 @@ def send_email(to_email, subject, text_body, html_body=None, unsubscribe_url=Non
 
 
 def notification_settings_payload(user_row):
-    reminder_hours = parse_reminder_hours(user_row['email_reminder_hours'] if 'email_reminder_hours' in user_row.keys() else None)
+    keys = user_row.keys()
+    reminder_hours = parse_reminder_hours(user_row['email_reminder_hours'] if 'email_reminder_hours' in keys else None)
+    enabled = bool(user_row['email_notifications_enabled']) if 'email_notifications_enabled' in keys else False
+    unsubscribed_at = user_row['email_unsubscribed_at'] if 'email_unsubscribed_at' in keys else None
     return {
-        "email": user_row['email'] if 'email' in user_row.keys() and user_row['email'] else "",
-        "enabled": bool(user_row['email_notifications_enabled']) if 'email_notifications_enabled' in user_row.keys() else False,
+        "email": user_row['email'] if 'email' in keys and user_row['email'] else "",
+        "enabled": enabled,
         "reminder_hours": reminder_hours,
         "available_reminder_hours": EMAIL_REMINDER_CHOICES,
         "email_service_configured": is_email_service_configured(),
+        "unsubscribed_via_link": bool(unsubscribed_at) and not enabled,
     }
 
 
@@ -839,7 +847,7 @@ def get_notification_settings():
     c = conn.cursor()
     c.execute(
         '''
-        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours, email_unsubscribed_at
         FROM users
         WHERE id = ?
         ''',
@@ -879,7 +887,7 @@ def update_notification_settings():
     c.execute(
         '''
         UPDATE users
-        SET email = ?, email_notifications_enabled = ?, email_reminder_hours = ?
+        SET email = ?, email_notifications_enabled = ?, email_reminder_hours = ?, email_unsubscribed_at = NULL
         WHERE id = ?
         ''',
         (email or None, 1 if enabled else 0, reminder_hours_to_db(reminder_hours), session['user_id']),
@@ -887,7 +895,7 @@ def update_notification_settings():
     conn.commit()
     c.execute(
         '''
-        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours, email_unsubscribed_at
         FROM users
         WHERE id = ?
         ''',
@@ -908,7 +916,7 @@ def send_notification_test_email():
     c = conn.cursor()
     c.execute(
         '''
-        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours, email_unsubscribed_at
         FROM users
         WHERE id = ?
         ''',
@@ -978,7 +986,10 @@ def unsubscribe_email_notifications():
         if not user:
             return jsonify({"error": "Invalid or expired unsubscribe token"}), 404
 
-        c.execute('UPDATE users SET email_notifications_enabled = 0 WHERE id = ?', (user['id'],))
+        c.execute(
+            'UPDATE users SET email_notifications_enabled = 0, email_unsubscribed_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (user['id'],),
+        )
         conn.commit()
     finally:
         conn.close()
