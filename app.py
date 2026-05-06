@@ -1,5 +1,7 @@
 import os
 import glob
+import gzip
+import io
 import json
 import re
 import sqlite3
@@ -80,6 +82,64 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_REFRESH_EACH_REQUEST=True,
 )
+
+
+GZIP_MIN_BYTES = 1024
+GZIP_MIME_PREFIXES = ('text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml')
+LONG_CACHE_PREFIXES = ('/vendor/',)
+
+
+@app.after_request
+def apply_response_optimizations(response):
+    path = request.path or ''
+
+    if path.startswith(LONG_CACHE_PREFIXES) and response.status_code == 200:
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    elif path == '/' or path.endswith('.html'):
+        response.headers['Cache-Control'] = 'no-cache'
+    elif path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
+
+    if response.status_code < 200 or response.status_code >= 300:
+        return response
+    if 'Content-Encoding' in response.headers:
+        return response
+
+    accept_encoding = request.headers.get('Accept-Encoding', '')
+    if 'gzip' not in accept_encoding.lower():
+        return response
+
+    mime = (response.mimetype or '').lower()
+    if not any(mime.startswith(prefix) for prefix in GZIP_MIME_PREFIXES):
+        return response
+
+    if response.direct_passthrough:
+        try:
+            data = b''.join(response.iter_encoded())
+        except Exception:
+            return response
+        response.direct_passthrough = False
+        response.set_data(data)
+    else:
+        data = response.get_data()
+
+    if len(data) < GZIP_MIN_BYTES:
+        return response
+
+    buffer = io.BytesIO()
+    with gzip.GzipFile(fileobj=buffer, mode='wb', compresslevel=6, mtime=0) as gz:
+        gz.write(data)
+    compressed = buffer.getvalue()
+    if len(compressed) >= len(data):
+        return response
+
+    response.set_data(compressed)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = str(len(compressed))
+    vary = response.headers.get('Vary', '')
+    if 'Accept-Encoding' not in vary:
+        response.headers['Vary'] = (vary + ', Accept-Encoding').strip(', ') if vary else 'Accept-Encoding'
+    return response
 
 
 @app.errorhandler(Exception)
