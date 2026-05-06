@@ -52,6 +52,55 @@
             will-change: transform;
         }
         .mono-ui { font-family: 'IBM Plex Mono', monospace; }
+        .book-serif {
+            font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'STSong', 'EB Garamond', Georgia, 'Times New Roman', serif;
+            font-feature-settings: "liga" 1, "kern" 1, "onum" 1;
+        }
+        .book-divider {
+            border: 0;
+            border-top: 1px solid rgba(16, 24, 32, 0.16);
+            margin: 0;
+        }
+        .book-divider-thin {
+            border: 0;
+            border-top: 1px solid rgba(16, 24, 32, 0.08);
+            margin: 0;
+        }
+        .book-link {
+            position: relative;
+            display: inline-block;
+            color: #1a140d;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(26, 20, 13, 0.5);
+            padding-bottom: 1px;
+            transition: border-color 0.18s ease;
+        }
+        .book-link:hover { border-bottom-color: rgba(26, 20, 13, 1); }
+        .book-entry {
+            display: grid;
+            grid-template-columns: 3rem 1fr auto;
+            gap: 1.5rem;
+            align-items: baseline;
+            padding: 1.4rem 0;
+            border-top: 1px solid rgba(26, 20, 13, 0.12);
+            cursor: pointer;
+            transition: background-color 0.18s ease;
+        }
+        .book-entry:last-child {
+            border-bottom: 1px solid rgba(26, 20, 13, 0.12);
+        }
+        .book-entry:hover {
+            background-color: rgba(26, 20, 13, 0.025);
+        }
+        .book-entry .arrow {
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .book-entry:hover .arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
         .home-grid {
             background-image:
                 linear-gradient(180deg, rgba(251, 247, 239, 0) 0%, rgba(251, 247, 239, 0.18) 62%, rgba(251, 247, 239, 0.9) 100%),
@@ -859,7 +908,8 @@
                 enabled: false,
                 reminder_hours: [24, 3],
                 available_reminder_hours: [72, 24, 3, 1],
-                email_service_configured: false
+                email_service_configured: false,
+                unsubscribed_via_link: false
             });
             const [notificationSaving, setNotificationSaving] = useState(false);
             const [notificationTesting, setNotificationTesting] = useState(false);
@@ -903,7 +953,8 @@
                         enabled: Boolean(data.enabled),
                         reminder_hours: data.reminder_hours || [24, 3],
                         available_reminder_hours: data.available_reminder_hours || [72, 24, 3, 1],
-                        email_service_configured: Boolean(data.email_service_configured)
+                        email_service_configured: Boolean(data.email_service_configured),
+                        unsubscribed_via_link: Boolean(data.unsubscribed_via_link)
                     });
                 } catch (e) {
                     setNotificationMessage({ type: 'error', text: e.message });
@@ -942,7 +993,8 @@
                         enabled: Boolean(data.settings.enabled),
                         reminder_hours: data.settings.reminder_hours || [24, 3],
                         available_reminder_hours: data.settings.available_reminder_hours || prev.available_reminder_hours,
-                        email_service_configured: Boolean(data.settings.email_service_configured)
+                        email_service_configured: Boolean(data.settings.email_service_configured),
+                        unsubscribed_via_link: Boolean(data.settings.unsubscribed_via_link)
                     }));
                     setNotificationMessage({ type: 'success', text: '邮件通知设置已保存' });
                 } catch (e) {
@@ -1138,6 +1190,12 @@
                                                         {notificationDraft.email_service_configured ? 'SMTP Ready' : 'Need SMTP'}
                                                     </span>
                                                 </div>
+
+                                                {notificationDraft.unsubscribed_via_link && (
+                                                    <div className="border-2 border-yellow-500 bg-yellow-50 px-3 py-2 text-xs font-bold text-yellow-800 leading-5">
+                                                        你已通过邮件中的退订链接关闭了邮件提醒。重新勾选下方"开启邮件提醒"并保存即可恢复。
+                                                    </div>
+                                                )}
 
                                                 <label className="flex items-center gap-2 font-bold text-sm">
                                                     <input
@@ -1919,106 +1977,121 @@
             );
         };
 
-        const HomeView = ({ user, onNavigate }) => {
-            const quickActions = [
+        const HomeView = ({ user, onNavigate, onOpenLogin }) => {
+            const chapters = [
                 {
+                    numeral: 'I',
                     key: 'classrooms',
                     title: '空教室查询',
-                    detail: '按时间和教学楼查看可用教室。',
-                    Icon: Building2
+                    en: 'Free Classrooms',
+                    detail: '按时间与教学楼查看可用教室。'
                 },
                 {
-                    key: 'eatwhat',
-                    title: '今天吃什么',
-                    detail: '随机抽取店铺、主食、加料和饮品。',
-                    Icon: Utensils,
-                    href: '/eatwhat/index.html'
-                },
-                {
+                    numeral: 'II',
                     key: 'optimizer',
                     title: '排课优化',
-                    detail: '选择课程和空闲时间，生成不冲突课表。',
-                    Icon: Calculator
+                    en: 'Schedule Optimizer',
+                    detail: '选定课程与空闲时间，生成不冲突的课表。'
                 },
                 {
+                    numeral: 'III',
                     key: 'ddl',
                     title: 'iSpace DDL',
-                    detail: '同步作业截止日期和待办事项。',
-                    Icon: CheckSquare
+                    en: 'Deadlines',
+                    detail: '同步 iSpace 作业截止日期与待办事项。'
+                },
+                {
+                    numeral: 'IV',
+                    key: 'eatwhat',
+                    title: '今天吃什么',
+                    en: 'What to Eat',
+                    detail: '随机抽取店铺、主食、加料与饮品。',
+                    href: '/eatwhat/index.html'
                 }
             ];
 
+            const today = new Date();
+            const dateLabel = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
             return (
-                <div className="relative overflow-hidden min-h-[calc(100svh-86px)]">
-                    <div className="absolute inset-0 home-grid opacity-45"></div>
-                    <div className="paper-wash absolute -left-28 top-24 h-80 w-72 rotate-[-7deg] rounded-[2rem]"></div>
-                    <div className="paper-wash absolute right-[-5rem] top-16 h-72 w-80 rotate-[6deg] rounded-[2.5rem]"></div>
-
-                    <section className="relative max-w-6xl mx-auto px-4 md:px-8 xl:px-12 min-h-[calc(100svh-86px)] flex items-center">
-                        <div className="grid w-full gap-8 py-14 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-20">
-                            <div className="tool-reveal">
-                                <div className="section-kicker bg-[#faf4ea]/80">Campus Toolkit</div>
-
-                                <h1 className="mt-7 max-w-3xl text-[clamp(3rem,7vw,6.4rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-[#2a211b]">
-                                    MAXCOURSE
-                                </h1>
-
-                                <p className="mt-6 max-w-xl text-lg leading-8 text-[#5f5147] md:text-xl">
-                                    把查课、排课、DDL、空教室和校园小工具收在一个安静的工作台里。
-                                </p>
-
-                                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                    <button
-                                        onClick={() => onNavigate('optimizer')}
-                                        className="rounded-2xl bg-[#2f261f] px-5 py-3 text-left font-semibold text-white shadow-[0_14px_32px_rgba(47,38,31,0.18)] transition-colors hover:bg-[#4b3a30]"
-                                    >
-                                        开始排课
-                                    </button>
-                                    <button
-                                        onClick={() => { window.location.href = '/eatwhat/index.html'; }}
-                                        className="rounded-2xl border border-[#2f261f]/12 bg-[#fffaf2]/82 px-5 py-3 text-left font-semibold text-[#2f261f] transition-colors hover:bg-white"
-                                    >
-                                        今天吃什么
-                                    </button>
-                                </div>
+                <div className="relative min-h-[calc(100svh-86px)]">
+                    <section className="relative max-w-3xl mx-auto px-6 md:px-10 py-16 md:py-24">
+                        <div className="tool-reveal">
+                            <div className="mono-ui text-[11px] uppercase tracking-[0.28em] text-[#8a7666]">
+                                MAXCOURSE · Campus Toolkit
                             </div>
-
-                            <div className="tool-reveal reveal-delay-2 rounded-[2rem] border border-[#2f261f]/10 bg-[#fffaf2]/92 p-3 shadow-[0_24px_70px_rgba(47,38,31,0.10)]">
-                                <div className="rounded-[1.5rem] border border-[#2f261f]/8 bg-[#fbf5ec] p-4 md:p-5">
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <div>
-                                            <div className="text-sm font-semibold text-[#2f261f]">常用入口</div>
-                                            <div className="mono-ui mt-1 text-[11px] uppercase tracking-[0.16em] text-[#8a7666]">Quick tools</div>
-                                        </div>
-                                        <div className="rounded-full bg-[#e8dccc] px-3 py-1 text-xs font-semibold text-[#6b4a35]">
-                                            {quickActions.length}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {quickActions.map((action) => {
-                                            const ActionIcon = action.Icon;
-                                            return (
-                                                <button
-                                                    key={action.key}
-                                                    onClick={() => action.href ? (window.location.href = action.href) : onNavigate(action.key)}
-                                                    className="group flex w-full items-center gap-3 rounded-2xl border border-transparent bg-white/58 p-3 text-left transition-all hover:border-[#b86f4c]/22 hover:bg-white"
-                                                >
-                                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#efe3d3] text-[#6b4a35] transition-colors group-hover:bg-[#d97757] group-hover:text-white">
-                                                        <ActionIcon className="w-5 h-5" />
-                                                    </span>
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="block font-semibold text-[#2f261f]">{action.title}</span>
-                                                        <span className="mt-0.5 block text-sm leading-5 text-[#7a6a5d]">{action.detail}</span>
-                                                    </span>
-                                                    <ChevronDown className="w-4 h-4 rotate-[-90deg] text-[#a08c7d] transition-transform group-hover:translate-x-1" />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                            <hr className="book-divider mt-4" />
                         </div>
+
+                        <header className="tool-reveal reveal-delay-1 mt-14 md:mt-20 text-center">
+                            <div className="book-serif text-[#7a6a5d] italic text-base md:text-lg">
+                                A quiet workspace for
+                            </div>
+                            <h1 className="book-serif mt-3 text-[clamp(3rem,8vw,6rem)] font-normal leading-[1.05] tracking-[0.02em] text-[#1a140d]">
+                                Course &amp; Day
+                            </h1>
+                            <div className="mono-ui mt-6 text-[11px] uppercase tracking-[0.32em] text-[#8a7666]">
+                                {dateLabel}
+                            </div>
+                        </header>
+
+                        <p className="book-serif tool-reveal reveal-delay-2 mx-auto mt-12 md:mt-16 max-w-xl text-center text-lg md:text-xl leading-[1.85] text-[#3d3025]">
+                            把查课、排课、DDL、空教室与校园小工具
+                            <br className="hidden md:block" />
+                            收在同一处安静的工作台里。
+                        </p>
+
+                        <div className="tool-reveal reveal-delay-3 mt-16 md:mt-20">
+                            <div className="flex items-baseline justify-between mb-2">
+                                <div className="book-serif italic text-[#7a6a5d] text-sm">Contents</div>
+                                <div className="mono-ui text-[10px] uppercase tracking-[0.24em] text-[#a08c7d]">
+                                    {chapters.length} entries
+                                </div>
+                            </div>
+
+                            <nav>
+                                {chapters.map((chapter) => (
+                                    <div
+                                        key={chapter.key}
+                                        className="book-entry"
+                                        onClick={() => chapter.href ? (window.location.href = chapter.href) : onNavigate(chapter.key)}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                chapter.href ? (window.location.href = chapter.href) : onNavigate(chapter.key);
+                                            }
+                                        }}
+                                    >
+                                        <span className="book-serif italic text-[#a08c7d] text-lg md:text-xl">
+                                            {chapter.numeral}.
+                                        </span>
+                                        <span>
+                                            <span className="book-serif block text-xl md:text-2xl text-[#1a140d] tracking-[0.01em]">
+                                                {chapter.title}
+                                            </span>
+                                            <span className="book-serif italic block mt-1 text-sm text-[#7a6a5d]">
+                                                {chapter.en} — {chapter.detail}
+                                            </span>
+                                        </span>
+                                        <span className="book-serif text-[#7a6a5d] text-lg arrow">
+                                            →
+                                        </span>
+                                    </div>
+                                ))}
+                            </nav>
+                        </div>
+
+                        <footer className="tool-reveal reveal-delay-3 mt-20 md:mt-28 text-center">
+                            <hr className="book-divider-thin mb-6" />
+                            <div className="book-serif italic text-sm text-[#8a7666]">
+                                {user ? (<>已登录 · <span className="text-[#3d3025]">{user.display_name || user.username}</span></>) : (<>未登录 · <button onClick={onOpenLogin} className="book-link">前往登录</button></>)}
+                            </div>
+                            <div className="mono-ui mt-3 text-[10px] uppercase tracking-[0.24em] text-[#a08c7d]">
+                                · Fin ·
+                            </div>
+                        </footer>
                     </section>
                 </div>
             );
