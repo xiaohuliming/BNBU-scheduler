@@ -400,6 +400,45 @@ class AppTestCase(unittest.TestCase):
         self.assertTrue(post_response.is_json)
         self.assertTrue(post_response.get_json()['success'])
 
+    def test_unsubscribe_via_link_flag_set_and_cleared_on_save(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+        )
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                UPDATE users
+                SET email = ?, email_notifications_enabled = 1, unsubscribe_token = ?
+                WHERE id = 1
+                ''',
+                ('student@example.com', 'unsub-flag-token'),
+            )
+            conn.commit()
+
+        self.client.get('/api/notifications/unsubscribe?token=unsub-flag-token')
+
+        with self.client.session_transaction() as flask_session:
+            flask_session['user_id'] = 1
+            flask_session['username'] = 'notify-user'
+            flask_session['display_name'] = 'notify-user'
+            flask_session.permanent = True
+
+        before = self.client.get('/api/user/notifications').get_json()
+        self.assertFalse(before['enabled'])
+        self.assertTrue(before['unsubscribed_via_link'])
+
+        save = self.client.put(
+            '/api/user/notifications',
+            json={'email': 'student@example.com', 'enabled': True, 'reminder_hours': [24]},
+        )
+        self.assertEqual(save.status_code, 200)
+        self.assertFalse(save.get_json()['settings']['unsubscribed_via_link'])
+
+        after = self.client.get('/api/user/notifications').get_json()
+        self.assertTrue(after['enabled'])
+        self.assertFalse(after['unsubscribed_via_link'])
+
     def test_dispatch_stops_after_three_failures(self):
         self.insert_user(
             'notify-user',
