@@ -1559,27 +1559,32 @@
                 ? `${result.query.day_label} · ${result.query.start} – ${result.query.end}`
                 : 'Loading...';
 
+            const headlineNumber = loading ? '–' : error ? '!' : filteredRooms.length;
+            const headlineSubtitle = loading ? '正在翻阅空闲教室…' : error ? '查询失败' : '间空闲教室 · 当前时段';
+
             return (
                 <div className="relative min-h-[calc(100svh-86px)]">
-                    <section className="max-w-3xl mx-auto px-6 md:px-10 py-12 md:py-16">
+                    <section className="max-w-5xl mx-auto px-6 md:px-10 py-10 md:py-14">
                         <div className="mono-ui text-[11px] uppercase tracking-[0.28em] text-[#8a7666]">
                             MAXCOURSE · Empty Classroom Index
                         </div>
                         <hr className="book-divider mt-4" />
 
-                        <header className="mt-12 md:mt-16">
-                            <div className="book-serif text-[#7a6a5d] italic text-base md:text-lg">
-                                A directory of quiet rooms,
+                        <header className="mt-10 md:mt-12 grid md:grid-cols-[minmax(0,1fr)_auto] gap-6 items-end">
+                            <div>
+                                <div className="book-serif text-[#7a6a5d] italic text-base md:text-lg">
+                                    A directory of quiet rooms,
+                                </div>
+                                <h1 className="book-serif mt-2 text-[clamp(2.25rem,5.5vw,3.75rem)] font-normal leading-[1.05] tracking-[0.02em] text-[#1a140d]">
+                                    Empty Classrooms
+                                </h1>
                             </div>
-                            <h1 className="book-serif mt-2 text-[clamp(2.5rem,6vw,4.5rem)] font-normal leading-[1.05] tracking-[0.02em] text-[#1a140d]">
-                                Empty Classrooms
-                            </h1>
-                            <div className="mono-ui mt-5 text-[11px] uppercase tracking-[0.28em] text-[#a08c7d]">
+                            <div className="mono-ui text-[11px] uppercase tracking-[0.28em] text-[#a08c7d] md:text-right">
                                 {queryLabel}
                             </div>
                         </header>
 
-                        <article className="mt-14">
+                        <article className="mt-12">
                             <div className="flex items-baseline justify-between mb-3">
                                 <div className="book-serif italic text-[#7a6a5d] text-sm">§ I. Query</div>
                                 <div className="mono-ui text-[10px] uppercase tracking-[0.22em] text-[#a08c7d]">
@@ -1588,7 +1593,7 @@
                             </div>
                             <hr className="book-divider-thin" />
 
-                            <div className="mt-7">
+                            <div className="mt-6">
                                 <div className="book-serif italic text-sm text-[#7a6a5d] mb-3">选择周几</div>
                                 <div className="flex flex-wrap gap-x-5 gap-y-3">
                                     {SCHOOL_DAY_OPTIONS.map((day) => (
@@ -1607,7 +1612,7 @@
                                 </div>
                             </div>
 
-                            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
+                            <div className="mt-7 grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5">
                                 <div>
                                     <label className="book-serif italic text-sm text-[#7a6a5d]">起始时间</label>
                                     <select
@@ -1638,30 +1643,22 @@
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-                        </article>
-
-                        <article className="mt-14">
-                            <div className="flex items-baseline justify-between mb-3">
-                                <div className="book-serif italic text-[#7a6a5d] text-sm">§ II. Result</div>
-                                <div className="mono-ui text-[10px] uppercase tracking-[0.22em] text-[#a08c7d]">
-                                    Free · Occupied · Total
+                                <div>
+                                    <label className="book-serif italic text-sm text-[#7a6a5d]">教学楼</label>
+                                    <select
+                                        value={buildingFilter}
+                                        onChange={(e) => setBuildingFilter(e.target.value)}
+                                        className="room-select mt-2 w-full bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] py-2 pr-10 book-serif text-lg text-[#1a140d]"
+                                        style={{ color: '#1a140d', backgroundColor: 'transparent' }}
+                                    >
+                                        <option value="ALL" style={{ color: '#1a140d', backgroundColor: '#fbf7ef' }}>全部</option>
+                                        {buildingOptions.map(item => (
+                                            <option key={item.building} value={item.building} style={{ color: '#1a140d', backgroundColor: '#fbf7ef' }}>
+                                                {item.building} · {item.free_rooms}/{item.total_rooms}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                            </div>
-                            <hr className="book-divider-thin" />
-
-                            <p className="book-serif text-2xl md:text-3xl mt-7 text-[#1a140d] tracking-[0.01em]">
-                                {loading ? '正在翻阅空闲教室…' : error ? '查询失败' : `当下可用 ${filteredRooms.length} 间`}
-                            </p>
-                            <div className="book-serif italic text-sm text-[#7a6a5d] mt-3">
-                                Free <span className="text-[#1a140d] not-italic">{summaryFree}</span>
-                                <span className="mx-2 text-[#a08c7d]">·</span>
-                                Occupied <span className="text-[#1a140d] not-italic">{summaryOccupied}</span>
-                                <span className="mx-2 text-[#a08c7d]">·</span>
-                                Inventory <span className="text-[#1a140d] not-italic">{summaryTotal}</span>
-                            </div>
-
-                            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
                                 <div>
                                     <label className="book-serif italic text-sm text-[#7a6a5d]">房间号</label>
                                     <input
@@ -1672,21 +1669,33 @@
                                         className="mt-2 w-full bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] py-2 book-serif text-lg text-[#1a140d] placeholder:text-[#a08c7d] placeholder:italic"
                                     />
                                 </div>
-                                <div>
-                                    <label className="book-serif italic text-sm text-[#7a6a5d]">教学楼</label>
-                                    <select
-                                        value={buildingFilter}
-                                        onChange={(e) => setBuildingFilter(e.target.value)}
-                                        className="room-select mt-2 w-full bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] py-2 pr-10 book-serif text-lg text-[#1a140d]"
-                                        style={{ color: '#1a140d', backgroundColor: 'transparent' }}
-                                    >
-                                        <option value="ALL" style={{ color: '#1a140d', backgroundColor: '#fbf7ef' }}>全部教学楼</option>
-                                        {buildingOptions.map(item => (
-                                            <option key={item.building} value={item.building} style={{ color: '#1a140d', backgroundColor: '#fbf7ef' }}>
-                                                {item.building} · {item.free_rooms}/{item.total_rooms}
-                                            </option>
-                                        ))}
-                                    </select>
+                            </div>
+                        </article>
+
+                        <article className="mt-14">
+                            <div className="flex items-baseline justify-between mb-3">
+                                <div className="book-serif italic text-[#7a6a5d] text-sm">§ II. Survey</div>
+                                <div className="mono-ui text-[10px] uppercase tracking-[0.22em] text-[#a08c7d]">
+                                    Free · Occupied · Total
+                                </div>
+                            </div>
+                            <hr className="book-divider-thin" />
+
+                            <div className="mt-6 flex items-baseline gap-6 md:gap-8">
+                                <span className="book-serif text-[clamp(4rem,11vw,7rem)] leading-none text-[#1a140d] tracking-[0.01em]">
+                                    {headlineNumber}
+                                </span>
+                                <div className="pb-2">
+                                    <div className="book-serif text-lg md:text-xl text-[#1a140d]">
+                                        {headlineSubtitle}
+                                    </div>
+                                    <div className="book-serif italic text-sm text-[#7a6a5d] mt-1.5">
+                                        Free <span className="text-[#1a140d] not-italic">{summaryFree}</span>
+                                        <span className="mx-2 text-[#a08c7d]">·</span>
+                                        Occupied <span className="text-[#1a140d] not-italic">{summaryOccupied}</span>
+                                        <span className="mx-2 text-[#a08c7d]">·</span>
+                                        Inventory <span className="text-[#1a140d] not-italic">{summaryTotal}</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -1701,26 +1710,26 @@
                             <hr className="book-divider" />
 
                             {loading ? (
-                                <p className="book-serif italic text-[#7a6a5d] text-base mt-10 text-center">正在计算空闲教室…</p>
+                                <p className="book-serif italic text-[#7a6a5d] text-base mt-12 text-center">正在计算空闲教室…</p>
                             ) : error ? (
-                                <div className="mt-8">
+                                <div className="mt-10">
                                     <p className="book-serif text-xl text-[#1a140d]">查询失败</p>
                                     <p className="book-serif italic text-sm text-[#7a6a5d] mt-2">{error}</p>
                                 </div>
                             ) : groupedRooms.length === 0 ? (
-                                <div className="mt-10 text-center">
+                                <div className="mt-12 text-center">
                                     <p className="book-serif text-xl md:text-2xl text-[#1a140d]">这个时段没有符合条件的空教室</p>
                                     <p className="book-serif italic text-sm text-[#7a6a5d] mt-3">换一个时间段、楼栋或者搜索条件试试。</p>
                                 </div>
                             ) : (
                                 <div>
                                     {groupedRooms.map((group, idx) => (
-                                        <section key={group.building} className="mt-10 first:mt-8">
+                                        <section key={group.building} className="mt-12 first:mt-8">
                                             <div className="flex items-baseline gap-4">
                                                 <span className="book-serif italic text-[#a08c7d] text-lg md:text-xl">
                                                     {toRoman(idx + 1)}.
                                                 </span>
-                                                <h2 className="book-serif text-2xl md:text-3xl text-[#1a140d] tracking-[0.01em]">
+                                                <h2 className="book-serif text-3xl md:text-4xl text-[#1a140d] tracking-[0.01em]">
                                                     {group.building}
                                                 </h2>
                                                 <span className="book-serif italic text-sm text-[#7a6a5d] ml-auto">
@@ -1730,48 +1739,32 @@
                                             <hr className="book-divider-thin mt-3" />
 
                                             {group.floors.map((floorGroup) => (
-                                                <div key={`${group.building}-${floorGroup.floorLabel}`} className="mt-6">
-                                                    <div className="flex items-baseline justify-between">
-                                                        <div className="book-serif italic text-sm text-[#7a6a5d]">
-                                                            — {floorGroup.floorLabel}
-                                                        </div>
-                                                        <div className="mono-ui text-[10px] uppercase tracking-[0.22em] text-[#a08c7d]">
-                                                            {floorGroup.rooms.length} 间
-                                                        </div>
+                                                <div key={`${group.building}-${floorGroup.floorLabel}`} className="mt-7">
+                                                    <div className="book-serif italic text-sm text-[#a08c7d] mb-4 tracking-[0.02em]">
+                                                        — {floorGroup.floorLabel} <span className="text-[#a08c7d]/70">· {floorGroup.rooms.length} 间</span>
                                                     </div>
-
-                                                    <ul className="mt-3">
-                                                        {floorGroup.rooms.map((room, roomIdx) => (
-                                                            <li
-                                                                key={room.room}
-                                                                className={`grid grid-cols-[5rem_minmax(0,1fr)_auto] gap-x-5 gap-y-1 py-3 ${roomIdx === 0 ? 'border-t' : ''} border-b border-[#1a140d]/10`}
-                                                            >
-                                                                <span className="book-serif text-xl text-[#1a140d] tracking-[0.01em]">
+                                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                                                        {floorGroup.rooms.map((room) => (
+                                                            <div key={room.room} className="border-t border-[#1a140d]/15 pt-3">
+                                                                <div className="book-serif text-2xl md:text-[1.65rem] text-[#1a140d] tracking-[0.01em] leading-tight">
                                                                     {room.room}
-                                                                </span>
-                                                                <span className="book-serif text-[#3d3025] text-base leading-relaxed">
+                                                                </div>
+                                                                <div className="book-serif mt-2 text-lg md:text-xl text-[#1a140d]">
+                                                                    <span className="italic text-[#7a6a5d] text-base">空闲至 </span>
+                                                                    <span className="text-[#a04a18]">{room.free_until}</span>
+                                                                </div>
+                                                                <div className="book-serif italic text-xs text-[#7a6a5d] mt-1.5 leading-relaxed">
                                                                     {room.next_busy ? (
                                                                         <React.Fragment>
-                                                                            <span className="italic text-[#7a6a5d]">下一节 </span>
-                                                                            {room.next_busy.start}–{room.next_busy.end}
-                                                                            <span className="text-[#7a6a5d]"> · </span>
-                                                                            {room.next_busy.course_code} {room.next_busy.title}
+                                                                            下一节 {room.next_busy.start}–{room.next_busy.end} · {room.next_busy.course_code}
                                                                         </React.Fragment>
                                                                     ) : (
-                                                                        <span className="italic text-[#7a6a5d]">今天后续没有排课</span>
+                                                                        '今天后续没有排课'
                                                                     )}
-                                                                </span>
-                                                                <span className="book-serif italic text-sm text-[#7a6a5d] whitespace-nowrap">
-                                                                    空闲至 <span className="text-[#1a140d] not-italic">{room.free_until}</span>
-                                                                </span>
-                                                                {room.previous_busy && (
-                                                                    <span className="col-start-2 col-end-4 book-serif italic text-xs text-[#a08c7d]">
-                                                                        前一节 {room.previous_busy.end} · {room.previous_busy.course_code}
-                                                                    </span>
-                                                                )}
-                                                            </li>
+                                                                </div>
+                                                            </div>
                                                         ))}
-                                                    </ul>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </section>
