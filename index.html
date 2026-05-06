@@ -1446,10 +1446,22 @@
         };
 
         const FreeClassroomView = () => {
-            const todayValue = SCHOOL_DAY_OPTIONS.find(option => option.value === ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()]);
-            const [selectedDay, setSelectedDay] = useState(todayValue ? todayValue.value : 'Mon');
-            const [startTime, setStartTime] = useState('08:00');
-            const [endTime, setEndTime] = useState('09:50');
+            const initialQuery = useMemo(() => {
+                const DAY_VALUES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const upcoming = SCHOOL_PERIODS.find(p => timeToMinutes(p.start) >= currentMinutes);
+                if (upcoming) {
+                    return { day: DAY_VALUES[now.getDay()], start: upcoming.start, end: upcoming.end };
+                }
+                const nextDay = DAY_VALUES[(now.getDay() + 1) % 7];
+                const first = SCHOOL_PERIODS[0];
+                return { day: nextDay, start: first.start, end: first.end };
+            }, []);
+
+            const [selectedDay, setSelectedDay] = useState(initialQuery.day);
+            const [startTime, setStartTime] = useState(initialQuery.start);
+            const [endTime, setEndTime] = useState(initialQuery.end);
             const [buildingFilter, setBuildingFilter] = useState('ALL');
             const [roomKeyword, setRoomKeyword] = useState('');
             const [loading, setLoading] = useState(true);
@@ -1564,22 +1576,22 @@
 
             return (
                 <div className="relative min-h-[calc(100svh-86px)]">
-                    <section className="max-w-5xl mx-auto px-6 md:px-10 py-10 md:py-14">
-                        <div className="mono-ui text-[11px] uppercase tracking-[0.28em] text-[#8a7666]">
+                    <section className="max-w-5xl mx-auto px-5 sm:px-6 md:px-10 py-8 md:py-14">
+                        <div className="mono-ui text-[10px] sm:text-[11px] uppercase tracking-[0.24em] sm:tracking-[0.28em] text-[#8a7666]">
                             MAXCOURSE · Empty Classroom Index
                         </div>
                         <hr className="book-divider mt-4" />
 
-                        <header className="mt-10 md:mt-12 grid md:grid-cols-[minmax(0,1fr)_auto] gap-6 items-end">
+                        <header className="mt-8 md:mt-12 grid md:grid-cols-[minmax(0,1fr)_auto] gap-3 md:gap-6 md:items-end">
                             <div>
                                 <div className="book-serif text-[#7a6a5d] italic text-base md:text-lg">
                                     A directory of quiet rooms,
                                 </div>
-                                <h1 className="book-serif mt-2 text-[clamp(2.25rem,5.5vw,3.75rem)] font-normal leading-[1.05] tracking-[0.02em] text-[#1a140d]">
+                                <h1 className="book-serif mt-2 text-[clamp(2rem,5.5vw,3.75rem)] font-normal leading-[1.05] tracking-[0.02em] text-[#1a140d]">
                                     Empty Classrooms
                                 </h1>
                             </div>
-                            <div className="mono-ui text-[11px] uppercase tracking-[0.28em] text-[#a08c7d] md:text-right">
+                            <div className="mono-ui text-[10px] sm:text-[11px] uppercase tracking-[0.24em] sm:tracking-[0.28em] text-[#a08c7d] md:text-right">
                                 {queryLabel}
                             </div>
                         </header>
@@ -1612,7 +1624,7 @@
                                 </div>
                             </div>
 
-                            <div className="mt-7 grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5">
+                            <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 md:gap-x-8 gap-y-5">
                                 <div>
                                     <label className="book-serif italic text-sm text-[#7a6a5d]">起始时间</label>
                                     <select
@@ -1681,19 +1693,19 @@
                             </div>
                             <hr className="book-divider-thin" />
 
-                            <div className="mt-6 flex items-baseline gap-6 md:gap-8">
-                                <span className="book-serif text-[clamp(4rem,11vw,7rem)] leading-none text-[#1a140d] tracking-[0.01em]">
+                            <div className="mt-6 flex flex-col sm:flex-row sm:items-baseline gap-3 sm:gap-6 md:gap-8">
+                                <span className="book-serif text-[clamp(3.25rem,13vw,7rem)] leading-none text-[#1a140d] tracking-[0.01em]">
                                     {headlineNumber}
                                 </span>
-                                <div className="pb-2">
+                                <div className="sm:pb-2">
                                     <div className="book-serif text-lg md:text-xl text-[#1a140d]">
                                         {headlineSubtitle}
                                     </div>
-                                    <div className="book-serif italic text-sm text-[#7a6a5d] mt-1.5">
+                                    <div className="book-serif italic text-xs sm:text-sm text-[#7a6a5d] mt-1.5 leading-relaxed">
                                         Free <span className="text-[#1a140d] not-italic">{summaryFree}</span>
-                                        <span className="mx-2 text-[#a08c7d]">·</span>
+                                        <span className="mx-1.5 sm:mx-2 text-[#a08c7d]">·</span>
                                         Occupied <span className="text-[#1a140d] not-italic">{summaryOccupied}</span>
-                                        <span className="mx-2 text-[#a08c7d]">·</span>
+                                        <span className="mx-1.5 sm:mx-2 text-[#a08c7d]">·</span>
                                         Inventory <span className="text-[#1a140d] not-italic">{summaryTotal}</span>
                                     </div>
                                 </div>
@@ -1725,14 +1737,14 @@
                                 <div>
                                     {groupedRooms.map((group, idx) => (
                                         <section key={group.building} className="mt-12 first:mt-8">
-                                            <div className="flex items-baseline gap-4">
+                                            <div className="flex items-baseline gap-3 md:gap-4 flex-wrap">
                                                 <span className="book-serif italic text-[#a08c7d] text-lg md:text-xl">
                                                     {toRoman(idx + 1)}.
                                                 </span>
-                                                <h2 className="book-serif text-3xl md:text-4xl text-[#1a140d] tracking-[0.01em]">
+                                                <h2 className="book-serif text-2xl md:text-3xl lg:text-4xl text-[#1a140d] tracking-[0.01em]">
                                                     {group.building}
                                                 </h2>
-                                                <span className="book-serif italic text-sm text-[#7a6a5d] ml-auto">
+                                                <span className="book-serif italic text-sm text-[#7a6a5d] ml-auto whitespace-nowrap">
                                                     {group.roomCount} {group.roomCount === 1 ? 'room' : 'rooms'}
                                                 </span>
                                             </div>
@@ -1753,13 +1765,14 @@
                                                                     <span className="italic text-[#7a6a5d] text-base">空闲至 </span>
                                                                     <span className="text-[#a04a18]">{room.free_until}</span>
                                                                 </div>
-                                                                <div className="book-serif italic text-xs text-[#7a6a5d] mt-1.5 leading-relaxed">
+                                                                <div className="book-serif text-xs text-[#7a6a5d] mt-2 leading-relaxed">
                                                                     {room.next_busy ? (
                                                                         <React.Fragment>
-                                                                            下一节 {room.next_busy.start}–{room.next_busy.end} · {room.next_busy.course_code}
+                                                                            <span className="italic">下一节 {room.next_busy.start}–{room.next_busy.end}</span>
+                                                                            <span className="block mt-0.5 text-[#3d3025]">{room.next_busy.course_code} · {room.next_busy.title}</span>
                                                                         </React.Fragment>
                                                                     ) : (
-                                                                        '今天后续没有排课'
+                                                                        <span className="italic">今天后续没有排课</span>
                                                                     )}
                                                                 </div>
                                                             </div>
