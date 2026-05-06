@@ -6,14 +6,12 @@
     <title>MAXCOURSE Campus Toolkit</title>
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
     <link rel="apple-touch-icon" href="/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="/vendor/fonts.css" rel="stylesheet">
+    <script src="/vendor/tailwind.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com/3.4.16';"></script>
+    <script src="/vendor/react.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react@18.3.1/umd/react.production.min.js';"></script>
+    <script src="/vendor/react-dom.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js';"></script>
+    <script src="/vendor/babel.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/@babel/standalone@7.24.7/babel.min.js';"></script>
+    <script src="/vendor/lucide.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js';"></script>
     <style>
         :root {
             --paper: #f4efe6;
@@ -181,6 +179,11 @@
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
+
+        const toRoman = (n) => {
+            const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+            return romans[n - 1] || String(n);
+        };
 
         // --- Icon Component ---
         const Icon = ({ name, className }) => {
@@ -2469,30 +2472,30 @@
             };
 
             return (
-                <div className="min-h-screen bg-transparent font-sans selection:bg-[#6b4a35] selection:text-white pb-8">
-                    <nav className="sticky top-0 z-50 border-b border-[#2f261f]/8 bg-[rgba(250,244,234,0.94)] shadow-[0_1px_0_rgba(47,38,31,0.04)]">
-                        <div className="max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-4 flex justify-between items-center relative gap-4">
-                            <div className="flex items-center gap-4 min-w-0">
-                                <button className="text-left shrink-0" onClick={() => goToView('home')}>
-                                    <span className="block text-2xl font-semibold tracking-[-0.055em] uppercase text-[#2f261f]">
-                                        MAX<span className="text-[#9a5a3f]">COURSE</span>
+                <div className="min-h-screen bg-transparent font-sans selection:bg-[#1a140d] selection:text-[#fbf5ec] pb-8">
+                    <nav className="sticky top-0 z-50 border-b border-[#1a140d]/15 bg-[rgba(250,244,234,0.92)] backdrop-blur-sm">
+                        <div className="max-w-6xl mx-auto px-6 md:px-10 py-5 flex justify-between items-baseline relative gap-6">
+                            <div className="flex items-baseline gap-8 min-w-0">
+                                <button className="text-left shrink-0 group" onClick={() => goToView('home')}>
+                                    <span className="book-serif block text-xl md:text-2xl font-normal tracking-[0.04em] text-[#1a140d]">
+                                        Maxcourse
                                     </span>
-                                    <span className="mono-ui hidden md:block text-[11px] uppercase tracking-[0.18em] text-[#8a7666]">
+                                    <span className="mono-ui hidden md:block text-[10px] uppercase tracking-[0.28em] text-[#8a7666] mt-0.5">
                                         Campus Toolkit
                                     </span>
                                 </button>
 
-                                <div className="hidden lg:flex items-center gap-1 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 p-1">
+                                <div className="hidden lg:flex items-baseline gap-7">
                                     {navItems.map((item) => {
                                         const isActive = currentView === item.key;
                                         return (
                                             <button
                                                 key={item.key}
                                                 onClick={() => goToView(item.key)}
-                                                className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors ${
+                                                className={`book-serif text-base relative pb-1 transition-colors ${
                                                     isActive
-                                                        ? 'bg-[#6b4a35] text-white'
-                                                        : 'text-[#5f5147] hover:bg-white hover:text-[#2f261f]'
+                                                        ? 'text-[#1a140d] border-b border-[#1a140d]'
+                                                        : 'text-[#7a6a5d] border-b border-transparent hover:text-[#1a140d] hover:border-[#1a140d]/40'
                                                 }`}
                                             >
                                                 {item.label}
@@ -2501,55 +2504,56 @@
                                     })}
                                 </div>
                             </div>
-                            
-                            <div className="flex items-center gap-3">
+
+                            <div className="flex items-baseline gap-5">
                                 {user ? (
-                                    <div className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-3 py-2">
-                                        <span className="mono-ui text-[11px] uppercase tracking-[0.18em] text-[#8a7666]">Session</span>
-                                        <span className="font-semibold text-[#2f261f] max-w-[11rem] truncate">{user.display_name || user.username}</span>
+                                    <div className="hidden md:flex items-baseline gap-2">
+                                        <span className="mono-ui text-[10px] uppercase tracking-[0.24em] text-[#8a7666]">Reader</span>
+                                        <span className="book-serif italic text-[#1a140d] max-w-[11rem] truncate">{user.display_name || user.username}</span>
                                     </div>
                                 ) : (
-                                    <button onClick={() => setShowAuthModal(true)} className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-4 py-2 font-semibold text-[#2f261f] hover:bg-white transition-colors">
-                                        <LogIn className="w-4 h-4" /> 登录
+                                    <button onClick={() => setShowAuthModal(true)} className="hidden md:inline book-serif text-[#1a140d] border-b border-[#1a140d]/50 hover:border-[#1a140d] pb-0.5 transition-colors">
+                                        登录
                                     </button>
                                 )}
 
                                 {user && (
-                                    <button onClick={logout} className="hidden md:flex items-center gap-2 rounded-full border border-[#2f261f]/10 bg-[#fffaf2]/72 px-4 py-2 font-semibold text-[#2f261f] hover:bg-white transition-colors" title="Logout">
-                                        <LogOut className="w-4 h-4" /> 退出
+                                    <button onClick={logout} className="hidden md:inline book-serif italic text-[#7a6a5d] border-b border-transparent hover:text-[#1a140d] hover:border-[#1a140d]/40 pb-0.5 transition-colors" title="Logout">
+                                        退出
                                     </button>
                                 )}
 
                                 <div className="lg:hidden relative z-50">
-                                    <button 
-                                        className="flex items-center gap-2 font-semibold bg-[#6b4a35] text-white px-4 py-2 rounded-full transition-colors hover:bg-[#4b3a30]"
+                                    <button
+                                        className="book-serif flex items-baseline gap-2 text-[#1a140d] border-b border-[#1a140d]/40 hover:border-[#1a140d] pb-0.5 transition-colors"
                                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                                     >
-                                        <Menu className="w-4 h-4" /> MENU
+                                        目录
                                     </button>
-                                    <div className={`absolute right-0 top-full mt-3 w-56 ${isMenuOpen ? 'block' : 'hidden'}`}>
-                                        <div className="bg-[#fffaf2] border border-[#2f261f]/10 shadow-[0_20px_50px_rgba(47,38,31,0.14)] rounded-3xl overflow-hidden">
-                                            {navItems.map((item) => {
-                                                const ItemIcon = item.Icon;
+                                    <div className={`absolute right-0 top-full mt-4 w-60 ${isMenuOpen ? 'block' : 'hidden'}`}>
+                                        <div className="bg-[#fbf5ec] border border-[#1a140d]/20 overflow-hidden">
+                                            {navItems.map((item, idx) => {
+                                                const isActive = currentView === item.key;
                                                 return (
                                                     <button
                                                         key={item.key}
                                                         onClick={() => goToView(item.key)}
-                                                        className={`w-full text-left px-4 py-3 font-semibold flex items-center gap-3 border-b border-[#2f261f]/6 last:border-b-0 ${
-                                                            currentView === item.key ? 'bg-[#6b4a35] text-white' : 'text-[#2f261f] hover:bg-[#f5efe5]'
+                                                        className={`book-serif w-full text-left px-5 py-3 flex items-baseline gap-3 ${idx > 0 ? 'border-t border-[#1a140d]/10' : ''} ${
+                                                            isActive ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
                                                         }`}
                                                     >
-                                                        <ItemIcon className="w-4 h-4" /> {item.label}
+                                                        <span className="book-serif italic text-[#a08c7d] text-sm w-6">{toRoman(idx + 1)}.</span>
+                                                        <span>{item.label}</span>
                                                     </button>
                                                 );
                                             })}
                                             {!user ? (
-                                                <button onClick={() => { setShowAuthModal(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 font-semibold text-[#2f261f] flex items-center gap-3 border-t border-[#2f261f]/6 hover:bg-[#f5efe5]">
-                                                    <LogIn className="w-4 h-4" /> 登录
+                                                <button onClick={() => { setShowAuthModal(true); setIsMenuOpen(false); }} className="book-serif italic w-full text-left px-5 py-3 text-[#3d3025] border-t border-[#1a140d]/20 hover:bg-[#1a140d]/[0.025]">
+                                                    登录
                                                 </button>
                                             ) : (
-                                                <button onClick={logout} className="w-full text-left px-4 py-3 font-semibold text-[#2f261f] flex items-center gap-3 border-t border-[#2f261f]/6 hover:bg-[#f5efe5]">
-                                                    <LogOut className="w-4 h-4" /> 退出
+                                                <button onClick={logout} className="book-serif italic w-full text-left px-5 py-3 text-[#3d3025] border-t border-[#1a140d]/20 hover:bg-[#1a140d]/[0.025]">
+                                                    退出
                                                 </button>
                                             )}
                                         </div>
