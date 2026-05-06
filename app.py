@@ -4,10 +4,14 @@ import json
 import re
 import sqlite3
 import secrets
+import smtplib
+import ssl
 import time
 import uuid
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+from html import escape
 from flask import Flask, request, jsonify, send_from_directory, session
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -34,6 +38,13 @@ DAY_LABELS = {
 SCHOOL_DAY_END_MINUTES = 21 * 60 + 50
 EXCLUDED_FREE_CLASSROOM_BUILDINGS = {'V22', 'V20', 'UC', 'SP'}
 PRIORITY_BUILDING_ORDER = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29']
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+EMAIL_REMINDER_CHOICES = [72, 24, 3, 1]
+DEFAULT_EMAIL_REMINDER_HOURS = [24, 3]
+DEFAULT_EMAIL_REMINDER_VALUE = ','.join(str(hour) for hour in DEFAULT_EMAIL_REMINDER_HOURS)
+DEFAULT_PUBLIC_BASE_URL = 'https://www.bnbscheduler.top'
+BEIJING_TZ = timezone(timedelta(hours=8))
+EMAIL_MAX_DELIVERY_ATTEMPTS = 3
 
 
 def load_or_create_secret_key():
@@ -159,16 +170,49 @@ def init_db():
             c.execute('ALTER TABLE users ADD COLUMN display_name TEXT')
         except sqlite3.OperationalError:
             pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN email TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN email_notifications_enabled BOOLEAN DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute(f"ALTER TABLE users ADD COLUMN email_reminder_hours TEXT DEFAULT '{DEFAULT_EMAIL_REMINDER_VALUE}'")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN unsubscribe_token TEXT')
+        except sqlite3.OperationalError:
+            pass
 
         try:
             c.execute('ALTER TABLE todos ADD COLUMN is_stale BOOLEAN DEFAULT 0')
         except sqlite3.OperationalError:
             pass
 
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS email_notification_deliveries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                todo_id INTEGER,
+                reminder_hours INTEGER,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                success BOOLEAN DEFAULT 0,
+                error TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(todo_id) REFERENCES todos(id)
+            )
+        ''')
+
+        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unsubscribe_token ON users (unsubscribe_token) WHERE unsubscribe_token IS NOT NULL')
         c.execute('CREATE INDEX IF NOT EXISTS idx_todos_user_ispace_lookup ON todos (user_id, ispace_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_view_name ON page_views (view_name)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_visitor_id ON page_views (visitor_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_email_notification_due_lookup ON email_notification_deliveries (user_id, todo_id, reminder_hours)')
+        c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_email_notification_unique_success ON email_notification_deliveries (user_id, todo_id, reminder_hours) WHERE success = 1')
         try:
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_user_ispace_unique ON todos (user_id, ispace_id) WHERE ispace_id IS NOT NULL')
         except sqlite3.IntegrityError:
@@ -185,6 +229,203 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def get_public_base_url():
+    return os.getenv('MAXCOURSE_PUBLIC_BASE_URL', DEFAULT_PUBLIC_BASE_URL).rstrip('/')
+
+
+def get_smtp_config():
+    use_ssl = env_bool('SMTP_USE_SSL', False)
+    default_port = 465 if use_ssl else 587
+    try:
+        port = int(os.getenv('SMTP_PORT', default_port))
+    except ValueError:
+        port = default_port
+    return {
+        "host": os.getenv('SMTP_HOST', '').strip(),
+        "port": port,
+        "username": os.getenv('SMTP_USERNAME', '').strip(),
+        "password": os.getenv('SMTP_PASSWORD', ''),
+        "from_email": os.getenv('SMTP_FROM_EMAIL', '').strip(),
+        "from_name": os.getenv('SMTP_FROM_NAME', 'MAXCOURSE DDL').strip(),
+        "reply_to": os.getenv('SMTP_REPLY_TO', '').strip(),
+        "use_tls": env_bool('SMTP_USE_TLS', not use_ssl),
+        "use_ssl": use_ssl,
+    }
+
+
+def is_email_service_configured():
+    config = get_smtp_config()
+    return bool(config["host"] and config["from_email"])
+
+
+def normalize_email(value):
+    email = str(value or '').strip().lower()
+    if not email:
+        return ''
+    if not EMAIL_RE.match(email):
+        raise ValueError("Invalid email address")
+    return email
+
+
+def parse_reminder_hours(value, default_to_existing=True):
+    if value is None:
+        return DEFAULT_EMAIL_REMINDER_HOURS[:] if default_to_existing else []
+
+    if isinstance(value, str):
+        raw_values = [item.strip() for item in value.split(',')]
+    elif isinstance(value, (list, tuple)):
+        raw_values = value
+    else:
+        raw_values = [value]
+
+    parsed = []
+    allowed = set(EMAIL_REMINDER_CHOICES)
+    for item in raw_values:
+        try:
+            hour = int(item)
+        except (TypeError, ValueError):
+            continue
+        if hour in allowed and hour not in parsed:
+            parsed.append(hour)
+
+    if not parsed and default_to_existing:
+        return DEFAULT_EMAIL_REMINDER_HOURS[:]
+    return sorted(parsed, reverse=True)
+
+
+def reminder_hours_to_db(value):
+    return ','.join(str(hour) for hour in parse_reminder_hours(value, default_to_existing=False))
+
+
+def format_due_time(timestamp):
+    return datetime.fromtimestamp(int(timestamp), tz=BEIJING_TZ).strftime('%Y-%m-%d %H:%M')
+
+
+def ensure_unsubscribe_token(conn, user_id):
+    c = conn.cursor()
+    c.execute('SELECT unsubscribe_token FROM users WHERE id = ?', (user_id,))
+    row = c.fetchone()
+    if row and row['unsubscribe_token']:
+        return row['unsubscribe_token']
+
+    for _ in range(5):
+        token = secrets.token_urlsafe(32)
+        try:
+            c.execute('UPDATE users SET unsubscribe_token = ? WHERE id = ?', (token, user_id))
+            conn.commit()
+            return token
+        except sqlite3.IntegrityError:
+            continue
+    raise RuntimeError("Failed to generate unique unsubscribe token")
+
+
+def build_unsubscribe_url(token):
+    return f"{get_public_base_url()}/api/notifications/unsubscribe?token={token}"
+
+
+def send_email(to_email, subject, text_body, html_body=None, unsubscribe_url=None):
+    config = get_smtp_config()
+    if not is_email_service_configured():
+        raise RuntimeError("Email service is not configured")
+
+    message = EmailMessage()
+    if config["from_name"]:
+        message['From'] = f'{config["from_name"]} <{config["from_email"]}>'
+    else:
+        message['From'] = config["from_email"]
+    message['To'] = to_email
+    message['Subject'] = subject
+    if config["reply_to"]:
+        message['Reply-To'] = config["reply_to"]
+    if unsubscribe_url:
+        message['List-Unsubscribe'] = f'<{unsubscribe_url}>'
+        message['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+
+    message.set_content(text_body)
+    if html_body:
+        message.add_alternative(html_body, subtype='html')
+
+    context = ssl.create_default_context()
+    if config["use_ssl"]:
+        server = smtplib.SMTP_SSL(config["host"], config["port"], timeout=20, context=context)
+    else:
+        server = smtplib.SMTP(config["host"], config["port"], timeout=20)
+
+    with server:
+        if config["use_tls"] and not config["use_ssl"]:
+            server.starttls(context=context)
+        if config["username"] or config["password"]:
+            server.login(config["username"], config["password"])
+        server.send_message(message)
+
+
+def notification_settings_payload(user_row):
+    reminder_hours = parse_reminder_hours(user_row['email_reminder_hours'] if 'email_reminder_hours' in user_row.keys() else None)
+    return {
+        "email": user_row['email'] if 'email' in user_row.keys() and user_row['email'] else "",
+        "enabled": bool(user_row['email_notifications_enabled']) if 'email_notifications_enabled' in user_row.keys() else False,
+        "reminder_hours": reminder_hours,
+        "available_reminder_hours": EMAIL_REMINDER_CHOICES,
+        "email_service_configured": is_email_service_configured(),
+    }
+
+
+def build_todo_reminder_email(user_row, todo_row, reminder_hours, unsubscribe_url=None):
+    due_time = format_due_time(todo_row['due_date'])
+    display_name = user_row['display_name'] or user_row['ispace_username'] or user_row['username']
+    title = todo_row['title']
+    course = todo_row['course'] or 'Personal Task'
+    task_url = todo_row['url'] or f"{get_public_base_url()}/"
+    site_url = get_public_base_url()
+    subject = f"DDL reminder: {title}"
+
+    text_body = (
+        f"Hi {display_name},\n\n"
+        f"This is your {reminder_hours}h reminder for:\n"
+        f"{title}\n\n"
+        f"Course: {course}\n"
+        f"Due: {due_time} (Beijing Time)\n"
+        f"Task link: {task_url}\n\n"
+        f"Open MAXCOURSE: {site_url}\n"
+    )
+    if unsubscribe_url:
+        text_body += f"\nUnsubscribe from these reminders: {unsubscribe_url}\n"
+
+    unsubscribe_html = ''
+    if unsubscribe_url:
+        unsubscribe_html = (
+            f'<p style="margin-top: 24px; font-size: 12px; color: #6b7280;">'
+            f'Don\'t want these reminders? '
+            f'<a href="{escape(unsubscribe_url, quote=True)}" style="color: #6b7280; text-decoration: underline;">Unsubscribe with one click</a>.'
+            f'</p>'
+        )
+
+    html_body = f"""
+        <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #101820; line-height: 1.55;">
+            <p>Hi {escape(str(display_name))},</p>
+            <p>This is your <strong>{reminder_hours}h reminder</strong> for:</p>
+            <div style="border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; background: #fbf7ef;">
+                <h2 style="margin: 0 0 8px; font-size: 20px;">{escape(str(title))}</h2>
+                <p style="margin: 0 0 6px;"><strong>Course:</strong> {escape(str(course))}</p>
+                <p style="margin: 0;"><strong>Due:</strong> {escape(due_time)} <span style="color: #6b7280; font-weight: normal;">(Beijing Time)</span></p>
+            </div>
+            <p style="margin-top: 18px;">
+                <a href="{escape(str(task_url), quote=True)}" style="display: inline-block; padding: 10px 14px; background: #101820; color: #ffffff; border-radius: 999px; text-decoration: none; font-weight: 700;">Open task</a>
+                <a href="{escape(site_url, quote=True)}" style="display: inline-block; margin-left: 8px; padding: 10px 14px; background: #d6ff62; color: #101820; border-radius: 999px; text-decoration: none; font-weight: 700;">Open MAXCOURSE</a>
+            </p>
+            {unsubscribe_html}
+        </div>
+    """
+    return subject, text_body, html_body
 
 
 def set_authenticated_session(user_id, username, display_name):
@@ -588,6 +829,184 @@ def update_profile():
     finally:
         conn.close()
 
+
+@app.route('/api/user/notifications', methods=['GET'])
+def get_notification_settings():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        '''
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        FROM users
+        WHERE id = ?
+        ''',
+        (session['user_id'],),
+    )
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify(notification_settings_payload(user))
+
+
+@app.route('/api/user/notifications', methods=['PUT'])
+def update_notification_settings():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get('enabled'))
+
+    try:
+        email = normalize_email(data.get('email'))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+    if enabled and not email:
+        return jsonify({"error": "Email is required when notifications are enabled"}), 400
+
+    reminder_hours = parse_reminder_hours(data.get('reminder_hours'), default_to_existing=False)
+    if enabled and not reminder_hours:
+        return jsonify({"error": "Choose at least one reminder time"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        '''
+        UPDATE users
+        SET email = ?, email_notifications_enabled = ?, email_reminder_hours = ?
+        WHERE id = ?
+        ''',
+        (email or None, 1 if enabled else 0, reminder_hours_to_db(reminder_hours), session['user_id']),
+    )
+    conn.commit()
+    c.execute(
+        '''
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        FROM users
+        WHERE id = ?
+        ''',
+        (session['user_id'],),
+    )
+    user = c.fetchone()
+    conn.close()
+
+    return jsonify({"success": True, "settings": notification_settings_payload(user)})
+
+
+@app.route('/api/user/notifications/test', methods=['POST'])
+def send_notification_test_email():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        '''
+        SELECT username, ispace_username, display_name, email, email_notifications_enabled, email_reminder_hours
+        FROM users
+        WHERE id = ?
+        ''',
+        (session['user_id'],),
+    )
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    if not user['email']:
+        return jsonify({"error": "Save an email address before sending a test"}), 400
+    if not is_email_service_configured():
+        return jsonify({"error": "Email service is not configured on the server"}), 503
+
+    display_name = user['display_name'] or user['ispace_username'] or user['username']
+    subject = "MAXCOURSE DDL email notification test"
+    site_url = get_public_base_url()
+
+    conn = get_db()
+    try:
+        token = ensure_unsubscribe_token(conn, session['user_id'])
+    finally:
+        conn.close()
+    unsubscribe_url = build_unsubscribe_url(token)
+
+    text_body = (
+        f"Hi {display_name},\n\n"
+        "Your MAXCOURSE DDL email notification is ready.\n"
+        "Reminder times shown in Beijing Time (UTC+8).\n\n"
+        f"Open MAXCOURSE: {site_url}\n"
+        f"\nUnsubscribe from these reminders: {unsubscribe_url}\n"
+    )
+    html_body = f"""
+        <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #101820; line-height: 1.55;">
+            <h2>MAXCOURSE DDL notification test</h2>
+            <p>Hi {escape(str(display_name))}, your email notification is ready.</p>
+            <p style="color: #6b7280; font-size: 13px;">Reminder times are shown in Beijing Time (UTC+8).</p>
+            <p><a href="{escape(site_url, quote=True)}" style="display: inline-block; padding: 10px 14px; background: #101820; color: #ffffff; border-radius: 999px; text-decoration: none; font-weight: 700;">Open MAXCOURSE</a></p>
+            <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">
+                Don't want these reminders?
+                <a href="{escape(unsubscribe_url, quote=True)}" style="color: #6b7280; text-decoration: underline;">Unsubscribe with one click</a>.
+            </p>
+        </div>
+    """
+
+    try:
+        send_email(user['email'], subject, text_body, html_body, unsubscribe_url=unsubscribe_url)
+    except Exception as error:
+        app.logger.exception("Failed to send notification test email")
+        return jsonify({"error": str(error)}), 502
+
+    return jsonify({"success": True})
+
+
+@app.route('/api/notifications/unsubscribe', methods=['GET', 'POST'])
+def unsubscribe_email_notifications():
+    token = (request.args.get('token') or request.form.get('token') or '').strip()
+    if not token:
+        return jsonify({"error": "Missing token"}), 400
+
+    conn = get_db()
+    try:
+        c = conn.cursor()
+        c.execute('SELECT id, email FROM users WHERE unsubscribe_token = ?', (token,))
+        user = c.fetchone()
+        if not user:
+            return jsonify({"error": "Invalid or expired unsubscribe token"}), 404
+
+        c.execute('UPDATE users SET email_notifications_enabled = 0 WHERE id = ?', (user['id'],))
+        conn.commit()
+    finally:
+        conn.close()
+
+    if request.method == 'POST':
+        return jsonify({"success": True})
+
+    site_url = escape(get_public_base_url(), quote=True)
+    email_html = escape(user['email'] or '')
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Unsubscribed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {{ font-family: system-ui, -apple-system, sans-serif; background: #fbf7ef; color: #101820; padding: 48px 24px; }}
+.card {{ max-width: 480px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,.05); }}
+h1 {{ margin: 0 0 12px; font-size: 22px; }}
+p {{ margin: 0 0 12px; line-height: 1.6; }}
+.btn {{ display: inline-block; margin-top: 16px; padding: 10px 16px; background: #101820; color: #fff; border-radius: 999px; text-decoration: none; font-weight: 700; }}
+</style></head>
+<body><div class="card">
+<h1>You're unsubscribed</h1>
+<p>DDL reminder emails to <strong>{email_html}</strong> have been turned off.</p>
+<p>You can re-enable them anytime in MAXCOURSE notification settings.</p>
+<a class="btn" href="{site_url}">Open MAXCOURSE</a>
+</div></body></html>"""
+    return page, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+
 @app.route('/api/teachers', methods=['GET'])
 def get_all_teachers():
     try:
@@ -938,6 +1357,136 @@ def delete_todo(todo_id):
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+@app.route('/api/notifications/dispatch', methods=['POST'])
+def dispatch_due_email_notifications():
+    expected_secret = os.getenv('MAXCOURSE_NOTIFICATION_SECRET', '').strip()
+    if not expected_secret:
+        return jsonify({"error": "Notification dispatch secret is not configured"}), 503
+
+    supplied_secret = request.headers.get('X-Notification-Secret', '').strip()
+    if not supplied_secret or not secrets.compare_digest(supplied_secret, expected_secret):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not is_email_service_configured():
+        return jsonify({"error": "Email service is not configured on the server"}), 503
+
+    data = request.get_json(silent=True) or {}
+    dry_run = bool(data.get('dry_run'))
+    now_ts = int(time.time())
+    max_window_seconds = max(EMAIL_REMINDER_CHOICES) * 60 * 60
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        '''
+        SELECT
+            todos.id AS todo_id,
+            todos.title,
+            todos.course,
+            todos.due_date,
+            todos.url,
+            users.id AS user_id,
+            users.username,
+            users.ispace_username,
+            users.display_name,
+            users.email,
+            users.email_reminder_hours
+        FROM todos
+        JOIN users ON users.id = todos.user_id
+        WHERE COALESCE(users.email_notifications_enabled, 0) = 1
+          AND users.email IS NOT NULL
+          AND users.email != ''
+          AND COALESCE(todos.is_completed, 0) = 0
+          AND COALESCE(todos.is_stale, 0) = 0
+          AND todos.due_date > ?
+          AND todos.due_date <= ?
+        ORDER BY todos.due_date ASC
+        ''',
+        (now_ts, now_ts + max_window_seconds),
+    )
+    candidates = c.fetchall()
+
+    checked = 0
+    sent = 0
+    skipped = 0
+    failed = 0
+    errors = []
+
+    for row in candidates:
+        reminder_hours = parse_reminder_hours(row['email_reminder_hours'])
+        remaining_seconds = int(row['due_date']) - now_ts
+        eligible = [hour for hour in sorted(reminder_hours) if remaining_seconds <= hour * 60 * 60]
+        if not eligible:
+            skipped += 1
+            continue
+
+        reminder_hour = eligible[0]
+        checked += 1
+        c.execute(
+            '''
+            SELECT
+                SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS success_count,
+                SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS failure_count
+            FROM email_notification_deliveries
+            WHERE user_id = ? AND todo_id = ? AND reminder_hours = ?
+            ''',
+            (row['user_id'], row['todo_id'], reminder_hour),
+        )
+        delivery_stats = c.fetchone()
+        success_count = (delivery_stats['success_count'] if delivery_stats else 0) or 0
+        failure_count = (delivery_stats['failure_count'] if delivery_stats else 0) or 0
+        if success_count > 0:
+            skipped += 1
+            continue
+        if failure_count >= EMAIL_MAX_DELIVERY_ATTEMPTS:
+            skipped += 1
+            continue
+
+        if dry_run:
+            continue
+
+        try:
+            unsubscribe_token = ensure_unsubscribe_token(conn, row['user_id'])
+            unsubscribe_url = build_unsubscribe_url(unsubscribe_token)
+            subject, text_body, html_body = build_todo_reminder_email(row, row, reminder_hour, unsubscribe_url=unsubscribe_url)
+            send_email(row['email'], subject, text_body, html_body, unsubscribe_url=unsubscribe_url)
+            c.execute(
+                '''
+                INSERT INTO email_notification_deliveries (user_id, todo_id, reminder_hours, success, error)
+                VALUES (?, ?, ?, 1, NULL)
+                ''',
+                (row['user_id'], row['todo_id'], reminder_hour),
+            )
+            conn.commit()
+            sent += 1
+        except Exception as error:
+            failed += 1
+            message = str(error)[:500]
+            errors.append({"todo_id": row['todo_id'], "user_id": row['user_id'], "error": message})
+            c.execute(
+                '''
+                INSERT INTO email_notification_deliveries (user_id, todo_id, reminder_hours, success, error)
+                VALUES (?, ?, ?, 0, ?)
+                ''',
+                (row['user_id'], row['todo_id'], reminder_hour, message),
+            )
+            conn.commit()
+            app.logger.exception("Failed to send DDL reminder email")
+
+    conn.close()
+
+    return jsonify({
+        "success": failed == 0,
+        "dry_run": dry_run,
+        "candidates": len(candidates),
+        "checked": checked,
+        "sent": sent,
+        "skipped": skipped,
+        "failed": failed,
+        "errors": errors[:10],
+    })
 
 # --- Existing API Endpoints ---
 
