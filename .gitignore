@@ -3,3 +3,4 @@
 .flask_secret_key
 __pycache__/
 venv/
+maxcourse.db
