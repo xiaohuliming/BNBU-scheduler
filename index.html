@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -2086,7 +2086,11 @@
                         <footer className="tool-reveal reveal-delay-3 mt-20 md:mt-28 text-center">
                             <hr className="book-divider-thin mb-6" />
                             <div className="book-serif italic text-sm text-[#8a7666]">
-                                {user ? (<>已登录 · <span className="text-[#3d3025]">{user.display_name || user.username}</span></>) : (<>未登录 · <button onClick={onOpenLogin} className="book-link">前往登录</button></>)}
+                                {user ? (
+                                    <React.Fragment>已登录 · <span className="text-[#3d3025]">{user.display_name || user.username}</span></React.Fragment>
+                                ) : (
+                                    <React.Fragment>未登录 · <button onClick={onOpenLogin} className="book-link">前往登录</button></React.Fragment>
+                                )}
                             </div>
                             <div className="mono-ui mt-3 text-[10px] uppercase tracking-[0.24em] text-[#a08c7d]">
                                 · Fin ·
