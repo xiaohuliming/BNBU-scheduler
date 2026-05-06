@@ -196,6 +196,274 @@ class AppTestCase(unittest.TestCase):
 
         self.assertEqual(todo_count, 0)
 
+    def test_user_can_save_email_notification_settings(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+            display_name='Notify User',
+        )
+
+        with self.client.session_transaction() as flask_session:
+            flask_session['user_id'] = 1
+            flask_session['username'] = 'notify-user'
+            flask_session['display_name'] = 'Notify User'
+            flask_session.permanent = True
+
+        response = self.client.put(
+            '/api/user/notifications',
+            json={
+                'email': 'Student@Example.COM',
+                'enabled': True,
+                'reminder_hours': [24, 3, 999],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()['settings']
+        self.assertEqual(data['email'], 'student@example.com')
+        self.assertTrue(data['enabled'])
+        self.assertEqual(data['reminder_hours'], [24, 3])
+
+        get_response = self.client.get('/api/user/notifications')
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(get_response.get_json()['email'], 'student@example.com')
+
+    def test_email_notification_requires_valid_email_when_enabled(self):
+        self.insert_user('notify-user', password_hash=app_module.generate_password_hash('pw'))
+
+        with self.client.session_transaction() as flask_session:
+            flask_session['user_id'] = 1
+            flask_session['username'] = 'notify-user'
+            flask_session['display_name'] = 'notify-user'
+            flask_session.permanent = True
+
+        response = self.client.put(
+            '/api/user/notifications',
+            json={'email': 'not-an-email', 'enabled': True, 'reminder_hours': [24]},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid email', response.get_json()['error'])
+
+    def test_dispatch_due_email_notifications_sends_closest_window_once(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+            display_name='Notify User',
+        )
+        due_date = int(app_module.time.time()) + (2 * 60 * 60)
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                UPDATE users
+                SET email = ?, email_notifications_enabled = 1, email_reminder_hours = ?
+                WHERE id = 1
+                ''',
+                ('student@example.com', '24,3,1'),
+            )
+            conn.execute(
+                '''
+                INSERT INTO todos (user_id, title, course, due_date, url, is_completed, is_stale)
+                VALUES (1, 'Submit essay', 'WRIT1001', ?, 'https://ispace.example/task', 0, 0)
+                ''',
+                (due_date,),
+            )
+            conn.commit()
+
+        env = {
+            'MAXCOURSE_NOTIFICATION_SECRET': 'dispatch-secret',
+            'SMTP_HOST': 'smtp.example.com',
+            'SMTP_FROM_EMAIL': 'notify@bnbscheduler.top',
+        }
+        with mock.patch.dict(os.environ, env, clear=False), mock.patch.object(app_module, 'send_email') as mocked_send:
+            first_response = self.client.post(
+                '/api/notifications/dispatch',
+                headers={'X-Notification-Secret': 'dispatch-secret'},
+                json={},
+            )
+            second_response = self.client.post(
+                '/api/notifications/dispatch',
+                headers={'X-Notification-Secret': 'dispatch-secret'},
+                json={},
+            )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(first_response.get_json()['sent'], 1)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response.get_json()['sent'], 0)
+        mocked_send.assert_called_once()
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            row = conn.execute(
+                '''
+                SELECT reminder_hours, success
+                FROM email_notification_deliveries
+                WHERE user_id = 1 AND todo_id = 1
+                '''
+            ).fetchone()
+
+        self.assertEqual(row[0], 3)
+        self.assertEqual(row[1], 1)
+
+    def test_format_due_time_uses_beijing_timezone(self):
+        # 1700000000 = 2023-11-14 22:13:20 UTC = 2023-11-15 06:13 Beijing
+        formatted = app_module.format_due_time(1700000000)
+        self.assertEqual(formatted, '2023-11-15 06:13')
+
+    def test_dispatch_includes_unsubscribe_url_and_token_persists(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+            display_name='Notify User',
+        )
+        due_date = int(app_module.time.time()) + (2 * 60 * 60)
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                UPDATE users
+                SET email = ?, email_notifications_enabled = 1, email_reminder_hours = ?
+                WHERE id = 1
+                ''',
+                ('student@example.com', '24,3,1'),
+            )
+            conn.execute(
+                '''
+                INSERT INTO todos (user_id, title, course, due_date, url, is_completed, is_stale)
+                VALUES (1, 'Submit essay', 'WRIT1001', ?, 'https://ispace.example/task', 0, 0)
+                ''',
+                (due_date,),
+            )
+            conn.commit()
+
+        env = {
+            'MAXCOURSE_NOTIFICATION_SECRET': 'dispatch-secret',
+            'SMTP_HOST': 'smtp.example.com',
+            'SMTP_FROM_EMAIL': 'notify@bnbscheduler.top',
+        }
+        with mock.patch.dict(os.environ, env, clear=False), mock.patch.object(app_module, 'send_email') as mocked_send:
+            response = self.client.post(
+                '/api/notifications/dispatch',
+                headers={'X-Notification-Secret': 'dispatch-secret'},
+                json={},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        mocked_send.assert_called_once()
+        call_kwargs = mocked_send.call_args.kwargs
+        self.assertIn('unsubscribe_url', call_kwargs)
+        unsubscribe_url = call_kwargs['unsubscribe_url']
+        self.assertIn('/api/notifications/unsubscribe?token=', unsubscribe_url)
+        text_body = mocked_send.call_args.args[2]
+        self.assertIn('Beijing Time', text_body)
+        self.assertIn('Unsubscribe', text_body)
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            token_row = conn.execute('SELECT unsubscribe_token FROM users WHERE id = 1').fetchone()
+        self.assertTrue(token_row[0])
+        self.assertIn(token_row[0], unsubscribe_url)
+
+    def test_unsubscribe_endpoint_disables_notifications(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+        )
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                UPDATE users
+                SET email = ?, email_notifications_enabled = 1, unsubscribe_token = ?
+                WHERE id = 1
+                ''',
+                ('student@example.com', 'unsub-token-abc'),
+            )
+            conn.commit()
+
+        bad = self.client.get('/api/notifications/unsubscribe?token=does-not-exist')
+        self.assertEqual(bad.status_code, 404)
+
+        ok = self.client.get('/api/notifications/unsubscribe?token=unsub-token-abc')
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn(b"unsubscribed", ok.data.lower())
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            enabled = conn.execute(
+                'SELECT email_notifications_enabled FROM users WHERE id = 1'
+            ).fetchone()[0]
+        self.assertEqual(enabled, 0)
+
+        post_response = self.client.post(
+            '/api/notifications/unsubscribe',
+            data={'token': 'unsub-token-abc'},
+        )
+        self.assertEqual(post_response.status_code, 200)
+        self.assertTrue(post_response.is_json)
+        self.assertTrue(post_response.get_json()['success'])
+
+    def test_dispatch_stops_after_three_failures(self):
+        self.insert_user(
+            'notify-user',
+            password_hash=app_module.generate_password_hash('pw'),
+        )
+        due_date = int(app_module.time.time()) + (2 * 60 * 60)
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                UPDATE users
+                SET email = ?, email_notifications_enabled = 1, email_reminder_hours = ?
+                WHERE id = 1
+                ''',
+                ('student@example.com', '24,3,1'),
+            )
+            conn.execute(
+                '''
+                INSERT INTO todos (user_id, title, course, due_date, url, is_completed, is_stale)
+                VALUES (1, 'Submit essay', 'WRIT1001', ?, 'https://ispace.example/task', 0, 0)
+                ''',
+                (due_date,),
+            )
+            conn.commit()
+
+        env = {
+            'MAXCOURSE_NOTIFICATION_SECRET': 'dispatch-secret',
+            'SMTP_HOST': 'smtp.example.com',
+            'SMTP_FROM_EMAIL': 'notify@bnbscheduler.top',
+        }
+
+        with mock.patch.dict(os.environ, env, clear=False), \
+             mock.patch.object(app_module, 'send_email', side_effect=RuntimeError('smtp down')) as mocked_send:
+            for _ in range(3):
+                self.client.post(
+                    '/api/notifications/dispatch',
+                    headers={'X-Notification-Secret': 'dispatch-secret'},
+                    json={},
+                )
+            self.assertEqual(mocked_send.call_count, 3)
+
+            fourth = self.client.post(
+                '/api/notifications/dispatch',
+                headers={'X-Notification-Secret': 'dispatch-secret'},
+                json={},
+            )
+            self.assertEqual(mocked_send.call_count, 3)
+
+        self.assertEqual(fourth.status_code, 200)
+        data = fourth.get_json()
+        self.assertEqual(data['sent'], 0)
+        self.assertEqual(data['failed'], 0)
+        self.assertEqual(data['skipped'], 1)
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            failure_count = conn.execute(
+                '''
+                SELECT COUNT(*)
+                FROM email_notification_deliveries
+                WHERE user_id = 1 AND todo_id = 1 AND success = 0
+                '''
+            ).fetchone()[0]
+        self.assertEqual(failure_count, 3)
+
     def test_optimize_returns_real_course_units(self):
         mocked_result = {
             'best_units': 3,
