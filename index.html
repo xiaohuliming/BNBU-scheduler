@@ -1445,7 +1445,138 @@
             );
         };
 
-        const FreeClassroomView = () => {
+        const ClassroomDetailModal = ({ room, onClose }) => {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                let ignore = false;
+                setLoading(true);
+                setError(null);
+                fetch(`/api/classroom/${encodeURIComponent(room)}/schedule`)
+                    .then(res => {
+                        if (!res.ok) throw new Error('查询失败');
+                        return res.json();
+                    })
+                    .then(d => {
+                        if (ignore) return;
+                        setData(d);
+                        setLoading(false);
+                    })
+                    .catch(err => {
+                        if (ignore) return;
+                        setError(err.message || '加载失败');
+                        setLoading(false);
+                    });
+                return () => { ignore = true; };
+            }, [room]);
+
+            useEffect(() => {
+                const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+                window.addEventListener('keydown', onKey);
+                const prevOverflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+                return () => {
+                    window.removeEventListener('keydown', onKey);
+                    document.body.style.overflow = prevOverflow;
+                };
+            }, [onClose]);
+
+            const totalEvents = data ? data.total_events : null;
+
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-stretch sm:items-center sm:justify-center sm:p-6">
+                    <div className="absolute inset-0 bg-[#1a140d]/40 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="relative bg-[#fbf7ef] w-full sm:max-w-3xl border border-[#1a140d]/15 shadow-[0_30px_80px_rgba(26,20,13,0.25)] flex flex-col max-h-[100vh] sm:max-h-[88vh] overflow-hidden">
+                        <div className="px-5 sm:px-10 pt-6 sm:pt-7 pb-5 border-b border-[#1a140d]/10 flex items-start justify-between gap-4 shrink-0">
+                            <div className="min-w-0">
+                                <div className="mono-ui text-[10px] sm:text-[11px] uppercase tracking-[0.24em] text-[#8a7666]">
+                                    MAXCOURSE · Classroom Schedule
+                                </div>
+                                <h2 className="book-serif mt-2 text-[clamp(1.875rem,5vw,2.5rem)] text-[#1a140d] tracking-[0.01em] leading-tight">
+                                    {room}
+                                </h2>
+                                <div className="book-serif italic text-sm text-[#7a6a5d] mt-1">
+                                    {data?.building ? `${data.building} 教学楼` : '本周课表'}
+                                    {totalEvents !== null && (
+                                        <React.Fragment>
+                                            <span className="mx-2 text-[#a08c7d]">·</span>
+                                            <span className="not-italic text-[#1a140d]">{totalEvents}</span> 节课
+                                        </React.Fragment>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="book-serif text-[#7a6a5d] hover:text-[#1a140d] text-3xl leading-none -mt-1 transition-colors shrink-0"
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto px-5 sm:px-10 py-6 sm:py-7">
+                            {loading ? (
+                                <p className="book-serif italic text-[#7a6a5d] text-base text-center py-12">正在翻阅本周课表…</p>
+                            ) : error ? (
+                                <div>
+                                    <p className="book-serif text-xl text-[#1a140d]">查询失败</p>
+                                    <p className="book-serif italic text-sm text-[#7a6a5d] mt-2">{error}</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-7">
+                                    {data.days.map((day, idx) => (
+                                        <section key={day.day}>
+                                            <div className="flex items-baseline gap-3 flex-wrap">
+                                                <span className="book-serif italic text-[#a08c7d] text-base">{toRoman(idx + 1)}.</span>
+                                                <h3 className="book-serif text-xl md:text-2xl text-[#1a140d] tracking-[0.01em]">
+                                                    {day.day_label}
+                                                </h3>
+                                                <span className="book-serif italic text-sm text-[#7a6a5d] ml-auto whitespace-nowrap">
+                                                    {day.events.length === 0 ? '本日无课' : `${day.events.length} 节`}
+                                                </span>
+                                            </div>
+                                            <hr className="book-divider-thin mt-2" />
+                                            {day.events.length === 0 ? (
+                                                <div className="book-serif italic text-sm text-[#a08c7d] mt-3">—</div>
+                                            ) : (
+                                                <ul className="mt-3">
+                                                    {day.events.map((event, eIdx) => (
+                                                        <li key={eIdx} className="py-3 border-b border-[#1a140d]/8 last:border-b-0">
+                                                            <div className="flex items-baseline gap-3 flex-wrap">
+                                                                <span className="book-serif text-base text-[#1a140d] tabular-nums whitespace-nowrap">
+                                                                    {event.start}–{event.end}
+                                                                </span>
+                                                                <span className="book-serif text-base text-[#a04a18]">
+                                                                    {event.course_code}
+                                                                </span>
+                                                            </div>
+                                                            {event.title && (
+                                                                <div className="book-serif text-sm text-[#3d3025] mt-1 leading-relaxed">
+                                                                    {event.title}
+                                                                </div>
+                                                            )}
+                                                            {event.teacher && (
+                                                                <div className="book-serif italic text-xs text-[#7a6a5d] mt-0.5">
+                                                                    {event.teacher}
+                                                                </div>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </section>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const FreeClassroomView = ({ onSelectRoom }) => {
             const initialQuery = useMemo(() => {
                 const DAY_VALUES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const now = new Date();
@@ -1757,7 +1888,12 @@
                                                     </div>
                                                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                                                         {floorGroup.rooms.map((room) => (
-                                                            <div key={room.room} className="border-t border-[#1a140d]/15 pt-3">
+                                                            <button
+                                                                key={room.room}
+                                                                type="button"
+                                                                onClick={() => onSelectRoom && onSelectRoom(room.room)}
+                                                                className="text-left border-t border-[#1a140d]/15 pt-3 transition-colors hover:bg-[#1a140d]/[0.025] focus:outline-none focus:bg-[#1a140d]/[0.04] -mx-2 px-2 -mt-1 pb-1 cursor-pointer"
+                                                            >
                                                                 <div className="book-serif text-2xl md:text-[1.65rem] text-[#1a140d] tracking-[0.01em] leading-tight">
                                                                     {room.room}
                                                                 </div>
@@ -1775,7 +1911,7 @@
                                                                         <span className="italic">今天后续没有排课</span>
                                                                     )}
                                                                 </div>
-                                                            </div>
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -2343,6 +2479,7 @@
             const [searchQuery, setSearchQuery] = useState("");
             const [viewingCourse, setViewingCourse] = useState(null);
             const [viewingTeacher, setViewingTeacher] = useState(null);
+            const [viewingRoom, setViewingRoom] = useState(null);
             const [startTime, setStartTime] = useState("08:00");
             const [endTime, setEndTime] = useState("22:00");
             const [blockedSlots, setBlockedSlots] = useState([]);
@@ -2618,7 +2755,7 @@
                     ) : currentView === 'teachers' ? (
                         <TeacherListView onViewTeacher={(name) => setViewingTeacher(name)} />
                     ) : currentView === 'classrooms' ? (
-                        <FreeClassroomView />
+                        <FreeClassroomView onSelectRoom={(room) => setViewingRoom(room)} />
                     ) : currentView === 'ddl' ? (
                         <DDLView user={user} onLoginRequest={() => setShowAuthModal(true)} />
                     ) : currentView === 'toolbox' ? (
@@ -2775,6 +2912,7 @@
 
                     {viewingCourse && <CourseDetailsModal course={viewingCourse} onClose={() => setViewingCourse(null)} />}
                     {viewingTeacher && <TeacherProfileModal teacherName={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
+                    {viewingRoom && <ClassroomDetailModal room={viewingRoom} onClose={() => setViewingRoom(null)} />}
                     {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={setUser} />}
                 </div>
             );

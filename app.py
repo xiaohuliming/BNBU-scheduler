@@ -1719,6 +1719,52 @@ def get_free_classrooms():
         "rooms": free_rooms,
     })
 
+
+@app.route('/api/classroom/<path:room>/schedule', methods=['GET'])
+def get_classroom_schedule(room):
+    room_clean = (room or '').strip()
+    if not room_clean:
+        return jsonify({"error": "Invalid room"}), 400
+
+    rooms, room_entries = build_classroom_index()
+    if room_clean not in room_entries:
+        room_meta = next((r for r in rooms if r["room"] == room_clean), None)
+        if room_meta is None:
+            return jsonify({"error": "Room not found"}), 404
+        building = room_meta["building"]
+    else:
+        room_meta = next((r for r in rooms if r["room"] == room_clean), None)
+        building = room_meta["building"] if room_meta else extract_building(room_clean)
+
+    entries = room_entries.get(room_clean, [])
+    days = []
+    for day in DAY_SEQUENCE:
+        day_idx = DAY_MAP[day]
+        day_events = [
+            {
+                "start": minutes_to_time(e["start_min"]),
+                "end": minutes_to_time(e["end_min"]),
+                "start_min": e["start_min"],
+                "end_min": e["end_min"],
+                "course_code": e["course_code"],
+                "title": e["title"],
+                "teacher": e["teacher"],
+            }
+            for e in entries if e["day_index"] == day_idx
+        ]
+        days.append({
+            "day": day,
+            "day_label": DAY_LABELS.get(day, day),
+            "events": day_events,
+        })
+
+    return jsonify({
+        "room": room_clean,
+        "building": building,
+        "total_events": len(entries),
+        "days": days,
+    })
+
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
     try:
