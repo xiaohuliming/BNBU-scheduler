@@ -99,6 +99,67 @@
             opacity: 1;
             transform: translateX(0);
         }
+        .timetable {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .timetable th,
+        .timetable td {
+            border: 1px solid rgba(26, 20, 13, 0.10);
+            padding: 0.45rem 0.4rem;
+            vertical-align: top;
+            text-align: center;
+            font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'STSong', 'EB Garamond', Georgia, 'Times New Roman', serif;
+        }
+        .timetable thead th {
+            font-style: italic;
+            color: #7a6a5d;
+            font-weight: normal;
+            font-size: 0.875rem;
+            background: rgba(26, 20, 13, 0.025);
+            padding: 0.55rem 0.4rem;
+        }
+        .timetable tbody th {
+            font-family: 'IBM Plex Mono', monospace;
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.05em;
+            color: #8a7666;
+            font-weight: normal;
+            width: 62px;
+            background: rgba(26, 20, 13, 0.015);
+            line-height: 1.35;
+        }
+        .timetable td.empty {
+            color: rgba(26, 20, 13, 0.18);
+            font-size: 0.85rem;
+        }
+        .timetable td.filled {
+            background: rgba(214, 184, 150, 0.13);
+            text-align: left;
+            padding: 0.5rem 0.55rem;
+            line-height: 1.35;
+        }
+        .timetable td.filled .code {
+            color: #a04a18;
+            font-size: 0.86rem;
+        }
+        .timetable td.filled .title {
+            color: #3d3025;
+            font-size: 0.72rem;
+            margin-top: 2px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+        .timetable td.filled .teacher {
+            color: #7a6a5d;
+            font-style: italic;
+            font-size: 0.68rem;
+            margin-top: 2px;
+        }
         .home-grid {
             background-image:
                 linear-gradient(180deg, rgba(251, 247, 239, 0) 0%, rgba(251, 247, 239, 0.18) 62%, rgba(251, 247, 239, 0.9) 100%),
@@ -1485,6 +1546,36 @@
 
             const totalEvents = data ? data.total_events : null;
 
+            const scheduleGrid = useMemo(() => {
+                if (!data) return null;
+                const periodStarts = SCHOOL_PERIODS.map(p => timeToMinutes(p.start));
+                const periodEnds = SCHOOL_PERIODS.map(p => timeToMinutes(p.end));
+                return data.days.map(day => {
+                    const column = SCHOOL_PERIODS.map(() => null);
+                    day.events.forEach(event => {
+                        let startIdx = periodStarts.indexOf(event.start_min);
+                        if (startIdx === -1) {
+                            startIdx = periodStarts.findIndex(s => s >= event.start_min);
+                            if (startIdx === -1) startIdx = 0;
+                        }
+                        let endIdx = periodEnds.indexOf(event.end_min);
+                        if (endIdx === -1) {
+                            for (let i = periodEnds.length - 1; i >= 0; i--) {
+                                if (periodEnds[i] <= event.end_min) { endIdx = i; break; }
+                            }
+                            if (endIdx === -1 || endIdx < startIdx) endIdx = startIdx;
+                        }
+                        const span = endIdx - startIdx + 1;
+                        for (let i = startIdx; i <= endIdx; i++) {
+                            if (column[i] === null) {
+                                column[i] = { event, isStart: i === startIdx, span };
+                            }
+                        }
+                    });
+                    return { day, column };
+                });
+            }, [data]);
+
             return (
                 <div className="fixed inset-0 z-[9999] flex items-stretch sm:items-center sm:justify-center sm:p-6">
                     <div className="absolute inset-0 bg-[#1a140d]/40 backdrop-blur-sm" onClick={onClose}></div>
@@ -1525,49 +1616,56 @@
                                     <p className="book-serif italic text-sm text-[#7a6a5d] mt-2">{error}</p>
                                 </div>
                             ) : (
-                                <div className="space-y-7">
-                                    {data.days.map((day, idx) => (
-                                        <section key={day.day}>
-                                            <div className="flex items-baseline gap-3 flex-wrap">
-                                                <span className="book-serif italic text-[#a08c7d] text-base">{toRoman(idx + 1)}.</span>
-                                                <h3 className="book-serif text-xl md:text-2xl text-[#1a140d] tracking-[0.01em]">
-                                                    {day.day_label}
-                                                </h3>
-                                                <span className="book-serif italic text-sm text-[#7a6a5d] ml-auto whitespace-nowrap">
-                                                    {day.events.length === 0 ? '本日无课' : `${day.events.length} 节`}
-                                                </span>
-                                            </div>
-                                            <hr className="book-divider-thin mt-2" />
-                                            {day.events.length === 0 ? (
-                                                <div className="book-serif italic text-sm text-[#a08c7d] mt-3">—</div>
-                                            ) : (
-                                                <ul className="mt-3">
-                                                    {day.events.map((event, eIdx) => (
-                                                        <li key={eIdx} className="py-3 border-b border-[#1a140d]/8 last:border-b-0">
-                                                            <div className="flex items-baseline gap-3 flex-wrap">
-                                                                <span className="book-serif text-base text-[#1a140d] tabular-nums whitespace-nowrap">
-                                                                    {event.start}–{event.end}
-                                                                </span>
-                                                                <span className="book-serif text-base text-[#a04a18]">
-                                                                    {event.course_code}
-                                                                </span>
-                                                            </div>
-                                                            {event.title && (
-                                                                <div className="book-serif text-sm text-[#3d3025] mt-1 leading-relaxed">
-                                                                    {event.title}
-                                                                </div>
-                                                            )}
-                                                            {event.teacher && (
-                                                                <div className="book-serif italic text-xs text-[#7a6a5d] mt-0.5">
-                                                                    {event.teacher}
-                                                                </div>
-                                                            )}
-                                                        </li>
+                                <div>
+                                    <div className="overflow-x-auto -mx-5 sm:mx-0 px-5 sm:px-0">
+                                        <table className="timetable min-w-[720px] sm:min-w-0">
+                                            <colgroup>
+                                                <col style={{ width: '62px' }} />
+                                                {scheduleGrid.map(({ day }) => (
+                                                    <col key={day.day} />
+                                                ))}
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th></th>
+                                                    {scheduleGrid.map(({ day }) => (
+                                                        <th key={day.day}>{day.day_label}</th>
                                                     ))}
-                                                </ul>
-                                            )}
-                                        </section>
-                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {SCHOOL_PERIODS.map((period, periodIdx) => (
+                                                    <tr key={period.slot}>
+                                                        <th>
+                                                            <div>{period.slot}</div>
+                                                            <div className="text-[#a08c7d] mt-0.5">{period.start}</div>
+                                                        </th>
+                                                        {scheduleGrid.map(({ day, column }) => {
+                                                            const cell = column[periodIdx];
+                                                            if (cell && !cell.isStart) return null;
+                                                            if (!cell) {
+                                                                return <td key={day.day} className="empty">·</td>;
+                                                            }
+                                                            return (
+                                                                <td key={day.day} rowSpan={cell.span} className="filled">
+                                                                    <div className="code">{cell.event.course_code}</div>
+                                                                    {cell.event.title && (
+                                                                        <div className="title">{cell.event.title}</div>
+                                                                    )}
+                                                                    {cell.event.teacher && (
+                                                                        <div className="teacher">{cell.event.teacher}</div>
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p className="book-serif italic text-xs text-[#a08c7d] mt-4 text-center sm:hidden">
+                                        左右滑动查看完整一周
+                                    </p>
                                 </div>
                             )}
                         </div>
@@ -2644,7 +2742,7 @@
 
             return (
                 <div className="min-h-screen bg-transparent font-sans selection:bg-[#1a140d] selection:text-[#fbf5ec] pb-8">
-                    <nav className="sticky top-0 z-50 border-b border-[#1a140d]/15 bg-[rgba(250,244,234,0.92)] backdrop-blur-sm">
+                    <nav className="sticky top-0 z-50 border-b border-[#1a140d]/15 bg-[#faf4ea]">
                         <div className="max-w-6xl mx-auto px-6 md:px-10 py-5 flex justify-between items-baseline relative gap-6">
                             <div className="flex items-baseline gap-8 min-w-0">
                                 <button className="text-left shrink-0 group" onClick={() => goToView('home')}>
