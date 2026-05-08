@@ -14,7 +14,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from html import escape
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, abort, request, jsonify, send_from_directory, session
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
@@ -88,6 +88,27 @@ app.config.update(
 GZIP_MIN_BYTES = 1024
 GZIP_MIME_PREFIXES = ('text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml')
 LONG_CACHE_PREFIXES = ('/vendor/',)
+SENSITIVE_STATIC_PREFIXES = (
+    '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
+    '/tests', '/venv', '/.venv', '/logs',
+)
+SENSITIVE_STATIC_SUFFIXES = (
+    '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
+    '.key', '.crt', '.log', '.bak', '.orig', '.swp',
+)
+
+
+@app.before_request
+def block_sensitive_project_files():
+    """Prevent Flask's root static handler from exposing source/data files."""
+    path = '/' + (request.path or '').lstrip('/')
+    path_lower = path.lower()
+    segments = [segment for segment in path_lower.split('/') if segment]
+
+    if any(segment.startswith('.') and segment != '.well-known' for segment in segments):
+        abort(404)
+    if path_lower.startswith(SENSITIVE_STATIC_PREFIXES) or path_lower.endswith(SENSITIVE_STATIC_SUFFIXES):
+        abort(404)
 
 
 @app.after_request
