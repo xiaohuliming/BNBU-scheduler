@@ -62,6 +62,36 @@ class AppTestCase(unittest.TestCase):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 404)
 
+    def test_media_proxy_content_disposition_is_ascii_safe_for_unicode_filename(self):
+        import media_dl.routes as media_routes
+
+        class FakeUpstreamResponse:
+            status_code = 206
+            headers = {
+                'Content-Range': 'bytes 0-2/3',
+                'Content-Type': 'video/mp4',
+            }
+
+            def iter_content(self, chunk_size=65536):
+                yield b'abc'
+
+            def close(self):
+                pass
+
+        with mock.patch.object(media_routes, '_fetch_range', return_value=FakeUpstreamResponse()):
+            response = self.client.get(
+                '/api/media-dl/proxy'
+                '?u=https://upos-sz-mirrorcosov.bilivideo.com/video.mp4'
+                '&name=我把AI扔进了测试.mp4'
+                '&r=https://www.bilibili.com',
+                buffered=False,
+            )
+
+        disposition = response.headers['Content-Disposition']
+        disposition.encode('latin-1')
+        self.assertIn('filename="download.mp4"', disposition)
+        self.assertIn("filename*=UTF-8''", disposition)
+
     def test_analytics_tracks_views_and_reports_summary(self):
         first = self.client.post('/api/analytics/track', json={'view': 'home', 'path': '/'})
         second = self.client.post('/api/analytics/track', json={'view': 'classrooms', 'path': '/#classrooms'})

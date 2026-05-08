@@ -6,7 +6,7 @@ import logging
 import re
 import sqlite3
 import time
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import requests
 from flask import Blueprint, Response, jsonify, request, session, stream_with_context
@@ -112,6 +112,19 @@ _CONTENT_RANGE_RE = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECASE)
 _PROXY_PASSTHROUGH_HEADERS = ("Content-Type", "ETag", "Last-Modified")
 
 
+def _content_disposition_header(filename: str) -> str:
+    """Build an RFC 5987 Content-Disposition header safe for WSGI latin-1."""
+    cleaned = re.sub(r'[\\/\r\n]+', '_', filename).strip() or 'download.bin'
+    ext = ''
+    if '.' in cleaned:
+        candidate = cleaned.rsplit('.', 1)[1].lower()
+        if re.fullmatch(r'[a-z0-9]{1,8}', candidate):
+            ext = f'.{candidate}'
+    fallback = f'download{ext or ".bin"}'
+    encoded = quote(cleaned, safe='')
+    return f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{encoded}'
+
+
 def _fetch_range(url: str, base_headers: dict, start: int, end: int) -> requests.Response:
     """GET a byte range with bounded retries. Returns an unread streaming Response."""
     last_exc: Exception | None = None
@@ -207,7 +220,7 @@ def proxy():
 
     forwarded: dict[str, str] = {
         "Cache-Control": "no-store",
-        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Content-Disposition": _content_disposition_header(filename),
         "Accept-Ranges": "bytes",
     }
     for h in _PROXY_PASSTHROUGH_HEADERS:
