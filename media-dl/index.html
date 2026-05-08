@@ -208,7 +208,7 @@
                     <div class="item-card">
                         ${showPreview ? `
                             <div class="aspect-[4/5] bg-black/5 overflow-hidden">
-                                <img src="${escapeHtml(item.url)}" alt="" loading="lazy"
+                                <img src="${escapeHtml(item.preview_url || item.url)}" alt="" loading="lazy"
                                      class="w-full h-full object-cover" referrerpolicy="no-referrer" />
                             </div>
                         ` : ''}
