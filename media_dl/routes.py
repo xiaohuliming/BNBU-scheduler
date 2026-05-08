@@ -224,28 +224,69 @@ def proxy():
     def generate():
         sent = 0
         cursor = user_start
-        cur = first
+        cur: requests.Response | None = first
+        failures = 0
+        MAX_FAILURES = 5  # consecutive (refetch + iter_content) failures before giving up
+
+        def _close(r: requests.Response | None) -> None:
+            if r is None:
+                return
+            try:
+                r.close()
+            except Exception:  # noqa: BLE001
+                pass
+
         try:
-            while True:
-                for piece in cur.iter_content(chunk_size=64 * 1024):
-                    if piece:
-                        sent += len(piece)
-                        cursor += len(piece)
-                        yield piece
-                cur.close()
-                if effective_end is None or cursor > effective_end:
-                    break
-                next_end = min(cursor + _PROXY_CHUNK - 1, effective_end)
-                cur = _fetch_range(target, base_headers, cursor, next_end)
+            while effective_end is None or cursor <= effective_end:
+                # 1. Make sure we hold an open response to drain.
+                if cur is None:
+                    next_end = (
+                        min(cursor + _PROXY_CHUNK - 1, effective_end)
+                        if effective_end is not None
+                        else cursor + _PROXY_CHUNK - 1
+                    )
+                    try:
+                        cur = _fetch_range(target, base_headers, cursor, next_end)
+                    except Exception as exc:  # noqa: BLE001
+                        failures += 1
+                        log.warning(
+                            "[proxy] refetch failed at byte %s (%d/%d): %s",
+                            cursor, failures, MAX_FAILURES, exc,
+                        )
+                        if failures >= MAX_FAILURES:
+                            raise
+                        time.sleep(0.5 * failures)
+                        continue
+
+                # 2. Drain the response. If iter_content blows up mid-chunk,
+                #    keep `cursor` accurate and refetch from where we are.
+                try:
+                    for piece in cur.iter_content(chunk_size=64 * 1024):
+                        if piece:
+                            sent += len(piece)
+                            cursor += len(piece)
+                            yield piece
+                    _close(cur)
+                    cur = None
+                    failures = 0  # full chunk drained
+                except Exception as exc:  # noqa: BLE001
+                    _close(cur)
+                    cur = None
+                    failures += 1
+                    log.warning(
+                        "[proxy] stream broke at byte %s (%d/%d): %s — refetching from cursor",
+                        cursor, failures, MAX_FAILURES, exc,
+                    )
+                    if failures >= MAX_FAILURES:
+                        raise
+                    # Next loop iteration will refetch starting at `cursor`.
+
             _log(True, sent, None)
         except Exception as exc:  # noqa: BLE001
             log.warning("chunked proxy interrupted at byte %s/%s: %s", cursor, effective_end, exc)
             _log(False, sent, f"interrupted at byte {cursor}: {exc}")
         finally:
-            try:
-                cur.close()
-            except Exception:  # noqa: BLE001
-                pass
+            _close(cur)
 
     return Response(stream_with_context(generate()), status=status, headers=forwarded)
 
