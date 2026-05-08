@@ -1,0 +1,36 @@
+name: Deploy MaxCourse
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: maxcourse-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Deploy production server over SSH
+        env:
+          MAXCOURSE_HOST: ${{ secrets.MAXCOURSE_HOST }}
+          MAXCOURSE_USER: ${{ secrets.MAXCOURSE_USER }}
+          MAXCOURSE_PORT: ${{ secrets.MAXCOURSE_PORT }}
+          MAXCOURSE_SSH_KEY: ${{ secrets.MAXCOURSE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$MAXCOURSE_SSH_KEY" > ~/.ssh/maxcourse_deploy
+          chmod 600 ~/.ssh/maxcourse_deploy
+          ssh-keyscan -p "$MAXCOURSE_PORT" -H "$MAXCOURSE_HOST" >> ~/.ssh/known_hosts
+          ssh \
+            -i ~/.ssh/maxcourse_deploy \
+            -p "$MAXCOURSE_PORT" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$MAXCOURSE_USER@$MAXCOURSE_HOST" \
+            maxcourse-deploy
