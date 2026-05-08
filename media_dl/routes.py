@@ -128,19 +128,27 @@ def _content_disposition_header(filename: str) -> str:
 def _fetch_range(url: str, base_headers: dict, start: int, end: int) -> requests.Response:
     """GET a byte range with bounded retries. Returns an unread streaming Response."""
     last_exc: Exception | None = None
+    last_status: int | None = None
+    last_body: str = ""
     headers = {**base_headers, "Range": f"bytes={start}-{end}"}
     for attempt in range(_PROXY_RETRIES_PER_CHUNK):
         try:
             r = requests.get(url, headers=headers, stream=True, timeout=_PROXY_TIMEOUT)
             if r.status_code in (200, 206):
                 return r
+            last_status = r.status_code
+            try:
+                last_body = r.content[:512].decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                last_body = ""
             r.close()
             last_exc = RuntimeError(f"upstream HTTP {r.status_code}")
         except requests.RequestException as exc:
             last_exc = exc
         # Linear backoff: 0.4s, 0.8s.
         time.sleep(0.4 * (attempt + 1))
-    raise last_exc or RuntimeError("range fetch retries exhausted")
+    detail = f"HTTP {last_status}: {last_body[:200]}" if last_status else str(last_exc or "")
+    raise RuntimeError(f"range fetch failed [{detail}]") from last_exc
 
 
 @media_dl_bp.get("/proxy")
@@ -206,7 +214,27 @@ def proxy():
         first = _fetch_range(target, base_headers, user_start, first_end)
     except Exception as exc:  # noqa: BLE001
         _log(False, 0, f"first range failed: {exc}")
-        return jsonify({"error": f"上游请求失败: {exc}"}), 502
+        # Return a downloadable .txt with the diagnosis so the user can see
+        # *why* the download failed instead of just Chrome's generic error.
+        body = (
+            "下载未能开始。\n\n"
+            f"目标 URL: {target}\n"
+            f"Referer:  {referer or '(未设置)'}\n"
+            f"上游错误: {exc}\n\n"
+            "可能原因：\n"
+            "  1. 解析结果已超过 2 小时（B站签名 URL 失效）→ 请回到工具页重新解析\n"
+            "  2. 服务器 IP 被 CDN 风控 → 短时间内多次失败可换时段重试\n"
+            "  3. 链接本身需要登录态（如付费内容）→ 当前仅支持公开视频\n"
+        ).encode("utf-8")
+        return Response(
+            body,
+            status=200,
+            headers={
+                "Content-Type": "text/plain; charset=utf-8",
+                "Content-Disposition": _content_disposition_header("download_error.txt"),
+                "Cache-Control": "no-store",
+            },
+        )
 
     total: int | None = None
     cr_match = _CONTENT_RANGE_RE.match(first.headers.get("Content-Range", ""))
