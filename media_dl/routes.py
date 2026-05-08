@@ -134,7 +134,9 @@ def proxy():
         headers["Range"] = range_header
 
     try:
-        upstream = requests.get(target, headers=headers, stream=True, timeout=15)
+        # (connect, read). The read timeout applies *between* chunks while
+        # streaming, so it must be generous enough for slow CDN segments.
+        upstream = requests.get(target, headers=headers, stream=True, timeout=(10, 120))
     except requests.RequestException as exc:
         log_event(
             visitor_id=_visitor_id(), user_id=_user_id(),
