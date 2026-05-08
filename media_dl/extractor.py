@@ -26,18 +26,21 @@ Each extractor returns a dict shaped like:
 
 from __future__ import annotations
 
+import logging
 import re
 from urllib.parse import urlparse
 
-from . import xhs, ytdlp
+from . import bilibili, xhs, ytdlp
 
+log = logging.getLogger(__name__)
 
 _YTDLP_HOST_RE = re.compile(
-    r"(youtube\.com|youtu\.be|bilibili\.com|b23\.tv|twitter\.com|x\.com|"
+    r"(youtube\.com|youtu\.be|twitter\.com|x\.com|"
     r"twitch\.tv|tiktok\.com|douyin\.com|instagram\.com|facebook\.com|"
     r"vimeo\.com|weibo\.com|kuaishou\.com)$"
 )
 
+_BILI_HOST_RE = re.compile(r"(bilibili\.com|b23\.tv)$")
 _XHS_HOST_RE = re.compile(r"(xiaohongshu\.com|xhslink\.com)$")
 
 
@@ -69,6 +72,15 @@ def resolve(url: str) -> dict:
 
     if _XHS_HOST_RE.search(host):
         return xhs.extract(url)
+
+    if _BILI_HOST_RE.search(host):
+        # Native API path is more reliable — yt-dlp's HTML scrape often hits 412
+        # on cloud server IPs. Fall back to yt-dlp only if the API fails.
+        try:
+            return bilibili.extract(url)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("native bilibili extractor failed, falling back to yt-dlp: %s", exc)
+            return ytdlp.extract(url)
 
     if _YTDLP_HOST_RE.search(host):
         return ytdlp.extract(url)
