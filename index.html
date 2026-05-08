@@ -296,6 +296,7 @@
         const Building2 = (p) => <Icon name="Building2" {...p} />;
         const Wrench = (p) => <Icon name="Wrench" {...p} />;
         const Utensils = (p) => <Icon name="Utensils" {...p} />;
+        const Download = (p) => <Icon name="Download" {...p} />;
 
         const Settings = (p) => <Icon name="Settings" {...p} />;
 
@@ -2395,6 +2396,17 @@
                 accent: 'bg-[#ec4899]',
                 external: true,
                 cta: '查看插件'
+            },
+            {
+                key: 'media-dl',
+                title: '无水印下载',
+                subtitle: '解析 B站 / YouTube / 小红书 等媒体直链',
+                description: '粘贴链接即可解析无水印视频或图片直链；遇到需要 Referer 的源（如哔哩哔哩）自动走服务器代理转发。',
+                href: '/media-dl/index.html',
+                badge: 'Media Tool',
+                Icon: Download,
+                accent: 'bg-[#0ea5e9]',
+                cta: '打开工具'
             }
         ];
 

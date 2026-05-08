@@ -20,6 +20,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
 from crawler import fetch_timeline
+from media_dl import media_dl_bp
 
 # Database setup
 DB_PATH = 'maxcourse.db'
@@ -257,6 +258,23 @@ def init_db():
             pass
 
         c.execute('''
+            CREATE TABLE IF NOT EXISTS media_dl_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                visitor_id TEXT,
+                user_id INTEGER,
+                action TEXT,
+                platform TEXT,
+                host TEXT,
+                success INTEGER DEFAULT 0,
+                bytes INTEGER DEFAULT 0,
+                elapsed_ms INTEGER,
+                error TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        ''')
+
+        c.execute('''
             CREATE TABLE IF NOT EXISTS email_notification_deliveries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
@@ -275,6 +293,8 @@ def init_db():
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_view_name ON page_views (view_name)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_visitor_id ON page_views (visitor_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_media_dl_events_created_at ON media_dl_events (created_at)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_media_dl_events_action_platform ON media_dl_events (action, platform)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_email_notification_due_lookup ON email_notification_deliveries (user_id, todo_id, reminder_hours)')
         c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_email_notification_unique_success ON email_notification_deliveries (user_id, todo_id, reminder_hours) WHERE success = 1')
         try:
@@ -713,6 +733,9 @@ def build_classroom_index():
         if extract_building(key) not in EXCLUDED_FREE_CLASSROOM_BUILDINGS
     ]
     return rooms, room_entries
+
+app.register_blueprint(media_dl_bp)
+
 
 @app.route('/')
 def index():
