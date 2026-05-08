@@ -61,24 +61,42 @@ def _resolve_real_url(url: str) -> str:
     return url
 
 
+def _xhs_image_token(image_url: str) -> str | None:
+    """Pull the watermark-free image token (path after host) out of any XHS image URL."""
+    if not image_url or "/" not in image_url:
+        return None
+    parts = image_url.split("/", 5)
+    if len(parts) < 6:
+        return None
+    return parts[5].split("!", 1)[0].split("?", 1)[0]
+
+
 def _strip_image_processing(image_url: str) -> str:
-    """Rehost a Xiaohongshu image URL onto the watermark-free CDN.
+    """Rehost an XHS image URL onto the watermark-free CDN.
 
     Borrowed from JoeanAmier/XHS-Downloader: take the image *token* (the path
     segment after the 5th `/` and before any `!processing` marker) and rebuild
-    it against `sns-img-bd.xhscdn.com`. This dodges per-image watermark markers
-    instead of just trimming the suffix — works even when the source already
-    has `wm_*` baked into the path.
+    it against `sns-img-bd.xhscdn.com`. Dodges per-image watermark markers
+    instead of just trimming the suffix.
     """
-    if not image_url or "/" not in image_url:
-        return image_url
-    parts = image_url.split("/", 5)
-    if len(parts) < 6:
-        # Fallback: just strip processing markers if path is too short.
-        return image_url.split("!", 1)[0]
-    tail = parts[5]
-    token = tail.split("!", 1)[0].split("?", 1)[0]
+    token = _xhs_image_token(image_url)
+    if not token:
+        return (image_url or "").split("!", 1)[0]
     return f"https://sns-img-bd.xhscdn.com/{token}"
+
+
+def _jpeg_preview_url(image_url: str) -> str:
+    """Return a JPEG-transcoded URL safe for `<img>` preview in any browser.
+
+    XHS now serves the `notes_uhdr/` path as HEIC/Ultra HDR — Safari renders it
+    natively, Chrome shows a broken image because `<img>` requires a known
+    raster format. `ci.xiaohongshu.com` accepts `?imageView2/format/jpg` and
+    transcodes on the fly without sacrificing the source resolution.
+    """
+    token = _xhs_image_token(image_url)
+    if not token:
+        return image_url
+    return f"https://ci.xiaohongshu.com/{token}?imageView2/format/jpg"
 
 
 def _undefined_to_null(blob: str) -> str:
@@ -157,10 +175,11 @@ def _image_items(note: dict, title: str) -> list[dict]:
     images = note.get("imageList") or []
     items: list[dict] = []
     for idx, img in enumerate(images, start=1):
-        url = img.get("urlDefault") or img.get("urlPre") or img.get("url")
-        if not url:
+        raw = img.get("urlDefault") or img.get("urlPre") or img.get("url")
+        if not raw:
             continue
-        url = _strip_image_processing(url)
+        url = _strip_image_processing(raw)
+        preview_url = _jpeg_preview_url(raw)
         ext = "jpg"
         if ".webp" in url.lower():
             ext = "webp"
@@ -170,6 +189,7 @@ def _image_items(note: dict, title: str) -> list[dict]:
             {
                 "kind": "image",
                 "url": url,
+                "preview_url": preview_url,
                 "ext": ext,
                 "width": img.get("width"),
                 "height": img.get("height"),
@@ -203,10 +223,11 @@ def extract(url: str) -> dict:
         raise XhsError("未能从该笔记中解析出图片或视频。")
 
     user = (note.get("user") or {})
+    raw_thumb = (note.get("imageList") or [{}])[0].get("urlDefault")
     return {
         "platform": "xiaohongshu",
         "title": title,
-        "thumbnail": (note.get("imageList") or [{}])[0].get("urlDefault"),
+        "thumbnail": _jpeg_preview_url(raw_thumb) if raw_thumb else None,
         "uploader": user.get("nickname") or user.get("nickName"),
         "duration": (note.get("video") or {}).get("capa", {}).get("duration"),
         "webpage_url": real_url,
