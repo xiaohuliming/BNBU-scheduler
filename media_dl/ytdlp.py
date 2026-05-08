@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import re
+import threading
+import time
 from typing import Any
+
+import requests
 
 try:
     import yt_dlp  # type: ignore
@@ -11,8 +16,55 @@ except ImportError:  # pragma: no cover - dep is required at runtime
     yt_dlp = None
 
 
+log = logging.getLogger(__name__)
+
 _BILI_HOST_RE = re.compile(r"bilibili\.com|b23\.tv")
 _DOUYIN_HOST_RE = re.compile(r"douyin\.com")
+
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+)
+
+# Bilibili rejects requests without `buvid3` (and friends) with HTTP 412.
+# We hit the homepage once, harvest the cookies, and reuse them for ~30 min.
+_BILI_COOKIE_TTL = 30 * 60
+_bili_cookie_cache: dict[str, Any] = {"value": "", "expires": 0.0}
+_bili_cookie_lock = threading.Lock()
+
+
+def _bili_cookie_header() -> str:
+    """Return a `Cookie:` header value for bilibili requests, refreshed lazily."""
+    now = time.time()
+    cached = _bili_cookie_cache.get("value", "")
+    if cached and now < _bili_cookie_cache.get("expires", 0):
+        return cached
+
+    with _bili_cookie_lock:
+        now = time.time()
+        if _bili_cookie_cache.get("value") and now < _bili_cookie_cache.get("expires", 0):
+            return _bili_cookie_cache["value"]
+        try:
+            sess = requests.Session()
+            sess.headers.update({
+                "User-Agent": _BROWSER_UA,
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            })
+            sess.get("https://www.bilibili.com/", timeout=8)
+            # The api page tends to set a wider set of cookies (buvid3/b_nut/sid/etc.).
+            sess.get("https://api.bilibili.com/x/frontend/finger/spi", timeout=8)
+            jar = sess.cookies
+            pairs = [f"{c.name}={c.value}" for c in jar if c.value]
+            cookie_value = "; ".join(pairs)
+            if cookie_value:
+                _bili_cookie_cache["value"] = cookie_value
+                _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
+                log.info("bilibili cookies refreshed (%d entries)", len(pairs))
+                return cookie_value
+        except Exception as exc:  # noqa: BLE001
+            log.warning("bilibili cookie bootstrap failed: %s", exc)
+    return ""
 
 
 def _safe_filename(title: str, ext: str) -> str:
@@ -109,16 +161,48 @@ def extract(url: str) -> dict:
     if yt_dlp is None:
         raise RuntimeError("yt-dlp 未安装。请在服务器虚拟环境中执行 pip install yt-dlp。")
 
+    http_headers: dict[str, str] = {
+        "User-Agent": _BROWSER_UA,
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    }
+
+    is_bili = bool(_BILI_HOST_RE.search(url))
+    if is_bili:
+        http_headers["Referer"] = "https://www.bilibili.com"
+        cookie_header = _bili_cookie_header()
+        if cookie_header:
+            http_headers["Cookie"] = cookie_header
+
     opts = {
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "noplaylist": True,
         "extract_flat": False,
+        "http_headers": http_headers,
+        "socket_timeout": 15,
+        "retries": 2,
     }
 
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info: dict[str, Any] = ydl.extract_info(url, download=False)
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info: dict[str, Any] = ydl.extract_info(url, download=False)
+    except yt_dlp.utils.DownloadError as exc:
+        # Bilibili 412 -> force-refresh the cookie cache and retry once.
+        msg = str(exc)
+        if is_bili and "412" in msg:
+            log.info("bilibili 412 — flushing cookie cache and retrying once")
+            _bili_cookie_cache["expires"] = 0.0
+            cookie_header = _bili_cookie_header()
+            if cookie_header:
+                http_headers["Cookie"] = cookie_header
+                opts["http_headers"] = http_headers
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+            else:
+                raise
+        else:
+            raise
 
     if info.get("_type") == "playlist" and info.get("entries"):
         info = next((e for e in info["entries"] if e), info)
