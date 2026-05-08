@@ -6,12 +6,17 @@ Strategy:
      for the play-url API).
   3. GET /x/player/playurl with progressive fnval=1 first; fall back to DASH
      fnval=16 when the user needs >480p.
-  4. Return the same normalised shape as the yt-dlp wrapper. needs_proxy=True
+  4. If the API path 412s (cloud IPs sometimes get blocked), fall back to
+     scraping the HTML page with the `facebookexternalhit/1.1` User-Agent —
+     borrowed from imputnet/cobalt; B站 whitelists FB's link-preview crawler
+     so this dodges anti-bot entirely.
+  5. Return the same normalised shape as the yt-dlp wrapper. needs_proxy=True
      because Bilibili CDN nodes require Referer.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 
@@ -183,6 +188,77 @@ def _build_items_dash(play_data: dict, title: str) -> list[dict]:
     return [it for it in items if it.get("url")]
 
 
+# Cobalt-style fallback: B站 whitelists the Facebook link-preview crawler UA,
+# so this path skips WBI signing and most IP-level anti-bot checks.
+_FB_UA = "facebookexternalhit/1.1"
+_PLAYINFO_RE = re.compile(r"window\.__playinfo__\s*=\s*(\{.+?\})\s*</script>", re.DOTALL)
+_INITIAL_STATE_BILI_RE = re.compile(
+    r"window\.__INITIAL_STATE__\s*=\s*(\{.+?\});\(function", re.DOTALL
+)
+_HTML_TITLE_RE = re.compile(r"<title>([^<]+)</title>")
+
+
+def _extract_via_html(bvid: str | None, aid: int | None) -> dict:
+    """Scrape the public video page using the Facebook crawler UA."""
+    page_path = f"video/{bvid}/" if bvid else f"video/av{aid}/"
+    page_url = f"https://www.bilibili.com/{page_path}"
+    headers = {
+        "User-Agent": _FB_UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    }
+    resp = requests.get(page_url, headers=headers, timeout=12)
+    if resp.status_code != 200:
+        raise BiliError(f"HTML 抓取失败 HTTP {resp.status_code}")
+
+    html = resp.text
+    play_match = _PLAYINFO_RE.search(html)
+    if not play_match:
+        raise BiliError("HTML 中未找到 __playinfo__ 字段（页面可能是登录墙或专栏）")
+
+    try:
+        play_blob = json.loads(play_match.group(1))
+    except json.JSONDecodeError as exc:
+        raise BiliError(f"__playinfo__ 解析失败: {exc}") from exc
+    play_data = play_blob.get("data") or {}
+
+    # Title + uploader from INITIAL_STATE if available, fall back to <title>.
+    title = ""
+    uploader = None
+    pic = None
+    duration = None
+    state_match = _INITIAL_STATE_BILI_RE.search(html)
+    if state_match:
+        try:
+            state = json.loads(state_match.group(1))
+            v = state.get("videoData") or {}
+            title = v.get("title") or title
+            pic = v.get("pic")
+            duration = v.get("duration")
+            uploader = (v.get("owner") or {}).get("name")
+        except json.JSONDecodeError:
+            pass
+    if not title:
+        t = _HTML_TITLE_RE.search(html)
+        if t:
+            title = t.group(1).replace("_哔哩哔哩_bilibili", "").strip()
+    title = title or "bilibili"
+
+    items = _build_items_progressive(play_data, title) or _build_items_dash(play_data, title)
+    if not items:
+        raise BiliError("HTML 中找到了 __playinfo__ 但没有可用的播放流。")
+
+    return {
+        "platform": "bilibili",
+        "title": title,
+        "thumbnail": pic,
+        "uploader": uploader,
+        "duration": duration,
+        "webpage_url": page_url,
+        "items": items,
+    }
+
+
 def extract(url: str) -> dict:
     real_url = _resolve_short(url)
     bvid, aid = _identify(real_url)
@@ -199,7 +275,11 @@ def extract(url: str) -> dict:
     else:
         view_params["aid"] = aid
 
-    view = _api_get(_API_VIEW, view_params, cookies)
+    try:
+        view = _api_get(_API_VIEW, view_params, cookies)
+    except BiliError as exc:
+        log.warning("bilibili API view failed (%s) — trying HTML fallback", exc)
+        return _extract_via_html(bvid, aid)
 
     title = view.get("title") or "bilibili"
     pic = view.get("pic")
@@ -227,16 +307,21 @@ def extract(url: str) -> dict:
     elif aid:
         play_params["avid"] = aid
 
-    play_data = _api_get(_API_PLAYURL, play_params, cookies)
-    items = _build_items_progressive(play_data, title)
-
-    if not items:
-        play_params["fnval"] = 16  # DASH fallback for higher resolutions
+    try:
         play_data = _api_get(_API_PLAYURL, play_params, cookies)
-        items = _build_items_dash(play_data, title)
+        items = _build_items_progressive(play_data, title)
+
+        if not items:
+            play_params["fnval"] = 16  # DASH fallback for higher resolutions
+            play_data = _api_get(_API_PLAYURL, play_params, cookies)
+            items = _build_items_dash(play_data, title)
+    except BiliError as exc:
+        log.warning("bilibili playurl API failed (%s) — trying HTML fallback", exc)
+        return _extract_via_html(bvid, aid)
 
     if not items:
-        raise BiliError("未能从该视频解析出可用的播放流。")
+        log.warning("bilibili playurl returned no streams — trying HTML fallback")
+        return _extract_via_html(bvid, aid)
 
     canonical = (
         f"https://www.bilibili.com/video/{bvid}/" if bvid else f"https://www.bilibili.com/video/av{aid}/"
