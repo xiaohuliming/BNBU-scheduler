@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
+import tempfile
 import threading
 import time
 from typing import Any
@@ -27,44 +29,99 @@ _BROWSER_UA = (
 )
 
 # Bilibili rejects requests without `buvid3` (and friends) with HTTP 412.
-# We hit the homepage once, harvest the cookies, and reuse them for ~30 min.
+# We bootstrap a Netscape-format cookie file once, then point yt-dlp at it.
 _BILI_COOKIE_TTL = 30 * 60
-_bili_cookie_cache: dict[str, Any] = {"value": "", "expires": 0.0}
+_bili_cookie_cache: dict[str, Any] = {"path": "", "expires": 0.0}
 _bili_cookie_lock = threading.Lock()
 
 
-def _bili_cookie_header() -> str:
-    """Return a `Cookie:` header value for bilibili requests, refreshed lazily."""
+def _write_netscape_cookies(path: str, cookies: dict[str, str]) -> None:
+    """Write cookies to a Netscape-format cookies file that yt-dlp can read."""
+    lines = ["# Netscape HTTP Cookie File\n"]
+    expiry = int(time.time()) + _BILI_COOKIE_TTL
+    for name, value in cookies.items():
+        if not value:
+            continue
+        # domain  flag  path  secure  expiration  name  value
+        lines.append(f".bilibili.com\tTRUE\t/\tFALSE\t{expiry}\t{name}\t{value}\n")
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+
+def _harvest_bili_cookies() -> dict[str, str]:
+    """Hit Bilibili's public endpoints and return a dict of cookie name → value."""
+    sess = requests.Session()
+    sess.headers.update({
+        "User-Agent": _BROWSER_UA,
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.bilibili.com",
+    })
+
+    # Step 1: homepage Set-Cookie sets some of buvid3/b_nut/_uuid (sometimes empty in CN IDC).
+    try:
+        sess.get("https://www.bilibili.com/", timeout=8)
+    except requests.RequestException as exc:
+        log.warning("bili homepage GET failed: %s", exc)
+
+    cookies: dict[str, str] = {c.name: c.value for c in sess.cookies if c.value}
+
+    # Step 2: SPI fingerprint endpoint returns the canonical buvid3/buvid4 values
+    # in the JSON body, regardless of Set-Cookie. This is the path that actually
+    # works on cloud servers where the homepage refuses to set cookies.
+    try:
+        spi = sess.get("https://api.bilibili.com/x/frontend/finger/spi", timeout=8).json()
+        data = spi.get("data") or {}
+        if data.get("b_3"):
+            cookies["buvid3"] = data["b_3"]
+        if data.get("b_4"):
+            cookies["buvid4"] = data["b_4"]
+    except Exception as exc:  # noqa: BLE001
+        log.warning("bili SPI fetch failed: %s", exc)
+
+    # Step 3: ExClimbWuzhiQuanZhi reportedly stabilises buvid usage; harmless if it 404s.
+    try:
+        sess.post(
+            "https://api.bilibili.com/x/internal/gaia-gateway/ExClimbWuzhi",
+            json={"payload": "{\"3064\":1}"},
+            timeout=6,
+        )
+        for c in sess.cookies:
+            if c.value and c.name not in cookies:
+                cookies[c.name] = c.value
+    except requests.RequestException:
+        pass
+
+    return cookies
+
+
+def _bili_cookie_file() -> str:
+    """Return the path to a Netscape cookies file with fresh Bilibili cookies."""
     now = time.time()
-    cached = _bili_cookie_cache.get("value", "")
-    if cached and now < _bili_cookie_cache.get("expires", 0):
-        return cached
+    cached_path = _bili_cookie_cache.get("path", "")
+    if cached_path and os.path.exists(cached_path) and now < _bili_cookie_cache.get("expires", 0):
+        return cached_path
 
     with _bili_cookie_lock:
         now = time.time()
-        if _bili_cookie_cache.get("value") and now < _bili_cookie_cache.get("expires", 0):
-            return _bili_cookie_cache["value"]
+        cached_path = _bili_cookie_cache.get("path", "")
+        if cached_path and os.path.exists(cached_path) and now < _bili_cookie_cache.get("expires", 0):
+            return cached_path
         try:
-            sess = requests.Session()
-            sess.headers.update({
-                "User-Agent": _BROWSER_UA,
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            })
-            sess.get("https://www.bilibili.com/", timeout=8)
-            # The api page tends to set a wider set of cookies (buvid3/b_nut/sid/etc.).
-            sess.get("https://api.bilibili.com/x/frontend/finger/spi", timeout=8)
-            jar = sess.cookies
-            pairs = [f"{c.name}={c.value}" for c in jar if c.value]
-            cookie_value = "; ".join(pairs)
-            if cookie_value:
-                _bili_cookie_cache["value"] = cookie_value
-                _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
-                log.info("bilibili cookies refreshed (%d entries)", len(pairs))
-                return cookie_value
+            cookies = _harvest_bili_cookies()
+            if not cookies.get("buvid3"):
+                log.warning("bilibili cookie harvest produced no buvid3 — yt-dlp may still 412")
+                # Continue anyway; yt-dlp can still try.
+            tmpdir = tempfile.gettempdir()
+            path = os.path.join(tmpdir, "maxcourse_bili_cookies.txt")
+            _write_netscape_cookies(path, cookies)
+            _bili_cookie_cache["path"] = path
+            _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
+            log.info("bilibili cookies refreshed → %s (%d entries)", path, len(cookies))
+            return path
         except Exception as exc:  # noqa: BLE001
             log.warning("bilibili cookie bootstrap failed: %s", exc)
-    return ""
+            return ""
 
 
 def _safe_filename(title: str, ext: str) -> str:
@@ -167,13 +224,12 @@ def extract(url: str) -> dict:
     }
 
     is_bili = bool(_BILI_HOST_RE.search(url))
+    cookiefile: str | None = None
     if is_bili:
         http_headers["Referer"] = "https://www.bilibili.com"
-        cookie_header = _bili_cookie_header()
-        if cookie_header:
-            http_headers["Cookie"] = cookie_header
+        cookiefile = _bili_cookie_file() or None
 
-    opts = {
+    opts: dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -183,24 +239,24 @@ def extract(url: str) -> dict:
         "socket_timeout": 15,
         "retries": 2,
     }
+    if cookiefile:
+        opts["cookiefile"] = cookiefile
+
+    def _run() -> dict[str, Any]:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=False)
 
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info: dict[str, Any] = ydl.extract_info(url, download=False)
+        info: dict[str, Any] = _run()
     except yt_dlp.utils.DownloadError as exc:
-        # Bilibili 412 -> force-refresh the cookie cache and retry once.
         msg = str(exc)
         if is_bili and "412" in msg:
             log.info("bilibili 412 — flushing cookie cache and retrying once")
             _bili_cookie_cache["expires"] = 0.0
-            cookie_header = _bili_cookie_header()
-            if cookie_header:
-                http_headers["Cookie"] = cookie_header
-                opts["http_headers"] = http_headers
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    info = ydl.extract_info(url, download=False)
-            else:
-                raise
+            cookiefile = _bili_cookie_file() or None
+            if cookiefile:
+                opts["cookiefile"] = cookiefile
+            info = _run()
         else:
             raise
 
