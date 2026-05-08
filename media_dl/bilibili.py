@@ -27,6 +27,21 @@ _AVID_RE = re.compile(r"/video/(?:av|AV)(\d+)")
 _API_VIEW = "https://api.bilibili.com/x/web-interface/view"
 _API_PLAYURL = "https://api.bilibili.com/x/player/playurl"
 
+# Bilibili quality codes → human labels. Without login, qn=80 is the ceiling.
+_QUALITY_LABELS = {
+    6: "240p", 16: "360p", 32: "480p", 64: "720p", 74: "720p60",
+    80: "1080p", 112: "1080p+", 116: "1080p60", 120: "4K",
+    125: "HDR", 126: "杜比视界", 127: "8K",
+}
+
+
+def _quality_label(qn) -> str:
+    try:
+        qn_int = int(qn)
+    except (TypeError, ValueError):
+        return "原画"
+    return _QUALITY_LABELS.get(qn_int, f"qn{qn_int}")
+
 _HEADERS = {
     "User-Agent": _BROWSER_UA,
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
@@ -87,7 +102,7 @@ def _build_items_progressive(play_data: dict, title: str) -> list[dict]:
     durl = play_data.get("durl") or []
     if not durl:
         return []
-    quality = play_data.get("quality")
+    quality_label = _quality_label(play_data.get("quality"))
     items: list[dict] = []
     multi = len(durl) > 1
     for idx, seg in enumerate(durl, start=1):
@@ -95,7 +110,7 @@ def _build_items_progressive(play_data: dict, title: str) -> list[dict]:
         if not url:
             continue
         suffix = f"part{idx}" if multi else ""
-        label = f"{quality}p · MP4"
+        label = f"{quality_label} · MP4"
         if multi:
             label += f" · 分段 {idx}/{len(durl)}"
         items.append(
