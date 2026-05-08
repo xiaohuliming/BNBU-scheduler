@@ -164,7 +164,8 @@ def _video_items(note: dict, title: str) -> list[dict]:
             "height": best["height"],
             "filesize": best["filesize"],
             "quality_label": best["quality_label"],
-            "needs_proxy": False,
+            # Cross-origin: Chrome ignores `<a download>` so we route via proxy.
+            "needs_proxy": True,
             "referer": None,
             "filename": _safe_filename(title, "mp4"),
         }
@@ -178,26 +179,32 @@ def _image_items(note: dict, title: str) -> list[dict]:
         raw = img.get("urlDefault") or img.get("urlPre") or img.get("url")
         if not raw:
             continue
-        url = _strip_image_processing(raw)
-        preview_url = _jpeg_preview_url(raw)
-        ext = "jpg"
-        if ".webp" in url.lower():
-            ext = "webp"
-        elif ".png" in url.lower():
-            ext = "png"
+        # Use the JPEG-transcoded URL for *both* preview and download:
+        #   - The `notes_uhdr/` path serves HEIC/Ultra HDR; a `.jpg` filename
+        #     over HEIC bytes is broken for most viewers.
+        #   - JPEG keeps the original resolution, just swaps the codec.
+        # Original/UHDR URL is kept on the item as `original_url` so power
+        # users can copy it via the "复制链接" button.
+        download_url = _jpeg_preview_url(raw)
+        original_url = _strip_image_processing(raw)
         items.append(
             {
                 "kind": "image",
-                "url": url,
-                "preview_url": preview_url,
-                "ext": ext,
+                "url": download_url,
+                "preview_url": download_url,
+                "original_url": original_url,
+                "ext": "jpg",
                 "width": img.get("width"),
                 "height": img.get("height"),
                 "filesize": None,
                 "quality_label": f"{img.get('width') or '?'}×{img.get('height') or '?'}",
-                "needs_proxy": False,
+                # Force the proxy path: Chrome ignores `<a download>` on cross-
+                # origin links, so a direct href to xhscdn.com just opens the
+                # image instead of saving it. Routing via our same-origin proxy
+                # restores download behaviour through Content-Disposition.
+                "needs_proxy": True,
                 "referer": None,
-                "filename": _safe_filename(title, ext, idx),
+                "filename": _safe_filename(title, "jpg", idx),
             }
         )
     return items
