@@ -56,6 +56,12 @@ class AppTestCase(unittest.TestCase):
         self.assertTrue(response.is_json)
         self.assertEqual(response.get_json()['status'], 404)
 
+    def test_sensitive_project_files_are_not_public_static_assets(self):
+        for path in ('/.git/HEAD', '/app.py', '/maxcourse.db'):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 404)
+
     def test_analytics_tracks_views_and_reports_summary(self):
         first = self.client.post('/api/analytics/track', json={'view': 'home', 'path': '/'})
         second = self.client.post('/api/analytics/track', json={'view': 'classrooms', 'path': '/#classrooms'})
