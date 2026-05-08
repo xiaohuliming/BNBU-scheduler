@@ -249,18 +249,18 @@ def proxy():
     forwarded: dict[str, str] = {
         "Cache-Control": "no-store",
         "Content-Disposition": _content_disposition_header(filename),
-        "Accept-Ranges": "bytes",
     }
     for h in _PROXY_PASSTHROUGH_HEADERS:
         if h in first.headers:
             forwarded[h] = first.headers[h]
-    if effective_end is not None:
-        forwarded["Content-Length"] = str(effective_end - user_start + 1)
-    if total is not None and effective_end is not None:
-        forwarded["Content-Range"] = f"bytes {user_start}-{effective_end}/{total}"
 
-    # Always 206 when we know the total; otherwise mirror the upstream status.
-    status = 206 if (total is not None) else first.status_code
+    # Deliberately omit Content-Length / Content-Range. Our chunked retry loop
+    # may yield slightly fewer bytes than `total` if a chunk permanently fails
+    # — Safari is lenient and saves whatever it got, but Chrome strictly
+    # enforces Content-Length and shows "无法从网站上提取文件" on any mismatch.
+    # By skipping Content-Length, Flask falls back to chunked transfer-encoding
+    # and both browsers accept the response as-is.
+    status = 200
 
     def generate():
         sent = 0
