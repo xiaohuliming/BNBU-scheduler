@@ -62,12 +62,23 @@ def _resolve_real_url(url: str) -> str:
 
 
 def _strip_image_processing(image_url: str) -> str:
-    """xhs images often end with `!nd_dft_wgth_webp_3` style markers — strip to original."""
-    if not image_url:
+    """Rehost a Xiaohongshu image URL onto the watermark-free CDN.
+
+    Borrowed from JoeanAmier/XHS-Downloader: take the image *token* (the path
+    segment after the 5th `/` and before any `!processing` marker) and rebuild
+    it against `sns-img-bd.xhscdn.com`. This dodges per-image watermark markers
+    instead of just trimming the suffix — works even when the source already
+    has `wm_*` baked into the path.
+    """
+    if not image_url or "/" not in image_url:
         return image_url
-    if "!" in image_url:
+    parts = image_url.split("/", 5)
+    if len(parts) < 6:
+        # Fallback: just strip processing markers if path is too short.
         return image_url.split("!", 1)[0]
-    return image_url
+    tail = parts[5]
+    token = tail.split("!", 1)[0].split("?", 1)[0]
+    return f"https://sns-img-bd.xhscdn.com/{token}"
 
 
 def _undefined_to_null(blob: str) -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 import time
 from urllib.parse import urlparse
@@ -99,12 +100,42 @@ def resolve():
     return jsonify(result)
 
 
+# Cobalt-style chunked proxy: instead of holding one giant streaming GET open
+# (where a single CDN hiccup at byte 200MB nukes the entire 300MB transfer),
+# we issue successive small `Range:` requests so a disconnect costs at most
+# one chunk.
+_PROXY_CHUNK = 8 * 1024 * 1024              # 8 MB per upstream request
+_PROXY_RETRIES_PER_CHUNK = 3                # transient errors → retry the same range
+_PROXY_TIMEOUT = (10, 60)                   # (connect, read) — read is between chunks
+_RANGE_RE = re.compile(r"bytes=(\d+)-(\d*)")
+_CONTENT_RANGE_RE = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECASE)
+_PROXY_PASSTHROUGH_HEADERS = ("Content-Type", "ETag", "Last-Modified")
+
+
+def _fetch_range(url: str, base_headers: dict, start: int, end: int) -> requests.Response:
+    """GET a byte range with bounded retries. Returns an unread streaming Response."""
+    last_exc: Exception | None = None
+    headers = {**base_headers, "Range": f"bytes={start}-{end}"}
+    for attempt in range(_PROXY_RETRIES_PER_CHUNK):
+        try:
+            r = requests.get(url, headers=headers, stream=True, timeout=_PROXY_TIMEOUT)
+            if r.status_code in (200, 206):
+                return r
+            r.close()
+            last_exc = RuntimeError(f"upstream HTTP {r.status_code}")
+        except requests.RequestException as exc:
+            last_exc = exc
+        # Linear backoff: 0.4s, 0.8s.
+        time.sleep(0.4 * (attempt + 1))
+    raise last_exc or RuntimeError("range fetch retries exhausted")
+
+
 @media_dl_bp.get("/proxy")
 def proxy():
-    """Stream a remote resource through the server.
+    """Stream a remote resource through the server in 8 MB Range chunks.
 
-    Used for hosts that require a Referer header (e.g. Bilibili) so the browser's
-    direct download would otherwise hit 403.
+    Used for hosts that require Referer (e.g. Bilibili). Per-chunk retries mean
+    a transient CDN error at byte 200 MB only loses 8 MB, not the whole download.
     """
     target = request.args.get("u", "").strip()
     referer = request.args.get("r", "").strip() or None
@@ -121,75 +152,101 @@ def proxy():
     target_platform = platform_of_host(target_host)
     started = time.monotonic()
 
-    headers = {
+    base_headers: dict[str, str] = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
         ),
     }
     if referer:
-        headers["Referer"] = referer
-    range_header = request.headers.get("Range")
-    if range_header:
-        headers["Range"] = range_header
+        base_headers["Referer"] = referer
 
-    try:
-        # (connect, read). The read timeout applies *between* chunks while
-        # streaming, so it must be generous enough for slow CDN segments.
-        upstream = requests.get(target, headers=headers, stream=True, timeout=(10, 120))
-    except requests.RequestException as exc:
-        log_event(
-            visitor_id=_visitor_id(), user_id=_user_id(),
-            action="proxy", platform=target_platform, host=target_host,
-            success=False, elapsed_ms=int((time.monotonic() - started) * 1000),
-            error=f"upstream request failed: {exc}",
-        )
-        return jsonify({"error": f"上游请求失败: {exc}"}), 502
-
-    if upstream.status_code >= 400:
-        body = upstream.content[:512]
-        upstream.close()
-        log_event(
-            visitor_id=_visitor_id(), user_id=_user_id(),
-            action="proxy", platform=target_platform, host=target_host,
-            success=False, elapsed_ms=int((time.monotonic() - started) * 1000),
-            error=f"upstream HTTP {upstream.status_code}",
-        )
-        return (
-            jsonify({"error": f"上游返回 HTTP {upstream.status_code}", "snippet": body.decode("utf-8", "replace")}),
-            502,
-        )
-
-    pass_through = ("Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "ETag", "Last-Modified")
-    forwarded = {k: upstream.headers[k] for k in pass_through if k in upstream.headers}
-    forwarded["Cache-Control"] = "no-store"
-    forwarded["Content-Disposition"] = f'attachment; filename="{filename}"'
+    # Honour any Range the browser sent. Most browsers send `bytes=0-` for downloads.
+    user_range = request.headers.get("Range")
+    user_start = 0
+    user_end: int | None = None
+    if user_range:
+        m = _RANGE_RE.match(user_range)
+        if m:
+            user_start = int(m.group(1))
+            user_end = int(m.group(2)) if m.group(2) else None
 
     visitor = _visitor_id()
     user = _user_id()
 
+    def _log(success: bool, sent: int, error: str | None) -> None:
+        log_event(
+            visitor_id=visitor, user_id=user,
+            action="proxy", platform=target_platform, host=target_host,
+            success=success, bytes_count=sent,
+            elapsed_ms=int((time.monotonic() - started) * 1000),
+            error=error,
+        )
+
+    # First range fetch: needed to discover total size from Content-Range and
+    # to surface upstream auth / 4xx errors as a real HTTP error to the client
+    # instead of dying mid-stream.
+    first_end = user_start + _PROXY_CHUNK - 1
+    if user_end is not None:
+        first_end = min(first_end, user_end)
+    try:
+        first = _fetch_range(target, base_headers, user_start, first_end)
+    except Exception as exc:  # noqa: BLE001
+        _log(False, 0, f"first range failed: {exc}")
+        return jsonify({"error": f"上游请求失败: {exc}"}), 502
+
+    total: int | None = None
+    cr_match = _CONTENT_RANGE_RE.match(first.headers.get("Content-Range", ""))
+    if cr_match and cr_match.group(3) != "*":
+        total = int(cr_match.group(3))
+    elif first.headers.get("Content-Length") and first.status_code == 200:
+        # Server doesn't honour Range — treat the single response as the whole body.
+        total = int(first.headers["Content-Length"])
+
+    effective_end = user_end if user_end is not None else (total - 1 if total else None)
+
+    forwarded: dict[str, str] = {
+        "Cache-Control": "no-store",
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Accept-Ranges": "bytes",
+    }
+    for h in _PROXY_PASSTHROUGH_HEADERS:
+        if h in first.headers:
+            forwarded[h] = first.headers[h]
+    if effective_end is not None:
+        forwarded["Content-Length"] = str(effective_end - user_start + 1)
+    if total is not None and effective_end is not None:
+        forwarded["Content-Range"] = f"bytes {user_start}-{effective_end}/{total}"
+
+    # Always 206 when we know the total; otherwise mirror the upstream status.
+    status = 206 if (total is not None) else first.status_code
+
     def generate():
         sent = 0
-        errored = False
+        cursor = user_start
+        cur = first
         try:
-            for chunk in upstream.iter_content(chunk_size=64 * 1024):
-                if chunk:
-                    sent += len(chunk)
-                    yield chunk
+            while True:
+                for piece in cur.iter_content(chunk_size=64 * 1024):
+                    if piece:
+                        sent += len(piece)
+                        cursor += len(piece)
+                        yield piece
+                cur.close()
+                if effective_end is None or cursor > effective_end:
+                    break
+                next_end = min(cursor + _PROXY_CHUNK - 1, effective_end)
+                cur = _fetch_range(target, base_headers, cursor, next_end)
+            _log(True, sent, None)
         except Exception as exc:  # noqa: BLE001
-            errored = True
-            log.warning("proxy stream interrupted: %s", exc)
+            log.warning("chunked proxy interrupted at byte %s/%s: %s", cursor, effective_end, exc)
+            _log(False, sent, f"interrupted at byte {cursor}: {exc}")
         finally:
-            upstream.close()
-            log_event(
-                visitor_id=visitor, user_id=user,
-                action="proxy", platform=target_platform, host=target_host,
-                success=not errored, bytes_count=sent,
-                elapsed_ms=int((time.monotonic() - started) * 1000),
-                error="stream interrupted" if errored else None,
-            )
+            try:
+                cur.close()
+            except Exception:  # noqa: BLE001
+                pass
 
-    status = upstream.status_code
     return Response(stream_with_context(generate()), status=status, headers=forwarded)
 
 
