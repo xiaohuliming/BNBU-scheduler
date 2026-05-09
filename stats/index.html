@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数据看板 · MAXCOURSE</title>
+    <link rel="icon" href="/favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --ink: #101820;
+            --paper: #f4efe6;
+            --accent: #ff7a1f;
+            --lime: #d6ff62;
+            --rose: #ef4444;
+            --emerald: #10b981;
+            --sky: #0ea5e9;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .panel {
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(16,24,32,0.10);
+            border-radius: 2rem;
+            box-shadow: 0 18px 45px rgba(16,24,32,0.08);
+            backdrop-filter: blur(8px);
+        }
+        .pill {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            border-radius: 9999px; border: 1px solid rgba(16,24,32,0.10);
+            background: var(--paper); padding: 0.25rem 0.7rem;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: rgba(16,24,32,0.6);
+        }
+        .kicker {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.22em;
+            color: rgba(16,24,32,0.55);
+        }
+        .accent-bar {
+            display: inline-block; width: 2.4rem; height: 0.32rem;
+            background: var(--accent); border-radius: 9999px;
+        }
+        .stat-card {
+            background: white;
+            border: 1px solid rgba(16,24,32,0.10);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            inset-inline-start: 0;
+            top: 1.25rem; bottom: 1.25rem;
+            width: 0.25rem;
+            background: var(--accent);
+            border-radius: 0 9999px 9999px 0;
+        }
+        .stat-value {
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+        }
+        .stat-label {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: rgba(16,24,32,0.55);
+        }
+        .stat-hint {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem;
+            color: rgba(16,24,32,0.45);
+        }
+        .stat-hint.up { color: var(--emerald); }
+        .stat-hint.down { color: var(--rose); }
+        .bar-track {
+            height: 0.55rem;
+            background: rgba(16,24,32,0.06);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff9d52);
+            border-radius: 9999px;
+            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .bar-fill.alt {
+            background: linear-gradient(90deg, var(--sky), #5cc4ff);
+        }
+        .row-grid {
+            display: grid;
+            grid-template-columns: minmax(6rem, 9rem) 1fr auto;
+            gap: 0.9rem;
+            align-items: center;
+            padding: 0.55rem 0;
+        }
+        .row-label {
+            font-weight: 700;
+            font-size: 0.92rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .row-value {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+        .row-sub {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem;
+            color: rgba(16,24,32,0.5);
+        }
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(30, 1fr);
+            gap: 0.2rem;
+            align-items: end;
+            height: 7rem;
+            padding-top: 1rem;
+        }
+        .day-bar {
+            background: rgba(255,122,31,0.85);
+            border-radius: 0.25rem 0.25rem 0 0;
+            min-height: 2px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .day-bar:hover {
+            opacity: 0.7;
+            transform: scaleY(1.04);
+            transform-origin: bottom;
+        }
+        .day-tooltip {
+            visibility: hidden;
+            position: absolute;
+            bottom: calc(100% + 0.4rem);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.5rem;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.68rem;
+            white-space: nowrap;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .day-bar:hover .day-tooltip { visibility: visible; }
+        .skeleton {
+            background: linear-gradient(90deg, #ebe4d8 0%, #f4efe6 50%, #ebe4d8 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 0.5rem;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .btn-ghost {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+            padding: 0.55rem 1rem; border-radius: 9999px;
+            background: white; color: var(--ink);
+            border: 1px solid rgba(16,24,32,0.18);
+            font-weight: 600; font-size: 0.85rem;
+            cursor: pointer; transition: background 0.15s ease;
+        }
+        .btn-ghost:hover { background: var(--paper); }
+        .platform-tag {
+            display: inline-flex; align-items: center;
+            padding: 0.15rem 0.55rem;
+            border-radius: 9999px;
+            background: rgba(16,24,32,0.06);
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.65rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: rgba(16,24,32,0.65);
+        }
+        .platform-tag.bilibili { background: #ffe4ee; color: #e91e63; }
+        .platform-tag.youtube { background: #ffe4e4; color: #c1272d; }
+        .platform-tag.xiaohongshu { background: #ffe1d6; color: #ff2442; }
+        .platform-tag.douyin { background: #f3e5ff; color: #7c3aed; }
+        .platform-tag.tiktok { background: #e0f7ff; color: #0ea5e9; }
+        .platform-tag.twitter { background: #e7f4ff; color: #1d9bf0; }
+        section + section { margin-top: 1.25rem; }
+    </style>
+</head>
+<body>
+    <header class="max-w-6xl mx-auto px-5 md:px-8 pt-8 md:pt-12 pb-2 flex items-center justify-between">
+        <a href="/" class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/55 hover:text-black/85">← MAXCOURSE</a>
+        <div class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/45">Toolbox / Analytics</div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-5 md:px-8 pt-6 pb-20">
+        <section class="panel p-6 md:p-10">
+            <div class="kicker">Pulse of the site</div>
+            <div class="mt-3"><span class="accent-bar"></span></div>
+            <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">数据看板</h1>
+            <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
+                站点访问、独立访客、各工具受欢迎程度，以及无水印下载器的运行状况。
+            </p>
+            <div class="mt-5 flex items-center gap-3 flex-wrap">
+                <button id="refresh" class="btn-ghost" type="button">⟳ 刷新</button>
+                <span id="last-updated" class="mono text-xs text-black/45"></span>
+            </div>
+        </section>
+
+        <!-- Page views -->
+        <section>
+            <div class="kicker mb-3">PAGE VIEWS</div>
+            <div class="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                <div class="stat-card" id="card-total">
+                    <div class="stat-label">累计浏览</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">total page views</div>
+                </div>
+                <div class="stat-card" id="card-unique">
+                    <div class="stat-label">独立访客</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">unique visitors</div>
+                </div>
+                <div class="stat-card col-span-2 lg:col-span-1" id="card-today">
+                    <div class="stat-label">今日浏览</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">since 00:00</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-4">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">页面访问分布</h2>
+                <span class="mono text-xs text-black/45">view → visits / visitors</span>
+            </div>
+            <div id="by-view"><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8"></div></div>
+        </section>
+
+        <!-- Media downloader -->
+        <section>
+            <div class="kicker mb-3">MEDIA DOWNLOADER</div>
+            <div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <div class="stat-card" id="card-resolves">
+                    <div class="stat-label">累计解析</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">resolve calls</div>
+                </div>
+                <div class="stat-card" id="card-success">
+                    <div class="stat-label">解析成功率</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">resolve ok / total</div>
+                </div>
+                <div class="stat-card" id="card-proxy">
+                    <div class="stat-label">代理调用</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">proxy calls</div>
+                </div>
+                <div class="stat-card" id="card-bytes">
+                    <div class="stat-label">代理流量</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">proxied bytes</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel p-6 md:p-8">
+            <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">短期对比</h2>
+            <div class="mt-5 grid gap-3 md:grid-cols-2">
+                <div class="rounded-2xl border border-black/10 bg-white p-5">
+                    <div class="kicker">今日</div>
+                    <div id="today-block" class="mt-3 mono text-sm text-black/70 leading-7">—</div>
+                </div>
+                <div class="rounded-2xl border border-black/10 bg-white p-5">
+                    <div class="kicker">近 7 天</div>
+                    <div id="week-block" class="mt-3 mono text-sm text-black/70 leading-7">—</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-4">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">按平台分布</h2>
+                <span class="mono text-xs text-black/45">last 30 days</span>
+            </div>
+            <div id="by-platform"><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8"></div></div>
+        </section>
+
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-2">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">每日解析趋势</h2>
+                <span class="mono text-xs text-black/45">last 30 days · resolve calls</span>
+            </div>
+            <div id="daily-trend" class="day-grid">
+                <div class="day-bar" style="height: 30%"></div>
+                <div class="day-bar" style="height: 50%"></div>
+                <div class="day-bar" style="height: 20%"></div>
+            </div>
+            <div class="mono text-[10px] text-black/40 mt-2 flex justify-between">
+                <span id="day-range-start">—</span>
+                <span>↔︎</span>
+                <span id="day-range-end">今日</span>
+            </div>
+        </section>
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-5 md:px-8 pb-10 mono text-[10px] uppercase tracking-[0.24em] text-black/40 text-center">
+        · Fin · 数据来自 page_views 与 media_dl_events 两张表 ·
+    </footer>
+
+    <script>
+        const PLATFORM_LABEL = {
+            youtube: 'YouTube',
+            bilibili: '哔哩哔哩',
+            xiaohongshu: '小红书',
+            douyin: '抖音',
+            tiktok: 'TikTok',
+            twitter: 'X (Twitter)',
+            unknown: '未知',
+        };
+        const VIEW_LABEL = {
+            home: '首页',
+            ddl: 'DDL 备忘',
+            'free-classroom': '空教室',
+            toolbox: '工具箱',
+            'media-dl': '无水印下载',
+            eatwhat: '今天吃什么',
+            settings: '设置',
+        };
+
+        const fmtNumber = (n) => {
+            if (n === null || n === undefined) return '—';
+            return Number(n).toLocaleString('en-US');
+        };
+
+        const fmtBytes = (n) => {
+            if (!n || n <= 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let i = 0;
+            let v = Number(n);
+            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+            return `${v.toFixed(v >= 10 ? 0 : 1)} ${units[i]}`;
+        };
+
+        const pct = (num, denom) => {
+            if (!denom || denom <= 0) return '—';
+            return `${((num / denom) * 100).toFixed(num === denom ? 0 : 1)}%`;
+        };
+
+        const fmtDate = (iso) => {
+            const d = new Date(iso);
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${m}/${day}`;
+        };
+
+        const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+
+        const setText = (sel, text) => {
+            const el = sel.startsWith('#') ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
+            if (el) el.textContent = text;
+        };
+
+        const setStatValue = (cardId, value, hint) => {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const v = card.querySelector('.stat-value');
+            const h = card.querySelector('.stat-hint');
+            if (v) v.textContent = value;
+            if (h && hint) h.textContent = hint;
+        };
+
+        const renderByView = (rows) => {
+            const target = document.getElementById('by-view');
+            if (!rows || !rows.length) {
+                target.innerHTML = '<div class="text-sm text-black/45 mono">暂无访问数据</div>';
+                return;
+            }
+            const max = Math.max(...rows.map((r) => r.views || 0), 1);
+            target.innerHTML = rows.map((r) => {
+                const label = VIEW_LABEL[r.view_name] || r.view_name || '未知';
+                const w = ((r.views || 0) / max * 100).toFixed(1);
+                return `
+                    <div class="row-grid border-b border-black/5 last:border-b-0">
+                        <div>
+                            <div class="row-label">${escapeHtml(label)}</div>
+                            <div class="row-sub">${escapeHtml(r.view_name || '')}</div>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width: ${w}%"></div></div>
+                        <div class="text-right">
+                            <div class="row-value">${fmtNumber(r.views)}</div>
+                            <div class="row-sub">${fmtNumber(r.visitors || 0)} 访客</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const renderByPlatform = (rows) => {
+            const target = document.getElementById('by-platform');
+            if (!rows || !rows.length) {
+                target.innerHTML = '<div class="text-sm text-black/45 mono">最近 30 天没有解析记录</div>';
+                return;
+            }
+            const max = Math.max(...rows.map((r) => r.resolves || 0), 1);
+            target.innerHTML = rows.map((r) => {
+                const platform = r.platform || 'unknown';
+                const label = PLATFORM_LABEL[platform] || platform;
+                const w = ((r.resolves || 0) / max * 100).toFixed(1);
+                const rate = r.resolves ? pct(r.resolve_ok, r.resolves) : '—';
+                const bytesLabel = r.proxy_bytes ? fmtBytes(r.proxy_bytes) : '0 B';
+                return `
+                    <div class="row-grid border-b border-black/5 last:border-b-0">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="platform-tag ${escapeHtml(platform)}">${escapeHtml(platform)}</span>
+                            </div>
+                            <div class="row-sub mt-1">${escapeHtml(label)}</div>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width: ${w}%"></div></div>
+                        <div class="text-right">
+                            <div class="row-value">${fmtNumber(r.resolves)} 解析</div>
+                            <div class="row-sub">成功率 ${rate} · 代理 ${bytesLabel}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const renderDaily = (rows) => {
+            const target = document.getElementById('daily-trend');
+            const dataMap = new Map((rows || []).map((r) => [r.day, r]));
+            const today = new Date();
+            const days = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = d.toISOString().slice(0, 10);
+                days.push({ day: iso, ...(dataMap.get(iso) || { resolves: 0, proxy_calls: 0, proxy_bytes: 0 }) });
+            }
+            const max = Math.max(...days.map((d) => d.resolves || 0), 1);
+            target.innerHTML = days.map((d) => {
+                const h = ((d.resolves || 0) / max * 100).toFixed(1);
+                return `
+                    <div class="day-bar" style="height: ${Math.max(2, h)}%">
+                        <span class="day-tooltip">${fmtDate(d.day)} · 解析 ${d.resolves || 0} · 代理 ${fmtBytes(d.proxy_bytes || 0)}</span>
+                    </div>
+                `;
+            }).join('');
+            const start = document.getElementById('day-range-start');
+            const end = document.getElementById('day-range-end');
+            if (start && days.length) start.textContent = fmtDate(days[0].day);
+            if (end) end.textContent = '今日';
+        };
+
+        const renderTodayWeek = (today, week) => {
+            const todayBlock = document.getElementById('today-block');
+            const weekBlock = document.getElementById('week-block');
+            const block = (data) => `
+                解析次数：<strong>${fmtNumber(data.resolves || 0)}</strong><br />
+                代理调用：<strong>${fmtNumber(data.proxy_calls || 0)}</strong><br />
+                代理流量：<strong>${fmtBytes(data.proxy_bytes || 0)}</strong>
+            `;
+            if (todayBlock) todayBlock.innerHTML = block(today || {});
+            if (weekBlock) weekBlock.innerHTML = block(week || {});
+        };
+
+        let inflight = false;
+
+        async function loadAll() {
+            if (inflight) return;
+            inflight = true;
+            const refreshBtn = document.getElementById('refresh');
+            if (refreshBtn) refreshBtn.disabled = true;
+
+            try {
+                const [summaryRes, statsRes] = await Promise.all([
+                    fetch('/api/analytics/summary').then((r) => r.json()),
+                    fetch('/api/media-dl/stats').then((r) => r.json()),
+                ]);
+
+                // Top page-view stats
+                setStatValue('card-total', fmtNumber(summaryRes.totalViews));
+                setStatValue('card-unique', fmtNumber(summaryRes.uniqueVisitors));
+                setStatValue('card-today', fmtNumber(summaryRes.todayViews));
+                renderByView(summaryRes.byView || []);
+
+                // Media downloader stats
+                const totals = statsRes.totals || {};
+                setStatValue('card-resolves', fmtNumber(totals.resolves || 0));
+                setStatValue('card-success', pct(totals.resolve_ok || 0, totals.resolves || 0),
+                    `${fmtNumber(totals.resolve_ok || 0)} / ${fmtNumber(totals.resolves || 0)}`);
+                setStatValue('card-proxy', fmtNumber(totals.proxy_calls || 0));
+                setStatValue('card-bytes', fmtBytes(totals.proxy_bytes || 0));
+
+                renderTodayWeek(statsRes.today, statsRes.last7d);
+                renderByPlatform(statsRes.byPlatform || []);
+                renderDaily(statsRes.daily || []);
+
+                const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                const lu = document.getElementById('last-updated');
+                if (lu) lu.textContent = `· 最后更新 ${ts}`;
+            } catch (err) {
+                console.error('analytics load failed', err);
+                const lu = document.getElementById('last-updated');
+                if (lu) lu.textContent = `· 加载失败：${err.message || err}`;
+            } finally {
+                if (refreshBtn) refreshBtn.disabled = false;
+                inflight = false;
+            }
+        }
+
+        document.getElementById('refresh').addEventListener('click', loadAll);
+        loadAll();
+    </script>
+</body>
+</html>

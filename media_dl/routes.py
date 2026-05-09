@@ -14,6 +14,40 @@ from flask import Blueprint, Response, jsonify, request, session, stream_with_co
 from . import extractor
 from .analytics import DB_PATH, host_of, log_event, platform_of_host
 
+
+_BLOCKED_HOST_HINTS = {
+    "x.com": "X (Twitter)",
+    "api.x.com": "X (Twitter)",
+    "twitter.com": "X (Twitter)",
+    "youtube.com": "YouTube",
+    "youtu.be": "YouTube",
+    "googlevideo.com": "YouTube",
+    "instagram.com": "Instagram",
+    "facebook.com": "Facebook",
+    "tiktok.com": "TikTok",
+}
+
+
+def _friendly_error(exc: Exception) -> str:
+    """Translate cryptic network errors into actionable Chinese messages."""
+    msg = str(exc)
+    lowered = msg.lower()
+    if "errno 101" in lowered or "network is unreachable" in lowered:
+        for needle, label in _BLOCKED_HOST_HINTS.items():
+            if needle in lowered:
+                return (
+                    f"{label} 在当前服务器无法直接访问（Network is unreachable）。"
+                    "如果服务器有可用代理，请在启动 Flask 前设置 HTTPS_PROXY 环境变量后重启。"
+                )
+        return "上游服务器不可达（Network is unreachable）—— 该平台的源站可能在境外，需配置出站代理。"
+    if "errno -2" in lowered or "name or service not known" in lowered or "nodename nor servname" in lowered:
+        return "DNS 解析失败，请检查链接是否正确，或稍后重试。"
+    if "timed out" in lowered or "timeout" in lowered:
+        return "上游请求超时，请稍后再试。"
+    if "ssl" in lowered and "verify" in lowered:
+        return "上游 SSL 证书校验失败，可能是代理拦截或证书过期。"
+    return f"解析失败: {exc}"
+
 log = logging.getLogger(__name__)
 
 media_dl_bp = Blueprint("media_dl", __name__, url_prefix="/api/media-dl")
@@ -86,7 +120,7 @@ def resolve():
             success=False, elapsed_ms=int((time.monotonic() - started) * 1000),
             error=str(exc),
         )
-        return jsonify({"error": f"解析失败: {exc}"}), 502
+        return jsonify({"error": _friendly_error(exc)}), 502
 
     elapsed = int((time.monotonic() - started) * 1000)
     result["elapsed_ms"] = elapsed

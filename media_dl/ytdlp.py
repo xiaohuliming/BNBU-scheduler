@@ -242,6 +242,17 @@ def extract(url: str) -> dict:
     if cookiefile:
         opts["cookiefile"] = cookiefile
 
+    # Outbound proxy for platforms unreachable from CN servers (X/Twitter,
+    # YouTube, Instagram). Set MAXCOURSE_PROXY (preferred) or HTTPS_PROXY in
+    # the environment, e.g. `http://127.0.0.1:7890` or `socks5://...`.
+    proxy = (
+        os.environ.get("MAXCOURSE_PROXY")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("https_proxy")
+    )
+    if proxy:
+        opts["proxy"] = proxy
+
     def _run() -> dict[str, Any]:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
