@@ -627,6 +627,19 @@
     </main>
 
     <script>
+        // Page-view tracking → /api/analytics/summary byView list.
+        if (window.location.protocol !== 'file:') {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    view: 'eatwhat',
+                    path: window.location.pathname + window.location.hash,
+                    referrer: document.referrer,
+                }),
+            }).catch(() => {});
+        }
+
         const CSV_PATHS = {
             shops: "clean_output/shops_clean.csv",
             dishes: "clean_output/dishes_clean.csv"

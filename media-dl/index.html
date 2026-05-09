@@ -138,6 +138,20 @@
     </footer>
 
     <script>
+        // Mirror the page-view tracking the main React app does, so this tool
+        // shows up in /api/analytics/summary alongside the other views.
+        if (window.location.protocol !== 'file:') {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    view: 'media-dl',
+                    path: window.location.pathname + window.location.hash,
+                    referrer: document.referrer,
+                }),
+            }).catch(() => {});
+        }
+
         const $form = document.getElementById('form');
         const $url = document.getElementById('url');
         const $submit = document.getElementById('submit');
