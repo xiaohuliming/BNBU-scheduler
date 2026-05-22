@@ -4,7 +4,7 @@ import json
 import time
 import logging
 
-# Configure logging
+# Configure logging in
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
