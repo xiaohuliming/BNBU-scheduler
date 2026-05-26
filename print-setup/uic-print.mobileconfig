@@ -26,9 +26,7 @@
             <key>Location</key>
             <string>UIC 图书馆 (PaperCut · Find Me)</string>
             <key>Model</key>
-            <string>Toshiba e-STUDIO 457</string>
-            <key>PPDURL</key>
-            <string></string>
+            <string>Generic PostScript Printer</string>
         </dict>
     </array>
     <key>PayloadType</key>
