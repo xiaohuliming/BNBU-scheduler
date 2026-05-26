@@ -21,23 +21,33 @@ Write-Host "目标:     $PrinterTarget  (Toshiba e-STUDIO 457)"
 Write-Host "重命名为: $NewName"
 Write-Host ''
 
-# 1. Probe connectivity
-Write-Host '[1/2] 测试与打印服务器的连通...'
+# 1. Probe connectivity. Use TCP port 445 (SMB) rather than ICMP — some networks
+# block ping but allow SMB, and Add-Printer needs 445 anyway.
+Write-Host '[1/2] 测试与打印服务器的连通 (TCP 445)...'
 $reachable = $false
 try {
-    $reachable = Test-Connection -ComputerName $ServerIP -Count 1 -Quiet -ErrorAction Stop
+    $client = [System.Net.Sockets.TcpClient]::new()
+    $task = $client.BeginConnect($ServerIP, 445, $null, $null)
+    $reachable = $task.AsyncWaitHandle.WaitOne(2500) -and $client.Connected
+    $client.Close()
 } catch { $reachable = $false }
 
 if (-not $reachable) {
     Write-Host ''
-    Write-Host "  [失败] 无法 ping 通 $ServerIP" -ForegroundColor Red
-    Write-Host '         没连校园 Wi-Fi, 或代理 / VPN 没关.'
-    Write-Host '         打印机仍会被添加, 但实际打印时会失败.'
+    Write-Host "  [失败] 无法连通 $ServerIP:445 (SMB)" -ForegroundColor Red
     Write-Host ''
-} else {
-    Write-Host '   OK' -ForegroundColor Green
+    Write-Host '  必须先做下面两步再重跑此命令:'
+    Write-Host '     1. 连接 UIC 校园 Wi-Fi'
+    Write-Host '     2. 关闭所有代理 / VPN / 加速器'
     Write-Host ''
+    Write-Host '  因为打印服务器是内网地址 (172.16.244.66), 离开校园网或开了代理'
+    Write-Host '  都会让数据走不到. Add-Printer 在这种状态下会卡 30 秒以上才报错.'
+    Write-Host ''
+    if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
+    exit 1
 }
+Write-Host '   OK' -ForegroundColor Green
+Write-Host ''
 
 # 2. Add printer
 Write-Host "[2/2] 正在添加打印机 $PrinterTarget ..."
