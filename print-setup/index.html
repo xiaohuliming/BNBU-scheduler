@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>校园打印一键配置 · MAXCOURSE</title>
+    <link rel="icon" href="/favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --ink: #101820;
+            --paper: #f4efe6;
+            --accent: #ff7a1f;
+            --lime: #d6ff62;
+            --rose: #ef4444;
+            --amber: #d97706;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .panel {
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(16,24,32,0.10);
+            border-radius: 2rem;
+            box-shadow: 0 18px 45px rgba(16,24,32,0.08);
+            backdrop-filter: blur(8px);
+        }
+        .pill {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            border-radius: 9999px; border: 1px solid rgba(16,24,32,0.10);
+            background: var(--paper); padding: 0.25rem 0.7rem;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: rgba(16,24,32,0.6);
+        }
+        .kicker {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.22em;
+            color: rgba(16,24,32,0.55);
+        }
+        .accent-bar {
+            display: inline-block; width: 2.4rem; height: 0.32rem;
+            background: var(--accent); border-radius: 9999px;
+        }
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+            padding: 1rem 1.8rem; border-radius: 9999px;
+            background: var(--ink); color: white; font-weight: 700; font-size: 1rem;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+            cursor: pointer; border: none;
+        }
+        .btn-primary:hover { background: var(--lime); color: var(--ink); }
+        .btn-ghost {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+            padding: 0.6rem 1.1rem; border-radius: 9999px;
+            background: white; color: var(--ink);
+            border: 1px solid rgba(16,24,32,0.18);
+            font-weight: 600; font-size: 0.85rem;
+            cursor: pointer; transition: background 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-ghost:hover { background: var(--paper); }
+        .reminder-card {
+            display: flex; gap: 0.9rem; align-items: flex-start;
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(217,119,6,0.25);
+            background: rgba(255,247,232,0.7);
+            border-radius: 1.25rem;
+        }
+        .reminder-num {
+            flex-shrink: 0;
+            width: 1.75rem; height: 1.75rem;
+            border-radius: 9999px;
+            background: var(--amber);
+            color: white;
+            font-family: "JetBrains Mono", monospace;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: grid; place-items: center;
+        }
+        .tab {
+            padding: 0.65rem 1.25rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(16,24,32,0.18);
+            background: white;
+            color: rgba(16,24,32,0.65);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, border 0.15s ease;
+        }
+        .tab.active {
+            background: var(--ink);
+            color: white;
+            border-color: var(--ink);
+        }
+        .step {
+            display: grid;
+            grid-template-columns: 2.6rem 1fr;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px dashed rgba(16,24,32,0.08);
+        }
+        .step:last-child { border-bottom: 0; }
+        .step-num {
+            font-family: "JetBrains Mono", monospace;
+            font-weight: 900;
+            font-size: 1.1rem;
+            color: var(--accent);
+            line-height: 1.6;
+        }
+        .step-body {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: rgba(16,24,32,0.78);
+        }
+        .step-body strong { color: var(--ink); }
+        .step-body code,
+        code.code {
+            font-family: "JetBrains Mono", monospace;
+            background: rgba(16,24,32,0.07);
+            padding: 0.1rem 0.45rem;
+            border-radius: 0.4rem;
+            font-size: 0.88em;
+            color: var(--ink);
+        }
+        .step-screenshot {
+            margin-top: 0.7rem;
+            display: block;
+            border: 1px dashed rgba(16,24,32,0.18);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.75rem;
+            color: rgba(16,24,32,0.4);
+            background: rgba(16,24,32,0.025);
+            min-height: 4rem;
+        }
+        .trouble-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1.5rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px dashed rgba(16,24,32,0.08);
+            font-size: 0.92rem;
+        }
+        .trouble-row:last-child { border-bottom: 0; }
+        .trouble-symptom {
+            font-weight: 700;
+            color: var(--rose);
+        }
+        @media (max-width: 640px) {
+            .trouble-row { grid-template-columns: 1fr; gap: 0.4rem; }
+        }
+        .hidden-panel { display: none; }
+    </style>
+</head>
+<body>
+    <header class="max-w-4xl mx-auto px-5 md:px-8 pt-8 md:pt-12 pb-2 flex items-center justify-between">
+        <a href="/" class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/55 hover:text-black/85">← MAXCOURSE</a>
+        <div class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/45">Toolbox / Campus Printing</div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-5 md:px-8 pt-6 pb-20">
+
+        <!-- Hero -->
+        <section class="panel p-6 md:p-10">
+            <div class="kicker">Set up campus printing in two clicks</div>
+            <div class="mt-3"><span class="accent-bar"></span></div>
+            <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">校园打印一键配置</h1>
+            <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
+                自动把 UIC 图书馆的共享打印机 (<span class="mono">172.16.244.66 / DP</span>, Toshiba e-STUDIO 457) 加进你的电脑。不需要 IT 处理，不需要装驱动盘，下载、双击、就好了。
+            </p>
+        </section>
+
+        <!-- Download card -->
+        <section class="panel p-6 md:p-10 mt-5">
+            <div class="kicker">检测到你的系统</div>
+            <div class="mt-2 flex items-baseline gap-3 flex-wrap">
+                <h2 id="detected-os" class="text-3xl md:text-4xl font-black tracking-[-0.04em]">macOS</h2>
+                <span id="detected-ua-hint" class="mono text-xs text-black/45"></span>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3 items-center">
+                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print.mobileconfig" download="UIC图书馆打印.mobileconfig">
+                    <span>下载并安装</span>
+                    <span id="primary-filename" class="mono text-xs opacity-75">UIC图书馆打印.mobileconfig</span>
+                </a>
+                <button id="toggle-other" class="btn-ghost" type="button">我用的是 Windows</button>
+            </div>
+
+            <div id="other-os-block" class="hidden-panel mt-4">
+                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC图书馆打印.bat">
+                    下载 <span class="mono ml-1" id="secondary-filename">UIC图书馆打印.bat</span>
+                </a>
+                <p class="mt-2 text-xs text-black/50">这个文件给另一个系统用。检测错了？直接点这个就行。</p>
+            </div>
+        </section>
+
+        <!-- Reminders -->
+        <section class="mt-8">
+            <div class="kicker mb-4">动手前，5 条必读</div>
+            <div class="grid gap-3 md:grid-cols-2">
+                <div class="reminder-card">
+                    <div class="reminder-num">1</div>
+                    <div>
+                        <div class="font-bold">必须在校园 Wi-Fi 下</div>
+                        <div class="text-sm text-black/65 mt-0.5">服务器地址 <code class="code">172.16.244.66</code> 是内网，外网完全访问不到。</div>
+                    </div>
+                </div>
+                <div class="reminder-card">
+                    <div class="reminder-num">2</div>
+                    <div>
+                        <div class="font-bold">关掉所有代理 / VPN</div>
+                        <div class="text-sm text-black/65 mt-0.5">Clash / Surge / V2Ray 任何一个开着，发往 172.16.x 的流量都会被拦走。</div>
+                    </div>
+                </div>
+                <div class="reminder-card">
+                    <div class="reminder-num">3</div>
+                    <div>
+                        <div class="font-bold">账号格式：<code class="code">UIC\学号</code></div>
+                        <div class="text-sm text-black/65 mt-0.5">例如 <code class="code">UIC\t330025032</code>。注意是反斜杠 <code class="code">\</code>。密码就是 iSpace 密码。</div>
+                    </div>
+                </div>
+                <div class="reminder-card">
+                    <div class="reminder-num">4</div>
+                    <div>
+                        <div class="font-bold">第一次打印记得勾"记住我的凭据"</div>
+                        <div class="text-sm text-black/65 mt-0.5">否则每次打印都要重输账号密码。</div>
+                    </div>
+                </div>
+                <div class="reminder-card md:col-span-2">
+                    <div class="reminder-num">5</div>
+                    <div>
+                        <div class="font-bold">打完要去图书馆刷学生证才出纸</div>
+                        <div class="text-sm text-black/65 mt-0.5">PaperCut Find Me 模式：任务先排队，你刷卡 release 后才打印。在电脑上点"打印"不会立刻吐纸。</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Steps -->
+        <section class="panel p-6 md:p-10 mt-8">
+            <div class="flex items-baseline justify-between gap-4 flex-wrap">
+                <div>
+                    <div class="kicker">安装步骤</div>
+                    <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">跟着做就好</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button class="tab active" data-tab="mac" type="button">macOS</button>
+                    <button class="tab" data-tab="win" type="button">Windows</button>
+                </div>
+            </div>
+
+            <!-- macOS steps -->
+            <div id="steps-mac" class="mt-6">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <strong>下载配置文件。</strong>
+                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC图书馆打印.mobileconfig</code>。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <strong>双击打开它。</strong>
+                        Safari 会提示"该网站正在尝试下载配置描述文件"，点允许。系统会跳出通知说"已下载该描述文件，请在系统设置中进行检查"。
+                        <span class="step-screenshot">[ 占位图：双击后的系统通知 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <strong>打开"系统设置 → 通用 → 设备管理"</strong>（旧版 macOS 是"系统偏好设置 → 描述文件"）。在"已下载"里找到 <strong>UIC 图书馆打印机配置</strong>，点 <strong>安装</strong>，输入 Mac 开机密码确认。
+                        <span class="step-screenshot">[ 占位图：设备管理里的描述文件 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <strong>验证。</strong>
+                        打开"系统设置 → 打印机与扫描仪"，能看到一台叫 <code>UIC 图书馆打印</code> 的设备就成了。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <strong>第一次打印。</strong>
+                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC 图书馆打印</code>，点打印，弹窗里：
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li>账号：<code>UIC\你的学号</code>（如 <code>UIC\t330025032</code>）</li>
+                            <li>密码：iSpace 密码</li>
+                            <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
+                        </ul>
+                        提交后任务进入 PaperCut 队列。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <strong>去图书馆刷卡取件。</strong>
+                        走到任意一台 Toshiba e-STUDIO，把学生证贴在读卡器上，屏幕里选你的任务、释放即可。
+                    </div>
+                </div>
+            </div>
+
+            <!-- Windows steps -->
+            <div id="steps-win" class="mt-6 hidden-panel">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <strong>下载脚本。</strong>
+                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC图书馆打印.bat</code>。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <strong>右键 → 以管理员身份运行。</strong>
+                        Windows Defender 可能弹"是否运行"，点 <strong>更多信息 → 仍要运行</strong>（脚本内容你可以提前用记事本打开看，只有两条命令：测试网络 + 加打印机）。
+                        <span class="step-screenshot">[ 占位图：右键菜单与 Defender 提示 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <strong>等脚本跑完。</strong>
+                        正常情况下会看到两个 <code>OK</code>，最后提示"完成"，按任意键关窗。
+                        <span class="step-screenshot">[ 占位图：脚本运行结果窗口 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <strong>验证。</strong>
+                        开始菜单搜 <strong>打印机</strong> → 打开"打印机和扫描仪"，能看到 <code>172.16.244.66 上的 DP</code> 就成了。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <strong>第一次打印。</strong>
+                        任意 App 按 <code>Ctrl + P</code>，打印机选刚才那台，点打印，Windows 会弹凭据窗口：
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li>用户名：<code>UIC\你的学号</code></li>
+                            <li>密码：iSpace 密码</li>
+                            <li>勾选 <strong>记住我的凭据</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <strong>去图书馆刷卡取件。</strong>
+                        同上，到任意 Toshiba e-STUDIO 前刷学生证 release 你的任务。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Driver note -->
+        <section class="panel p-6 md:p-8 mt-5">
+            <div class="kicker">关于驱动</div>
+            <p class="mt-3 text-sm text-black/70 leading-7">
+                这个配置默认用系统通用 PostScript 驱动 —— <strong>纯文字 / PDF / 一般图文文档完全够用</strong>。如果要打非常吃驱动的东西（特殊纸张、装订排版、海报级图像），到 Toshiba 官网下载 <code>Toshiba e-STUDIO 457 macOS / Windows 驱动</code> 装好后，在"打印机与扫描仪"里把对应打印机的"驱动"切换过去就行，已配置的地址不用动。
+            </p>
+        </section>
+
+        <!-- Troubleshooting -->
+        <section class="panel p-6 md:p-10 mt-8">
+            <div class="kicker">打不出来怎么办</div>
+            <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">先按这个清单查一遍</h2>
+
+            <div class="mt-6">
+                <div class="trouble-row">
+                    <div class="trouble-symptom">ping 172.16.244.66 没反应 / 脚本第一步就失败</div>
+                    <div class="text-black/75">
+                        没连校园 Wi-Fi，或者开了代理 / VPN。先关掉所有代理软件，重连 UIC 的 Wi-Fi（不是 eduroam，确认连的是校内 SSID），再试一次。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">打印机加上了，但打印出来全是乱码 / 排版错乱</div>
+                    <div class="text-black/75">
+                        通用 PostScript 驱动跟你的文档不兼容。装一份 Toshiba e-STUDIO 457 的官方驱动，在"打印机与扫描仪"里把驱动切过去。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">电脑显示已提交，机器上找不到我的任务</div>
+                    <div class="text-black/75">
+                        账号填错了（PaperCut 把任务记到了别人头上），或者第一次输账号时没勾"记住"，每次提交用了不同账号。打开<strong>钥匙串访问 (Mac) / 凭据管理器 (Win)</strong>删掉 <code>172.16.244.66</code> 的记录，下次重新输一次 <code>UIC\学号</code>。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">macOS 双击 .mobileconfig 没反应 / 报"该文件不是有效的配置描述文件"</div>
+                    <div class="text-black/75">
+                        浏览器把文件后缀改错了（变成 <code>.mobileconfig.txt</code>）。在 Finder 里手动改回 <code>.mobileconfig</code> 再双击；或者改用 Safari 重新下载。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">Windows 报"找不到网络路径 / 0x80070035"</div>
+                    <div class="text-black/75">
+                        系统禁用了 SMB 客户端。<code>控制面板 → 程序 → 启用或关闭 Windows 功能</code>，勾上 <strong>SMB 1.0/CIFS File Sharing Support</strong>（仅勾"客户端"子项就够，不要勾服务器）。重启后再跑脚本。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">提示"凭据无效"反复重输</div>
+                    <div class="text-black/75">
+                        99% 是漏了 <code>UIC\</code> 前缀。账号必须填 <code>UIC\t330025032</code> 这种完整形式，不能只填学号。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">以上都试过还不行</div>
+                    <div class="text-black/75">
+                        到图书馆服务台问 IT，或者来找我。本工具只是把官方配置打包成一键安装，底层流程跟人工添加是完全一样的。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Privacy note -->
+        <section class="panel p-6 md:p-8 mt-5">
+            <div class="kicker">隐私说明</div>
+            <p class="mt-3 text-sm text-black/70 leading-7">
+                这个页面只做两件事：① 给你一个配置文件下载；② 告诉你怎么用。<strong>不收集</strong>你的 UIC 账号、密码、学号、任何登录凭据。配置文件里也<strong>不包含</strong>任何账号信息，账号是你的电脑直接跟 PaperCut 通信时输入的，全程经过你的本地系统，跟这个网站没有任何关联。打印计费照常按你的 PaperCut 账户记。
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="max-w-4xl mx-auto px-5 md:px-8 pb-10 mono text-[10px] uppercase tracking-[0.24em] text-black/40 text-center">
+        · Fin · 同学互助配置 · 非官方工具 ·
+    </footer>
+
+    <script>
+        // Page-view tracking → /api/analytics/summary byView list.
+        if (window.location.protocol !== 'file:') {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    view: 'print-setup',
+                    path: window.location.pathname + window.location.hash,
+                    referrer: document.referrer,
+                }),
+            }).catch(() => {});
+        }
+
+        // ---- OS detection ----
+        const ua = (navigator.userAgent || '').toLowerCase();
+        const platform = (navigator.platform || '').toLowerCase();
+        const isWindows = /windows|win32|win64/.test(ua) || /win/.test(platform);
+        const isMac = !isWindows && (/mac os x|macintosh/.test(ua) || /mac/.test(platform));
+
+        const detectedOs = isWindows ? 'windows' : 'mac';
+
+        const FILES = {
+            mac: {
+                label: 'macOS',
+                file: '/print-setup/uic-print.mobileconfig',
+                downloadAs: 'UIC图书馆打印.mobileconfig',
+                hint: '(.mobileconfig · 描述文件)',
+            },
+            windows: {
+                label: 'Windows',
+                file: '/print-setup/uic-print.bat',
+                downloadAs: 'UIC图书馆打印.bat',
+                hint: '(.bat · 一键脚本)',
+            },
+        };
+
+        const otherOs = detectedOs === 'mac' ? 'windows' : 'mac';
+
+        // Populate primary
+        document.getElementById('detected-os').textContent = FILES[detectedOs].label;
+        document.getElementById('detected-ua-hint').textContent = FILES[detectedOs].hint;
+        const primary = document.getElementById('primary-download');
+        primary.href = FILES[detectedOs].file;
+        primary.setAttribute('download', FILES[detectedOs].downloadAs);
+        document.getElementById('primary-filename').textContent = FILES[detectedOs].downloadAs;
+
+        // Populate secondary (other OS)
+        const secondary = document.getElementById('secondary-download');
+        secondary.href = FILES[otherOs].file;
+        secondary.setAttribute('download', FILES[otherOs].downloadAs);
+        document.getElementById('secondary-filename').textContent = FILES[otherOs].downloadAs;
+        const toggleBtn = document.getElementById('toggle-other');
+        toggleBtn.textContent = '我用的是 ' + FILES[otherOs].label;
+
+        toggleBtn.addEventListener('click', () => {
+            const block = document.getElementById('other-os-block');
+            const showing = !block.classList.contains('hidden-panel');
+            if (showing) {
+                block.classList.add('hidden-panel');
+                toggleBtn.textContent = '我用的是 ' + FILES[otherOs].label;
+            } else {
+                block.classList.remove('hidden-panel');
+                toggleBtn.textContent = '收起';
+            }
+        });
+
+        // ---- Tab switching for steps ----
+        const tabs = document.querySelectorAll('.tab');
+        const macPanel = document.getElementById('steps-mac');
+        const winPanel = document.getElementById('steps-win');
+
+        const setTab = (which) => {
+            tabs.forEach((t) => t.classList.toggle('active', t.getAttribute('data-tab') === which));
+            macPanel.classList.toggle('hidden-panel', which !== 'mac');
+            winPanel.classList.toggle('hidden-panel', which !== 'win');
+        };
+
+        // Default to detected OS
+        setTab(detectedOs === 'mac' ? 'mac' : 'win');
+
+        tabs.forEach((t) => {
+            t.addEventListener('click', () => setTab(t.getAttribute('data-tab')));
+        });
+    </script>
+</body>
+</html>
