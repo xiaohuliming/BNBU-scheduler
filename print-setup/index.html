@@ -252,6 +252,22 @@
                 </div>
             </div>
 
+            <!-- Primary install path for Windows: PowerShell one-liner.
+                 Hidden when the user toggles to macOS. -->
+            <div id="win-terminal-block" class="mt-6 rounded-2xl border-2 border-[var(--accent)] bg-white p-5 hidden-panel">
+                <div class="flex items-baseline gap-3 flex-wrap">
+                    <span class="pill" style="background:var(--accent);color:white;border-color:var(--accent)">推荐</span>
+                    <div class="kicker">Windows · PowerShell 一行搞定</div>
+                </div>
+                <p class="mt-3 text-sm md:text-base text-black/70 leading-7">
+                    开始菜单搜 "PowerShell"（或按 <code>Win + X</code> → 选"终端"），把下面这一行<strong>粘进去回车</strong>。不会下载文件、不会触发 SmartScreen、不需要管理员权限。
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 items-stretch">
+                    <code id="win-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex</code>
+                    <button id="win-terminal-copy" class="btn-ghost" type="button">复制</button>
+                </div>
+            </div>
+
             <!-- Download fallback: shown for both Mac (zip) and Win (bat).
                  For Mac users this is labelled as an alternative. -->
             <div class="mt-4 flex flex-wrap gap-3 items-center">
@@ -785,17 +801,11 @@
         primary.setAttribute('download', FILES[detectedOs].downloadAs);
         document.getElementById('primary-filename').textContent = FILES[detectedOs].downloadAs;
 
-        // Mac users see the terminal one-liner as the recommended path, so
-        // the download button is demoted to "alternative". Windows users have
-        // no terminal alternative, so the .bat download is the primary CTA.
+        // Both OSes now have a recommended terminal one-liner above the
+        // download button, so the file download is the secondary path.
         const primaryLabel = document.getElementById('primary-label');
-        if (detectedOs === 'mac') {
-            primary.className = 'btn-ghost';
-            if (primaryLabel) primaryLabel.textContent = '或者下载';
-        } else {
-            primary.className = 'btn-primary';
-            if (primaryLabel) primaryLabel.textContent = '下载并安装';
-        }
+        primary.className = 'btn-ghost';
+        if (primaryLabel) primaryLabel.textContent = '或者下载';
 
         // Populate secondary (other OS)
         const secondary = document.getElementById('secondary-download');
@@ -817,31 +827,41 @@
             }
         });
 
-        // Hide the Terminal one-liner block when the user is on Windows.
-        const termBlock = document.getElementById('mac-terminal-block');
-        if (termBlock && detectedOs !== 'mac') {
-            termBlock.classList.add('hidden-panel');
+        // Show only the terminal block matching the detected OS.
+        const macTermBlock = document.getElementById('mac-terminal-block');
+        const winTermBlock = document.getElementById('win-terminal-block');
+        if (macTermBlock && winTermBlock) {
+            if (detectedOs === 'mac') {
+                winTermBlock.classList.add('hidden-panel');
+                macTermBlock.classList.remove('hidden-panel');
+            } else {
+                macTermBlock.classList.add('hidden-panel');
+                winTermBlock.classList.remove('hidden-panel');
+            }
         }
 
-        // Copy-to-clipboard for the curl one-liner.
-        const termCopyBtn = document.getElementById('mac-terminal-copy');
-        const termCmd = document.getElementById('mac-terminal-cmd');
-        if (termCopyBtn && termCmd) {
-            termCopyBtn.addEventListener('click', async () => {
+        // Wire up copy-to-clipboard for both terminal one-liners.
+        const wireCopy = (btnId, cmdId) => {
+            const btn = document.getElementById(btnId);
+            const cmd = document.getElementById(cmdId);
+            if (!btn || !cmd) return;
+            btn.addEventListener('click', async () => {
                 try {
-                    await navigator.clipboard.writeText(termCmd.textContent.trim());
-                    const original = termCopyBtn.textContent;
-                    termCopyBtn.textContent = '已复制 ✓';
-                    setTimeout(() => { termCopyBtn.textContent = original; }, 1400);
+                    await navigator.clipboard.writeText(cmd.textContent.trim());
+                    const original = btn.textContent;
+                    btn.textContent = '已复制 ✓';
+                    setTimeout(() => { btn.textContent = original; }, 1400);
                 } catch (err) {
                     const range = document.createRange();
-                    range.selectNodeContents(termCmd);
+                    range.selectNodeContents(cmd);
                     const sel = window.getSelection();
                     sel.removeAllRanges();
                     sel.addRange(range);
                 }
             });
-        }
+        };
+        wireCopy('mac-terminal-copy', 'mac-terminal-cmd');
+        wireCopy('win-terminal-copy', 'win-terminal-cmd');
 
         // ---- Tab switching: a reusable factory keeps the auto-install
         // and manual-setup tab groups independent of each other ----
