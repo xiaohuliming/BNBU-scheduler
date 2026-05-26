@@ -146,6 +146,41 @@
             background: rgba(16,24,32,0.025);
             min-height: 4rem;
         }
+        .step-shot {
+            margin: 0.7rem 0 0;
+            padding: 0;
+            border: 1px solid rgba(16,24,32,0.10);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 8px rgba(16,24,32,0.04);
+        }
+        .step-shot img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+        }
+        .step-shot.shot-missing {
+            border: 1px dashed rgba(16,24,32,0.18);
+            padding: 1.5rem;
+            text-align: center;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.75rem;
+            color: rgba(16,24,32,0.4);
+            background: rgba(16,24,32,0.025);
+            box-shadow: none;
+            min-height: 4rem;
+        }
+        .shot-caption {
+            display: block;
+            padding: 0.5rem 0.9rem;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.7rem;
+            color: rgba(16,24,32,0.5);
+            background: rgba(16,24,32,0.025);
+            border-top: 1px solid rgba(16,24,32,0.06);
+        }
         .trouble-row {
             display: grid;
             grid-template-columns: 1fr 2fr;
@@ -229,7 +264,7 @@
                     <div class="reminder-num">3</div>
                     <div>
                         <div class="font-bold">账号：先试单纯学号，不行再加 <code class="code">UIC\</code> 前缀</div>
-                        <div class="text-sm text-black/65 mt-0.5">大多数情况只填 <code class="code">t330025032</code> 就能过；如果反复弹"凭据无效"，改写成 <code class="code">UIC\t330025032</code>（反斜杠不是斜杠）。密码就是 iSpace 密码。</div>
+                        <div class="text-sm text-black/65 mt-0.5">大多数情况只填 <code class="code">t12345678</code> 就能过；如果反复弹"凭据无效"，改写成 <code class="code">UIC\t12345678</code>（反斜杠不是斜杠）。密码就是 iSpace 密码。</div>
                     </div>
                 </div>
                 <div class="reminder-card">
@@ -275,15 +310,29 @@
                     <div class="step-num">2</div>
                     <div class="step-body">
                         <strong>双击打开它。</strong>
-                        Safari 会提示"该网站正在尝试下载配置描述文件"，点允许。系统会跳出通知说"已下载该描述文件，请在系统设置中进行检查"。
-                        <span class="step-screenshot">[ 占位图：双击后的系统通知 ]</span>
+                        Safari 会提示"该网站正在尝试下载配置描述文件"，点允许。系统会跳出通知说"已下载该描述文件，请在'系统设置'中检查该描述文件"。
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-auto-02-download-notification.png"
+                                 alt="系统通知：已下载描述文件"
+                                 data-shot-fallback="双击后的系统通知">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">3</div>
                     <div class="step-body">
-                        <strong>打开"系统设置 → 通用 → 设备管理"</strong>（旧版 macOS 是"系统偏好设置 → 描述文件"）。在"已下载"里找到 <strong>UIC 图书馆打印机配置</strong>，点 <strong>安装</strong>，输入 Mac 开机密码确认。
-                        <span class="step-screenshot">[ 占位图：设备管理里的描述文件 ]</span>
+                        <strong>打开"系统设置 → 通用 → 设备管理"</strong>（旧版 macOS 是"系统偏好设置 → 描述文件"）。在"已下载"里能看到一行 <strong>UIC 图书馆打印机配置</strong>。
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-auto-03-device-management.png"
+                                 alt="设备管理里的描述文件"
+                                 data-shot-fallback="设备管理里的描述文件">
+                        </figure>
+                        <span class="block mt-3">双击这一行，弹出"确定要安装此描述文件吗？"对话框，点左下角 <strong>安装...</strong>，输入 Mac 开机密码确认即可。</span>
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-auto-03b-install-confirm.png"
+                                 alt="确定要安装此描述文件吗 对话框"
+                                 data-shot-fallback="安装确认对话框">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
@@ -291,6 +340,11 @@
                     <div class="step-body">
                         <strong>验证。</strong>
                         打开"系统设置 → 打印机与扫描仪"，能看到一台叫 <code>UIC 图书馆打印</code> 的设备就成了。
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-auto-04-printer-listed.png"
+                                 alt="打印机与扫描仪里出现 UIC 图书馆打印"
+                                 data-shot-fallback="打印机已加到列表">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
@@ -299,11 +353,16 @@
                         <strong>第一次打印。</strong>
                         随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC 图书馆打印</code>，点打印，弹窗里：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>账号：先输你的学号（如 <code>t330025032</code>）；如果被反复打回，改成 <code>UIC\t330025032</code></li>
+                            <li>账号：先输你的学号（如 <code>t12345678</code>）；如果被反复打回，改成 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
                         </ul>
                         提交后任务进入 PaperCut 队列。
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-print-credentials.png"
+                                 alt="第一次打印的凭据弹窗"
+                                 data-shot-fallback="第一次打印的凭据弹窗">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
@@ -353,7 +412,7 @@
                         <strong>第一次打印。</strong>
                         任意 App 按 <code>Ctrl + P</code>，打印机选刚才那台，点打印，Windows 会弹凭据窗口：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>用户名：先输学号（如 <code>t330025032</code>），不行再加前缀 <code>UIC\t330025032</code></li>
+                            <li>用户名：先输学号（如 <code>t12345678</code>），不行再加前缀 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住我的凭据</strong></li>
                         </ul>
@@ -393,19 +452,33 @@
                     <div class="step-body">
                         <strong>打开"打印机与扫描仪"。</strong>
                         系统设置 → 打印机与扫描仪 → 点 <strong>添加打印机、扫描仪或传真...</strong>
-                        <span class="step-screenshot">[ 占位图：打印机与扫描仪界面 ]</span>
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-manual-01-add-printer.png"
+                                 alt="打印机与扫描仪面板与添加按钮"
+                                 data-shot-fallback="打印机与扫描仪界面">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">2</div>
                     <div class="step-body">
                         <strong>启用"高级"选项卡。</strong>
-                        弹出的"添加"窗口默认只有 IP、Windows、Default 几个选项。需要把"高级 (Advanced)"选项卡加出来：
-                        <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li><strong>Control + 单击</strong>窗口顶部工具栏</li>
-                            <li>选 <strong>自定工具栏...</strong></li>
-                            <li>把"<strong>高级</strong>"齿轮图标拖到工具栏，点完成</li>
+                        弹出的"添加打印机"窗口默认只有 <strong>默认 / IP / Windows</strong> 三个选项卡（右上角有"自定义工具栏..."按钮）。需要把"高级 (Advanced)"选项卡加出来：
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-manual-02a-add-dialog.png"
+                                 alt="添加打印机窗口的初始状态"
+                                 data-shot-fallback="添加打印机窗口初始状态">
+                        </figure>
+                        <ul class="mt-3 list-disc pl-5 space-y-1">
+                            <li>点右上角 <strong>自定义工具栏...</strong>（也可以 Control + 单击工具栏，选自定工具栏）</li>
+                            <li>在弹出的"将喜爱的项目拖入工具栏..."里找到 <strong>高级</strong> 齿轮图标</li>
+                            <li>把它拖到上方工具栏，点 <strong>完成</strong></li>
                         </ul>
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-manual-02b-customize-toolbar.png"
+                                 alt="自定义工具栏 拖出高级齿轮"
+                                 data-shot-fallback="自定义工具栏 (拖出 '高级' 齿轮)">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
@@ -414,20 +487,30 @@
                         <strong>切到"高级"选项卡，按下面填写：</strong>
                         <ul class="mt-2 list-none pl-0 space-y-1 mono text-sm">
                             <li>类型 (Type): <code>Windows printer via spoolss</code></li>
-                            <li>设备 (Device): <code>Another Device</code></li>
+                            <li>设备 (Device): <code>另一个设备 / Another Device</code></li>
                             <li>URL: <code>smb://172.16.244.66/DP</code></li>
-                            <li>名称 (Name): <code>UIC 图书馆打印</code>（可以自己改）</li>
-                            <li>位置 (Location): <code>UIC 图书馆</code>（可选）</li>
-                            <li>使用 (Use): <code>Generic PostScript Printer</code></li>
+                            <li>名称 (Name): <code>UIC 图书馆打印</code>（随便填，能认出来就行）</li>
+                            <li>位置 (Location): 留空或写 <code>UIC 图书馆</code></li>
+                            <li>使用 (Use): <code>普通 PostScript 打印机</code></li>
                         </ul>
-                        <span class="step-screenshot">[ 占位图：高级选项卡填写后 ]</span>
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-manual-03-advanced-form.png"
+                                 alt="高级选项卡填好的样子"
+                                 data-shot-fallback="高级选项卡填写后">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">4</div>
                     <div class="step-body">
                         <strong>点"添加"。</strong>
-                        如果系统提示选择驱动，挑 <code>Generic PostScript Printer</code> 就够用了。装了 Toshiba 官方驱动的话，能在列表里看到 <code>Toshiba e-STUDIO 457</code>，选它体验更好。
+                        系统会自动探测打印机选项，弹出 <strong>正在设置 "UIC 打印机..."</strong> 的对话框。如果检测到"双面打印单位"开关，保持打开；其他选项保持默认，点 <strong>好</strong> 完成。
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-manual-04-printer-options.png"
+                                 alt="正在设置打印机 选项对话框"
+                                 data-shot-fallback="打印机选项对话框 (双面打印单位)">
+                        </figure>
+                        <span class="block mt-3 text-sm text-black/55">如果想换更精确的驱动：装好 Toshiba 官方驱动后，在"打印机与扫描仪"里右键这台 → "选项与耗材" → "驱动程序"，切换到 <code>Toshiba e-STUDIO 457</code> 即可，不用重新添加。</span>
                     </div>
                 </div>
                 <div class="step">
@@ -436,10 +519,15 @@
                         <strong>第一次打印。</strong>
                         任意 App 按 <code>⌘ + P</code>，打印机选刚才那台，提交后弹账号窗口：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>账号：<code>UIC\你的学号</code></li>
+                            <li>账号：先输你的学号（如 <code>t12345678</code>）；不行再加前缀 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
                         </ul>
+                        <figure class="step-shot">
+                            <img src="screenshots/mac-print-credentials.png"
+                                 alt="第一次打印的凭据弹窗"
+                                 data-shot-fallback="第一次打印的凭据弹窗">
+                        </figure>
                     </div>
                 </div>
                 <div class="step">
@@ -469,7 +557,7 @@
                         <strong>输入凭据。</strong>
                         Windows 弹窗要账号密码，按这个填：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>用户名：先输学号（如 <code>t330025032</code>）；不行再带前缀 <code>UIC\t330025032</code></li>
+                            <li>用户名：先输学号（如 <code>t12345678</code>）；不行再带前缀 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住我的凭据</strong></li>
                         </ul>
@@ -560,7 +648,7 @@
                 <div class="trouble-row">
                     <div class="trouble-symptom">提示"凭据无效"反复重输</div>
                     <div class="text-black/75">
-                        你的电脑没有自动识别 UIC 域。把账号从 <code>t330025032</code> 改成 <code>UIC\t330025032</code> 再试。`UIC\` 是 Active Directory 的域名前缀，反斜杠不是斜杠。
+                        你的电脑没有自动识别 UIC 域。把账号从 <code>t12345678</code> 改成 <code>UIC\t12345678</code> 再试。`UIC\` 是 Active Directory 的域名前缀，反斜杠不是斜杠。
                     </div>
                 </div>
                 <div class="trouble-row">
@@ -599,6 +687,20 @@
                 }),
             }).catch(() => {});
         }
+
+        // ---- Screenshot fallback ----
+        // When an img tag with data-shot-fallback fails to load, swap it for
+        // the classic dashed placeholder text. That way new images can be
+        // dropped into print-setup/screenshots/ at any time without the page
+        // showing broken-image icons in the meantime.
+        document.querySelectorAll('img[data-shot-fallback]').forEach((img) => {
+            img.addEventListener('error', () => {
+                const figure = img.closest('.step-shot');
+                if (!figure) return;
+                figure.classList.add('shot-missing');
+                figure.textContent = `[ 占位图：${img.getAttribute('data-shot-fallback')} ]`;
+            }, { once: true });
+        });
 
         // ---- OS detection ----
         const ua = (navigator.userAgent || '').toLowerCase();
