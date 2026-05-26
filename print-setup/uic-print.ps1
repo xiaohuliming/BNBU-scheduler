@@ -34,7 +34,7 @@ try {
 
 if (-not $reachable) {
     Write-Host ''
-    Write-Host "  [失败] 无法连通 $ServerIP:445 (SMB)" -ForegroundColor Red
+    Write-Host "  [失败] 无法连通 ${ServerIP}:445 (SMB)" -ForegroundColor Red
     Write-Host ''
     Write-Host '  必须先做下面两步再重跑此命令:'
     Write-Host '     1. 连接 UIC 校园 Wi-Fi'
