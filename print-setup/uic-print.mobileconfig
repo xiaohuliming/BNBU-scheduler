@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.printing.printer</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadIdentifier</key>
+            <string>top.bnbscheduler.print.uic-dp.printer</string>
+            <key>PayloadUUID</key>
+            <string>1B30A55E-3F61-4D8F-9F4B-2A8C0F8D5C11</string>
+            <key>PayloadDisplayName</key>
+            <string>UIC 图书馆打印机</string>
+            <key>PayloadDescription</key>
+            <string>UIC 图书馆 PaperCut 共享打印队列。</string>
+            <key>PayloadEnabled</key>
+            <true/>
+            <key>DeviceURI</key>
+            <string>smb://172.16.244.66/DP</string>
+            <key>DisplayName</key>
+            <string>UIC 图书馆打印</string>
+            <key>Location</key>
+            <string>UIC 图书馆 (PaperCut · Find Me)</string>
+            <key>Model</key>
+            <string>Toshiba e-STUDIO 457</string>
+            <key>PPDURL</key>
+            <string></string>
+        </dict>
+    </array>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadScope</key>
+    <string>User</string>
+    <key>PayloadIdentifier</key>
+    <string>top.bnbscheduler.print.uic-dp</string>
+    <key>PayloadUUID</key>
+    <string>7A0D8C9E-6B43-4F2A-A1D7-3E5F9B7C2A88</string>
+    <key>PayloadDisplayName</key>
+    <string>UIC 图书馆打印机配置</string>
+    <key>PayloadDescription</key>
+    <string>添加 UIC 图书馆共享打印机 (smb://172.16.244.66/DP, Toshiba e-STUDIO 457)。打印时按提示输入 UIC 账号 (格式: UIC\学号) 与 iSpace 密码，可勾选保存。本配置不包含任何账号或密码。</string>
+    <key>PayloadOrganization</key>
+    <string>maxcourse · 同学互助配置</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+</dict>
+</plist>

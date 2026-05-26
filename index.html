@@ -297,6 +297,7 @@
         const Wrench = (p) => <Icon name="Wrench" {...p} />;
         const Utensils = (p) => <Icon name="Utensils" {...p} />;
         const Download = (p) => <Icon name="Download" {...p} />;
+        const Printer = (p) => <Icon name="Printer" {...p} />;
 
         const Settings = (p) => <Icon name="Settings" {...p} />;
 
@@ -2268,20 +2269,28 @@
                 },
                 {
                     numeral: 'III',
+                    key: 'print-setup',
+                    title: '校园打印一键配置',
+                    en: 'Campus Printing',
+                    detail: '一键添加图书馆共享打印机到 Mac / Windows。',
+                    href: '/print-setup/index.html'
+                },
+                {
+                    numeral: 'IV',
                     key: 'optimizer',
                     title: '排课优化',
                     en: 'Schedule Optimizer',
                     detail: '选定课程与空闲时间，生成不冲突的课表。'
                 },
                 {
-                    numeral: 'IV',
+                    numeral: 'V',
                     key: 'ddl',
                     title: 'iSpace DDL',
                     en: 'Deadlines',
                     detail: '同步 iSpace 作业截止日期与待办事项。'
                 },
                 {
-                    numeral: 'V',
+                    numeral: 'VI',
                     key: 'eatwhat',
                     title: '今天吃什么',
                     en: 'What to Eat',
@@ -2412,6 +2421,17 @@
                 badge: 'Media Tool',
                 Icon: Download,
                 accent: 'bg-[#0ea5e9]',
+                cta: '打开工具'
+            },
+            {
+                key: 'print-setup',
+                title: '校园打印一键配置',
+                subtitle: '一键把图书馆共享打印机加到你的电脑',
+                description: '自动识别 Mac / Windows，发对应的双击安装文件。涵盖 SMB 队列地址、双面默认、PaperCut Find Me 释放说明与故障排查清单。',
+                href: '/print-setup/index.html',
+                badge: 'Campus Setup',
+                Icon: Printer,
+                accent: 'bg-[#10b981]',
                 cta: '打开工具'
             }
         ];
