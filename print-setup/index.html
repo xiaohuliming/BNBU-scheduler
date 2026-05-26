@@ -227,16 +227,16 @@
             </div>
 
             <div class="mt-6 flex flex-wrap gap-3 items-center">
-                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print.mobileconfig" download="UIC图书馆打印.mobileconfig">
+                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print-mac.zip" download="UIC打印机.zip">
                     <span>下载并安装</span>
-                    <span id="primary-filename" class="mono text-xs opacity-75">UIC图书馆打印.mobileconfig</span>
+                    <span id="primary-filename" class="mono text-xs opacity-75">UIC打印机.zip</span>
                 </a>
                 <button id="toggle-other" class="btn-ghost" type="button">我用的是 Windows</button>
             </div>
 
             <div id="other-os-block" class="hidden-panel mt-4">
-                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC图书馆打印.bat">
-                    下载 <span class="mono ml-1" id="secondary-filename">UIC图书馆打印.bat</span>
+                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC打印机.bat">
+                    下载 <span class="mono ml-1" id="secondary-filename">UIC打印机.bat</span>
                 </a>
                 <p class="mt-2 text-xs text-black/50">这个文件给另一个系统用。检测错了？直接点这个就行。</p>
             </div>
@@ -302,47 +302,34 @@
                 <div class="step">
                     <div class="step-num">1</div>
                     <div class="step-body">
-                        <strong>下载配置文件。</strong>
-                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC图书馆打印.mobileconfig</code>。
+                        <strong>下载并自动解压。</strong>
+                        点上面那个黑色"下载并安装"按钮，浏览器会下到 <code>UIC打印机.zip</code>，macOS 会自动解压出一个 <code>uic-print.command</code> 文件（在你的 <code>下载</code> 文件夹）。
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">2</div>
                     <div class="step-body">
-                        <strong>双击打开它。</strong>
-                        Safari 会提示"该网站正在尝试下载配置描述文件"，点允许。系统会跳出通知说"已下载该描述文件，请在'系统设置'中检查该描述文件"。
-                        <figure class="step-shot">
-                            <img src="screenshots/mac-auto-02-download-notification.png"
-                                 alt="系统通知：已下载描述文件"
-                                 data-shot-fallback="双击后的系统通知">
-                        </figure>
+                        <strong>右键 → 打开。</strong>
+                        在 Finder 里找到 <code>uic-print.command</code>，<strong>右键 (或 Control+单击)</strong> → 选 <strong>打开</strong>。系统会弹一个对话框说"无法打开...身份不明的开发者"，再点一次 <strong>打开</strong>。这样 Gatekeeper 就放行了，下次双击直接生效。
+                        <span class="block mt-2 text-sm text-black/55">如果直接双击没反应：那是因为 macOS 较新版本不让双击运行未签名脚本，必须走"右键 → 打开"这一次。</span>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">3</div>
                     <div class="step-body">
-                        <strong>打开"系统设置 → 通用 → 设备管理"</strong>（旧版 macOS 是"系统偏好设置 → 描述文件"）。在"已下载"里能看到一行 <strong>UIC 图书馆打印机配置</strong>。
-                        <figure class="step-shot">
-                            <img src="screenshots/mac-auto-03-device-management.png"
-                                 alt="设备管理里的描述文件"
-                                 data-shot-fallback="设备管理里的描述文件">
-                        </figure>
-                        <span class="block mt-3">双击这一行，弹出"确定要安装此描述文件吗？"对话框，点左下角 <strong>安装...</strong>，输入 Mac 开机密码确认即可。</span>
-                        <figure class="step-shot">
-                            <img src="screenshots/mac-auto-03b-install-confirm.png"
-                                 alt="确定要安装此描述文件吗 对话框"
-                                 data-shot-fallback="安装确认对话框">
-                        </figure>
+                        <strong>等终端跑完。</strong>
+                        Terminal 会自动打开并跑两步：测试网络 + 添加打印机。看到 <code>完成! 打开 '系统设置 → 打印机与扫描仪'...</code> 这行就说明加成功了。
+                        <span class="block mt-2 text-sm text-black/55">脚本内容你可以提前用文本编辑器看，<strong>不会要求 sudo / 管理员密码</strong>，全程只调用 macOS 自带的 <code>lpadmin</code>。</span>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">4</div>
                     <div class="step-body">
                         <strong>验证。</strong>
-                        打开"系统设置 → 打印机与扫描仪"，能看到一台叫 <code>UIC 图书馆打印</code> 的设备就成了。
+                        打开"系统设置 → 打印机与扫描仪"，能看到一台叫 <code>UIC打印机</code> 的设备就成了。
                         <figure class="step-shot">
                             <img src="screenshots/mac-auto-04-printer-listed.png"
-                                 alt="打印机与扫描仪里出现 UIC 图书馆打印"
+                                 alt="打印机与扫描仪里出现 UIC打印机"
                                  data-shot-fallback="打印机已加到列表">
                         </figure>
                     </div>
@@ -351,7 +338,7 @@
                     <div class="step-num">5</div>
                     <div class="step-body">
                         <strong>第一次打印。</strong>
-                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC 图书馆打印</code>，点打印，弹窗里：
+                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC打印机</code>，点打印，弹窗里：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
                             <li>账号：先输你的学号（如 <code>t12345678</code>）；如果被反复打回，改成 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
@@ -380,7 +367,7 @@
                     <div class="step-num">1</div>
                     <div class="step-body">
                         <strong>下载脚本。</strong>
-                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC图书馆打印.bat</code>。
+                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC打印机.bat</code>。
                     </div>
                 </div>
                 <div class="step">
@@ -489,7 +476,7 @@
                             <li>类型 (Type): <code>Windows printer via spoolss</code></li>
                             <li>设备 (Device): <code>另一个设备 / Another Device</code></li>
                             <li>URL: <code>smb://172.16.244.66/DP</code></li>
-                            <li>名称 (Name): <code>UIC 图书馆打印</code>（随便填，能认出来就行）</li>
+                            <li>名称 (Name): <code>UIC打印机</code>（随便填，能认出来就行）</li>
                             <li>位置 (Location): 留空或写 <code>UIC 图书馆</code></li>
                             <li>使用 (Use): <code>普通 PostScript 打印机</code></li>
                         </ul>
@@ -634,9 +621,15 @@
                     </div>
                 </div>
                 <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 双击 .mobileconfig 没反应 / 报"该文件不是有效的配置描述文件"</div>
+                    <div class="trouble-symptom">macOS 双击 .command 文件没反应 / "无法打开身份不明开发者"</div>
                     <div class="text-black/75">
-                        浏览器把文件后缀改错了（变成 <code>.mobileconfig.txt</code>）。在 Finder 里手动改回 <code>.mobileconfig</code> 再双击；或者改用 Safari 重新下载。
+                        新版 macOS 不让双击运行未签名脚本。<strong>右键 (Control+单击)</strong> 这个文件 → 选 <strong>打开</strong> → 弹窗里再点一次 <strong>打开</strong>，Gatekeeper 就会放行。下次再双击就直接生效。
+                    </div>
+                </div>
+                <div class="trouble-row">
+                    <div class="trouble-symptom">macOS 脚本跑完但"打印机与扫描仪"里没出现</div>
+                    <div class="text-black/75">
+                        完全退出"系统设置"App 再打开（macOS UI 有时不实时刷新打印机列表）。或者打开"终端"运行 <code>lpstat -p</code>，能看到 <code>UICPrinter</code> 就说明已经加上了，只是 UI 显示有延迟。
                     </div>
                 </div>
                 <div class="trouble-row">
@@ -713,14 +706,14 @@
         const FILES = {
             mac: {
                 label: 'macOS',
-                file: '/print-setup/uic-print.mobileconfig',
-                downloadAs: 'UIC图书馆打印.mobileconfig',
-                hint: '(.mobileconfig · 描述文件)',
+                file: '/print-setup/uic-print-mac.zip',
+                downloadAs: 'UIC打印机.zip',
+                hint: '(.zip · 内含 .command 脚本)',
             },
             windows: {
                 label: 'Windows',
                 file: '/print-setup/uic-print.bat',
-                downloadAs: 'UIC图书馆打印.bat',
+                downloadAs: 'UIC打印机.bat',
                 hint: '(.bat · 一键脚本)',
             },
         };
