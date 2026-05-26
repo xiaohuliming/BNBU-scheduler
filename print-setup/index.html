@@ -179,7 +179,7 @@
             <div class="mt-3"><span class="accent-bar"></span></div>
             <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">校园打印一键配置</h1>
             <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
-                自动把 UIC 图书馆的共享打印机 (<span class="mono">172.16.244.66 / DP</span>, Toshiba e-STUDIO 457) 加进你的电脑。不需要 IT 处理，不需要装驱动盘，下载、双击、就好了。
+                自动把 UIC 图书馆的共享打印机 (<span class="mono">172.16.244.66 / DP</span>, Toshiba e-STUDIO 457) 加进你的电脑。
             </p>
         </section>
 
@@ -228,8 +228,8 @@
                 <div class="reminder-card">
                     <div class="reminder-num">3</div>
                     <div>
-                        <div class="font-bold">账号格式：<code class="code">UIC\学号</code></div>
-                        <div class="text-sm text-black/65 mt-0.5">例如 <code class="code">UIC\t330025032</code>。注意是反斜杠 <code class="code">\</code>。密码就是 iSpace 密码。</div>
+                        <div class="font-bold">账号：先试单纯学号，不行再加 <code class="code">UIC\</code> 前缀</div>
+                        <div class="text-sm text-black/65 mt-0.5">大多数情况只填 <code class="code">t330025032</code> 就能过；如果反复弹"凭据无效"，改写成 <code class="code">UIC\t330025032</code>（反斜杠不是斜杠）。密码就是 iSpace 密码。</div>
                     </div>
                 </div>
                 <div class="reminder-card">
@@ -299,7 +299,7 @@
                         <strong>第一次打印。</strong>
                         随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC 图书馆打印</code>，点打印，弹窗里：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>账号：<code>UIC\你的学号</code>（如 <code>UIC\t330025032</code>）</li>
+                            <li>账号：先输你的学号（如 <code>t330025032</code>）；如果被反复打回，改成 <code>UIC\t330025032</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
                         </ul>
@@ -353,7 +353,7 @@
                         <strong>第一次打印。</strong>
                         任意 App 按 <code>Ctrl + P</code>，打印机选刚才那台，点打印，Windows 会弹凭据窗口：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>用户名：<code>UIC\你的学号</code></li>
+                            <li>用户名：先输学号（如 <code>t330025032</code>），不行再加前缀 <code>UIC\t330025032</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住我的凭据</strong></li>
                         </ul>
@@ -364,6 +364,150 @@
                     <div class="step-body">
                         <strong>去图书馆刷卡取件。</strong>
                         同上，到任意 Toshiba e-STUDIO 前刷学生证 release 你的任务。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Manual setup (no downloads) -->
+        <section class="panel p-6 md:p-10 mt-8">
+            <div class="flex items-baseline justify-between gap-4 flex-wrap">
+                <div>
+                    <div class="kicker">不想下载我的文件？</div>
+                    <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">纯手动添加</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button class="tab active" data-manual-tab="mac" type="button">macOS</button>
+                    <button class="tab" data-manual-tab="win" type="button">Windows</button>
+                </div>
+            </div>
+
+            <p class="mt-3 text-sm text-black/65 leading-7">
+                如果你对来路不明的脚本 / 描述文件不放心，下面这套步骤完全用系统自带界面完成，每一步都看得到自己在改什么。结果跟自动安装完全一样。
+            </p>
+
+            <!-- macOS manual -->
+            <div id="manual-mac" class="mt-6">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <strong>打开"打印机与扫描仪"。</strong>
+                        系统设置 → 打印机与扫描仪 → 点 <strong>添加打印机、扫描仪或传真...</strong>
+                        <span class="step-screenshot">[ 占位图：打印机与扫描仪界面 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <strong>启用"高级"选项卡。</strong>
+                        弹出的"添加"窗口默认只有 IP、Windows、Default 几个选项。需要把"高级 (Advanced)"选项卡加出来：
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li><strong>Control + 单击</strong>窗口顶部工具栏</li>
+                            <li>选 <strong>自定工具栏...</strong></li>
+                            <li>把"<strong>高级</strong>"齿轮图标拖到工具栏，点完成</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <strong>切到"高级"选项卡，按下面填写：</strong>
+                        <ul class="mt-2 list-none pl-0 space-y-1 mono text-sm">
+                            <li>类型 (Type): <code>Windows printer via spoolss</code></li>
+                            <li>设备 (Device): <code>Another Device</code></li>
+                            <li>URL: <code>smb://172.16.244.66/DP</code></li>
+                            <li>名称 (Name): <code>UIC 图书馆打印</code>（可以自己改）</li>
+                            <li>位置 (Location): <code>UIC 图书馆</code>（可选）</li>
+                            <li>使用 (Use): <code>Generic PostScript Printer</code></li>
+                        </ul>
+                        <span class="step-screenshot">[ 占位图：高级选项卡填写后 ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <strong>点"添加"。</strong>
+                        如果系统提示选择驱动，挑 <code>Generic PostScript Printer</code> 就够用了。装了 Toshiba 官方驱动的话，能在列表里看到 <code>Toshiba e-STUDIO 457</code>，选它体验更好。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <strong>第一次打印。</strong>
+                        任意 App 按 <code>⌘ + P</code>，打印机选刚才那台，提交后弹账号窗口：
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li>账号：<code>UIC\你的学号</code></li>
+                            <li>密码：iSpace 密码</li>
+                            <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <strong>去图书馆刷卡取件。</strong>
+                        到任意 Toshiba e-STUDIO 前刷学生证 release 任务才会出纸。
+                    </div>
+                </div>
+            </div>
+
+            <!-- Windows manual -->
+            <div id="manual-win" class="mt-6 hidden-panel">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <strong>按 <code>Win + R</code> 打开"运行"。</strong>
+                        在输入框输入下面这一行，回车：
+                        <div class="mt-2 mono text-base bg-black/5 rounded-lg px-3 py-2 select-all">\\172.16.244.66\DP</div>
+                        （路径分隔符是反斜杠 <code>\</code>，不是 <code>/</code>。）
+                        <span class="step-screenshot">[ 占位图：运行窗口输入 \\IP\DP ]</span>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <strong>输入凭据。</strong>
+                        Windows 弹窗要账号密码，按这个填：
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li>用户名：先输学号（如 <code>t330025032</code>）；不行再带前缀 <code>UIC\t330025032</code></li>
+                            <li>密码：iSpace 密码</li>
+                            <li>勾选 <strong>记住我的凭据</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <strong>系统会自动安装这台共享打印机。</strong>
+                        如果弹"是否信任来自此共享的打印机驱动"，点 <strong>安装驱动程序</strong>。等几秒钟即可。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <strong>验证。</strong>
+                        开始菜单搜 <strong>打印机</strong> → 打开"打印机和扫描仪"，应该能看到 <code>172.16.244.66 上的 DP</code>。
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <strong>方法 A 失败的话，走传统添加流程：</strong>
+                        <ul class="mt-2 list-disc pl-5 space-y-1">
+                            <li>设置 → 蓝牙和其他设备 → 打印机和扫描仪</li>
+                            <li>点 <strong>添加设备</strong>，等列表加载完几秒</li>
+                            <li>点 <strong>"我需要的打印机不在列表中"</strong></li>
+                            <li>选 <strong>"按名称选择共享打印机"</strong></li>
+                            <li>输入 <code>\\172.16.244.66\DP</code>，下一步</li>
+                            <li>同样会弹凭据窗口，按上面填</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <strong>去图书馆刷卡取件。</strong>
+                        到任意 Toshiba e-STUDIO 前刷学生证 release 任务才会出纸。
                     </div>
                 </div>
             </div>
@@ -398,7 +542,7 @@
                 <div class="trouble-row">
                     <div class="trouble-symptom">电脑显示已提交，机器上找不到我的任务</div>
                     <div class="text-black/75">
-                        账号填错了（PaperCut 把任务记到了别人头上），或者第一次输账号时没勾"记住"，每次提交用了不同账号。打开<strong>钥匙串访问 (Mac) / 凭据管理器 (Win)</strong>删掉 <code>172.16.244.66</code> 的记录，下次重新输一次 <code>UIC\学号</code>。
+                        账号填错了（PaperCut 把任务记到了别人头上），或者第一次输账号时没勾"记住"，每次提交用了不同账号。打开<strong>钥匙串访问 (Mac) / 凭据管理器 (Win)</strong>删掉 <code>172.16.244.66</code> 的记录，下次重新认证。
                     </div>
                 </div>
                 <div class="trouble-row">
@@ -416,7 +560,7 @@
                 <div class="trouble-row">
                     <div class="trouble-symptom">提示"凭据无效"反复重输</div>
                     <div class="text-black/75">
-                        99% 是漏了 <code>UIC\</code> 前缀。账号必须填 <code>UIC\t330025032</code> 这种完整形式，不能只填学号。
+                        你的电脑没有自动识别 UIC 域。把账号从 <code>t330025032</code> 改成 <code>UIC\t330025032</code> 再试。`UIC\` 是 Active Directory 的域名前缀，反斜杠不是斜杠。
                     </div>
                 </div>
                 <div class="trouble-row">
@@ -509,23 +653,37 @@
             }
         });
 
-        // ---- Tab switching for steps ----
-        const tabs = document.querySelectorAll('.tab');
-        const macPanel = document.getElementById('steps-mac');
-        const winPanel = document.getElementById('steps-win');
-
-        const setTab = (which) => {
-            tabs.forEach((t) => t.classList.toggle('active', t.getAttribute('data-tab') === which));
-            macPanel.classList.toggle('hidden-panel', which !== 'mac');
-            winPanel.classList.toggle('hidden-panel', which !== 'win');
+        // ---- Tab switching: a reusable factory keeps the auto-install
+        // and manual-setup tab groups independent of each other ----
+        const wireTabs = ({ attr, panels }) => {
+            const buttons = document.querySelectorAll(`[${attr}]`);
+            const setActive = (which) => {
+                buttons.forEach((b) => b.classList.toggle('active', b.getAttribute(attr) === which));
+                Object.entries(panels).forEach(([key, el]) => {
+                    el.classList.toggle('hidden-panel', key !== which);
+                });
+            };
+            buttons.forEach((b) => b.addEventListener('click', () => setActive(b.getAttribute(attr))));
+            return setActive;
         };
 
-        // Default to detected OS
-        setTab(detectedOs === 'mac' ? 'mac' : 'win');
+        const initial = detectedOs === 'mac' ? 'mac' : 'win';
 
-        tabs.forEach((t) => {
-            t.addEventListener('click', () => setTab(t.getAttribute('data-tab')));
-        });
+        wireTabs({
+            attr: 'data-tab',
+            panels: {
+                mac: document.getElementById('steps-mac'),
+                win: document.getElementById('steps-win'),
+            },
+        })(initial);
+
+        wireTabs({
+            attr: 'data-manual-tab',
+            panels: {
+                mac: document.getElementById('manual-mac'),
+                win: document.getElementById('manual-win'),
+            },
+        })(initial);
     </script>
 </body>
 </html>
