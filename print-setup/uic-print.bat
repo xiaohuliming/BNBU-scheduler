@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 title UIC 图书馆打印机一键配置
 
@@ -35,7 +35,11 @@ echo.
 rem ---- 2. 添加打印机 ----
 echo [2/2] 正在添加打印机 \\172.16.244.66\DP ...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "try { Add-Printer -ConnectionName '\\172.16.244.66\DP' -ErrorAction Stop; Write-Host '   OK' } catch { Write-Host ('   [失败] ' + $_.Exception.Message); exit 1 }"
+    "try { ^
+        Add-Printer -ConnectionName '\\172.16.244.66\DP' -ErrorAction Stop; ^
+        Get-Printer | Where-Object { $_.Name -like '*172.16.244.66*' -or $_.Name -like '*\\172.16.244.66\\DP*' } | ForEach-Object { Rename-Printer -InputObject $_ -NewName 'UIC打印机' -ErrorAction SilentlyContinue }; ^
+        Write-Host '   OK' ^
+    } catch { Write-Host ('   [失败] ' + $_.Exception.Message); exit 1 }"
 
 if errorlevel 1 (
     echo.
@@ -53,7 +57,9 @@ if errorlevel 1 (
 echo.
 echo --------------------------------------------
 echo 完成! 打开 "设置 -- 蓝牙和其他设备 -- 打印机和扫描仪"
-echo 即可看到 "172.16.244.66 上的 DP" 这台打印机.
+echo 应能看到一台叫 "UIC打印机" 的设备.
+echo (如果显示成 "172.16.244.66 上的 DP", 自动重命名可能未生效,
+echo  可以在面板里右键这台机器 -- 重命名 -- 输入 "UIC打印机".)
 echo.
 echo 提示: 第一次打印任何文档时,
 echo   Windows 会弹窗要账号密码,
