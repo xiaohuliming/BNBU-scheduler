@@ -1,4 +1,4 @@
-﻿# UIC 图书馆打印机一键配置 (Windows / PowerShell)
+# UIC 图书馆打印机一键配置 (Windows / PowerShell)
 #
 # 用法 (在 PowerShell 里运行):
 #   irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex

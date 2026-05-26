@@ -75,6 +75,14 @@ def load_or_create_secret_key():
     return secret_key
 
 
+import mimetypes
+# `.ps1` and `.command` carry Chinese text and are fetched via `irm | iex`
+# (PowerShell) and `curl | bash` (macOS). Without an explicit charset, PowerShell
+# 5.1 falls back to Windows-1252 → Chinese decodes to garbage. Register them
+# as text/plain; charset=utf-8 so the response header tells clients the encoding.
+mimetypes.add_type('text/plain; charset=utf-8', '.ps1')
+mimetypes.add_type('text/plain; charset=utf-8', '.command')
+
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = load_or_create_secret_key()
 app.config.update(
