@@ -145,6 +145,28 @@
             font-weight: 700;
             letter-spacing: 0.08em;
         }
+        .os-switch {
+            display: inline-flex;
+            gap: 0.2rem;
+            padding: 0.25rem;
+            border-radius: 9999px;
+            background: rgba(16,24,32,0.06);
+        }
+        .os-tab {
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            border: none;
+            background: transparent;
+            color: rgba(16,24,32,0.6);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .os-tab.active {
+            background: var(--ink);
+            color: white;
+        }
         .step {
             display: grid;
             grid-template-columns: 2.6rem 1fr;
@@ -272,11 +294,22 @@
 
         <!-- Method picker: three mutually-exclusive install methods -->
         <section class="mt-6">
-            <div class="kicker mb-1">三种安装方式 · 任选其一</div>
-            <p class="text-sm md:text-base text-black/65 mb-4 leading-7">
-                下面三种方式装好的是<strong>同一台打印机</strong>，<strong>挑一种做完就行，不用三种都做</strong>。
-                检测到你在用 <span id="detected-os" class="font-bold">macOS</span><span id="detected-ua-hint" class="hidden"></span>，已为你默认选中最适合的方式。
-            </p>
+            <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+                <div>
+                    <div class="kicker mb-1">三种安装方式 · 任选其一</div>
+                    <p class="text-sm md:text-base text-black/65 leading-7">
+                        三种方式装好的是<strong>同一台打印机</strong>，<strong>挑一种做完就行，不用三种都做</strong>。
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="mono text-xs text-black/45">你的系统</span>
+                    <div class="os-switch">
+                        <button class="os-tab active" data-os="mac" type="button">macOS</button>
+                        <button class="os-tab" data-os="win" type="button">Windows</button>
+                    </div>
+                    <span id="detected-ua-hint" class="hidden"></span>
+                </div>
+            </div>
             <div class="flex flex-wrap gap-2">
                 <button class="method-tab active" data-method="cmd" type="button">① 命令行<span class="method-tab-tag">推荐 · 最快</span></button>
                 <button class="method-tab" data-method="script" type="button">② 下载脚本</button>
@@ -286,19 +319,11 @@
 
         <!-- Method ①: command-line one-liner -->
         <section id="method-cmd" class="panel p-6 md:p-10 mt-4">
-            <div class="flex items-baseline justify-between gap-4 flex-wrap">
-                <div>
-                    <div class="flex items-baseline gap-3 flex-wrap">
-                        <span class="method-badge">方式一</span>
-                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
-                    </div>
-                    <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
-                </div>
-                <div class="flex gap-2">
-                    <button class="tab active" data-cmd-tab="mac" type="button">macOS</button>
-                    <button class="tab" data-cmd-tab="win" type="button">Windows</button>
-                </div>
+            <div class="flex items-baseline gap-3 flex-wrap">
+                <span class="method-badge">方式一</span>
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
             </div>
+            <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
 
             <!-- macOS terminal one-liner -->
             <div id="mac-terminal-block" class="mt-5 rounded-2xl border-2 border-[var(--accent)] bg-white p-5">
@@ -383,32 +408,17 @@
 
         <!-- Method ②: download script -->
         <section id="method-script" class="panel p-6 md:p-10 mt-4 hidden-panel">
-            <div class="flex items-baseline justify-between gap-4 flex-wrap">
-                <div>
-                    <div class="flex items-baseline gap-3 flex-wrap">
-                        <span class="method-badge">方式二</span>
-                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">下载脚本运行</h2>
-                    </div>
-                    <p class="mt-2 text-sm text-black/60">下载一个文件双击跑。比命令行多几步（要过系统的安全拦截），但全程图形界面。</p>
-                </div>
-                <div class="flex gap-2">
-                    <button class="tab active" data-tab="mac" type="button">macOS</button>
-                    <button class="tab" data-tab="win" type="button">Windows</button>
-                </div>
+            <div class="flex items-baseline gap-3 flex-wrap">
+                <span class="method-badge">方式二</span>
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">下载脚本运行</h2>
             </div>
+            <p class="mt-2 text-sm text-black/60">下载一个文件双击跑。比命令行多几步（要过系统的安全拦截），但全程图形界面。</p>
 
             <div class="mt-5 flex flex-wrap gap-3 items-center">
                 <a id="primary-download" class="btn-primary" href="/print-setup/uic-print-mac.zip" download="UIC打印机.zip">
                     <span id="primary-label">下载并安装</span>
                     <span id="primary-filename" class="mono text-xs ml-1 opacity-75">UIC打印机.zip</span>
                 </a>
-                <button id="toggle-other" class="btn-ghost" type="button">我用的是 Windows</button>
-            </div>
-            <div id="other-os-block" class="hidden-panel mt-3">
-                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC打印机.bat">
-                    下载 <span class="mono ml-1" id="secondary-filename">UIC打印机.bat</span>
-                </a>
-                <p class="mt-2 text-xs text-black/50">这个文件给另一个系统用。检测错了？直接点这个就行。</p>
             </div>
 
             <!-- macOS steps -->
@@ -549,19 +559,11 @@
 
         <!-- Method ③: manual setup (no downloads) -->
         <section id="method-manual" class="panel p-6 md:p-10 mt-4 hidden-panel">
-            <div class="flex items-baseline justify-between gap-4 flex-wrap">
-                <div>
-                    <div class="flex items-baseline gap-3 flex-wrap">
-                        <span class="method-badge">方式三</span>
-                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">纯手动添加</h2>
-                    </div>
-                    <p class="mt-2 text-sm text-black/60">不下载任何文件、不跑任何脚本，全程用系统自带界面。步骤最多，但每一步你都看得到自己在改什么。</p>
-                </div>
-                <div class="flex gap-2">
-                    <button class="tab active" data-manual-tab="mac" type="button">macOS</button>
-                    <button class="tab" data-manual-tab="win" type="button">Windows</button>
-                </div>
+            <div class="flex items-baseline gap-3 flex-wrap">
+                <span class="method-badge">方式三</span>
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">纯手动添加</h2>
             </div>
+            <p class="mt-2 text-sm text-black/60">不下载任何文件、不跑任何脚本，全程用系统自带界面。步骤最多，但每一步你都看得到自己在改什么。</p>
 
             <!-- macOS manual -->
             <div id="manual-mac" class="mt-6">
@@ -857,42 +859,34 @@
             },
         };
 
-        const otherOs = detectedOs === 'mac' ? 'windows' : 'mac';
-
-        // Populate primary
-        document.getElementById('detected-os').textContent = FILES[detectedOs].label;
-        document.getElementById('detected-ua-hint').textContent = FILES[detectedOs].hint;
+        // ---- Global OS switch: one toggle drives every method's OS-specific
+        // content (terminal command, download file, step list). ----
+        const osPanels = {
+            mac: ['mac-terminal-block', 'steps-mac', 'manual-mac'],
+            win: ['win-terminal-block', 'steps-win', 'manual-win'],
+        };
+        const osButtons = document.querySelectorAll('[data-os]');
         const primary = document.getElementById('primary-download');
-        primary.href = FILES[detectedOs].file;
-        primary.setAttribute('download', FILES[detectedOs].downloadAs);
-        document.getElementById('primary-filename').textContent = FILES[detectedOs].downloadAs;
-
-        // Inside method ② the download button IS the primary action.
         const primaryLabel = document.getElementById('primary-label');
-        primary.className = 'btn-primary';
         if (primaryLabel) primaryLabel.textContent = '下载并安装';
 
-        // Populate secondary (other OS)
-        const secondary = document.getElementById('secondary-download');
-        secondary.href = FILES[otherOs].file;
-        secondary.setAttribute('download', FILES[otherOs].downloadAs);
-        document.getElementById('secondary-filename').textContent = FILES[otherOs].downloadAs;
-        const toggleBtn = document.getElementById('toggle-other');
-        toggleBtn.textContent = '我用的是 ' + FILES[otherOs].label;
-
-        toggleBtn.addEventListener('click', () => {
-            const block = document.getElementById('other-os-block');
-            const showing = !block.classList.contains('hidden-panel');
-            if (showing) {
-                block.classList.add('hidden-panel');
-                toggleBtn.textContent = '我用的是 ' + FILES[otherOs].label;
-            } else {
-                block.classList.remove('hidden-panel');
-                toggleBtn.textContent = '收起';
-            }
-        });
-
-        // (terminal-block visibility is handled by the data-cmd-tab wireTabs below)
+        const setOS = (os) => {
+            const filesKey = os === 'mac' ? 'mac' : 'windows';
+            osButtons.forEach((b) => b.classList.toggle('active', b.getAttribute('data-os') === os));
+            ['mac', 'win'].forEach((key) => {
+                osPanels[key].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.toggle('hidden-panel', key !== os);
+                });
+            });
+            // Method ② download button follows the selected OS.
+            primary.href = FILES[filesKey].file;
+            primary.setAttribute('download', FILES[filesKey].downloadAs);
+            const fn = document.getElementById('primary-filename');
+            if (fn) fn.textContent = FILES[filesKey].downloadAs;
+        };
+        osButtons.forEach((b) => b.addEventListener('click', () => setOS(b.getAttribute('data-os'))));
+        setOS(detectedOs === 'windows' ? 'win' : 'mac');
 
         // Wire up copy-to-clipboard for both terminal one-liners.
         const wireCopy = (btnId, cmdId) => {
@@ -930,33 +924,6 @@
             buttons.forEach((b) => b.addEventListener('click', () => setActive(b.getAttribute(attr))));
             return setActive;
         };
-
-        const initial = detectedOs === 'mac' ? 'mac' : 'win';
-
-        // Method ① command-line: switch between the macOS / Windows one-liner.
-        wireTabs({
-            attr: 'data-cmd-tab',
-            panels: {
-                mac: document.getElementById('mac-terminal-block'),
-                win: document.getElementById('win-terminal-block'),
-            },
-        })(initial);
-
-        wireTabs({
-            attr: 'data-tab',
-            panels: {
-                mac: document.getElementById('steps-mac'),
-                win: document.getElementById('steps-win'),
-            },
-        })(initial);
-
-        wireTabs({
-            attr: 'data-manual-tab',
-            panels: {
-                mac: document.getElementById('manual-mac'),
-                win: document.getElementById('manual-win'),
-            },
-        })(initial);
 
         // ---- Method picker: command-line / download-script / manual.
         // Only one method section is visible at a time so it never reads as
