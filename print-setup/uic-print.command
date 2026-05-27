@@ -58,9 +58,13 @@ if lpadmin -p "${PRINTER_NAME}" \
     -o printer-is-shared=false \
     -E
 then
+    # 关键: 声明这台队列需要 SMB 账号密码, 否则 macOS 打印时不会弹登录框,
+    # 任务会以 guest 身份静默失败. 单独一条 lpadmin 设置更稳 (和 -E 写一起
+    # 在某些 macOS 版本上会被重置).
+    lpadmin -p "${PRINTER_NAME}" -o auth-info-required=username,password 2>/dev/null || true
     cupsenable "${PRINTER_NAME}" 2>/dev/null || true
     cupsaccept "${PRINTER_NAME}" 2>/dev/null || true
-    echo "   OK"
+    echo "   OK (已设置: 打印时会弹账号密码框)"
 else
     echo ""
     echo "添加失败. 试着检查:"
