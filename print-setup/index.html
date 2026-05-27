@@ -103,6 +103,48 @@
             color: white;
             border-color: var(--ink);
         }
+        .method-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.3rem;
+            border-radius: 1rem;
+            border: 1.5px solid rgba(16,24,32,0.15);
+            background: white;
+            color: rgba(16,24,32,0.6);
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .method-tab:hover { border-color: rgba(16,24,32,0.4); }
+        .method-tab.active {
+            background: var(--ink);
+            color: white;
+            border-color: var(--ink);
+            box-shadow: 0 6px 18px rgba(16,24,32,0.18);
+        }
+        .method-tab-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            background: var(--accent);
+            color: white;
+            letter-spacing: 0.02em;
+        }
+        .method-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.7rem;
+            border-radius: 9999px;
+            background: var(--accent);
+            color: white;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
         .step {
             display: grid;
             grid-template-columns: 2.6rem 1fr;
@@ -228,23 +270,33 @@
             </p>
         </section>
 
-        <!-- Download card -->
-        <section class="panel p-6 md:p-10 mt-5">
-            <div class="kicker">检测到你的系统</div>
-            <div class="mt-2 flex items-baseline gap-3 flex-wrap">
-                <h2 id="detected-os" class="text-3xl md:text-4xl font-black tracking-[-0.04em]">macOS</h2>
-                <span id="detected-ua-hint" class="mono text-xs text-black/45"></span>
+        <!-- Method picker: three mutually-exclusive install methods -->
+        <section class="mt-6">
+            <div class="kicker mb-1">三种安装方式 · 任选其一</div>
+            <p class="text-sm md:text-base text-black/65 mb-4 leading-7">
+                下面三种方式装好的是<strong>同一台打印机</strong>，<strong>挑一种做完就行，不用三种都做</strong>。
+                检测到你在用 <span id="detected-os" class="font-bold">macOS</span><span id="detected-ua-hint" class="hidden"></span>，已为你默认选中最适合的方式。
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button class="method-tab active" data-method="cmd" type="button">① 命令行<span class="method-tab-tag">推荐 · 最快</span></button>
+                <button class="method-tab" data-method="script" type="button">② 下载脚本</button>
+                <button class="method-tab" data-method="manual" type="button">③ 纯手动</button>
             </div>
+        </section>
 
-            <!-- Primary install path for macOS: terminal one-liner.
-                 Hidden when the user toggles to Windows. -->
-            <div id="mac-terminal-block" class="mt-6 rounded-2xl border-2 border-[var(--accent)] bg-white p-5">
-                <div class="flex items-baseline gap-3 flex-wrap">
-                    <span class="pill" style="background:var(--accent);color:white;border-color:var(--accent)">推荐</span>
-                    <div class="kicker">macOS · 终端一行搞定</div>
-                </div>
-                <p class="mt-3 text-sm md:text-base text-black/70 leading-7">
-                    Spotlight 搜 "终端"（或 <code>⌘ + 空格</code> 输 "Terminal"），把下面这一行<strong>粘进去回车</strong>，等它跑完。不需要下载文件、不触发 Gatekeeper、不需要管理员密码 —— 这是最干净的安装方式。
+        <!-- Method ①: command-line one-liner -->
+        <section id="method-cmd" class="panel p-6 md:p-10 mt-4">
+            <div class="flex items-baseline gap-3 flex-wrap">
+                <span class="method-badge">方式一</span>
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
+            </div>
+            <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
+
+            <!-- macOS terminal one-liner -->
+            <div id="mac-terminal-block" class="mt-5 rounded-2xl border-2 border-[var(--accent)] bg-white p-5">
+                <div class="kicker mb-2">macOS · 终端</div>
+                <p class="text-sm md:text-base text-black/70 leading-7">
+                    Spotlight 搜 "终端"（或 <code>⌘ + 空格</code> 输 "Terminal"），把下面这一行<strong>粘进去回车</strong>。
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2 items-stretch">
                     <code id="mac-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">curl -fsSL https://www.bnbscheduler.top/print-setup/uic-print.command | bash</code>
@@ -252,15 +304,11 @@
                 </div>
             </div>
 
-            <!-- Primary install path for Windows: PowerShell one-liner.
-                 Hidden when the user toggles to macOS. -->
-            <div id="win-terminal-block" class="mt-6 rounded-2xl border-2 border-[var(--accent)] bg-white p-5 hidden-panel">
-                <div class="flex items-baseline gap-3 flex-wrap">
-                    <span class="pill" style="background:var(--accent);color:white;border-color:var(--accent)">推荐</span>
-                    <div class="kicker">Windows · PowerShell 一行搞定</div>
-                </div>
-                <p class="mt-3 text-sm md:text-base text-black/70 leading-7">
-                    开始菜单搜 "PowerShell"（或按 <code>Win + X</code> → 选"终端"），把下面这一行<strong>粘进去回车</strong>。不会下载文件、不会触发 SmartScreen、不需要管理员权限。
+            <!-- Windows PowerShell one-liner -->
+            <div id="win-terminal-block" class="mt-5 rounded-2xl border-2 border-[var(--accent)] bg-white p-5 hidden-panel">
+                <div class="kicker mb-2">Windows · PowerShell</div>
+                <p class="text-sm md:text-base text-black/70 leading-7">
+                    开始菜单搜 "PowerShell"（或按 <code>Win + X</code> → 选"终端"），把下面这一行<strong>粘进去回车</strong>。
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2 items-stretch">
                     <code id="win-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex</code>
@@ -268,21 +316,18 @@
                 </div>
             </div>
 
-            <!-- Download fallback: shown for both Mac (zip) and Win (bat).
-                 For Mac users this is labelled as an alternative. -->
-            <div class="mt-4 flex flex-wrap gap-3 items-center">
-                <a id="primary-download" class="btn-ghost" href="/print-setup/uic-print-mac.zip" download="UIC打印机.zip">
-                    <span id="primary-label">或者下载</span>
-                    <span id="primary-filename" class="mono text-xs ml-1 opacity-75">UIC打印机.zip</span>
-                </a>
-                <button id="toggle-other" class="btn-ghost" type="button">我用的是 Windows</button>
+            <div class="step-warn mt-5">
+                <strong>Windows 必须现在就连着校园 Wi-Fi 跑这条命令</strong>（macOS 离线也能装，到校园再打印即可）。
             </div>
 
-            <div id="other-os-block" class="hidden-panel mt-4">
-                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC打印机.bat">
-                    下载 <span class="mono ml-1" id="secondary-filename">UIC打印机.bat</span>
-                </a>
-                <p class="mt-2 text-xs text-black/50">这个文件给另一个系统用。检测错了？直接点这个就行。</p>
+            <div class="mt-5 rounded-2xl border border-black/10 bg-[#f4efe6] p-5">
+                <div class="kicker mb-2">装好之后 · 第一次打印</div>
+                <ol class="list-decimal pl-5 space-y-1 text-sm text-black/75 leading-7">
+                    <li><strong>连着校园 Wi-Fi、关掉代理 / VPN</strong> 才能提交（内网地址，离线会失败）</li>
+                    <li>任意 App 按 <code>⌘ + P</code> / <code>Ctrl + P</code>，打印机选 <code>UIC打印机</code></li>
+                    <li>弹账号窗口：先填学号 <code>t12345678</code>，被打回再改 <code>UIC\t12345678</code>；密码是 iSpace 密码，勾"记住"</li>
+                    <li>到图书馆任意 Toshiba e-STUDIO 前<strong>刷学生证</strong>才会出纸（PaperCut Find Me）</li>
+                </ol>
             </div>
         </section>
 
@@ -328,17 +373,34 @@
             </div>
         </section>
 
-        <!-- Steps -->
-        <section class="panel p-6 md:p-10 mt-8">
+        <!-- Method ②: download script -->
+        <section id="method-script" class="panel p-6 md:p-10 mt-4 hidden-panel">
             <div class="flex items-baseline justify-between gap-4 flex-wrap">
                 <div>
-                    <div class="kicker">安装步骤</div>
-                    <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">跟着做就好</h2>
+                    <div class="flex items-baseline gap-3 flex-wrap">
+                        <span class="method-badge">方式二</span>
+                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">下载脚本运行</h2>
+                    </div>
+                    <p class="mt-2 text-sm text-black/60">下载一个文件双击跑。比命令行多几步（要过系统的安全拦截），但全程图形界面。</p>
                 </div>
                 <div class="flex gap-2">
                     <button class="tab active" data-tab="mac" type="button">macOS</button>
                     <button class="tab" data-tab="win" type="button">Windows</button>
                 </div>
+            </div>
+
+            <div class="mt-5 flex flex-wrap gap-3 items-center">
+                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print-mac.zip" download="UIC打印机.zip">
+                    <span id="primary-label">下载并安装</span>
+                    <span id="primary-filename" class="mono text-xs ml-1 opacity-75">UIC打印机.zip</span>
+                </a>
+                <button id="toggle-other" class="btn-ghost" type="button">我用的是 Windows</button>
+            </div>
+            <div id="other-os-block" class="hidden-panel mt-3">
+                <a id="secondary-download" class="btn-ghost" href="/print-setup/uic-print.bat" download="UIC打印机.bat">
+                    下载 <span class="mono ml-1" id="secondary-filename">UIC打印机.bat</span>
+                </a>
+                <p class="mt-2 text-xs text-black/50">这个文件给另一个系统用。检测错了？直接点这个就行。</p>
             </div>
 
             <!-- macOS steps -->
@@ -477,22 +539,21 @@
             </div>
         </section>
 
-        <!-- Manual setup (no downloads) -->
-        <section class="panel p-6 md:p-10 mt-8">
+        <!-- Method ③: manual setup (no downloads) -->
+        <section id="method-manual" class="panel p-6 md:p-10 mt-4 hidden-panel">
             <div class="flex items-baseline justify-between gap-4 flex-wrap">
                 <div>
-                    <div class="kicker">不想下载我的文件？</div>
-                    <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">纯手动添加</h2>
+                    <div class="flex items-baseline gap-3 flex-wrap">
+                        <span class="method-badge">方式三</span>
+                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">纯手动添加</h2>
+                    </div>
+                    <p class="mt-2 text-sm text-black/60">不下载任何文件、不跑任何脚本，全程用系统自带界面。步骤最多，但每一步你都看得到自己在改什么。</p>
                 </div>
                 <div class="flex gap-2">
                     <button class="tab active" data-manual-tab="mac" type="button">macOS</button>
                     <button class="tab" data-manual-tab="win" type="button">Windows</button>
                 </div>
             </div>
-
-            <p class="mt-3 text-sm text-black/65 leading-7">
-                如果你对来路不明的脚本 / 描述文件不放心，下面这套步骤完全用系统自带界面完成，每一步都看得到自己在改什么。结果跟自动安装完全一样。
-            </p>
 
             <!-- macOS manual -->
             <div id="manual-mac" class="mt-6">
@@ -798,11 +859,10 @@
         primary.setAttribute('download', FILES[detectedOs].downloadAs);
         document.getElementById('primary-filename').textContent = FILES[detectedOs].downloadAs;
 
-        // Both OSes now have a recommended terminal one-liner above the
-        // download button, so the file download is the secondary path.
+        // Inside method ② the download button IS the primary action.
         const primaryLabel = document.getElementById('primary-label');
-        primary.className = 'btn-ghost';
-        if (primaryLabel) primaryLabel.textContent = '或者下载';
+        primary.className = 'btn-primary';
+        if (primaryLabel) primaryLabel.textContent = '下载并安装';
 
         // Populate secondary (other OS)
         const secondary = document.getElementById('secondary-download');
@@ -891,6 +951,19 @@
                 win: document.getElementById('manual-win'),
             },
         })(initial);
+
+        // ---- Method picker: command-line / download-script / manual.
+        // Only one method section is visible at a time so it never reads as
+        // a single must-do-all-of-it flow. ----
+        const methodSetActive = wireTabs({
+            attr: 'data-method',
+            panels: {
+                cmd: document.getElementById('method-cmd'),
+                script: document.getElementById('method-script'),
+                manual: document.getElementById('method-manual'),
+            },
+        });
+        methodSetActive('cmd');  // command-line is the recommended default
     </script>
 </body>
 </html>

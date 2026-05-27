@@ -3,6 +3,7 @@ title UIC 图书馆打印机一键配置
 
 echo ============================================
 echo   UIC 图书馆打印机 一键配置
+echo   www.bnbscheduler.top  -  by Sirus
 echo ============================================
 echo.
 echo 打印服务器  : 172.16.244.66 (sspstu.UIC.local)
@@ -68,5 +69,10 @@ echo   并勾选 "记住我的凭据".
 echo.
 echo 打印完毕后, 到图书馆任一打印机前刷学生证才会出纸
 echo (PaperCut Find Me 模式).
+echo.
+echo --------------------------------------------
+echo 工具来自 www.bnbscheduler.top/print-setup
+echo 作者 Sirus - 反馈 xiaohulimings@gmail.com
+echo --------------------------------------------
 echo.
 pause

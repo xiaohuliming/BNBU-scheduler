@@ -1,5 +1,9 @@
 #!/bin/bash
-# UIC 图书馆打印机一键配置 (macOS)
+# =============================================================
+#  UIC 图书馆打印机一键配置 (macOS)
+#  https://www.bnbscheduler.top/print-setup/
+#  by Sirus · Contact: xiaohulimings@gmail.com
+# =============================================================
 #
 # 这个脚本调用 macOS 自带的 lpadmin 添加 UIC 图书馆共享 SMB 打印机.
 # - 不修改任何系统级配置 (CUPS 用户级队列)
@@ -17,6 +21,7 @@ PPD="drv:///sample.drv/generic.ppd"
 clear
 echo "============================================"
 echo "  UIC 图书馆打印机配置 (macOS)"
+echo "  www.bnbscheduler.top  ·  by Sirus"
 echo "============================================"
 echo ""
 echo "目标:     ${DESCRIPTION}"
@@ -84,6 +89,11 @@ echo ""
 echo "想要卸载这台打印机, 在终端跑:"
 echo "   lpadmin -x ${PRINTER_NAME}"
 echo "(或者直接在'系统设置 -> 打印机与扫描仪'里删除)"
+echo ""
+echo "--------------------------------------------"
+echo "工具来自 www.bnbscheduler.top/print-setup"
+echo "作者 Sirus · 反馈 xiaohulimings@gmail.com"
+echo "--------------------------------------------"
 echo ""
 echo "(按 Return 关闭此窗口)"
 read
