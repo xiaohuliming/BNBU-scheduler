@@ -286,11 +286,19 @@
 
         <!-- Method ①: command-line one-liner -->
         <section id="method-cmd" class="panel p-6 md:p-10 mt-4">
-            <div class="flex items-baseline gap-3 flex-wrap">
-                <span class="method-badge">方式一</span>
-                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
+            <div class="flex items-baseline justify-between gap-4 flex-wrap">
+                <div>
+                    <div class="flex items-baseline gap-3 flex-wrap">
+                        <span class="method-badge">方式一</span>
+                        <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
+                    </div>
+                    <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="tab active" data-cmd-tab="mac" type="button">macOS</button>
+                    <button class="tab" data-cmd-tab="win" type="button">Windows</button>
+                </div>
             </div>
-            <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
 
             <!-- macOS terminal one-liner -->
             <div id="mac-terminal-block" class="mt-5 rounded-2xl border-2 border-[var(--accent)] bg-white p-5">
@@ -884,18 +892,7 @@
             }
         });
 
-        // Show only the terminal block matching the detected OS.
-        const macTermBlock = document.getElementById('mac-terminal-block');
-        const winTermBlock = document.getElementById('win-terminal-block');
-        if (macTermBlock && winTermBlock) {
-            if (detectedOs === 'mac') {
-                winTermBlock.classList.add('hidden-panel');
-                macTermBlock.classList.remove('hidden-panel');
-            } else {
-                macTermBlock.classList.add('hidden-panel');
-                winTermBlock.classList.remove('hidden-panel');
-            }
-        }
+        // (terminal-block visibility is handled by the data-cmd-tab wireTabs below)
 
         // Wire up copy-to-clipboard for both terminal one-liners.
         const wireCopy = (btnId, cmdId) => {
@@ -935,6 +932,15 @@
         };
 
         const initial = detectedOs === 'mac' ? 'mac' : 'win';
+
+        // Method ① command-line: switch between the macOS / Windows one-liner.
+        wireTabs({
+            attr: 'data-cmd-tab',
+            panels: {
+                mac: document.getElementById('mac-terminal-block'),
+                win: document.getElementById('win-terminal-block'),
+            },
+        })(initial);
 
         wireTabs({
             attr: 'data-tab',
