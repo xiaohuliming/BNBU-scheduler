@@ -743,6 +743,12 @@
 
             <div class="mt-6">
                 <div class="trouble-row">
+                    <div class="trouble-symptom">macOS 提交打印后没弹账号密码框，也没出纸</div>
+                    <div class="text-black/75">
+                        旧版脚本建队列时漏了"需要认证"标志，任务以 guest 身份静默失败。<strong>重新跑一遍命令行 / 下载脚本</strong>（新版已修复，会自动设置 <code>auth-info-required</code>）。如果还不弹，打开<strong>钥匙串访问</strong>搜 <code>172.16.244.66</code>，删掉里面残留的空/错凭据，再打印一次就会弹了。手动命令：<code>lpadmin -p UICPrinter -o auth-info-required=username,password</code>
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">ping 172.16.244.66 没反应 / 脚本第一步就失败</div>
                     <div class="text-black/75">
                         没连校园 Wi-Fi，或者开了代理 / VPN。先关掉所有代理软件，重连 UIC 的 Wi-Fi（不是 eduroam，确认连的是校内 SSID），再试一次。
