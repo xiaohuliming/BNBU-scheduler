@@ -58,13 +58,13 @@ if lpadmin -p "${PRINTER_NAME}" \
     -o printer-is-shared=false \
     -E
 then
-    # 关键: 声明这台队列需要 SMB 账号密码, 否则 macOS 打印时不会弹登录框,
-    # 任务会以 guest 身份静默失败. 单独一条 lpadmin 设置更稳 (和 -E 写一起
-    # 在某些 macOS 版本上会被重置).
-    lpadmin -p "${PRINTER_NAME}" -o auth-info-required=username,password 2>/dev/null || true
+    # 关键: 用 negotiate (跟系统设置 GUI 手动添加时一样). 这个值让 SMB 后端
+    # 做交互式认证, 提交打印就"立即弹"登录框. 而 username,password 是 CUPS
+    # 层认证, 任务会挂起等你手动点刷新补凭据 (体验差, 已弃用).
+    lpadmin -p "${PRINTER_NAME}" -o auth-info-required=negotiate 2>/dev/null || true
     cupsenable "${PRINTER_NAME}" 2>/dev/null || true
     cupsaccept "${PRINTER_NAME}" 2>/dev/null || true
-    echo "   OK (已设置: 打印时会弹账号密码框)"
+    echo "   OK (已设置: 打印时会自动弹账号密码框)"
 else
     echo ""
     echo "添加失败. 试着检查:"

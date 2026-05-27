@@ -357,8 +357,9 @@
                 <div class="kicker mb-2">装好之后 · 第一次打印</div>
                 <ol class="list-decimal pl-5 space-y-1 text-sm text-black/75 leading-7">
                     <li><strong>连着校园 Wi-Fi、关掉代理 / VPN</strong> 才能提交（内网地址，离线会失败）</li>
-                    <li>任意 App 按 <code>⌘ + P</code> / <code>Ctrl + P</code>，打印机选 <code>UIC打印机</code></li>
-                    <li>弹账号窗口：先填学号 <code>t12345678</code>，被打回再改 <code>UIC\t12345678</code>；密码是 iSpace 密码，勾"记住"</li>
+                    <li>任意 App 按 <code>⌘ + P</code> / <code>Ctrl + P</code>，打印机选 <code>UIC打印机</code>，点打印</li>
+                    <li>提交后会<strong>自动弹账号框</strong>。万一没弹、任务停在"保留以进行认证"，就到"打印机与扫描仪"双击这台打印机，<strong>点任务右边圆圈刷新按钮</strong>手动触发。</li>
+                    <li class="text-[#b45309]"><strong>账号框里"名称"默认是你的 Mac 用户名（如 xhlm），一定要删掉改成你的学号</strong> <code>t12345678</code>（被打回再改 <code>UIC\t12345678</code>）；密码是 iSpace 密码，勾"记住"。</li>
                     <li>到图书馆任意 Toshiba e-STUDIO 前<strong>刷学生证</strong>才会出纸（PaperCut Find Me）</li>
                 </ol>
             </div>
@@ -478,13 +479,16 @@
                             <strong>提交打印任务时必须连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
                             打印机地址是内网 <code>172.16.244.66</code>，离开校园网 / 开了代理 → 数据走不到服务器 → 任务直接提交失败。
                         </div>
-                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC打印机</code>，点打印，弹窗里：
+                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC打印机</code>，点打印。提交后会<strong>自动弹账号框</strong>。
+                        <div class="step-warn mt-2">
+                            万一没自动弹、任务停在"<strong>保留以进行认证</strong>"：到"打印机与扫描仪"双击这台打印机看队列，<strong>点任务右边圆圈刷新按钮</strong>手动触发。
+                        </div>
+                        账号框里：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>账号：先输你的学号（如 <code>t12345678</code>）；如果被反复打回，改成 <code>UIC\t12345678</code></li>
+                            <li class="text-[#b45309]"><strong>"名称"默认填的是你的 Mac 用户名（如 xhlm），删掉改成你的学号</strong>（如 <code>t12345678</code>）；被反复打回再改 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
                         </ul>
-                        提交后任务进入 PaperCut 队列。
                         <figure class="step-shot">
                             <img src="screenshots/mac-print-credentials.png"
                                  alt="第一次打印的凭据弹窗"
@@ -641,9 +645,13 @@
                             <strong>提交打印任务时必须连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
                             打印机地址是内网 <code>172.16.244.66</code>，离开校园网 / 开了代理 → 数据走不到服务器 → 任务直接提交失败。
                         </div>
-                        任意 App 按 <code>⌘ + P</code>，打印机选刚才那台，提交后弹账号窗口：
+                        任意 App 按 <code>⌘ + P</code>，打印机选刚才那台，点打印。提交后会<strong>自动弹账号框</strong>。
+                        <div class="step-warn mt-2">
+                            万一没自动弹、任务停在"<strong>保留以进行认证</strong>"：到"打印机与扫描仪"双击这台打印机，<strong>点任务右边圆圈刷新按钮</strong>手动触发。
+                        </div>
+                        账号框里：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>账号：先输你的学号（如 <code>t12345678</code>）；不行再加前缀 <code>UIC\t12345678</code></li>
+                            <li class="text-[#b45309]"><strong>"名称"默认是你的 Mac 用户名，删掉改成学号</strong>（如 <code>t12345678</code>）；不行再加前缀 <code>UIC\t12345678</code></li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住此密码</strong>（钥匙串）</li>
                         </ul>
@@ -743,9 +751,9 @@
 
             <div class="mt-6">
                 <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 提交打印后没弹账号密码框，也没出纸</div>
+                    <div class="trouble-symptom">macOS 提交打印后没弹账号框</div>
                     <div class="text-black/75">
-                        旧版脚本建队列时漏了"需要认证"标志，任务以 guest 身份静默失败。<strong>重新跑一遍命令行 / 下载脚本</strong>（新版已修复，会自动设置 <code>auth-info-required</code>）。如果还不弹，打开<strong>钥匙串访问</strong>搜 <code>172.16.244.66</code>，删掉里面残留的空/错凭据，再打印一次就会弹了。手动命令：<code>lpadmin -p UICPrinter -o auth-info-required=username,password</code>
+                        新版脚本用 <code>negotiate</code> 认证，提交即弹（跟手动添加一样）。如果你装的是旧版脚本（任务静默失败、或停在"保留以进行认证"不弹框），<strong>重新跑一遍命令行 / 脚本</strong>即可。手动补：<code>lpadmin -p UICPrinter -o auth-info-required=negotiate</code>。任务停在"保留以进行认证"时也可以直接点任务右边圆圈刷新按钮触发账号框。记得把"名称"从 Mac 用户名改成学号。
                     </div>
                 </div>
                 <div class="trouble-row">
