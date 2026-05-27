@@ -44,7 +44,7 @@
     <key>PayloadDescription</key>
     <string>添加 UIC 图书馆共享打印机 (smb://172.16.244.66/DP, Toshiba e-STUDIO 457)。打印时按提示输入 UIC 账号 (格式: UIC\学号) 与 iSpace 密码，可勾选保存。本配置不包含任何账号或密码。</string>
     <key>PayloadOrganization</key>
-    <string>maxcourse · 同学互助配置</string>
+    <string>www.bnbscheduler.top · by Sirus (xiaohulimings@gmail.com)</string>
     <key>PayloadRemovalDisallowed</key>
     <false/>
 </dict>

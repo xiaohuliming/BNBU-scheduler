@@ -1,4 +1,8 @@
-# UIC 图书馆打印机一键配置 (Windows / PowerShell)
+# =============================================================
+#  UIC 图书馆打印机一键配置 (Windows / PowerShell)
+#  https://www.bnbscheduler.top/print-setup/
+#  by Sirus · Contact: xiaohulimings@gmail.com
+# =============================================================
 #
 # 用法 (在 PowerShell 里运行):
 #   irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex
@@ -15,6 +19,7 @@ $NewName = 'UIC打印机'
 
 Write-Host '============================================'
 Write-Host '  UIC 图书馆打印机 一键配置 (PowerShell)'
+Write-Host '  www.bnbscheduler.top  ·  by Sirus'
 Write-Host '============================================'
 Write-Host ''
 Write-Host "目标:     $PrinterTarget  (Toshiba e-STUDIO 457)"
@@ -88,5 +93,10 @@ Write-Host '  - 打印后到图书馆任一 Toshiba 打印机前刷学生证 rel
 Write-Host ''
 Write-Host '想卸载这台打印机:'
 Write-Host "  Remove-Printer -Name '$NewName'"
+Write-Host ''
+Write-Host '--------------------------------------------'
+Write-Host '工具来自 www.bnbscheduler.top/print-setup'
+Write-Host '作者 Sirus · 反馈 xiaohulimings@gmail.com'
+Write-Host '--------------------------------------------'
 Write-Host ''
 if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
