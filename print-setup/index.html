@@ -167,6 +167,49 @@
             background: var(--ink);
             color: white;
         }
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.95rem 1.1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(16,24,32,0.10);
+            background: white;
+            color: var(--ink);
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .contact-card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(16,24,32,0.3);
+            box-shadow: 0 8px 22px rgba(16,24,32,0.08);
+        }
+        .contact-icon {
+            flex-shrink: 0;
+            width: 1.6rem;
+            height: 1.6rem;
+            color: var(--accent);
+        }
+        .contact-label {
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: rgba(16,24,32,0.5);
+        }
+        .contact-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-top: 0.1rem;
+        }
+        .contact-hint {
+            font-size: 0.7rem;
+            color: rgba(16,24,32,0.45);
+            margin-top: 0.15rem;
+        }
         .step {
             display: grid;
             grid-template-columns: 2.6rem 1fr;
@@ -794,6 +837,12 @@
                     </div>
                 </div>
                 <div class="trouble-row">
+                    <div class="trouble-symptom">Windows 报"需要提供其他用户凭据" / "credential required"</div>
+                    <div class="text-black/75">
+                        Windows 没缓存 \\172.16.244.66 的账号。<strong>新版 PowerShell 脚本会自动检测并弹账号框</strong>，按提示输 UIC 账号 + iSpace 密码就行。如果你用的是 .bat 或手动 Win+R，先打开"文件资源管理器"地址栏输 <code>\\172.16.244.66</code>，弹凭据框时勾"记住"，再去加打印机。手动存：<code>cmdkey /add:172.16.244.66 /user:UIC\t12345678 /pass:你的密码</code>
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">Windows 报 <code>Operation could not complete 0x00000040</code> 或 <code>The specified network name is no longer available</code>（能浏览 \\172.16.244.66 看到打印机，但加不上）</div>
                     <div class="text-black/75">
                         这是 <strong>PrintNightmare 安全补丁</strong>（2021 年后默认开启）拦掉了从打印服务器自动下载驱动这一步。三步走，从易到难任选其一：
@@ -829,6 +878,40 @@
             <p class="mt-3 text-sm text-black/70 leading-7">
                 这个页面只做两件事：① 给你一个配置文件下载；② 告诉你怎么用。<strong>不收集</strong>你的 UIC 账号、密码、学号、任何登录凭据。配置文件里也<strong>不包含</strong>任何账号信息，账号是你的电脑直接跟 PaperCut 通信时输入的，全程经过你的本地系统，跟这个网站没有任何关联。打印计费照常按你的 PaperCut 账户记。
             </p>
+        </section>
+
+        <!-- Contact -->
+        <section class="panel p-6 md:p-8 mt-5">
+            <div class="kicker">遇到问题 / 想反馈</div>
+            <h2 class="mt-2 text-xl md:text-2xl font-black tracking-[-0.04em]">联系 Sirus</h2>
+            <p class="mt-2 text-sm text-black/65 leading-7">
+                这工具非官方，遇到没列出的奇怪报错、想加新功能、或者只是想说一声"装上了"，都欢迎找我。
+            </p>
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                <a href="mailto:xiaohulimings@gmail.com" class="contact-card">
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                        <path d="M3 7l9 6 9-6"></path>
+                    </svg>
+                    <div>
+                        <div class="contact-label">邮箱</div>
+                        <div class="contact-value mono">xiaohulimings@gmail.com</div>
+                    </div>
+                </a>
+                <button type="button" class="contact-card text-left" data-copy-text="ToDOHaCambiado">
+                    <svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 12c0-3.5 3.5-6 7.5-6S23 8.5 23 12c0 2-1.5 3.8-3.5 4.8L20 19l-3-1.5c-.5.1-1 .1-1.5.1-4 0-7.5-2.5-7.5-5.6z"></path>
+                        <path d="M15.5 12.5c-3 0-6 1.5-6 4.5s3 5 6.5 5c.5 0 1 0 1.5-.1L20 23l-.7-2.7c2-1 3.2-2.5 3.2-4.3 0-2.5-2.5-3.5-4-3.5"></path>
+                        <circle cx="12" cy="10" r=".5" fill="currentColor"></circle>
+                        <circle cx="17" cy="10" r=".5" fill="currentColor"></circle>
+                    </svg>
+                    <div>
+                        <div class="contact-label">微信</div>
+                        <div class="contact-value mono">ToDOHaCambiado</div>
+                        <div class="contact-hint">点击复制微信号</div>
+                    </div>
+                </button>
+            </div>
         </section>
 
     </main>
@@ -939,6 +1022,27 @@
         };
         wireCopy('mac-terminal-copy', 'mac-terminal-cmd');
         wireCopy('win-terminal-copy', 'win-terminal-cmd');
+
+        // Contact cards with data-copy-text: copy that text to clipboard on click.
+        document.querySelectorAll('[data-copy-text]').forEach((el) => {
+            el.addEventListener('click', async () => {
+                const text = el.getAttribute('data-copy-text');
+                const hint = el.querySelector('.contact-hint');
+                const original = hint ? hint.textContent : '';
+                try {
+                    await navigator.clipboard.writeText(text);
+                    if (hint) {
+                        hint.textContent = '已复制 ✓';
+                        setTimeout(() => { hint.textContent = original; }, 1600);
+                    }
+                } catch (err) {
+                    if (hint) {
+                        hint.textContent = '复制失败，请手动复制';
+                        setTimeout(() => { hint.textContent = original; }, 2200);
+                    }
+                }
+            });
+        });
 
         // ---- Tab switching: a reusable factory keeps the auto-install
         // and manual-setup tab groups independent of each other ----
