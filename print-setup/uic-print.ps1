@@ -66,11 +66,30 @@ function Invoke-AddPrinter {
     }
 }
 
+function Format-PrinterError {
+    param($err)
+    $parts = @()
+    if ($err.Exception.Message) { $parts += $err.Exception.Message }
+    if ($err.ErrorDetails -and $err.ErrorDetails.Message) {
+        $parts += "[Details] " + $err.ErrorDetails.Message
+    }
+    $inner = $err.Exception.InnerException
+    while ($inner) {
+        if ($inner.Message) { $parts += "[Inner] " + $inner.Message }
+        $inner = $inner.InnerException
+    }
+    if ($err.Exception.HResult) {
+        $hex = "0x{0:X8}" -f $err.Exception.HResult
+        $parts += "[HResult] $hex"
+    }
+    return ($parts -join " | ")
+}
+
 try {
     Invoke-AddPrinter
     Write-Host '   OK' -ForegroundColor Green
 } catch {
-    $msg = $_.Exception.Message
+    $msg = Format-PrinterError $_
 
     # "需要提供其他用户凭据" / credential required: Windows SMB 没有 \\IP 的凭据缓存.
     # 先问用户账号密码 → cmdkey 存到凭据管理器 → 重试 Add-Printer.
@@ -111,22 +130,36 @@ try {
     }
 
     if (-not $authRetryOK) {
-        Write-Host ('   [失败] ' + $msg) -ForegroundColor Red
+        Write-Host '   [失败]' -ForegroundColor Red
+        Write-Host ('   ' + $msg)
         Write-Host ''
-        # 0x40 / ERROR_NETNAME_DELETED 几乎总是 PrintNightmare 补丁拦了驱动下载
-        if ($msg -match '0x00000040|0x40\b|network name is no longer available|网络名称') {
-            Write-Host '检测到 PrintNightmare 补丁拦截 (2021 后默认开启).' -ForegroundColor Yellow
-            Write-Host 'Add-Printer 不被允许从打印服务器下载驱动. 三种解法 (推荐第一种):'
+
+        # 把通用错误也归到 PrintNightmare 嫌疑里 —— Add-Printer 在驱动下载被拦时
+        # 经常吐 "An error occurred while performing the specified operation"
+        # 或 "0x00000040 / network name is no longer available".
+        $isPrintNightmareLikely = $msg -match '0x00000040|0x40\b|network name is no longer available|网络名称|An error occurred while performing|执行指定的操作时发生错误'
+
+        if ($isPrintNightmareLikely) {
+            Write-Host '高度怀疑被 PrintNightmare 补丁拦了驱动下载 (2021 后默认开启).' -ForegroundColor Yellow
+            Write-Host 'Add-Printer 不被允许从打印服务器自动下载驱动 → 报通用错误退出.'
             Write-Host ''
-            Write-Host '  1) 先装 Toshiba e-STUDIO 457 官方驱动 (toshibatec.com),'
-            Write-Host '     装好后再跑这条命令. 本地有驱动就不去服务器下载.'
+            Write-Host '按下面顺序试, 任意一种成功就停:'
             Write-Host ''
-            Write-Host '  2) 右键开始菜单 -> "终端 (管理员)", 再跑一遍这条命令.'
+            Write-Host '  1) [最干净] 先装 Toshiba e-STUDIO 457 官方驱动:'
+            Write-Host '     https://www.toshibatec.com/support_download/'
+            Write-Host '     装好后再跑这条命令 (本地有驱动就不去服务器下载, 绕过整套拦截).'
             Write-Host ''
-            Write-Host '  3) 管理员 PowerShell 临时放开 Point and Print:'
+            Write-Host '  2) [试试看] 重启打印服务再跑一次 (管理员 PowerShell):'
+            Write-Host '       Restart-Service Spooler'
+            Write-Host '       irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex'
+            Write-Host ''
+            Write-Host '  3) [快但有安全代价] 临时放开 Point and Print 限制 (管理员 PowerShell),'
+            Write-Host '     装完务必把 Value 改回 1:'
             Write-Host "       Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord"
             Write-Host '       Restart-Service Spooler'
-            Write-Host '     装完务必把 Value 改回 1.'
+            Write-Host ''
+            Write-Host '  4) [兜底] 用 Win+R 输 \\172.16.244.66, 在弹的窗口里双击 DP 那台打印机,'
+            Write-Host '     Windows 会用图形界面装它 (有时图形界面能过, 命令行不能过).'
         } else {
             Write-Host '可能原因:'
             Write-Host '  - 网络仍未通; 重连校园 Wi-Fi 后重试'
