@@ -845,6 +845,14 @@
                     </div>
                 </div>
                 <div class="trouble-row">
+                    <div class="trouble-symptom">Windows 打印队列里任务显示 <code>Printing</code> → <code>Error</code>，不弹账号框</div>
+                    <div class="text-black/75">
+                        SMB 凭据没缓存（或缓存的账号错了），spooler 静默失败。修法：管理员 PowerShell（或普通 PowerShell 也行）跑下面这条把凭据存进 Windows 凭据管理器，然后取消队列里那个 Error 任务、重新打印：<br>
+                        <code class="block mt-1 mono text-xs">cmdkey /add:172.16.244.66 /user:UIC\你的学号 /pass:iSpace密码</code>
+                        <strong>用户名必须带 UIC\ 前缀。</strong> 之前缓存错了想清掉先跑 <code>cmdkey /delete:172.16.244.66</code> 再加。新版安装脚本会在装完后主动让你输一次 → 自动 cmdkey → 跳过这步。
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">Windows 报"需要提供其他用户凭据" / "credential required"</div>
                     <div class="text-black/75">
                         Windows 没缓存 \\172.16.244.66 的账号。<strong>新版 PowerShell 脚本会自动检测并弹账号框</strong>，按提示输 UIC 账号 + iSpace 密码就行。如果你用的是 .bat 或手动 Win+R，先打开"文件资源管理器"地址栏输 <code>\\172.16.244.66</code>，弹凭据框时勾"记住"，再去加打印机。手动存：<code>cmdkey /add:172.16.244.66 /user:UIC\t12345678 /pass:你的密码</code>

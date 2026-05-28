@@ -223,6 +223,34 @@ try {
     }
 }
 
+# --- 3. 缓存 SMB 凭据 (避免第一次打印时静默 Error) ---
+# 用 -DriverName + -PortName 路径添加的打印机, Add-Printer 不联服务器, 所以 SMB
+# 凭据没被缓存. 第一次打印时 spooler 找不到现成凭据 -> 任务直接标 Error 也不弹框.
+# 提前用 cmdkey 缓存一份, 第一次打印就能直接走通.
+Write-Host ''
+Write-Host '[3/3] 缓存打印凭据 (避免第一次打印时静默失败)...'
+$existing = & cmdkey.exe /list 2>$null | Select-String "Target:.*$ServerIP"
+if ($existing) {
+    Write-Host "   已检测到 $ServerIP 的缓存凭据 (跳过)." -ForegroundColor DarkGray
+    Write-Host '   如果之前缓存的账号错了, 手动运行: cmdkey /delete:172.16.244.66'
+} else {
+    Write-Host ''
+    Write-Host '  ** 用户名必须带 UIC\ 前缀 **' -ForegroundColor Yellow
+    Write-Host '     格式: UIC\你的学号  (例如  UIC\t12345678)'
+    Write-Host '     密码就是 iSpace 密码.'
+    Write-Host ''
+    try {
+        $cred = Get-Credential -Message "缓存 \\$ServerIP 的打印凭据 — 用户名一定要 UIC\学号"
+        $u = $cred.UserName
+        $p = $cred.GetNetworkCredential().Password
+        $null = & cmdkey.exe /add:$ServerIP /user:$u /pass:$p 2>$null
+        Write-Host "   OK - 凭据已缓存 ($u)" -ForegroundColor Green
+    } catch {
+        Write-Host '   跳过. 第一次打印时如果任务状态显示 Error, 回头自己跑:' -ForegroundColor DarkGray
+        Write-Host "       cmdkey /add:$ServerIP /user:UIC\你的学号 /pass:iSpace密码" -ForegroundColor DarkGray
+    }
+}
+
 Write-Host ''
 Write-Host '--------------------------------------------'
 Write-Host "完成! 打开'设置 -> 蓝牙和其他设备 -> 打印机和扫描仪'"
@@ -230,12 +258,11 @@ Write-Host "应能看到一台叫 '$NewName' 的设备."
 Write-Host "(若仍显示为 '172.16.244.66 上的 DP', 在面板里右键 -> 重命名 -> 输入 '$NewName')"
 Write-Host ''
 Write-Host '第一次打印 (必须在校园网内发起):'
-Write-Host '  - 任意 App 按 Ctrl+P, 选这台打印机'
-Write-Host '  - 如果弹凭据窗口, 用户名一定要带 UIC\ 前缀:'
-Write-Host '      用户名: UIC\你的学号  (例如 UIC\t12345678)'
-Write-Host '      密码:   iSpace 密码'
-Write-Host '      勾选 "记住我的凭据"'
-Write-Host '  - 打印后到图书馆任一 Toshiba 打印机前刷学生证 release'
+Write-Host '  - 任意 App 按 Ctrl+P, 选这台打印机, 提交即可'
+Write-Host '  - 如果队列里任务显示 "Error":'
+Write-Host '      → 凭据没缓存或缓存错了. 跑: cmdkey /add:172.16.244.66 /user:UIC\你的学号 /pass:密码'
+Write-Host '      → 然后取消那个 Error 任务, 重新打印'
+Write-Host '  - 等任务传完 (进度条跑完), 到图书馆任一 Toshiba 打印机前刷学生证 release'
 Write-Host ''
 Write-Host '想卸载这台打印机:'
 Write-Host "  Remove-Printer -Name '$NewName'"
