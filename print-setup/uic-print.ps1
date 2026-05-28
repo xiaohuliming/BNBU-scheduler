@@ -66,12 +66,30 @@ try {
     }
     Write-Host '   OK' -ForegroundColor Green
 } catch {
-    Write-Host ('   [失败] ' + $_.Exception.Message) -ForegroundColor Red
+    $msg = $_.Exception.Message
+    Write-Host ('   [失败] ' + $msg) -ForegroundColor Red
     Write-Host ''
-    Write-Host '可能原因:'
-    Write-Host '  - 网络仍未通; 重连校园 Wi-Fi 后重试'
-    Write-Host '  - 此电脑禁用了 SMB v1/v2 协议; 启用后重试'
-    Write-Host '  - 系统太旧 (Win 7/8); 按 Win+R 输 \\172.16.244.66\DP 手动连接'
+
+    # 0x40 / ERROR_NETNAME_DELETED 几乎总是 PrintNightmare 补丁拦了驱动下载
+    if ($msg -match '0x00000040|0x40\b|network name is no longer available|网络名称') {
+        Write-Host '检测到 PrintNightmare 补丁拦截 (2021 后默认开启).' -ForegroundColor Yellow
+        Write-Host 'Add-Printer 不被允许从打印服务器下载驱动. 三种解法 (推荐第一种):'
+        Write-Host ''
+        Write-Host '  1) 先装 Toshiba e-STUDIO 457 官方驱动 (toshibatec.com),'
+        Write-Host '     装好后再跑这条命令. 本地有驱动就不去服务器下载.'
+        Write-Host ''
+        Write-Host '  2) 右键开始菜单 -> "终端 (管理员)", 再跑一遍这条命令.'
+        Write-Host ''
+        Write-Host '  3) 管理员 PowerShell 临时放开 Point and Print:'
+        Write-Host "       Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord"
+        Write-Host '       Restart-Service Spooler'
+        Write-Host '     装完务必把 Value 改回 1.'
+    } else {
+        Write-Host '可能原因:'
+        Write-Host '  - 网络仍未通; 重连校园 Wi-Fi 后重试'
+        Write-Host '  - 此电脑禁用了 SMB v1/v2 协议; 启用后重试'
+        Write-Host '  - 系统太旧 (Win 7/8); 按 Win+R 输 \\172.16.244.66\DP 手动连接'
+    }
     Write-Host ''
     if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
     exit 1
