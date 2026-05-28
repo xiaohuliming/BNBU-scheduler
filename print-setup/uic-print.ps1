@@ -56,43 +56,83 @@ Write-Host ''
 
 # 2. Add printer
 Write-Host "[2/2] 正在添加打印机 $PrinterTarget ..."
-try {
+
+function Invoke-AddPrinter {
     Add-Printer -ConnectionName $PrinterTarget -ErrorAction Stop
-    # 自动重命名 (新版 Windows 上对 connection printer 有时不支持, 失败时静默忽略)
     Get-Printer 2>$null | Where-Object {
         $_.Name -like "*$ServerIP*" -or $_.Name -like "*\\$ServerIP\DP*"
     } | ForEach-Object {
         try { Rename-Printer -InputObject $_ -NewName $NewName -ErrorAction Stop } catch {}
     }
+}
+
+try {
+    Invoke-AddPrinter
     Write-Host '   OK' -ForegroundColor Green
 } catch {
     $msg = $_.Exception.Message
-    Write-Host ('   [失败] ' + $msg) -ForegroundColor Red
-    Write-Host ''
 
-    # 0x40 / ERROR_NETNAME_DELETED 几乎总是 PrintNightmare 补丁拦了驱动下载
-    if ($msg -match '0x00000040|0x40\b|network name is no longer available|网络名称') {
-        Write-Host '检测到 PrintNightmare 补丁拦截 (2021 后默认开启).' -ForegroundColor Yellow
-        Write-Host 'Add-Printer 不被允许从打印服务器下载驱动. 三种解法 (推荐第一种):'
+    # "需要提供其他用户凭据" / credential required: Windows SMB 没有 \\IP 的凭据缓存.
+    # 先问用户账号密码 → cmdkey 存到凭据管理器 → 重试 Add-Printer.
+    if ($msg -match '需要提供其他用户凭据|credential|Logon failure|0x8009030E|0x8007052E') {
+        Write-Host '   [需要先输入账号密码] Windows 凭据管理器里没存这台服务器的账号.' -ForegroundColor Yellow
         Write-Host ''
-        Write-Host '  1) 先装 Toshiba e-STUDIO 457 官方驱动 (toshibatec.com),'
-        Write-Host '     装好后再跑这条命令. 本地有驱动就不去服务器下载.'
+        Write-Host '请按下面提示输入 UIC 账号 + iSpace 密码 (会保存进 Windows 凭据管理器).'
+        Write-Host '账号格式: 先试单纯学号 (如 t12345678), 不行加 UIC\ 前缀 (如 UIC\t12345678)'
         Write-Host ''
-        Write-Host '  2) 右键开始菜单 -> "终端 (管理员)", 再跑一遍这条命令.'
+        try {
+            $cred = Get-Credential -Message "登录 \\$ServerIP (UIC 打印服务器)"
+        } catch {
+            Write-Host '   已取消.' -ForegroundColor Red
+            if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
+            exit 1
+        }
+        $user = $cred.UserName
+        $plain = $cred.GetNetworkCredential().Password
+        # cmdkey 把凭据存到 Windows 凭据管理器 (跟 Mac 的钥匙串一个意思)
+        $null = & cmdkey.exe /add:$ServerIP /user:$user /pass:$plain 2>$null
+        Write-Host "凭据已保存. 重试添加打印机..."
         Write-Host ''
-        Write-Host '  3) 管理员 PowerShell 临时放开 Point and Print:'
-        Write-Host "       Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord"
-        Write-Host '       Restart-Service Spooler'
-        Write-Host '     装完务必把 Value 改回 1.'
-    } else {
-        Write-Host '可能原因:'
-        Write-Host '  - 网络仍未通; 重连校园 Wi-Fi 后重试'
-        Write-Host '  - 此电脑禁用了 SMB v1/v2 协议; 启用后重试'
-        Write-Host '  - 系统太旧 (Win 7/8); 按 Win+R 输 \\172.16.244.66\DP 手动连接'
+        try {
+            Invoke-AddPrinter
+            Write-Host '   OK' -ForegroundColor Green
+            # 跳过下面的失败收尾流程
+            $authRetryOK = $true
+        } catch {
+            $msg = $_.Exception.Message
+            Write-Host ('   [仍然失败] ' + $msg) -ForegroundColor Red
+            Write-Host '   可能是账号密码输错, 或者撞上了 PrintNightmare 驱动拦截 (见下方).'
+            Write-Host ''
+        }
     }
-    Write-Host ''
-    if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
-    exit 1
+
+    if (-not $authRetryOK) {
+        Write-Host ('   [失败] ' + $msg) -ForegroundColor Red
+        Write-Host ''
+        # 0x40 / ERROR_NETNAME_DELETED 几乎总是 PrintNightmare 补丁拦了驱动下载
+        if ($msg -match '0x00000040|0x40\b|network name is no longer available|网络名称') {
+            Write-Host '检测到 PrintNightmare 补丁拦截 (2021 后默认开启).' -ForegroundColor Yellow
+            Write-Host 'Add-Printer 不被允许从打印服务器下载驱动. 三种解法 (推荐第一种):'
+            Write-Host ''
+            Write-Host '  1) 先装 Toshiba e-STUDIO 457 官方驱动 (toshibatec.com),'
+            Write-Host '     装好后再跑这条命令. 本地有驱动就不去服务器下载.'
+            Write-Host ''
+            Write-Host '  2) 右键开始菜单 -> "终端 (管理员)", 再跑一遍这条命令.'
+            Write-Host ''
+            Write-Host '  3) 管理员 PowerShell 临时放开 Point and Print:'
+            Write-Host "       Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord"
+            Write-Host '       Restart-Service Spooler'
+            Write-Host '     装完务必把 Value 改回 1.'
+        } else {
+            Write-Host '可能原因:'
+            Write-Host '  - 网络仍未通; 重连校园 Wi-Fi 后重试'
+            Write-Host '  - 此电脑禁用了 SMB v1/v2 协议; 启用后重试'
+            Write-Host '  - 系统太旧 (Win 7/8); 按 Win+R 输 \\172.16.244.66\DP 手动连接'
+        }
+        Write-Host ''
+        if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
+        exit 1
+    }
 }
 
 Write-Host ''
