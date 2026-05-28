@@ -57,12 +57,63 @@ Write-Host ''
 # 2. Add printer
 Write-Host "[2/2] 正在添加打印机 $PrinterTarget ..."
 
+function Find-BestDriver {
+    # 优先用 Toshiba 官方驱动 (画质最好); 其次系统自带 PS 通用驱动 (够用且总有).
+    # 实在没有再 fallback 到 -ConnectionName (会触发 PrintNightmare 那条坑路).
+    $installed = @(Get-PrinterDriver -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+    $preferred = @(
+        'TOSHIBA Universal Printer 2',
+        'TOSHIBA Universal Printer',
+        'TOSHIBA e-STUDIO PS3',
+        'TOSHIBA e-STUDIO PCL6 v4',
+        'TOSHIBA e-STUDIO PCL6',
+        'Microsoft PS Class Driver',
+        'Generic / Text Only'
+    )
+    foreach ($name in $preferred) {
+        if ($installed -contains $name) { return $name }
+    }
+    $tosh = $installed | Where-Object { $_ -like '*TOSHIBA*' } | Select-Object -First 1
+    if ($tosh) { return $tosh }
+    $ps = $installed | Where-Object { $_ -like '*PS Class*' -or $_ -like '*PostScript*' } | Select-Object -First 1
+    if ($ps) { return $ps }
+    return $null
+}
+
 function Invoke-AddPrinter {
-    Add-Printer -ConnectionName $PrinterTarget -ErrorAction Stop
-    Get-Printer 2>$null | Where-Object {
-        $_.Name -like "*$ServerIP*" -or $_.Name -like "*\\$ServerIP\DP*"
-    } | ForEach-Object {
-        try { Rename-Printer -InputObject $_ -NewName $NewName -ErrorAction Stop } catch {}
+    # 先清掉之前失败留下的同名 / 同地址打印机 (让重跑脚本可以幂等执行).
+    $stale = Get-Printer -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -eq $NewName -or $_.PortName -like "*$ServerIP*" -or $_.Name -like "*$ServerIP*"
+    }
+    foreach ($p in $stale) {
+        try {
+            Remove-Printer -Name $p.Name -ErrorAction Stop
+            Write-Host "   清理旧打印机: $($p.Name)" -ForegroundColor DarkGray
+        } catch {}
+    }
+
+    $driver = Find-BestDriver
+    if ($driver) {
+        Write-Host "   使用本地驱动: $driver" -ForegroundColor Cyan
+        # 先确保 UNC 端口存在 (不影响已存在的)
+        try { Add-PrinterPort -Name $PrinterTarget -ErrorAction Stop } catch {
+            # PrinterPort 已存在会抛, 忽略即可
+            if ($_.Exception.Message -notmatch '已存在|exists') { throw }
+        }
+        # 用本地驱动 + UNC 端口添加打印机 — 完全不需要从服务器下载驱动,
+        # 绕开 PrintNightmare 整套拦截.
+        Add-Printer -Name $NewName -DriverName $driver -PortName $PrinterTarget -ErrorAction Stop
+    } else {
+        # 实在没找到任何可用驱动 -> 退回到 -ConnectionName, 让服务器送驱动
+        # (大概率撞 PrintNightmare, 但已经没有其他办法)
+        Write-Host '   本机没找到可用驱动, 尝试从服务器下载 (可能被 PrintNightmare 拦)...' -ForegroundColor Yellow
+        Add-Printer -ConnectionName $PrinterTarget -ErrorAction Stop
+        # ConnectionName 模式下打印机名是固定的, 试着 rename 一下
+        Get-Printer 2>$null | Where-Object {
+            $_.Name -like "*$ServerIP*" -or $_.Name -like "*\\$ServerIP\DP*"
+        } | ForEach-Object {
+            try { Rename-Printer -InputObject $_ -NewName $NewName -ErrorAction Stop } catch {}
+        }
     }
 }
 

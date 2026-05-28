@@ -839,6 +839,12 @@
                     </div>
                 </div>
                 <div class="trouble-row">
+                    <div class="trouble-symptom">我人在校外，想用 AnyConnect VPN / Tailscale subnet 远程装打印机</div>
+                    <div class="text-black/75">
+                        TCP 能通，但 <code>Add-Printer</code> 装不上。<strong>跟 VPN/隧道无关</strong>，是 Windows 的 PrintNightmare 补丁不让从远端打印服务器自动下载驱动（校内 Wi-Fi 上也一样拦）。推荐顺序：① <strong>先装 Toshiba e-STUDIO 457 官方驱动</strong>（toshibatec.com），本地有驱动后再跑脚本，无需服务器下载；② Win+R 输 <code>\\172.16.244.66</code> 在网络共享窗口里双击 DP 打印机，图形界面有时能过；③ 等回校园再装最稳。
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">Windows 报"需要提供其他用户凭据" / "credential required"</div>
                     <div class="text-black/75">
                         Windows 没缓存 \\172.16.244.66 的账号。<strong>新版 PowerShell 脚本会自动检测并弹账号框</strong>，按提示输 UIC 账号 + iSpace 密码就行。如果你用的是 .bat 或手动 Win+R，先打开"文件资源管理器"地址栏输 <code>\\172.16.244.66</code>，弹凭据框时勾"记住"，再去加打印机。手动存：<code>cmdkey /add:172.16.244.66 /user:UIC\t12345678 /pass:你的密码</code>
