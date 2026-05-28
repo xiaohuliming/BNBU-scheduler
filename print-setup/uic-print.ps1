@@ -78,10 +78,14 @@ try {
         Write-Host '   [需要先输入账号密码] Windows 凭据管理器里没存这台服务器的账号.' -ForegroundColor Yellow
         Write-Host ''
         Write-Host '请按下面提示输入 UIC 账号 + iSpace 密码 (会保存进 Windows 凭据管理器).'
-        Write-Host '账号格式: 先试单纯学号 (如 t12345678), 不行加 UIC\ 前缀 (如 UIC\t12345678)'
+        Write-Host ''
+        Write-Host '  ** 用户名一定要带 UIC\ 前缀 **' -ForegroundColor Yellow
+        Write-Host '     格式: UIC\你的学号  (例如  UIC\t12345678)'
+        Write-Host '     Windows 不会自动识别 UIC 域, 不加前缀会直接被拒.'
+        Write-Host '     密码就是 iSpace 密码.'
         Write-Host ''
         try {
-            $cred = Get-Credential -Message "登录 \\$ServerIP (UIC 打印服务器)"
+            $cred = Get-Credential -Message "登录 \\$ServerIP — 用户名必须填 UIC\学号"
         } catch {
             Write-Host '   已取消.' -ForegroundColor Red
             if ($Host.Name -eq 'ConsoleHost') { Read-Host '按 Enter 关闭' }
@@ -143,8 +147,8 @@ Write-Host "(若仍显示为 '172.16.244.66 上的 DP', 在面板里右键 -> �
 Write-Host ''
 Write-Host '第一次打印 (必须在校园网内发起):'
 Write-Host '  - 任意 App 按 Ctrl+P, 选这台打印机'
-Write-Host '  - Windows 弹凭据窗口:'
-Write-Host '      用户名: 先输学号 (如 t12345678), 不行加 UIC\ 前缀 (UIC\t12345678)'
+Write-Host '  - 如果弹凭据窗口, 用户名一定要带 UIC\ 前缀:'
+Write-Host '      用户名: UIC\你的学号  (例如 UIC\t12345678)'
 Write-Host '      密码:   iSpace 密码'
 Write-Host '      勾选 "记住我的凭据"'
 Write-Host '  - 打印后到图书馆任一 Toshiba 打印机前刷学生证 release'
