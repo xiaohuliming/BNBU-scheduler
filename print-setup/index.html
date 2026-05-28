@@ -428,8 +428,11 @@
                 <div class="reminder-card">
                     <div class="reminder-num">3</div>
                     <div>
-                        <div class="font-bold">账号：先试单纯学号，不行再加 <code class="code">UIC\</code> 前缀</div>
-                        <div class="text-sm text-black/65 mt-0.5">大多数情况只填 <code class="code">t12345678</code> 就能过；如果反复弹"凭据无效"，改写成 <code class="code">UIC\t12345678</code>（反斜杠不是斜杠）。密码就是 iSpace 密码。</div>
+                        <div class="font-bold">账号格式：<span class="mono">Mac</span> 和 <span class="mono">Windows</span> 不一样</div>
+                        <div class="text-sm text-black/65 mt-0.5 leading-7">
+                            <strong>macOS</strong>：直接填学号 <code class="code">t12345678</code> 就行（系统自动识别 UIC 域）。<br>
+                            <strong>Windows</strong>：必须带前缀 <code class="code">UIC\t12345678</code>（Windows 不会自动识别域，不加直接被拒）。反斜杠不是斜杠。密码都是 iSpace 密码。
+                        </div>
                     </div>
                 </div>
                 <div class="reminder-card">
@@ -587,7 +590,7 @@
                         </div>
                         任意 App 按 <code>Ctrl + P</code>，打印机选刚才那台，点打印，Windows 会弹凭据窗口：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>用户名：先输学号（如 <code>t12345678</code>），不行再加前缀 <code>UIC\t12345678</code></li>
+                            <li class="text-[#b45309]"><strong>用户名必须带 UIC\ 前缀</strong>：<code>UIC\t12345678</code>（Windows 不会自动识别域，不加前缀直接被拒）</li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住我的凭据</strong></li>
                         </ul>
@@ -734,7 +737,7 @@
                         <strong>输入凭据。</strong>
                         Windows 弹窗要账号密码，按这个填：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
-                            <li>用户名：先输学号（如 <code>t12345678</code>）；不行再带前缀 <code>UIC\t12345678</code></li>
+                            <li class="text-[#b45309]"><strong>用户名必须带 UIC\ 前缀</strong>：<code>UIC\t12345678</code>（Windows 不会自动识别域，不加前缀直接被拒）</li>
                             <li>密码：iSpace 密码</li>
                             <li>勾选 <strong>记住我的凭据</strong></li>
                         </ul>
