@@ -794,6 +794,21 @@
                     </div>
                 </div>
                 <div class="trouble-row">
+                    <div class="trouble-symptom">Windows 报 <code>Operation could not complete 0x00000040</code> 或 <code>The specified network name is no longer available</code>（能浏览 \\172.16.244.66 看到打印机，但加不上）</div>
+                    <div class="text-black/75">
+                        这是 <strong>PrintNightmare 安全补丁</strong>（2021 年后默认开启）拦掉了从打印服务器自动下载驱动这一步。三步走，从易到难任选其一：
+                        <ol class="mt-2 list-decimal pl-5 space-y-1.5">
+                            <li><strong>先装 Toshiba 官方驱动，再加打印机</strong>（最干净）。去 <a class="underline" href="https://www.toshibatec.com/support_download/" target="_blank" rel="noopener">Toshiba TEC 下载中心</a> 搜 <strong>e-STUDIO 457</strong> 的 Windows 驱动，装好后再跑命令行 / 脚本。本地有驱动后 Add-Printer 不用再去服务器下载，绕过整套拦截。</li>
+                            <li><strong>用管理员权限重试</strong>。右键开始菜单 → <strong>终端 (管理员)</strong>，再跑 <code>irm ... | iex</code> 那一行。能解决部分组策略下的拦截。</li>
+                            <li><strong>临时放开 Point and Print 限制</strong>（有安全代价，谨慎）。管理员 PowerShell 跑：<br>
+                                <code class="block mt-1 text-xs">Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord</code>
+                                然后重启 Print Spooler：<code>Restart-Service Spooler</code>，再跑安装命令。装完务必把那个值改回 <code>1</code>。
+                            </li>
+                        </ol>
+                        装完试打印还有问题，把电脑带去图书馆 IT 台让人帮忙看一眼。
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">提示"凭据无效"反复重输</div>
                     <div class="text-black/75">
                         你的电脑没有自动识别 UIC 域。把账号从 <code>t12345678</code> 改成 <code>UIC\t12345678</code> 再试。`UIC\` 是 Active Directory 的域名前缀，反斜杠不是斜杠。
