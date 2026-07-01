@@ -1,0 +1,12 @@
+# MAXCOURSE runtime dependencies.
+# Install into the server venv, then restart the app:
+#   pip install -r requirements.txt
+Flask>=3.0
+pandas>=2.0
+openpyxl>=3.1
+requests>=2.30
+beautifulsoup4>=4.12
+numpy>=1.26
+scipy>=1.11          # SkillPath PPR career recommender (/api/recommend)
+pypdf>=4.0           # transcript parsing (/api/parse-transcript) + course-catalog build
+# yt-dlp is an OPTIONAL dependency for media_dl (YouTube/Douyin/etc.); install if needed.
