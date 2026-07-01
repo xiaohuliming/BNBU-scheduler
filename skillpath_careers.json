@@ -1,0 +1,8164 @@
+{
+ "Data Analyst": {
+  "label": "Data Analyst",
+  "faculty": "FST",
+  "n_skill_jobs": 15,
+  "n_postings": 455,
+  "skills": [
+   {
+    "name": "Data Analysis",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.833,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Python",
+    "weight": 0.583,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.417,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Business Intelligence",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Power BI",
+    "weight": 0.333,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Chatbot Development",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Code Review",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Code Evaluation",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Performance Optimization",
+    "weight": 0.25,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "C++",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "C#",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Coding Problems",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analytics",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Data Modeling",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.25,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.167,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Natural Language Processing",
+    "weight": 0.167,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Regular Expressions",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Syntax Analysis",
+    "weight": 0.167,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 102730,
+   "p25": 85000,
+   "p75": 129438,
+   "n": 150,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "FINM3113",
+    2.166
+   ],
+   [
+    "MCOM3063",
+    2.166
+   ],
+   [
+    "GTSC2193",
+    2.0
+   ],
+   [
+    "COMP2073",
+    1.916
+   ],
+   [
+    "DS2043",
+    1.916
+   ],
+   [
+    "GTSC2053",
+    1.916
+   ],
+   [
+    "GTSC2203",
+    1.75
+   ],
+   [
+    "EBIS3093",
+    1.667
+   ],
+   [
+    "FIN3103",
+    1.584
+   ],
+   [
+    "DMM3003",
+    1.583
+   ],
+   [
+    "FIN3083",
+    1.583
+   ],
+   [
+    "GFQR1013",
+    1.583
+   ]
+  ],
+  "low_sample": false
+ },
+ "Data Scientist": {
+  "label": "Data Scientist",
+  "faculty": "FST",
+  "n_skill_jobs": 9,
+  "n_postings": 366,
+  "skills": [
+   {
+    "name": "Machine Learning",
+    "weight": 1.0,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Python",
+    "weight": 0.778,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "R",
+    "weight": 0.556,
+    "category": "Other"
+   },
+   {
+    "name": "Data Science",
+    "weight": 0.444,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.444,
+    "category": "Data Systems"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.444,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.444,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Natural Language Processing",
+    "weight": 0.333,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Statistics",
+    "weight": 0.222,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "C++",
+    "weight": 0.222,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Java",
+    "weight": 0.222,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "PyTorch",
+    "weight": 0.222,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Scala",
+    "weight": 0.222,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.222,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Generative AI",
+    "weight": 0.222,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Exploratory Data Analysis",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Simulation",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "SAS",
+    "weight": 0.222,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Data Engineering",
+    "weight": 0.222,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Predictive Modeling",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analytics",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Unix",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Algorithms",
+    "weight": 0.111,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 166200,
+   "p25": 119242,
+   "p75": 193125,
+   "n": 120,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "AI2023",
+    2.333
+   ],
+   [
+    "FIN3103",
+    2.11
+   ],
+   [
+    "EBIS4073",
+    2.0
+   ],
+   [
+    "STAT4103",
+    2.0
+   ],
+   [
+    "COMP4223",
+    1.889
+   ],
+   [
+    "GTSC2203",
+    1.888
+   ],
+   [
+    "BA3023",
+    1.777
+   ],
+   [
+    "FINM3113",
+    1.666
+   ],
+   [
+    "DSS2043",
+    1.444
+   ],
+   [
+    "EBIS3093",
+    1.444
+   ],
+   [
+    "FIN4073",
+    1.444
+   ],
+   [
+    "AI2013",
+    1.333
+   ]
+  ],
+  "low_sample": false
+ },
+ "Machine Learning Engineer": {
+  "label": "Machine Learning Engineer",
+  "faculty": "FST",
+  "n_skill_jobs": 8,
+  "n_postings": 174,
+  "skills": [
+   {
+    "name": "Machine Learning",
+    "weight": 1.0,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Python",
+    "weight": 0.875,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "PyTorch",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Kubernetes",
+    "weight": 0.375,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Generative AI",
+    "weight": 0.375,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Natural Language Processing",
+    "weight": 0.375,
+    "category": "ML & AI"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Optimization",
+    "weight": 0.25,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Statistics",
+    "weight": 0.25,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Deep Learning",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Scala",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "C++",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Large Language Models",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "TensorFlow",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "DevOps",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Microservices",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Bioinformatics",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Engineering",
+    "weight": 0.125,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Machine Learning Lifecycle Management",
+    "weight": 0.125,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Agile Development",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Distributed Training",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Computational Modeling",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Testing Methodologies",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Cloud Computing",
+    "weight": 0.125,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 176800,
+   "p25": 158300,
+   "p75": 210000,
+   "n": 61,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "AI2023",
+    2.75
+   ],
+   [
+    "EBIS4073",
+    2.375
+   ],
+   [
+    "STAT4103",
+    2.375
+   ],
+   [
+    "COMP4223",
+    1.875
+   ],
+   [
+    "FIN3103",
+    1.625
+   ],
+   [
+    "AI3133",
+    1.5
+   ],
+   [
+    "DSS2043",
+    1.5
+   ],
+   [
+    "AI2013",
+    1.25
+   ],
+   [
+    "AI4003",
+    1.25
+   ],
+   [
+    "COMP4103",
+    1.25
+   ],
+   [
+    "EBIS3093",
+    1.25
+   ],
+   [
+    "FIN4073",
+    1.25
+   ]
+  ],
+  "low_sample": false
+ },
+ "Software Engineer": {
+  "label": "Software Engineer",
+  "faculty": "FST",
+  "n_skill_jobs": 65,
+  "n_postings": 1602,
+  "skills": [
+   {
+    "name": "Python",
+    "weight": 1.0,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Java",
+    "weight": 0.824,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.765,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.676,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.618,
+    "category": "Other"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.618,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Kubernetes",
+    "weight": 0.529,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "C++",
+    "weight": 0.471,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.441,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "C#",
+    "weight": 0.382,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "React",
+    "weight": 0.324,
+    "category": "Other"
+   },
+   {
+    "name": "TypeScript",
+    "weight": 0.324,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.265,
+    "category": "Other"
+   },
+   {
+    "name": "Linux",
+    "weight": 0.265,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Git",
+    "weight": 0.265,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "NoSQL",
+    "weight": 0.265,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Node.js",
+    "weight": 0.265,
+    "category": "Other"
+   },
+   {
+    "name": "CSS",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Unit Testing",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Go",
+    "weight": 0.235,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Microsoft Azure",
+    "weight": 0.206,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Microservices",
+    "weight": 0.206,
+    "category": "Other"
+   },
+   {
+    "name": "Jenkins",
+    "weight": 0.206,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.206,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.206,
+    "category": "ML & AI"
+   }
+  ],
+  "salary": {
+   "median": 158500,
+   "p25": 126880,
+   "p75": 190000,
+   "n": 531,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "AI2023",
+    1.412
+   ],
+   [
+    "EBIS4073",
+    1.412
+   ],
+   [
+    "STAT4103",
+    1.412
+   ],
+   [
+    "DS2033",
+    1.354
+   ],
+   [
+    "MAD1013",
+    1.265
+   ],
+   [
+    "COMP4223",
+    1.206
+   ],
+   [
+    "ENV3203",
+    1.206
+   ],
+   [
+    "GD2073",
+    1.206
+   ],
+   [
+    "AI3053",
+    1.03
+   ],
+   [
+    "AI1003",
+    1.0
+   ],
+   [
+    "AI3133",
+    1.0
+   ],
+   [
+    "AI3143",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Backend Developer": {
+  "label": "Backend Developer",
+  "faculty": "FST",
+  "n_skill_jobs": 5,
+  "n_postings": 198,
+  "skills": [
+   {
+    "name": "Python",
+    "weight": 0.625,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.625,
+    "category": "Data Systems"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.625,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "C#",
+    "weight": 0.625,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.625,
+    "category": "ML & AI"
+   },
+   {
+    "name": "C++",
+    "weight": 0.625,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Distributed Systems",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Microservices Architecture",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.312,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "RESTful APIs",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Unit Testing",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Amazon Web Services",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Integration Testing",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Object-Oriented Programming",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "React",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Cloud Computing",
+    "weight": 0.312,
+    "category": "Other"
+   },
+   {
+    "name": "Spring Boot",
+    "weight": 0.312,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 143530,
+   "p25": 121930,
+   "p75": 181300,
+   "n": 64,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MAD1013",
+    1.562
+   ],
+   [
+    "COMP3233",
+    1.25
+   ],
+   [
+    "ENV3203",
+    1.25
+   ],
+   [
+    "GD2073",
+    1.25
+   ],
+   [
+    "STAT4103",
+    1.25
+   ],
+   [
+    "ACCT4083",
+    0.937
+   ],
+   [
+    "COMP3153",
+    0.937
+   ],
+   [
+    "DS2033",
+    0.937
+   ],
+   [
+    "GD1003",
+    0.937
+   ],
+   [
+    "AI1023",
+    0.625
+   ],
+   [
+    "AI2013",
+    0.625
+   ],
+   [
+    "AI2053",
+    0.625
+   ]
+  ],
+  "low_sample": true
+ },
+ "Frontend Developer": {
+  "label": "Frontend Developer",
+  "faculty": "FST",
+  "n_skill_jobs": 7,
+  "n_postings": 153,
+  "skills": [
+   {
+    "name": "HTML",
+    "weight": 0.875,
+    "category": "Other"
+   },
+   {
+    "name": "CSS",
+    "weight": 0.729,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.584,
+    "category": "Data Systems"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.584,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "React",
+    "weight": 0.438,
+    "category": "Other"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.438,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.291,
+    "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.291,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "UI Design",
+    "weight": 0.291,
+    "category": "Other"
+   },
+   {
+    "name": "Wireframing",
+    "weight": 0.291,
+    "category": "Other"
+   },
+   {
+    "name": "TypeScript",
+    "weight": 0.291,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Azure",
+    "weight": 0.146,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "MS Office",
+    "weight": 0.146,
+    "category": "Other"
+   },
+   {
+    "name": "PHP",
+    "weight": 0.146,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Symfony",
+    "weight": 0.146,
+    "category": "Other"
+   },
+   {
+    "name": "Database Management",
+    "weight": 0.146,
+    "category": "Other"
+   },
+   {
+    "name": "GitHub",
+    "weight": 0.146,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Web Development",
+    "weight": 0.146,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 145000,
+   "p25": 122200,
+   "p75": 160625,
+   "n": 35,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MAD1013",
+    2.188
+   ],
+   [
+    "MAD3093",
+    1.604
+   ],
+   [
+    "CTV4033",
+    0.875
+   ],
+   [
+    "DS2003",
+    0.73
+   ],
+   [
+    "MAD3153",
+    0.582
+   ],
+   [
+    "BA3043",
+    0.291
+   ],
+   [
+    "DS4073",
+    0.291
+   ],
+   [
+    "GD3113",
+    0.291
+   ],
+   [
+    "PSY3193",
+    0.291
+   ],
+   [
+    "ENV3073",
+    0.146
+   ],
+   [
+    "MCOM2103",
+    0.146
+   ]
+  ],
+  "low_sample": true
+ },
+ "Full-Stack Developer": {
+  "label": "Full-Stack Developer",
+  "faculty": "FST",
+  "n_skill_jobs": 14,
+  "n_postings": 373,
+  "skills": [
+   {
+    "name": "JavaScript",
+    "weight": 1.0,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.727,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Java",
+    "weight": 0.727,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "CSS",
+    "weight": 0.727,
+    "category": "Other"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.636,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.636,
+    "category": "Other"
+   },
+   {
+    "name": "Kubernetes",
+    "weight": 0.636,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.636,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "NoSQL",
+    "weight": 0.545,
+    "category": "Data Systems"
+   },
+   {
+    "name": "TypeScript",
+    "weight": 0.455,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.455,
+    "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.455,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "React",
+    "weight": 0.455,
+    "category": "Other"
+   },
+   {
+    "name": "Node.js",
+    "weight": 0.364,
+    "category": "Other"
+   },
+   {
+    "name": "Git",
+    "weight": 0.273,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Angular",
+    "weight": 0.273,
+    "category": "Other"
+   },
+   {
+    "name": "PostgreSQL",
+    "weight": 0.273,
+    "category": "Data Systems"
+   },
+   {
+    "name": "MongoDB",
+    "weight": 0.273,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Front-End Development",
+    "weight": 0.273,
+    "category": "Other"
+   },
+   {
+    "name": "Full-Stack Development",
+    "weight": 0.273,
+    "category": "Other"
+   },
+   {
+    "name": "Google Cloud Platform",
+    "weight": 0.273,
+    "category": "Other"
+   },
+   {
+    "name": "Go",
+    "weight": 0.273,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Spring",
+    "weight": 0.182,
+    "category": "Other"
+   },
+   {
+    "name": "Unit Testing",
+    "weight": 0.182,
+    "category": "Other"
+   },
+   {
+    "name": "MySQL",
+    "weight": 0.182,
+    "category": "Data Systems"
+   }
+  ],
+  "salary": {
+   "median": 140750,
+   "p25": 121824,
+   "p75": 161200,
+   "n": 109,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MAD1013",
+    2.182
+   ],
+   [
+    "MAD3093",
+    1.182
+   ],
+   [
+    "AI1023",
+    0.727
+   ],
+   [
+    "AI3053",
+    0.727
+   ],
+   [
+    "AI4033",
+    0.727
+   ],
+   [
+    "BA1003",
+    0.727
+   ],
+   [
+    "COMP3013",
+    0.727
+   ],
+   [
+    "DS2003",
+    0.727
+   ],
+   [
+    "EBIS3003",
+    0.727
+   ],
+   [
+    "DS2033",
+    0.636
+   ],
+   [
+    "DS3043",
+    0.545
+   ],
+   [
+    "CTV4033",
+    0.455
+   ]
+  ],
+  "low_sample": false
+ },
+ "Data Engineer": {
+  "label": "Data Engineer",
+  "faculty": "FST",
+  "n_skill_jobs": 23,
+  "n_postings": 359,
+  "skills": [
+   {
+    "name": "SQL",
+    "weight": 1.0,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Python",
+    "weight": 0.944,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.722,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Data Modeling",
+    "weight": 0.556,
+    "category": "Other"
+   },
+   {
+    "name": "Data Pipelines",
+    "weight": 0.556,
+    "category": "Data Systems"
+   },
+   {
+    "name": "ETL",
+    "weight": 0.556,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Data Engineering",
+    "weight": 0.444,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Data Warehousing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.333,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Java",
+    "weight": 0.333,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Scala",
+    "weight": 0.278,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Snowflake",
+    "weight": 0.278,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Google Cloud Platform",
+    "weight": 0.278,
+    "category": "Other"
+   },
+   {
+    "name": "PostgreSQL",
+    "weight": 0.222,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Apache Spark",
+    "weight": 0.222,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Azure",
+    "weight": 0.222,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Hadoop",
+    "weight": 0.167,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Kafka",
+    "weight": 0.167,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Spark",
+    "weight": 0.167,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Amazon S3",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Apache Airflow",
+    "weight": 0.167,
+    "category": "Data Systems"
+   },
+   {
+    "name": "AWS Glue",
+    "weight": 0.167,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "CI/CD",
+    "weight": 0.167,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Data Quality",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.167,
+    "category": "Programming Languages"
+   }
+  ],
+  "salary": {
+   "median": 138525,
+   "p25": 125000,
+   "p75": 157000,
+   "n": 112,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "DS2003",
+    1.556
+   ],
+   [
+    "DS2043",
+    1.5
+   ],
+   [
+    "AI2023",
+    1.277
+   ],
+   [
+    "COMP4223",
+    1.277
+   ],
+   [
+    "STAT4103",
+    1.277
+   ],
+   [
+    "AI1023",
+    1.0
+   ],
+   [
+    "BA1003",
+    1.0
+   ],
+   [
+    "COMP3013",
+    1.0
+   ],
+   [
+    "EBIS3003",
+    1.0
+   ],
+   [
+    "AI1003",
+    0.944
+   ],
+   [
+    "AI3133",
+    0.944
+   ],
+   [
+    "AI3143",
+    0.944
+   ]
+  ],
+  "low_sample": false
+ },
+ "DevOps Engineer": {
+  "label": "DevOps Engineer",
+  "faculty": "FST",
+  "n_skill_jobs": 10,
+  "n_postings": 348,
+  "skills": [
+   {
+    "name": "Kubernetes",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "DevOps",
+    "weight": 0.857,
+    "category": "Other"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.857,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "CI/CD",
+    "weight": 0.857,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Python",
+    "weight": 0.714,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Terraform",
+    "weight": 0.714,
+    "category": "Other"
+   },
+   {
+    "name": "Ansible",
+    "weight": 0.714,
+    "category": "Other"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.714,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Linux",
+    "weight": 0.571,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Jenkins",
+    "weight": 0.571,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Bash",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Go",
+    "weight": 0.429,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Azure",
+    "weight": 0.429,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "PowerShell",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Infrastructure as Code",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Perl",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Google Cloud Platform",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Bitbucket",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "GitLab",
+    "weight": 0.286,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "GitHub",
+    "weight": 0.286,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Cloud Migration",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "GitHub Enterprise",
+    "weight": 0.143,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "SonarQube",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Sonatype",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Distributed Systems",
+    "weight": 0.143,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 142500,
+   "p25": 125000,
+   "p75": 173300,
+   "n": 99,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "DS2033",
+    1.428
+   ],
+   [
+    "AI1003",
+    0.714
+   ],
+   [
+    "AI3143",
+    0.714
+   ],
+   [
+    "COMP4263",
+    0.714
+   ],
+   [
+    "DS1013",
+    0.714
+   ],
+   [
+    "DS3043",
+    0.571
+   ],
+   [
+    "AI4093",
+    0.143
+   ]
+  ],
+  "low_sample": false
+ },
+ "Business Intelligence Analyst": {
+  "label": "Business Intelligence Analyst",
+  "faculty": "FST",
+  "n_skill_jobs": 11,
+  "n_postings": 174,
+  "skills": [
+   {
+    "name": "SQL",
+    "weight": 1.0,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Business Intelligence",
+    "weight": 0.857,
+    "category": "Other"
+   },
+   {
+    "name": "Tableau",
+    "weight": 0.714,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "ETL",
+    "weight": 0.714,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Data Warehousing",
+    "weight": 0.714,
+    "category": "Other"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Power BI",
+    "weight": 0.429,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Data Modeling",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.429,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "SAS",
+    "weight": 0.286,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "DAX",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Teradata",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "R",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.143,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "SAS/QC",
+    "weight": 0.143,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "ODS",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Macro Programming",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Business Objects",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Base SAS",
+    "weight": 0.143,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Excel",
+    "weight": 0.143,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "SAS/GRAPH",
+    "weight": 0.143,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Predictive Modeling",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Forecasting",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "SAS/STAT",
+    "weight": 0.143,
+    "category": "Programming Languages"
+   }
+  ],
+  "salary": {
+   "median": 123875,
+   "p25": 100375,
+   "p75": 143419,
+   "n": 68,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GTSC2193",
+    1.857
+   ],
+   [
+    "FINM3113",
+    1.572
+   ],
+   [
+    "DS2003",
+    1.429
+   ],
+   [
+    "COMP2073",
+    1.286
+   ],
+   [
+    "DS2043",
+    1.286
+   ],
+   [
+    "EBIS4073",
+    1.286
+   ],
+   [
+    "FIN3083",
+    1.286
+   ],
+   [
+    "GTSC2053",
+    1.286
+   ],
+   [
+    "MCOM3063",
+    1.286
+   ],
+   [
+    "AI1023",
+    1.0
+   ],
+   [
+    "BA1003",
+    1.0
+   ],
+   [
+    "BA2043",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Database Administrator": {
+  "label": "Database Administrator",
+  "faculty": "FST",
+  "n_skill_jobs": 9,
+  "n_postings": 234,
+  "skills": [
+   {
+    "name": "Database Administration",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.5,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Performance Tuning",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Troubleshooting",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "SQL Server",
+    "weight": 0.375,
+    "category": "Data Systems"
+   },
+   {
+    "name": "ETL",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Microsoft SQL Server",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Stored Procedures",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "High Availability",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Backup and Recovery",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "T-SQL",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Databricks",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Database Security",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Views",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "SSIS",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "JSON",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "IBM DB2",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Indexes",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Oracle Database",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "C#",
+    "weight": 0.125,
+    "category": "Programming Languages"
+   },
+   {
+    "name": ".NET",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "XML",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Storage Design",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Neo4j",
+    "weight": 0.125,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 120000,
+   "p25": 102000,
+   "p75": 145600,
+   "n": 59,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "EBIS3003",
+    1.5
+   ]
+  ],
+  "low_sample": false
+ },
+ "Cybersecurity Analyst": {
+  "label": "Cybersecurity Analyst",
+  "faculty": "FST",
+  "n_skill_jobs": 10,
+  "n_postings": 325,
+  "skills": [
+   {
+    "name": "Cybersecurity",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Incident Response",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Identity and Access Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Information Security",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Linux",
+    "weight": 0.25,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Requirements Analysis",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "IT Demand Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Business Process Analysis",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Rollout Planning",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "IT Security",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Agile Methodology",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Problem Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Release Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Change Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Workshop Facilitation",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Incident Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Root Cause Analysis",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Security",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Testing",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Quantitative Research",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Gathering",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Strategic Planning",
+    "weight": 0.125,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 130000,
+   "p25": 105270,
+   "p75": 170500,
+   "n": 113,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "THEM3063",
+    1.25
+   ],
+   [
+    "EBIS3023",
+    1.0
+   ],
+   [
+    "EBIS4063",
+    0.5
+   ],
+   [
+    "DS3043",
+    0.25
+   ],
+   [
+    "ENV3123",
+    0.25
+   ],
+   [
+    "EPIN3043",
+    0.25
+   ],
+   [
+    "FIN4003",
+    0.25
+   ],
+   [
+    "FIN4023",
+    0.25
+   ],
+   [
+    "FINM2043",
+    0.25
+   ],
+   [
+    "FINM3023",
+    0.25
+   ],
+   [
+    "FINM3033",
+    0.25
+   ],
+   [
+    "FINM3063",
+    0.25
+   ]
+  ],
+  "low_sample": false
+ },
+ "Quantitative Analyst": {
+  "label": "Quantitative Analyst",
+  "faculty": "FST",
+  "n_skill_jobs": 1,
+  "n_postings": 22,
+  "skills": [
+   {
+    "name": "Machine Learning",
+    "weight": 0.6,
+    "category": "ML & AI",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Forecasting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.6,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.54,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Python",
+    "weight": 0.467,
+    "category": "Programming Languages",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "R",
+    "weight": 0.334,
+    "category": "Other",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Variance Analysis",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Data Science",
+    "weight": 0.266,
+    "category": "Other",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.266,
+    "category": "Data Systems",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.266,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.266,
+    "category": "Math & Stats",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Financial Modeling",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.24,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Natural Language Processing",
+    "weight": 0.2,
+    "category": "ML & AI",
+    "borrowed_from": "Data Scientist"
+   }
+  ],
+  "salary": {
+   "median": 232500,
+   "p25": 225000,
+   "p75": 518750,
+   "n": 10,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "FINM3113",
+    1.273
+   ],
+   [
+    "AI2023",
+    1.267
+   ],
+   [
+    "ACCT3033",
+    1.26
+   ],
+   [
+    "ACCT2063",
+    1.2
+   ],
+   [
+    "GTSC2143",
+    1.2
+   ],
+   [
+    "STAT3043",
+    1.2
+   ],
+   [
+    "FIN4073",
+    1.14
+   ],
+   [
+    "COMP4223",
+    1.067
+   ],
+   [
+    "FIN3103",
+    1.066
+   ],
+   [
+    "EPIN3033",
+    1.02
+   ],
+   [
+    "STAT4063",
+    0.934
+   ],
+   [
+    "BA3023",
+    0.866
+   ]
+  ],
+  "low_sample": true
+ },
+ "Statistician": {
+  "label": "Statistician",
+  "faculty": "FST",
+  "n_skill_jobs": 2,
+  "n_postings": 51,
+  "skills": [
+   {
+    "name": "Data Analysis",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.5,
+    "category": "Data Systems",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Python",
+    "weight": 0.35,
+    "category": "Programming Languages",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "R",
+    "weight": 0.334,
+    "category": "Other",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Data Science",
+    "weight": 0.266,
+    "category": "Other",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.266,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.25,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.25,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Business Intelligence",
+    "weight": 0.25,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Power BI",
+    "weight": 0.2,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.2,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.15,
+    "category": "Programming Languages",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.15,
+    "category": "ML & AI",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Chatbot Development",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Code Review",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Code Evaluation",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Performance Optimization",
+    "weight": 0.15,
+    "category": "Math & Stats",
+    "borrowed_from": "Data Analyst"
+   }
+  ],
+  "salary": {
+   "median": 180086,
+   "p25": 138988,
+   "p75": 218708,
+   "n": 12,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GTSC2203",
+    1.216
+   ],
+   [
+    "COMP2073",
+    1.15
+   ],
+   [
+    "DS2043",
+    1.15
+   ],
+   [
+    "GTSC2053",
+    1.15
+   ],
+   [
+    "MCOM3063",
+    1.15
+   ],
+   [
+    "GD3123",
+    1.066
+   ],
+   [
+    "DMM3003",
+    0.95
+   ],
+   [
+    "AI3103",
+    0.934
+   ],
+   [
+    "FINM2023",
+    0.934
+   ],
+   [
+    "STAT2013",
+    0.934
+   ],
+   [
+    "DSS3063",
+    0.866
+   ],
+   [
+    "PRA4073",
+    0.866
+   ]
+  ],
+  "low_sample": true
+ },
+ "Web Developer": {
+  "label": "Web Developer",
+  "faculty": "FST",
+  "n_skill_jobs": 1,
+  "n_postings": 68,
+  "skills": [
+   {
+    "name": "JavaScript",
+    "weight": 0.6,
+    "category": "Programming Languages",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.436,
+    "category": "Data Systems",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Java",
+    "weight": 0.436,
+    "category": "Programming Languages",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "CSS",
+    "weight": 0.436,
+    "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "AWS",
+    "weight": 0.382,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.382,
+    "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Kubernetes",
+    "weight": 0.382,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.382,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "NoSQL",
+    "weight": 0.327,
+    "category": "Data Systems",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "TypeScript",
+    "weight": 0.273,
+    "category": "Programming Languages",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.273,
+    "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Python",
+    "weight": 0.273,
+    "category": "Programming Languages",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "React",
+    "weight": 0.273,
+    "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Node.js",
+    "weight": 0.218,
+    "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.2,
+    "category": "Other",
+    "borrowed_from": "Frontend Developer"
+   },
+   {
+    "name": "UI Design",
+    "weight": 0.2,
+    "category": "Other",
+    "borrowed_from": "Frontend Developer"
+   },
+   {
+    "name": "Wireframing",
+    "weight": 0.2,
+    "category": "Other",
+    "borrowed_from": "Frontend Developer"
+   },
+   {
+    "name": "Git",
+    "weight": 0.164,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Full-Stack Developer"
+   }
+  ],
+  "salary": {
+   "median": 120000,
+   "p25": 85958,
+   "p75": 131259,
+   "n": 11,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MAD1013",
+    1.309
+   ],
+   [
+    "MAD3093",
+    0.709
+   ],
+   [
+    "AI3053",
+    0.436
+   ],
+   [
+    "AI4033",
+    0.436
+   ],
+   [
+    "MAD3153",
+    0.4
+   ],
+   [
+    "DS2033",
+    0.382
+   ],
+   [
+    "DS3043",
+    0.327
+   ],
+   [
+    "DS4073",
+    0.2
+   ],
+   [
+    "GD3113",
+    0.2
+   ]
+  ],
+  "low_sample": true
+ },
+ "Accountant": {
+  "label": "Accountant",
+  "faculty": "FBM",
+  "n_skill_jobs": 78,
+  "n_postings": 2107,
+  "skills": [
+   {
+    "name": "Accounting",
+    "weight": 1.0,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.958,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.688,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Accounts Payable",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "Journal Entries",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "General Ledger",
+    "weight": 0.542,
+    "category": "Other"
+   },
+   {
+    "name": "Accounts Receivable",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Statements",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "GAAP",
+    "weight": 0.396,
+    "category": "Other"
+   },
+   {
+    "name": "Account Reconciliation",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Month-End Close",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Bank Reconciliation",
+    "weight": 0.292,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.292,
+    "category": "Other"
+   },
+   {
+    "name": "Auditing",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Bookkeeping",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Payroll",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "CPA",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Accounting Software",
+    "weight": 0.167,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Audit",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "NetSuite",
+    "weight": 0.146,
+    "category": "Other"
+   },
+   {
+    "name": "Excel",
+    "weight": 0.146,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "QuickBooks",
+    "weight": 0.146,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 82500,
+   "p25": 65000,
+   "p75": 102500,
+   "n": 1009,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT3033",
+    2.75
+   ],
+   [
+    "ACCT2063",
+    2.708
+   ],
+   [
+    "ACCT3053",
+    1.958
+   ],
+   [
+    "ACCT4043",
+    1.958
+   ],
+   [
+    "THEM3143",
+    1.792
+   ],
+   [
+    "ACCT2013",
+    1.541
+   ],
+   [
+    "ACCT2053",
+    1.541
+   ],
+   [
+    "ACCT3043",
+    1.417
+   ],
+   [
+    "EPIN3033",
+    1.333
+   ],
+   [
+    "ACCT2003",
+    1.208
+   ],
+   [
+    "ACCT2033",
+    1.208
+   ],
+   [
+    "ACCT2043",
+    1.208
+   ]
+  ],
+  "low_sample": false
+ },
+ "Auditor": {
+  "label": "Auditor",
+  "faculty": "FBM",
+  "n_skill_jobs": 10,
+  "n_postings": 326,
+  "skills": [
+   {
+    "name": "Cash Handling",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Internal Audit",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Credit Card Processing",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Assurance",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Compliance",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analytics",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Audit Planning",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Audit Reporting",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Reconciliation",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Transaction Posting",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Auditing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Food and Beverage Operations",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Lean Manufacturing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Six Sigma",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Manufacturing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Systems",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "SAP",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Visual Inspection",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Auditing",
+    "weight": 0.333,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 93600,
+   "p25": 69714,
+   "p75": 111825,
+   "n": 103,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "EPIN3033",
+    2.0
+   ],
+   [
+    "ACCT3053",
+    1.667
+   ],
+   [
+    "GTSC2193",
+    1.667
+   ],
+   [
+    "EBIS4063",
+    1.0
+   ],
+   [
+    "ECON3043",
+    1.0
+   ],
+   [
+    "ENV3123",
+    1.0
+   ],
+   [
+    "EPIN3043",
+    1.0
+   ],
+   [
+    "FIN4003",
+    1.0
+   ],
+   [
+    "FIN4023",
+    1.0
+   ],
+   [
+    "FINM2043",
+    1.0
+   ],
+   [
+    "FINM3023",
+    1.0
+   ],
+   [
+    "FINM3033",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Financial Analyst": {
+  "label": "Financial Analyst",
+  "faculty": "FBM",
+  "n_skill_jobs": 16,
+  "n_postings": 406,
+  "skills": [
+   {
+    "name": "Forecasting",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.9,
+    "category": "Other"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.8,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.8,
+    "category": "Other"
+   },
+   {
+    "name": "Variance Analysis",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Modeling",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.4,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Reconciliation",
+    "weight": 0.3,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.3,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.2,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "GAAP",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "VBA",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Cost Accounting",
+    "weight": 0.2,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Microsoft Outlook",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "SAP",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Planning & Analysis",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Revenue Analysis",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "ERP Systems",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Account Reconciliation",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.2,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 96621,
+   "p25": 82500,
+   "p75": 111750,
+   "n": 152,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT3033",
+    2.1
+   ],
+   [
+    "ACCT2063",
+    2.0
+   ],
+   [
+    "EPIN3033",
+    1.7
+   ],
+   [
+    "FIN4043",
+    1.3
+   ],
+   [
+    "GFQR1023",
+    1.3
+   ],
+   [
+    "GTSC2143",
+    1.3
+   ],
+   [
+    "STAT3043",
+    1.3
+   ],
+   [
+    "THEM3143",
+    1.3
+   ],
+   [
+    "ACCT2013",
+    1.2
+   ],
+   [
+    "ACCT2053",
+    1.2
+   ],
+   [
+    "ACCT3053",
+    1.2
+   ],
+   [
+    "ACCT4043",
+    1.2
+   ]
+  ],
+  "low_sample": false
+ },
+ "Investment Banking Analyst": {
+  "label": "Investment Banking Analyst",
+  "faculty": "FBM",
+  "n_skill_jobs": 0,
+  "n_postings": 65,
+  "skills": [
+   {
+    "name": "Forecasting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.6,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.54,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Variance Analysis",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Modeling",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.24,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Reconciliation",
+    "weight": 0.18,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.18,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.12,
+    "category": "Data Systems",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.12,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "GAAP",
+    "weight": 0.12,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "VBA",
+    "weight": 0.12,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Cost Accounting",
+    "weight": 0.12,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Outlook",
+    "weight": 0.12,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   }
+  ],
+  "salary": {
+   "median": 132500,
+   "p25": 103550,
+   "p75": 175000,
+   "n": 30,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT3033",
+    1.26
+   ],
+   [
+    "ACCT2063",
+    1.2
+   ],
+   [
+    "FIN4043",
+    0.78
+   ],
+   [
+    "GFQR1023",
+    0.78
+   ],
+   [
+    "THEM3143",
+    0.78
+   ],
+   [
+    "ACCT2013",
+    0.72
+   ],
+   [
+    "ACCT2053",
+    0.72
+   ],
+   [
+    "ACCT4043",
+    0.72
+   ],
+   [
+    "ECON3013",
+    0.6
+   ],
+   [
+    "ECON3063",
+    0.6
+   ],
+   [
+    "ECON3133",
+    0.6
+   ],
+   [
+    "FINM3123",
+    0.6
+   ]
+  ],
+  "low_sample": true
+ },
+ "Actuary": {
+  "label": "Actuary",
+  "faculty": "FBM",
+  "n_skill_jobs": 3,
+  "n_postings": 135,
+  "skills": [
+   {
+    "name": "Forecasting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.6,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.54,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Power BI",
+    "weight": 0.375,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "R",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Actuarial Science",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Variance Analysis",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Business Intelligence",
+    "weight": 0.25,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Financial Modeling",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.24,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.188,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Tableau",
+    "weight": 0.188,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Predictive Analytics",
+    "weight": 0.188,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 135000,
+   "p25": 98092,
+   "p75": 171000,
+   "n": 31,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GTSC2193",
+    1.351
+   ],
+   [
+    "ACCT3033",
+    1.26
+   ],
+   [
+    "ACCT2063",
+    1.2
+   ],
+   [
+    "STAT3043",
+    0.975
+   ],
+   [
+    "STAT4063",
+    0.975
+   ],
+   [
+    "FIN4043",
+    0.78
+   ],
+   [
+    "THEM3143",
+    0.78
+   ],
+   [
+    "ACCT2013",
+    0.72
+   ],
+   [
+    "ACCT2053",
+    0.72
+   ],
+   [
+    "ACCT4043",
+    0.72
+   ],
+   [
+    "ECON3013",
+    0.6
+   ],
+   [
+    "ECON3063",
+    0.6
+   ]
+  ],
+  "low_sample": true
+ },
+ "Tax Consultant": {
+  "label": "Tax Consultant",
+  "faculty": "FBM",
+  "n_skill_jobs": 5,
+  "n_postings": 146,
+  "skills": [
+   {
+    "name": "Accounting",
+    "weight": 0.625,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Tax Accounting",
+    "weight": 0.417,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "CPA",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Tax Preparation",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Tax Compliance",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.417,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "FIN 48",
+    "weight": 0.417,
+    "category": "Other"
+   },
+   {
+    "name": "Public Accounting",
+    "weight": 0.208,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Estimated Tax Payments",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Partnership Accounting",
+    "weight": 0.208,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Fiduciary Accounting",
+    "weight": 0.208,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Estate Accounting",
+    "weight": 0.208,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Form 1023",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Valuation of Assets",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Trust Accounting",
+    "weight": 0.208,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Form 990-PF",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Probate",
+    "weight": 0.208,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 85000,
+   "p25": 70000,
+   "p75": 100000,
+   "n": 81,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT2053",
+    0.833
+   ],
+   [
+    "ACCT2003",
+    0.625
+   ],
+   [
+    "ACCT2033",
+    0.625
+   ],
+   [
+    "ACCT2043",
+    0.625
+   ],
+   [
+    "ACCT3043",
+    0.625
+   ],
+   [
+    "ACCT4033",
+    0.625
+   ],
+   [
+    "ACCT4063",
+    0.625
+   ],
+   [
+    "ACCT4073",
+    0.625
+   ],
+   [
+    "FINM3073",
+    0.625
+   ],
+   [
+    "GCAP3193",
+    0.625
+   ]
+  ],
+  "low_sample": true
+ },
+ "Financial Advisor": {
+  "label": "Financial Advisor",
+  "faculty": "FBM",
+  "n_skill_jobs": 12,
+  "n_postings": 364,
+  "skills": [
+   {
+    "name": "Financial Planning",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Wealth Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Estate Planning",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Series 7",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Series 66",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Portfolio Management",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.375,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Client Relationship Management",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Retirement Planning",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Sales",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "CFA",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "CFP",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Investment Strategy",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Planning Software",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Administrative Support",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Account Opening",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Services",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Customer Relationship Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.25,
+    "category": "Domain Knowledge"
+   }
+  ],
+  "salary": {
+   "median": 87500,
+   "p25": 62500,
+   "p75": 115000,
+   "n": 85,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT3013",
+    1.25
+   ],
+   [
+    "AIM4103",
+    1.0
+   ],
+   [
+    "FIN2013",
+    1.0
+   ],
+   [
+    "FIN3023",
+    0.625
+   ],
+   [
+    "FIN3043",
+    0.375
+   ],
+   [
+    "FINM4033",
+    0.375
+   ],
+   [
+    "FOOD4003",
+    0.375
+   ],
+   [
+    "PRA4043",
+    0.375
+   ],
+   [
+    "ACCT2003",
+    0.25
+   ],
+   [
+    "ACCT2033",
+    0.25
+   ],
+   [
+    "ACCT2043",
+    0.25
+   ],
+   [
+    "ACCT3043",
+    0.25
+   ]
+  ],
+  "low_sample": false
+ },
+ "Marketing Manager": {
+  "label": "Marketing Manager",
+  "faculty": "FBM",
+  "n_skill_jobs": 31,
+  "n_postings": 670,
+  "skills": [
+   {
+    "name": "Digital Marketing",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Email Marketing",
+    "weight": 0.571,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.571,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Brand Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Marketing Strategy",
+    "weight": 0.5,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.429,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Market Research",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Content Marketing",
+    "weight": 0.429,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Competitive Analysis",
+    "weight": 0.357,
+    "category": "Other"
+   },
+   {
+    "name": "Google Analytics",
+    "weight": 0.357,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Marketing Automation",
+    "weight": 0.286,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "SEO",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Go-to-Market Strategy",
+    "weight": 0.286,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Marketing Analytics",
+    "weight": 0.286,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "A/B Testing",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Product Marketing",
+    "weight": 0.286,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Market Analysis",
+    "weight": 0.214,
+    "category": "Other"
+   },
+   {
+    "name": "Search Engine Optimization",
+    "weight": 0.214,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "User Experience",
+    "weight": 0.214,
+    "category": "Other"
+   },
+   {
+    "name": "Budget Management",
+    "weight": 0.214,
+    "category": "Other"
+   },
+   {
+    "name": "WordPress",
+    "weight": 0.214,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 90000,
+   "p25": 62700,
+   "p75": 115769,
+   "n": 255,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "BA4043",
+    2.857
+   ],
+   [
+    "GCAP3083",
+    2.071
+   ],
+   [
+    "MKT3093",
+    1.786
+   ],
+   [
+    "MKT2023",
+    1.5
+   ],
+   [
+    "THEM3043",
+    1.0
+   ],
+   [
+    "EBIS3083",
+    0.786
+   ],
+   [
+    "PRA4023",
+    0.786
+   ],
+   [
+    "PRA4093",
+    0.786
+   ],
+   [
+    "MKT4053",
+    0.714
+   ],
+   [
+    "AIM4113",
+    0.571
+   ],
+   [
+    "COMP3063",
+    0.571
+   ],
+   [
+    "CTV4153",
+    0.571
+   ]
+  ],
+  "low_sample": false
+ },
+ "Digital Marketing Specialist": {
+  "label": "Digital Marketing Specialist",
+  "faculty": "FBM",
+  "n_skill_jobs": 13,
+  "n_postings": 268,
+  "skills": [
+   {
+    "name": "Digital Marketing",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.714,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "SEO",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Google Analytics",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "On-Page SEO",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "WordPress",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Email Marketing",
+    "weight": 0.429,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Google Ads",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Google Search Console",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "SEO Audits",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "SEMrush",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Salesforce",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Canva",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Photography",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Marketing Automation",
+    "weight": 0.286,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "HubSpot",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "SEM",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "CRM",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Door-to-Door Sales",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Prospecting",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Sales Demonstration",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Direct Marketing",
+    "weight": 0.143,
+    "category": "Domain Knowledge"
+   }
+  ],
+  "salary": {
+   "median": 72000,
+   "p25": 55000,
+   "p75": 97240,
+   "n": 87,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "BA4043",
+    1.714
+   ],
+   [
+    "GCAP3083",
+    1.714
+   ],
+   [
+    "MKT2023",
+    1.0
+   ],
+   [
+    "MKT3093",
+    1.0
+   ],
+   [
+    "THEM3043",
+    1.0
+   ],
+   [
+    "MCOM2083",
+    0.714
+   ],
+   [
+    "CTV4033",
+    0.429
+   ],
+   [
+    "MAD3093",
+    0.429
+   ],
+   [
+    "AIM3083",
+    0.286
+   ],
+   [
+    "AIM4003",
+    0.286
+   ],
+   [
+    "COMM3113",
+    0.286
+   ],
+   [
+    "CTV2013",
+    0.286
+   ]
+  ],
+  "low_sample": false
+ },
+ "Brand Manager": {
+  "label": "Brand Manager",
+  "faculty": "FBM",
+  "n_skill_jobs": 1,
+  "n_postings": 65,
+  "skills": [
+   {
+    "name": "Digital Marketing",
+    "weight": 0.6,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.343,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Email Marketing",
+    "weight": 0.343,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.343,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Brand Management",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Marketing Strategy",
+    "weight": 0.3,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.257,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Market Research",
+    "weight": 0.257,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Content Marketing",
+    "weight": 0.257,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Competitive Analysis",
+    "weight": 0.214,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Google Analytics",
+    "weight": 0.214,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.172,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.172,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Marketing Automation",
+    "weight": 0.172,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "SEO",
+    "weight": 0.172,
+    "category": "Other",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Go-to-Market Strategy",
+    "weight": 0.172,
+    "category": "Programming Languages",
+    "borrowed_from": "Marketing Manager"
+   },
+   {
+    "name": "Marketing Analytics",
+    "weight": 0.172,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Marketing Manager"
+   }
+  ],
+  "salary": {
+   "median": 89594,
+   "p25": 80000,
+   "p75": 118862,
+   "n": 21,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "BA4043",
+    1.715
+   ],
+   [
+    "GCAP3083",
+    1.243
+   ],
+   [
+    "MKT3093",
+    1.072
+   ],
+   [
+    "MKT2023",
+    0.9
+   ],
+   [
+    "THEM3043",
+    0.6
+   ],
+   [
+    "PRA4023",
+    0.471
+   ],
+   [
+    "PRA4093",
+    0.471
+   ],
+   [
+    "AIM4103",
+    0.3
+   ],
+   [
+    "BA3013",
+    0.3
+   ],
+   [
+    "BUS2023",
+    0.3
+   ],
+   [
+    "CCM3153",
+    0.3
+   ],
+   [
+    "EPIN3023",
+    0.3
+   ]
+  ],
+  "low_sample": true
+ },
+ "Business Analyst": {
+  "label": "Business Analyst",
+  "faculty": "FBM",
+  "n_skill_jobs": 26,
+  "n_postings": 559,
+  "skills": [
+   {
+    "name": "Business Analysis",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.647,
+    "category": "Other"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.529,
+    "category": "Other"
+   },
+   {
+    "name": "Requirements Gathering",
+    "weight": 0.529,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Visio",
+    "weight": 0.412,
+    "category": "Other"
+   },
+   {
+    "name": "Change Management",
+    "weight": 0.353,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.353,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "User Acceptance Testing",
+    "weight": 0.294,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.294,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.294,
+    "category": "Other"
+   },
+   {
+    "name": "Process Mapping",
+    "weight": 0.294,
+    "category": "Other"
+   },
+   {
+    "name": "Scrum",
+    "weight": 0.294,
+    "category": "Other"
+   },
+   {
+    "name": "Requirements Analysis",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Business Process Analysis",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "User Stories",
+    "weight": 0.235,
+    "category": "Other"
+   },
+   {
+    "name": "Functional Requirements",
+    "weight": 0.176,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Assurance",
+    "weight": 0.176,
+    "category": "Other"
+   },
+   {
+    "name": "System Integration Testing",
+    "weight": 0.176,
+    "category": "Other"
+   },
+   {
+    "name": "Jira",
+    "weight": 0.176,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.176,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Waterfall",
+    "weight": 0.118,
+    "category": "Other"
+   },
+   {
+    "name": "Workflow Analysis",
+    "weight": 0.118,
+    "category": "Other"
+   },
+   {
+    "name": "Software Testing",
+    "weight": 0.118,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 102000,
+   "p25": 82675,
+   "p75": 129438,
+   "n": 150,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "CCM4093",
+    1.294
+   ],
+   [
+    "MUS2123",
+    1.294
+   ],
+   [
+    "BUS4013",
+    1.0
+   ],
+   [
+    "BUS4073",
+    1.0
+   ],
+   [
+    "BUS4103",
+    1.0
+   ],
+   [
+    "COMP4133",
+    1.0
+   ],
+   [
+    "ECON2093",
+    1.0
+   ],
+   [
+    "GFHC1103",
+    1.0
+   ],
+   [
+    "TEM3013",
+    1.0
+   ],
+   [
+    "THEM2043",
+    1.0
+   ],
+   [
+    "AIM4113",
+    0.647
+   ],
+   [
+    "COMP3063",
+    0.647
+   ]
+  ],
+  "low_sample": false
+ },
+ "Management Consultant": {
+  "label": "Management Consultant",
+  "faculty": "FBM",
+  "n_skill_jobs": 12,
+  "n_postings": 238,
+  "skills": [
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Mechanical Engineering",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Program Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Business Intelligence",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Business Development",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Quantitative Research",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Research Methods",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Quantitative Data Analysis",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Qualitative Data Analysis",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Grant Writing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Literature Reviews",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "SPSS",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Research Report Writing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Organizational Behavior",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Stata",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Qualitative Research",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Applied Research",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Commissioning",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Electrical Engineering",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Hardware Integration",
+    "weight": 0.5,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 140225,
+   "p25": 120699,
+   "p75": 164000,
+   "n": 98,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "THEM4033",
+    2.5
+   ],
+   [
+    "COMM3083",
+    2.0
+   ],
+   [
+    "ECON3043",
+    2.0
+   ],
+   [
+    "EPIN3033",
+    2.0
+   ],
+   [
+    "SWSA3083",
+    2.0
+   ],
+   [
+    "ENG4183",
+    1.5
+   ],
+   [
+    "FOOD3083",
+    1.5
+   ],
+   [
+    "GCAP3073",
+    1.5
+   ],
+   [
+    "ACCT3013",
+    1.0
+   ],
+   [
+    "ACCT3053",
+    1.0
+   ],
+   [
+    "AIM4113",
+    1.0
+   ],
+   [
+    "BUS3023",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Human Resources Manager": {
+  "label": "Human Resources Manager",
+  "faculty": "FBM",
+  "n_skill_jobs": 41,
+  "n_postings": 1045,
+  "skills": [
+   {
+    "name": "Onboarding",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Recruiting",
+    "weight": 0.733,
+    "category": "Other"
+   },
+   {
+    "name": "Talent Acquisition",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Employment Law",
+    "weight": 0.6,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Employee Relations",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Applicant Tracking Systems",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Background Checks",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Compliance",
+    "weight": 0.533,
+    "category": "Other"
+   },
+   {
+    "name": "Human Resources",
+    "weight": 0.467,
+    "category": "Other"
+   },
+   {
+    "name": "Performance Management",
+    "weight": 0.467,
+    "category": "Other"
+   },
+   {
+    "name": "Interviewing",
+    "weight": 0.467,
+    "category": "Other"
+   },
+   {
+    "name": "Reference Checks",
+    "weight": 0.467,
+    "category": "Other"
+   },
+   {
+    "name": "Social Media Recruiting",
+    "weight": 0.467,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "LinkedIn",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Candidate Screening",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Candidate Sourcing",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.267,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Labor Relations",
+    "weight": 0.267,
+    "category": "Other"
+   },
+   {
+    "name": "Recruitment",
+    "weight": 0.267,
+    "category": "Other"
+   },
+   {
+    "name": "HRIS",
+    "weight": 0.267,
+    "category": "Other"
+   },
+   {
+    "name": "Employee Engagement",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Workforce Planning",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.2,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 80000,
+   "p25": 58240,
+   "p75": 106320,
+   "n": 410,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MHR3023",
+    1.534
+   ],
+   [
+    "THEM3033",
+    1.401
+   ],
+   [
+    "MHR3043",
+    1.2
+   ],
+   [
+    "ECON4023",
+    0.867
+   ],
+   [
+    "GCAP3313",
+    0.867
+   ],
+   [
+    "PSY4043",
+    0.6
+   ],
+   [
+    "ENG2043",
+    0.467
+   ],
+   [
+    "MCOM2103",
+    0.467
+   ],
+   [
+    "MHR3033",
+    0.467
+   ],
+   [
+    "MHR3063",
+    0.467
+   ],
+   [
+    "MHR4013",
+    0.467
+   ]
+  ],
+  "low_sample": false
+ },
+ "Supply Chain Analyst": {
+  "label": "Supply Chain Analyst",
+  "faculty": "FBM",
+  "n_skill_jobs": 43,
+  "n_postings": 936,
+  "skills": [
+   {
+    "name": "Supply Chain Management",
+    "weight": 1.0,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Logistics",
+    "weight": 0.704,
+    "category": "Other"
+   },
+   {
+    "name": "Inventory Management",
+    "weight": 0.519,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.444,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Procurement",
+    "weight": 0.37,
+    "category": "Other"
+   },
+   {
+    "name": "Warehousing",
+    "weight": 0.296,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Continuous Improvement",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Contract Negotiation",
+    "weight": 0.185,
+    "category": "Other"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.185,
+    "category": "Other"
+   },
+   {
+    "name": "SAP",
+    "weight": 0.185,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Freight Management",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "DOT Medical Card",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Production Planning",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Supplier Management",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Cost Analysis",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.148,
+    "category": "Other"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.111,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Forecasting",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Manufacturing",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Purchasing",
+    "weight": 0.111,
+    "category": "Other"
+   },
+   {
+    "name": "Data Visualization",
+    "weight": 0.111,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 82500,
+   "p25": 58744,
+   "p75": 117115,
+   "n": 306,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "BA3113",
+    2.223
+   ],
+   [
+    "MATH3093",
+    1.704
+   ],
+   [
+    "EPIN3053",
+    1.223
+   ],
+   [
+    "GTSU2003",
+    1.0
+   ],
+   [
+    "OR3003",
+    0.852
+   ],
+   [
+    "BA3063",
+    0.519
+   ],
+   [
+    "STAT4093",
+    0.519
+   ],
+   [
+    "GLD3003",
+    0.37
+   ],
+   [
+    "PSY3193",
+    0.222
+   ],
+   [
+    "MCOM2053",
+    0.185
+   ],
+   [
+    "MCOM3023",
+    0.185
+   ],
+   [
+    "AIM4003",
+    0.148
+   ]
+  ],
+  "low_sample": false
+ },
+ "Operations Manager": {
+  "label": "Operations Manager",
+  "faculty": "FBM",
+  "n_skill_jobs": 23,
+  "n_postings": 614,
+  "skills": [
+   {
+    "name": "Microsoft Excel",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Quality Assurance",
+    "weight": 0.714,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.714,
+    "category": "Other"
+   },
+   {
+    "name": "Operations Management",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.571,
+    "category": "Other"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Compliance",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Continuous Improvement",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Inventory Management",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "KPI Analysis",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
+    "name": "Automation",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Robotics",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Performance Management",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Cybersecurity",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Reporting",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Scheduling",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Customer Service",
+    "weight": 0.286,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 87500,
+   "p25": 70000,
+   "p75": 119600,
+   "n": 217,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "EPIN3033",
+    1.715
+   ],
+   [
+    "GTSC2193",
+    1.286
+   ],
+   [
+    "ACCT3053",
+    1.144
+   ],
+   [
+    "BA3063",
+    1.0
+   ],
+   [
+    "GFQR1033",
+    1.0
+   ],
+   [
+    "ECON3043",
+    0.858
+   ],
+   [
+    "PSY3073",
+    0.715
+   ],
+   [
+    "BA2023",
+    0.571
+   ],
+   [
+    "FOOD4003",
+    0.571
+   ],
+   [
+    "PRA4043",
+    0.571
+   ],
+   [
+    "TEM3023",
+    0.571
+   ],
+   [
+    "TEM3033",
+    0.571
+   ]
+  ],
+  "low_sample": false
+ },
+ "Product Manager": {
+  "label": "Product Manager",
+  "faculty": "FBM",
+  "n_skill_jobs": 28,
+  "n_postings": 660,
+  "skills": [
+   {
+    "name": "Product Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.688,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Market Research",
+    "weight": 0.438,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.438,
+    "category": "Other"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.375,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Scrum",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Competitive Analysis",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Backlog Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Analytics",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Requirements Analysis",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "User Stories",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Jira",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.188,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Design Thinking",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "A/B Testing",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Product Roadmapping",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "API Design",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Science",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "SaaS",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Prototyping",
+    "weight": 0.125,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 155000,
+   "p25": 123758,
+   "p75": 183688,
+   "n": 240,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "FIN3103",
+    1.25
+   ],
+   [
+    "GTSC2203",
+    1.25
+   ],
+   [
+    "EBIS3093",
+    1.125
+   ],
+   [
+    "ENV4003",
+    1.0
+   ],
+   [
+    "BA3023",
+    0.875
+   ],
+   [
+    "PRA4073",
+    0.813
+   ],
+   [
+    "GTSC2153",
+    0.688
+   ],
+   [
+    "PRA4023",
+    0.688
+   ],
+   [
+    "PRA4093",
+    0.688
+   ],
+   [
+    "EPIN4013",
+    0.626
+   ],
+   [
+    "AI2013",
+    0.625
+   ],
+   [
+    "COMP4103",
+    0.625
+   ]
+  ],
+  "low_sample": false
+ },
+ "Economist": {
+  "label": "Economist",
+  "faculty": "FBM",
+  "n_skill_jobs": 1,
+  "n_postings": 26,
+  "skills": [
+   {
+    "name": "Forecasting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.6,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Business Analysis",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.54,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Financial Reporting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.388,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.317,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Requirements Gathering",
+    "weight": 0.317,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Variance Analysis",
+    "weight": 0.3,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Visio",
+    "weight": 0.247,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Financial Modeling",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Accounting",
+    "weight": 0.24,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Change Management",
+    "weight": 0.212,
+    "category": "Other",
+    "borrowed_from": "Business Analyst"
+   },
+   {
+    "name": "Reconciliation",
+    "weight": 0.18,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.18,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   }
+  ],
+  "salary": {
+   "median": 158855,
+   "p25": 122012,
+   "p75": 159675,
+   "n": 15,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "ACCT3033",
+    1.26
+   ],
+   [
+    "ACCT2063",
+    1.2
+   ],
+   [
+    "CCM4093",
+    0.78
+   ],
+   [
+    "GFQR1023",
+    0.78
+   ],
+   [
+    "MUS2123",
+    0.78
+   ],
+   [
+    "ACCT2013",
+    0.72
+   ],
+   [
+    "ACCT4043",
+    0.72
+   ],
+   [
+    "BUS4013",
+    0.6
+   ],
+   [
+    "BUS4073",
+    0.6
+   ],
+   [
+    "BUS4103",
+    0.6
+   ],
+   [
+    "COMP4133",
+    0.6
+   ],
+   [
+    "ECON2093",
+    0.6
+   ]
+  ],
+  "low_sample": true
+ },
+ "Graphic Designer": {
+  "label": "Graphic Designer",
+  "faculty": "FHSS",
+  "n_skill_jobs": 11,
+  "n_postings": 148,
+  "skills": [
+   {
+    "name": "Graphic Design",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Creative Suite",
+    "weight": 0.889,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Illustrator",
+    "weight": 0.556,
+    "category": "Other"
+   },
+   {
+    "name": "Video Editing",
+    "weight": 0.556,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Photoshop",
+    "weight": 0.556,
+    "category": "Other"
+   },
+   {
+    "name": "Branding",
+    "weight": 0.444,
+    "category": "Other"
+   },
+   {
+    "name": "Typography",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Web Design",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Figma",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Layout Design",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Animation",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Logo Design",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Print Design",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Photo Editing",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe InDesign",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.222,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Presentation Design",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Motion Graphics",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Illustrator",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "InDesign",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "PowerPoint",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Photoshop",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Color Theory",
+    "weight": 0.222,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 64246,
+   "p25": 55000,
+   "p75": 82500,
+   "n": 52,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "AIM2043",
+    2.112
+   ],
+   [
+    "PRA2033",
+    1.555
+   ],
+   [
+    "AIM2033",
+    1.444
+   ],
+   [
+    "MAD2043",
+    1.444
+   ],
+   [
+    "MAD4053",
+    1.0
+   ],
+   [
+    "PRA3053",
+    1.0
+   ],
+   [
+    "PRA4663",
+    1.0
+   ],
+   [
+    "AIM3123",
+    0.556
+   ],
+   [
+    "CTV2063",
+    0.556
+   ],
+   [
+    "CTV3023",
+    0.556
+   ],
+   [
+    "CTV4233",
+    0.556
+   ],
+   [
+    "DMM2013",
+    0.556
+   ]
+  ],
+  "low_sample": false
+ },
+ "UX/UI Designer": {
+  "label": "UX/UI Designer",
+  "faculty": "FHSS",
+  "n_skill_jobs": 10,
+  "n_postings": 212,
+  "skills": [
+   {
+    "name": "Prototyping",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Wireframing",
+    "weight": 0.875,
+    "category": "Other"
+   },
+   {
+    "name": "Usability Testing",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "Interaction Design",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "User Experience Design",
+    "weight": 0.625,
+    "category": "Other"
+   },
+   {
+    "name": "UX Design",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Figma",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "User Research",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Information Architecture",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Product Design",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "User-Centered Design",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Human-Computer Interaction",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Visual Design",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Sketch",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "SLA",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Compliance",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "OKR",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "High-Fidelity Prototyping",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "User Feedback Analysis",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "KPI",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "OLA",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Privacy Regulations",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Product Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Design Sprints",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Product Development Lifecycle",
+    "weight": 0.125,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 125095,
+   "p25": 104250,
+   "p75": 162285,
+   "n": 82,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MAD3153",
+    3.875
+   ],
+   [
+    "GTSC2153",
+    1.875
+   ],
+   [
+    "MAD3163",
+    1.25
+   ],
+   [
+    "MAD4043",
+    1.25
+   ],
+   [
+    "MAD4113",
+    1.25
+   ],
+   [
+    "COMP4183",
+    1.0
+   ],
+   [
+    "ENV3203",
+    1.0
+   ],
+   [
+    "GD2043",
+    1.0
+   ],
+   [
+    "GD3023",
+    1.0
+   ],
+   [
+    "THEM4043",
+    1.0
+   ],
+   [
+    "PRA4083",
+    0.75
+   ],
+   [
+    "AIM4073",
+    0.625
+   ]
+  ],
+  "low_sample": false
+ },
+ "Content Writer": {
+  "label": "Content Writer",
+  "faculty": "FHSS",
+  "n_skill_jobs": 12,
+  "n_postings": 207,
+  "skills": [
+   {
+    "name": "Copywriting",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Content Strategy",
+    "weight": 0.8,
+    "category": "Other"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.8,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "SEO",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Slack",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Digital Marketing",
+    "weight": 0.6,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Content Writing",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Research",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Coda",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Asana",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "UX Writing",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Blockchain",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Internationalization",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "macOS",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Accessibility",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Front-end Development",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Cryptography",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Information Architecture",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Google Workspace",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Web Design",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Content Creation",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Photography",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Facebook",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "AI Models",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.4,
+    "category": "ML & AI"
+   }
+  ],
+  "salary": {
+   "median": 86840,
+   "p25": 65625,
+   "p75": 125475,
+   "n": 58,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GCAP3083",
+    2.0
+   ],
+   [
+    "BA4043",
+    1.4
+   ],
+   [
+    "GDST1083",
+    1.2
+   ],
+   [
+    "MCOM2083",
+    1.2
+   ],
+   [
+    "ENG4123",
+    1.0
+   ],
+   [
+    "PRA3023",
+    1.0
+   ],
+   [
+    "TRA3023",
+    1.0
+   ],
+   [
+    "TRA3133",
+    1.0
+   ],
+   [
+    "TRA4033",
+    1.0
+   ],
+   [
+    "ACCT4083",
+    0.8
+   ],
+   [
+    "GLD2053",
+    0.8
+   ],
+   [
+    "MCOM2103",
+    0.8
+   ]
+  ],
+  "low_sample": false
+ },
+ "Journalist": {
+  "label": "Journalist",
+  "faculty": "FHSS",
+  "n_skill_jobs": 4,
+  "n_postings": 58,
+  "skills": [
+   {
+    "name": "Copywriting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Web Publishing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Non-linear Editing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Broadcast Camera Equipment",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Multimedia Production",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Final Cut Pro",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Video Editing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "AP Style Writing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Live Broadcasting",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Newsroom Computer Systems",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Content Management Systems",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Photography",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Videography",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Digital Recording",
+    "weight": 0.5,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Exposure Adjustment",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Audio and Video Technology",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Audio Mixing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Remote Technical Support",
+    "weight": 0.5,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 64500,
+   "p25": 58432,
+   "p75": 82750,
+   "n": 14,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "PRA3023",
+    0.6
+   ],
+   [
+    "TRA3023",
+    0.6
+   ],
+   [
+    "TRA3133",
+    0.6
+   ],
+   [
+    "TRA4033",
+    0.6
+   ],
+   [
+    "AIM2043",
+    0.5
+   ],
+   [
+    "AIM3073",
+    0.5
+   ],
+   [
+    "AIM3083",
+    0.5
+   ],
+   [
+    "AIM3123",
+    0.5
+   ],
+   [
+    "AIM4003",
+    0.5
+   ],
+   [
+    "COMM3113",
+    0.5
+   ],
+   [
+    "CTV2013",
+    0.5
+   ],
+   [
+    "CTV2063",
+    0.5
+   ]
+  ],
+  "low_sample": true
+ },
+ "Public Relations Specialist": {
+  "label": "Public Relations Specialist",
+  "faculty": "FHSS",
+  "n_skill_jobs": 8,
+  "n_postings": 215,
+  "skills": [
+   {
+    "name": "Public Relations",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.75,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.75,
+    "category": "Other"
+   },
+   {
+    "name": "Strategic Planning",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Brand Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Content Writing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Marketing Analytics",
+    "weight": 0.5,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Content Creation",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Content Marketing",
+    "weight": 0.5,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Campaign Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Media Monitoring",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office Suite",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Strategic Communications",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "New Business Development",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Paid Media",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Account Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Integrated Campaigns",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Earned Media",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Influencer Marketing",
+    "weight": 0.25,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Budget Management",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Human Resources Information Systems",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Copywriting",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Documentation",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "AP Style",
+    "weight": 0.25,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 73690,
+   "p25": 56680,
+   "p75": 110936,
+   "n": 66,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "PRA3093",
+    1.5
+   ],
+   [
+    "BA4043",
+    1.25
+   ],
+   [
+    "EPIN4013",
+    1.25
+   ],
+   [
+    "GCAP3083",
+    1.25
+   ],
+   [
+    "MCOM2083",
+    1.25
+   ],
+   [
+    "TRA4033",
+    1.25
+   ],
+   [
+    "COMM1023",
+    1.0
+   ],
+   [
+    "COMM3013",
+    1.0
+   ],
+   [
+    "COMM3113",
+    1.0
+   ],
+   [
+    "GFVM1063",
+    1.0
+   ],
+   [
+    "GTCU2073",
+    1.0
+   ],
+   [
+    "PRA2003",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Translator / Interpreter": {
+  "label": "Translator / Interpreter",
+  "faculty": "FHSS",
+  "n_skill_jobs": 1,
+  "n_postings": 88,
+  "skills": [
+   {
+    "name": "Copywriting",
+    "weight": 0.6,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Content Strategy",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Social Media Marketing",
+    "weight": 0.48,
+    "category": "Domain Knowledge",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "SEO",
+    "weight": 0.36,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Slack",
+    "weight": 0.36,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Digital Marketing",
+    "weight": 0.36,
+    "category": "Tools & Platforms",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Content Writing",
+    "weight": 0.36,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Research",
+    "weight": 0.36,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Coda",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Asana",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "UX Writing",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Blockchain",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Internationalization",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "macOS",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Accessibility",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Front-end Development",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Cryptography",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Information Architecture",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   }
+  ],
+  "salary": {
+   "median": 55000,
+   "p25": 42640,
+   "p75": 83200,
+   "n": 19,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GCAP3083",
+    1.2
+   ],
+   [
+    "PRA3023",
+    0.6
+   ],
+   [
+    "TRA3023",
+    0.6
+   ],
+   [
+    "TRA3133",
+    0.6
+   ],
+   [
+    "TRA4033",
+    0.6
+   ],
+   [
+    "MCOM2083",
+    0.48
+   ],
+   [
+    "BA4003",
+    0.36
+   ],
+   [
+    "CCM3133",
+    0.36
+   ],
+   [
+    "ENG3243",
+    0.36
+   ],
+   [
+    "ENG4123",
+    0.36
+   ],
+   [
+    "ENG4173",
+    0.36
+   ],
+   [
+    "FOOD4004",
+    0.36
+   ]
+  ],
+  "low_sample": true
+ },
+ "Video Editor": {
+  "label": "Video Editor",
+  "faculty": "FHSS",
+  "n_skill_jobs": 4,
+  "n_postings": 52,
+  "skills": [
+   {
+    "name": "Video Editing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Photoshop",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe After Effects",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Graphic Design",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Creative Suite",
+    "weight": 0.334,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Premiere Pro",
+    "weight": 0.334,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Illustrator",
+    "weight": 0.334,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Lightroom",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Video Compression",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "HD Post-Production",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Asana",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Media Encoder",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Motion Design",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Sound Design",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Color Correction",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Figma",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Typography",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Brand Design",
+    "weight": 0.167,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 71375,
+   "p25": 52000,
+   "p75": 90900,
+   "n": 16,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "AIM2043",
+    2.168
+   ],
+   [
+    "CTV2063",
+    0.667
+   ],
+   [
+    "MAD2043",
+    0.667
+   ],
+   [
+    "PRA2033",
+    0.667
+   ],
+   [
+    "AIM2033",
+    0.5
+   ],
+   [
+    "AIM3123",
+    0.5
+   ],
+   [
+    "CTV3023",
+    0.5
+   ],
+   [
+    "CTV4233",
+    0.5
+   ],
+   [
+    "DMM2013",
+    0.5
+   ],
+   [
+    "MAD3113",
+    0.5
+   ],
+   [
+    "MAD4053",
+    0.5
+   ],
+   [
+    "MCOM3103",
+    0.5
+   ]
+  ],
+  "low_sample": true
+ },
+ "Media Producer": {
+  "label": "Media Producer",
+  "faculty": "FHSS",
+  "n_skill_jobs": 0,
+  "n_postings": 37,
+  "skills": [],
+  "salary": {
+   "median": 52500,
+   "p25": 46800,
+   "p75": 62400,
+   "n": 13,
+   "currency": "USD"
+  },
+  "top_courses": [],
+  "low_sample": true
+ },
+ "Counselor / Psychologist": {
+  "label": "Counselor / Psychologist",
+  "faculty": "FHSS",
+  "n_skill_jobs": 86,
+  "n_postings": 1920,
+  "skills": [
+   {
+    "name": "Treatment Planning",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Physical Therapy",
+    "weight": 0.865,
+    "category": "Other"
+   },
+   {
+    "name": "Patient Assessment",
+    "weight": 0.73,
+    "category": "Other"
+   },
+   {
+    "name": "Clinical Documentation",
+    "weight": 0.649,
+    "category": "Other"
+   },
+   {
+    "name": "Rehabilitation",
+    "weight": 0.541,
+    "category": "Other"
+   },
+   {
+    "name": "Patient Care",
+    "weight": 0.405,
+    "category": "Other"
+   },
+   {
+    "name": "CPR",
+    "weight": 0.378,
+    "category": "Other"
+   },
+   {
+    "name": "Telehealth",
+    "weight": 0.324,
+    "category": "Other"
+   },
+   {
+    "name": "Occupational Therapy",
+    "weight": 0.324,
+    "category": "Other"
+   },
+   {
+    "name": "Clinical Assessment",
+    "weight": 0.297,
+    "category": "Other"
+   },
+   {
+    "name": "Crisis Intervention",
+    "weight": 0.27,
+    "category": "Other"
+   },
+   {
+    "name": "Evidence-Based Practice",
+    "weight": 0.243,
+    "category": "Other"
+   },
+   {
+    "name": "Patient Education",
+    "weight": 0.243,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Psychotherapy",
+    "weight": 0.243,
+    "category": "Other"
+   },
+   {
+    "name": "Patient Evaluation",
+    "weight": 0.216,
+    "category": "Other"
+   },
+   {
+    "name": "Behavioral Health",
+    "weight": 0.216,
+    "category": "Other"
+   },
+   {
+    "name": "Care Coordination",
+    "weight": 0.216,
+    "category": "Other"
+   },
+   {
+    "name": "Basic Life Support",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Group Therapy",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Family Therapy",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Case Management",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Care Planning",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Counseling",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "CPR Certification",
+    "weight": 0.189,
+    "category": "Other"
+   },
+   {
+    "name": "Mental Health Assessment",
+    "weight": 0.189,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 91300,
+   "p25": 60320,
+   "p75": 124800,
+   "n": 489,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "PSY3023",
+    1.0
+   ],
+   [
+    "PSY3133",
+    0.432
+   ],
+   [
+    "SWSA2033",
+    0.432
+   ],
+   [
+    "SWSA4123",
+    0.378
+   ],
+   [
+    "SWSA4113",
+    0.27
+   ],
+   [
+    "SWSA4153",
+    0.27
+   ]
+  ],
+  "low_sample": false
+ },
+ "Teacher / Educator": {
+  "label": "Teacher / Educator",
+  "faculty": "FHSS",
+  "n_skill_jobs": 55,
+  "n_postings": 1214,
+  "skills": [
+   {
+    "name": "Curriculum Development",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Classroom Management",
+    "weight": 0.95,
+    "category": "Other"
+   },
+   {
+    "name": "Lesson Planning",
+    "weight": 0.8,
+    "category": "Other"
+   },
+   {
+    "name": "Instructional Design",
+    "weight": 0.6,
+    "category": "Other"
+   },
+   {
+    "name": "Student Assessment",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Assessment",
+    "weight": 0.45,
+    "category": "Other"
+   },
+   {
+    "name": "Special Education",
+    "weight": 0.45,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Early Childhood Education",
+    "weight": 0.45,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Differentiated Instruction",
+    "weight": 0.35,
+    "category": "Other"
+   },
+   {
+    "name": "Child Development",
+    "weight": 0.35,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 0.3,
+    "category": "Other"
+   },
+   {
+    "name": "CPR",
+    "weight": 0.3,
+    "category": "Other"
+   },
+   {
+    "name": "Educational Technology",
+    "weight": 0.3,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Record Keeping",
+    "weight": 0.3,
+    "category": "Other"
+   },
+   {
+    "name": "Artificial Intelligence",
+    "weight": 0.25,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Teaching",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Database Management",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Adaptive Assessments",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Personalized Learning",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Learning Science",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Training",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "First Aid",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Curriculum Implementation",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Progress Monitoring",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Professional Development",
+    "weight": 0.15,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 65000,
+   "p25": 46800,
+   "p75": 79484,
+   "n": 295,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "PSY3053",
+    3.3
+   ],
+   [
+    "GCAP3023",
+    2.75
+   ],
+   [
+    "TESL4053",
+    2.0
+   ],
+   [
+    "GCAP3273",
+    1.6
+   ],
+   [
+    "TESL3103",
+    1.05
+   ],
+   [
+    "MUS4013",
+    1.0
+   ],
+   [
+    "TESL3033",
+    1.0
+   ],
+   [
+    "MUS2093",
+    0.9
+   ],
+   [
+    "TESL4093",
+    0.9
+   ],
+   [
+    "GCAP3043",
+    0.8
+   ],
+   [
+    "TESL3063",
+    0.8
+   ],
+   [
+    "DSS4053",
+    0.55
+   ]
+  ],
+  "low_sample": false
+ },
+ "Environmental Consultant": {
+  "label": "Environmental Consultant",
+  "faculty": "Science",
+  "n_skill_jobs": 22,
+  "n_postings": 467,
+  "skills": [
+   {
+    "name": "Microsoft Excel",
+    "weight": 1.0,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "EPA Regulations",
+    "weight": 0.833,
+    "category": "Other"
+   },
+   {
+    "name": "Regulatory Compliance",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Industrial Hygiene",
+    "weight": 0.667,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Environmental Compliance",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Environmental Health and Safety",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "OSHA Regulations",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "HAZWOPER",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Hazardous Waste Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Stormwater Management",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Environmental Planning",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Data Collection",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Environmental Science",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Project Management",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Data Management",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "DOT Regulations",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "GIS",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Remediation",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Incident Investigation",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Floor Care",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "ISO 14000",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Life Cycle Assessment",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "NPDES",
+    "weight": 0.333,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 80000,
+   "p25": 50960,
+   "p75": 105000,
+   "n": 141,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GTSC2193",
+    1.333
+   ],
+   [
+    "GFQR1033",
+    1.0
+   ],
+   [
+    "FOOD4003",
+    0.667
+   ],
+   [
+    "PRA4043",
+    0.667
+   ],
+   [
+    "ENV1053",
+    0.666
+   ],
+   [
+    "ENV3013",
+    0.666
+   ],
+   [
+    "GCAP3343",
+    0.666
+   ],
+   [
+    "BIOL1003",
+    0.333
+   ],
+   [
+    "BIOL2053",
+    0.333
+   ],
+   [
+    "BIOL2083",
+    0.333
+   ],
+   [
+    "BIOL2093",
+    0.333
+   ],
+   [
+    "COMM3033",
+    0.333
+   ]
+  ],
+  "low_sample": false
+ },
+ "Research Assistant": {
+  "label": "Research Assistant",
+  "faculty": "Science",
+  "n_skill_jobs": 8,
+  "n_postings": 241,
+  "skills": [
+   {
+    "name": "Python",
+    "weight": 1.0,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Data Collection",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "PyTorch",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Algorithms",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Large-Scale Training",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "3D Generation",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Computer Vision",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Foundation Models",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Image Processing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Video Processing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Deep Learning",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Generative AI",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Multimodal Machine Learning",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Scientific Writing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Patient Recruitment",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Research Documentation",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Institutional Review Board (IRB)",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Data Entry",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Manuscript Preparation",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Clinical Trial Coordination",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Research Laboratory Coordination",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Informed Consent",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Statistical Reporting",
+    "weight": 0.5,
+    "category": "Math & Stats"
+   }
+  ],
+  "salary": {
+   "median": 83520,
+   "p25": 59625,
+   "p75": 123125,
+   "n": 98,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "COMP2073",
+    3.0
+   ],
+   [
+    "COMP4223",
+    3.0
+   ],
+   [
+    "FINM3113",
+    3.0
+   ],
+   [
+    "GTSC2053",
+    3.0
+   ],
+   [
+    "AI2023",
+    2.5
+   ],
+   [
+    "GTSC2203",
+    2.5
+   ],
+   [
+    "AI3143",
+    2.0
+   ],
+   [
+    "BUS4083",
+    2.0
+   ],
+   [
+    "DMM3003",
+    2.0
+   ],
+   [
+    "DS2043",
+    2.0
+   ],
+   [
+    "EBIS3083",
+    2.0
+   ],
+   [
+    "EBIS4073",
+    2.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Project Manager": {
+  "label": "Project Manager",
+  "faculty": "Cross",
+  "n_skill_jobs": 95,
+  "n_postings": 2171,
+  "skills": [
+   {
+    "name": "Project Management",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Construction Management",
+    "weight": 0.329,
+    "category": "Other"
+   },
+   {
+    "name": "Risk Management",
+    "weight": 0.304,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.266,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.266,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.203,
+    "category": "Other"
+   },
+   {
+    "name": "Budget Management",
+    "weight": 0.203,
+    "category": "Other"
+   },
+   {
+    "name": "Project Scheduling",
+    "weight": 0.19,
+    "category": "Other"
+   },
+   {
+    "name": "Cost Estimation",
+    "weight": 0.177,
+    "category": "Other"
+   },
+   {
+    "name": "Scheduling",
+    "weight": 0.177,
+    "category": "Other"
+   },
+   {
+    "name": "Budgeting",
+    "weight": 0.165,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
+    "weight": 0.152,
+    "category": "Other"
+   },
+   {
+    "name": "PMP",
+    "weight": 0.139,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Control",
+    "weight": 0.127,
+    "category": "Other"
+   },
+   {
+    "name": "Contract Management",
+    "weight": 0.127,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Outlook",
+    "weight": 0.127,
+    "category": "Other"
+   },
+   {
+    "name": "Procurement",
+    "weight": 0.114,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Assurance",
+    "weight": 0.114,
+    "category": "Other"
+   },
+   {
+    "name": "Change Management",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Project Planning",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Stakeholder Management",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Process Improvement",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Agile",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Scrum",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Project",
+    "weight": 0.089,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 113850,
+   "p25": 87500,
+   "p75": 135000,
+   "n": 727,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "GD3023",
+    1.101
+   ],
+   [
+    "AIM4113",
+    1.0
+   ],
+   [
+    "COMP3063",
+    1.0
+   ],
+   [
+    "CTV4153",
+    1.0
+   ],
+   [
+    "EPIN4013",
+    1.0
+   ],
+   [
+    "FOOD3033",
+    1.0
+   ],
+   [
+    "GCAP3073",
+    1.0
+   ],
+   [
+    "GCAP3143",
+    1.0
+   ],
+   [
+    "GCAP3323",
+    1.0
+   ],
+   [
+    "GCAP3343",
+    1.0
+   ],
+   [
+    "GD4013",
+    1.0
+   ],
+   [
+    "GLD3103",
+    1.0
+   ]
+  ],
+  "low_sample": false
+ },
+ "Sales Manager": {
+  "label": "Sales Manager",
+  "faculty": "Cross",
+  "n_skill_jobs": 140,
+  "n_postings": 3243,
+  "skills": [
+   {
+    "name": "Lead Generation",
+    "weight": 1.0,
+    "category": "Other"
+   },
+   {
+    "name": "Sales Strategy",
+    "weight": 0.871,
+    "category": "Other"
+   },
+   {
+    "name": "Business Development",
+    "weight": 0.774,
+    "category": "Other"
+   },
+   {
+    "name": "SaaS",
+    "weight": 0.726,
+    "category": "Other"
+   },
+   {
+    "name": "Sales Management",
+    "weight": 0.677,
+    "category": "Other"
+   },
+   {
+    "name": "Consultative Selling",
+    "weight": 0.629,
+    "category": "Other"
+   },
+   {
+    "name": "Sales Process",
+    "weight": 0.565,
+    "category": "Other"
+   },
+   {
+    "name": "Training and Development",
+    "weight": 0.548,
+    "category": "Other"
+   },
+   {
+    "name": "Business Credit Consulting",
+    "weight": 0.548,
+    "category": "Other"
+   },
+   {
+    "name": "Performance Management",
+    "weight": 0.548,
+    "category": "Other"
+   },
+   {
+    "name": "Channel Sales",
+    "weight": 0.548,
+    "category": "Other"
+   },
+   {
+    "name": "Strategic Partnerships",
+    "weight": 0.516,
+    "category": "Other"
+   },
+   {
+    "name": "Account Management",
+    "weight": 0.387,
+    "category": "Other"
+   },
+   {
+    "name": "Customer Relationship Management",
+    "weight": 0.339,
+    "category": "Other"
+   },
+   {
+    "name": "Prospecting",
+    "weight": 0.306,
+    "category": "Other"
+   },
+   {
+    "name": "B2B Sales",
+    "weight": 0.274,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.258,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "CRM",
+    "weight": 0.258,
+    "category": "Other"
+   },
+   {
+    "name": "Sales",
+    "weight": 0.242,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Word",
+    "weight": 0.226,
+    "category": "Other"
+   },
+   {
+    "name": "Pipeline Management",
+    "weight": 0.21,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Office",
+    "weight": 0.21,
+    "category": "Other"
+   },
+   {
+    "name": "Salesforce",
+    "weight": 0.21,
+    "category": "Other"
+   },
+   {
+    "name": "Territory Management",
+    "weight": 0.21,
+    "category": "Other"
+   },
+   {
+    "name": "Cold Calling",
+    "weight": 0.194,
+    "category": "Other"
+   }
+  ],
+  "salary": {
+   "median": 82500,
+   "p25": 60000,
+   "p75": 120000,
+   "n": 867,
+   "currency": "USD"
+  },
+  "top_courses": [
+   [
+    "MHR3063",
+    1.096
+   ],
+   [
+    "EPIN3013",
+    0.774
+   ],
+   [
+    "TEM3033",
+    0.774
+   ],
+   [
+    "MKT4043",
+    0.677
+   ],
+   [
+    "MHR3013",
+    0.548
+   ],
+   [
+    "MHR3033",
+    0.548
+   ],
+   [
+    "CCM4083",
+    0.339
+   ],
+   [
+    "MKT3003",
+    0.339
+   ]
+  ],
+  "low_sample": false
+ }
+}

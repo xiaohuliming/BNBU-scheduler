@@ -763,12 +763,383 @@ def build_classroom_index():
     ]
     return rooms, room_entries
 
+# --- Course catalog + AI enrichment (static JSON, regenerated per semester) ---
+COURSE_CATALOG_PATH = os.path.join(APP_ROOT, 'course_catalog.json')
+COURSE_ENRICHMENT_PATH = os.path.join(APP_ROOT, 'course_enrichment.json')
+_catalog_cache = {"mtime": None, "data": None}
+_enrichment_cache = {"mtime": None, "data": None}
+
+
+def _load_json_cached(path, cache):
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        cache["mtime"], cache["data"] = None, {}
+        return cache["data"]
+    if cache["data"] is None or cache["mtime"] != mtime:
+        try:
+            with open(path, 'r', encoding='utf-8') as file:
+                cache["data"] = json.load(file)
+        except (OSError, ValueError):
+            cache["data"] = {}
+        cache["mtime"] = mtime
+    return cache["data"]
+
+
+def get_course_catalog():
+    return _load_json_cached(COURSE_CATALOG_PATH, _catalog_cache)
+
+
+def get_course_enrichment():
+    return _load_json_cached(COURSE_ENRICHMENT_PATH, _enrichment_cache)
+
+
+def _resolve_course_refs(codes, catalog, enrichment):
+    resolved = []
+    for code in codes:
+        course = catalog.get(code)
+        resolved.append({
+            "code": code,
+            "title": course["title"] if course else "",
+            "offered": bool(course["offered"]) if course else False,
+            "has_enrichment": code in enrichment,
+        })
+    return resolved
+
+
 app.register_blueprint(media_dl_bp)
 
 
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
+
+
+@app.route('/api/course/<path:code>', methods=['GET'])
+def get_course_detail(code):
+    code = (code or '').strip().upper()
+    catalog = get_course_catalog()
+    course = catalog.get(code)
+    if not course:
+        return jsonify({"error": "Course not found"}), 404
+
+    enrichment_map = get_course_enrichment()
+    result = dict(course)
+    result["prereqs"] = _resolve_course_refs(course.get("prereq_codes", []), catalog, enrichment_map)
+    result["unlocks"] = _resolve_course_refs(course.get("unlocks", []), catalog, enrichment_map)
+
+    enrichment = enrichment_map.get(code)
+    if enrichment:
+        enrichment = dict(enrichment)
+        resolved_similar = []
+        for item in enrichment.get("similar", []):
+            ref = catalog.get(item.get("code"))
+            resolved_similar.append({
+                "code": item.get("code"),
+                "reason": item.get("reason", ""),
+                "title": ref["title"] if ref else "",
+                "offered": bool(ref["offered"]) if ref else False,
+                "has_enrichment": item.get("code") in enrichment_map,
+            })
+        enrichment["similar"] = resolved_similar
+    result["enrichment"] = enrichment
+
+    # SkillPath layer: skills taught + matched careers (with US-market salary)
+    skillpath_courses = get_skillpath_courses()
+    result["skillpath"] = skillpath_courses.get(code, {"skills": [], "careers": []})
+    return jsonify(result)
+
+
+# --- SkillPath: course skills, target careers, and a live PPR recommender ---
+# Data + graph are precomputed by build_skillpath.py from the Big-Data project's
+# LinkedIn + course-skill extraction. Salary/jobs reflect a 2023-24 US dataset.
+SKILLPATH_COURSES_PATH = os.path.join(APP_ROOT, 'skillpath_courses.json')
+SKILLPATH_CAREERS_PATH = os.path.join(APP_ROOT, 'skillpath_careers.json')
+SKILLPATH_GRAPH_PATH = os.path.join(APP_ROOT, 'skillpath_graph.npz')
+SKILLPATH_NODES_PATH = os.path.join(APP_ROOT, 'skillpath_nodes.json')
+SKILLPATH_SALARY_CAVEAT = "岗位与薪资来自 2023-24 LinkedIn 公开数据集（以美国市场为主，USD/年），仅供参考，非大湾区本地行情。"
+_skillpath_courses_cache = {"mtime": None, "data": None}
+_skillpath_careers_cache = {"mtime": None, "data": None}
+_skillpath_graph = {"loaded": False}
+
+
+def get_skillpath_courses():
+    return _load_json_cached(SKILLPATH_COURSES_PATH, _skillpath_courses_cache)
+
+
+def get_skillpath_careers():
+    return _load_json_cached(SKILLPATH_CAREERS_PATH, _skillpath_careers_cache)
+
+
+def get_skillpath_graph():
+    if _skillpath_graph["loaded"]:
+        return _skillpath_graph
+    _skillpath_graph["loaded"] = True
+    try:
+        import numpy as np
+        from scipy import sparse
+        matrix = sparse.load_npz(SKILLPATH_GRAPH_PATH).tocsr()
+        nodes = json.load(open(SKILLPATH_NODES_PATH, encoding='utf-8'))
+        n = matrix.shape[0]
+        node_ids = nodes["node_ids"]
+        dangling = np.zeros(n)
+        for i in nodes.get("dangling", []):
+            dangling[i] = 1.0
+        _skillpath_graph.update(
+            np=np, M=matrix, n=n,
+            node_type=nodes["node_type"], node_label=nodes["node_label"], node_ids=node_ids,
+            course_index=nodes["course_index"], career_index=nodes["career_index"],
+            skill_index={nid.split("skill:", 1)[1]: i for i, nid in enumerate(node_ids) if nid.startswith("skill:")},
+            course_rows=[i for i, t in enumerate(nodes["node_type"]) if t == "course"],
+            dangling=dangling, ok=True,
+        )
+    except Exception:
+        app.logger.exception("SkillPath graph load failed")
+        _skillpath_graph["ok"] = False
+    return _skillpath_graph
+
+
+def _run_ppr(graph, career, completed_skill_names, beta=0.85, iters=60):
+    np = graph["np"]
+    n = graph["n"]
+    careers = get_skillpath_careers()
+    career_skills = careers.get(career, {}).get("skills", [])
+    missing = [(s["name"], float(s["weight"])) for s in career_skills
+               if s["name"].lower() not in completed_skill_names]
+
+    teleport = np.zeros(n)
+    career_node = graph["career_index"].get(career)
+    if career_node is not None:
+        teleport[career_node] = 0.5
+    total_missing = sum(w for _, w in missing) or 1.0
+    for name, weight in missing:
+        si = graph["skill_index"].get(name)
+        if si is not None:
+            teleport[si] += 0.5 * (weight / total_missing)
+    if teleport.sum() == 0:
+        if career_node is not None:
+            teleport[career_node] = 1.0
+        else:
+            return None
+    teleport /= teleport.sum()
+
+    rank = teleport.copy()
+    matrix = graph["M"]
+    dangling = graph["dangling"]
+    for _ in range(iters):
+        rank = beta * (matrix @ rank) + beta * float(dangling @ rank) * teleport + (1 - beta) * teleport
+    return rank
+
+
+# --- Transcript parsing: pull completed course codes from a BNBU/UIC PDF ---
+TRANSCRIPT_CODE_RE = re.compile(r'\b([A-Z]{2,4})\s?(\d{4})\b')
+TRANSCRIPT_PASS_GRADES = {'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'S', 'P'}
+_TRANSCRIPT_GRADE_RE = re.compile(r'(?<![A-Za-z0-9.])(A\+|A-|A|B\+|B-|B|C\+|C-|C|D\+|D-|D|S|P|F|W|I)(?![A-Za-z])')
+_TRANSCRIPT_GLUED_RE = re.compile(r'\d(A\+|A-|A|B\+|B-|B|C\+|C-|C|D\+|D-|D|S|P)(?![A-Za-z])')
+
+
+def _transcript_has_pass(record):
+    tokens = set(_TRANSCRIPT_GRADE_RE.findall(record)) | set(_TRANSCRIPT_GLUED_RE.findall(record))
+    return any(t in TRANSCRIPT_PASS_GRADES for t in tokens)
+
+
+def extract_completed_course_codes(text):
+    """Return completed (passed) course codes from a transcript / graduation-audit PDF.
+
+    Graduation-audit reports group courses under 'successfully completed' vs
+    'failed/incomplete/to be taken' headers; plain transcripts list a grade per
+    course. Handle both, and normalise 'AI 2023' -> 'AI2023'.
+    """
+    text = re.sub(r'[ \t]+', ' ', text or '')
+    matches = list(TRANSCRIPT_CODE_RE.finditer(text))
+    lower = text.lower()
+    out, seen = [], set()
+
+    if 'successfully completed' in lower:
+        spans = []
+        for header in re.finditer(r'successfully completed', lower):
+            start = header.end()
+            boundaries = [lower.find(h, start) for h in
+                          ('currently taking', 'failed/incomplete', 'failed', 'to be taken',
+                           'to be selected', 'successfully completed')]
+            boundaries = [b for b in boundaries if b != -1 and b > start]
+            spans.append((start, min(boundaries) if boundaries else len(text)))
+
+        def in_completed(pos):
+            return any(s <= pos < e for s, e in spans)
+
+        for match in matches:
+            if in_completed(match.start()):
+                code = match.group(1) + match.group(2)
+                if code not in seen:
+                    seen.add(code)
+                    out.append(code)
+    else:
+        for i, match in enumerate(matches):
+            code = match.group(1) + match.group(2)
+            start = match.end()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            if _transcript_has_pass(text[start:end]) and code not in seen:
+                seen.add(code)
+                out.append(code)
+    return out
+
+
+@app.route('/api/parse-transcript', methods=['POST'])
+def parse_transcript():
+    upload = request.files.get('file')
+    if not upload or not upload.filename:
+        return jsonify({"error": "请选择成绩单 PDF 文件"}), 400
+    if not upload.filename.lower().endswith('.pdf'):
+        return jsonify({"error": "仅支持 PDF 格式的成绩单/毕业审核报告"}), 400
+
+    max_bytes = 12 * 1024 * 1024
+    data = upload.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return jsonify({"error": "文件过大（上限 12MB）"}), 400
+
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(data))
+        text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    except Exception as error:
+        app.logger.exception("Transcript parse failed")
+        return jsonify({"error": f"无法读取 PDF：{error}"}), 400
+
+    codes = extract_completed_course_codes(text)
+    catalog = get_course_catalog()
+    recognized = [{"code": c, "title": catalog[c]["title"]} for c in codes if c in catalog]
+    unrecognized = [c for c in codes if c not in catalog]
+    return jsonify({
+        "codes": codes,
+        "courses": recognized,
+        "unrecognized": unrecognized,
+        "count": len(codes),
+        "recognized_count": len(recognized),
+    })
+
+
+@app.route('/api/careers', methods=['GET'])
+def list_careers():
+    careers = get_skillpath_careers()
+    out = []
+    for label, c in careers.items():
+        out.append({
+            "label": label,
+            "faculty": c.get("faculty", ""),
+            "salary": c.get("salary", {}),
+            "n_postings": c.get("n_postings", 0),
+            "n_skill_jobs": c.get("n_skill_jobs", 0),
+            "low_sample": bool(c.get("low_sample", False)),
+            "top_skills": [s["name"] for s in c.get("skills", [])[:5]],
+        })
+    out.sort(key=lambda x: (x["faculty"], -x["n_postings"], x["label"]))
+    return jsonify({"careers": out, "caveat": SKILLPATH_SALARY_CAVEAT})
+
+
+@app.route('/api/recommend', methods=['POST'])
+def recommend_courses():
+    data = request.get_json(silent=True) or {}
+    career = str(data.get('career') or '').strip()
+    completed = [str(c).strip().upper() for c in (data.get('completed') or []) if str(c).strip()]
+    offered_only = bool(data.get('offered_only', True))
+    limit = min(int(data.get('limit', 12) or 12), 30)
+
+    careers = get_skillpath_careers()
+    if career not in careers:
+        return jsonify({"error": "Unknown career goal"}), 400
+
+    graph = get_skillpath_graph()
+    if not graph.get("ok"):
+        return jsonify({"error": "SkillPath recommender is unavailable"}), 503
+
+    catalog = get_course_catalog()
+    sp_courses = get_skillpath_courses()
+    enrichment_map = get_course_enrichment()
+    completed_set = set(completed)
+
+    # student's skills = union of skills from completed courses
+    student_skills = set()
+    for code in completed:
+        for s in sp_courses.get(code, {}).get("skills", []):
+            student_skills.add(s["name"].lower())
+
+    rank = _run_ppr(graph, career, student_skills)
+    if rank is None:
+        return jsonify({"error": "Could not build a recommendation for this goal"}), 500
+
+    career_skill_names = {s["name"].lower(): s for s in careers[career].get("skills", [])}
+
+    ranked_courses = sorted(
+        ((graph["node_ids"][i].split("course:", 1)[1], float(rank[i])) for i in graph["course_rows"]),
+        key=lambda x: -x[1],
+    )
+
+    recommendations = []
+    why_not = []
+    for code, score in ranked_courses:
+        course = catalog.get(code)
+        if not course:
+            continue
+        if code in completed_set:
+            if len(why_not) < 6:
+                why_not.append({"code": code, "title": course["title"], "reason": "已修过"})
+            continue
+        if offered_only and not course["offered"]:
+            if len(why_not) < 6:
+                why_not.append({"code": code, "title": course["title"], "reason": "本学期未开设"})
+            continue
+
+        course_skills = sp_courses.get(code, {}).get("skills", [])
+        bridge = []
+        for s in course_skills:
+            low = s["name"].lower()
+            if low in career_skill_names and low not in student_skills:
+                bridge.append({"name": s["name"], "category": s["category"],
+                               "career_weight": career_skill_names[low]["weight"]})
+        bridge.sort(key=lambda x: -x["career_weight"])
+
+        unmet_prereqs = [
+            {"code": p, "title": catalog[p]["title"] if p in catalog else ""}
+            for p in course.get("prereq_codes", []) if p not in completed_set
+        ]
+
+        recommendations.append({
+            "code": code,
+            "title": course["title"],
+            "units": course["units"],
+            "offered": course["offered"],
+            "score": round(score, 6),
+            "tagline": (enrichment_map.get(code) or {}).get("tagline", ""),
+            "teaches": [{"name": s["name"], "category": s["category"]} for s in course_skills[:8]],
+            "bridge_skills": bridge[:4],
+            "unmet_prereqs": unmet_prereqs[:4],
+        })
+        if len(recommendations) >= limit:
+            break
+
+    # skill gap: which of the career's top skills the student already has
+    skill_gap = [
+        {"name": s["name"], "category": s["category"], "weight": s["weight"],
+         "have": s["name"].lower() in student_skills}
+        for s in careers[career].get("skills", [])[:12]
+    ]
+
+    return jsonify({
+        "career": {
+            "label": career,
+            "faculty": careers[career].get("faculty", ""),
+            "salary": careers[career].get("salary", {}),
+            "n_postings": careers[career].get("n_postings", 0),
+            "n_skill_jobs": careers[career].get("n_skill_jobs", 0),
+            "low_sample": bool(careers[career].get("low_sample", False)),
+        },
+        "skill_gap": skill_gap,
+        "student_skill_count": len(student_skills),
+        "recommendations": recommendations,
+        "why_not": why_not[:4],
+        "caveat": SKILLPATH_SALARY_CAVEAT,
+    })
 
 @app.route('/ddl')
 def ddl_page():

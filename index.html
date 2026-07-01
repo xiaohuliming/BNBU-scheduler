@@ -300,6 +300,20 @@
         const Printer = (p) => <Icon name="Printer" {...p} />;
 
         const Settings = (p) => <Icon name="Settings" {...p} />;
+        const Briefcase = (p) => <Icon name="Briefcase" {...p} />;
+        const GraduationCap = (p) => <Icon name="GraduationCap" {...p} />;
+        const Sparkles = (p) => <Icon name="Sparkles" {...p} />;
+        const TrendingUp = (p) => <Icon name="TrendingUp" {...p} />;
+        const Lightbulb = (p) => <Icon name="Lightbulb" {...p} />;
+        const Target = (p) => <Icon name="Target" {...p} />;
+        const ArrowRight = (p) => <Icon name="ArrowRight" {...p} />;
+        const Layers = (p) => <Icon name="Layers" {...p} />;
+        const Network = (p) => <Icon name="Network" {...p} />;
+        const Users = (p) => <Icon name="Users" {...p} />;
+        const Flame = (p) => <Icon name="Flame" {...p} />;
+        const Upload = (p) => <Icon name="Upload" {...p} />;
+        const FileText = (p) => <Icon name="FileText" {...p} />;
+        const Github = (p) => <Icon name="Github" {...p} />;
 
         const SCHOOL_DAY_OPTIONS = [
             { value: 'Mon', label: '周一' },
@@ -420,7 +434,7 @@
         };
 
         // --- Explorer View ---
-        const ExplorerView = ({ availableCourses, onAddCourse, switchToOptimizer, onViewTeacher }) => {
+        const ExplorerView = ({ availableCourses, onAddCourse, switchToOptimizer, onViewTeacher, onViewCourse }) => {
             const [searchQuery, setSearchQuery] = useState('');
             const [filters, setFilters] = useState({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
             const [currentPage, setCurrentPage] = useState(1);
@@ -580,10 +594,10 @@
                           paginatedResults.map((course, idx) => (
                             <div key={idx} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group">
                               <div className="flex justify-between items-start mb-2">
-                                <span className="bg-black text-white px-2 py-1 font-black text-lg">{course.code}</span>
+                                <button onClick={() => onViewCourse && onViewCourse(course.code)} title="查看课程详情" className="bg-black text-white px-2 py-1 font-black text-lg hover:bg-[#ec4899] transition-colors">{course.code}</button>
                                 <span className="bg-[#a3e635] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
                               </div>
-                              <h3 className="font-black text-xl leading-tight mb-3 min-h-[3rem]">{course.title}</h3>
+                              <h3 onClick={() => onViewCourse && onViewCourse(course.code)} className="font-black text-xl leading-tight mb-3 min-h-[3rem] cursor-pointer hover:underline decoration-2 underline-offset-2">{course.title}</h3>
                               <div className="space-y-2 text-sm font-bold text-gray-700 flex-grow">
                                 <div className="flex items-center gap-2">
                                    <User className="w-4 h-4 shrink-0" /> 
@@ -604,10 +618,16 @@
                                    <span>{course.classroom || 'TBA'}</span>
                                 </div>
                               </div>
-                              <button onClick={() => { onAddCourse({ code: course.code, name: course.name }, course.teacher); switchToOptimizer(); }}
-                                className="mt-4 w-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-2">
-                                <Plus className="w-5 h-5" /> 添加到排课
-                              </button>
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button onClick={() => onViewCourse && onViewCourse(course.code)}
+                                  className="bg-white text-black font-black py-3 border-2 border-black hover:bg-[#d6ff62] active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
+                                  <BookOpen className="w-4 h-4" /> 详情
+                                </button>
+                                <button onClick={() => { onAddCourse({ code: course.code, name: course.name }, course.teacher); switchToOptimizer(); }}
+                                  className="bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
+                                  <Plus className="w-4 h-4" /> 排课
+                                </button>
+                              </div>
                             </div>
                           ))
                         )}
@@ -654,6 +674,293 @@
                                 </table>
                             )}
                         </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SKILL_CAT_STYLE = {
+            'Programming Languages': '#c7f9cc',
+            'ML & AI': '#ffd6a5',
+            'Data Systems': '#a0e7e5',
+            'Math & Stats': '#fdffb6',
+            'Domain Knowledge': '#ffc6ff',
+            'Tools & Platforms': '#bdb2ff',
+            'Other': '#eef0f2',
+        };
+
+        const SkillChip = ({ name, category, muted, title }) => (
+            <span title={title || category || ''} className={`inline-flex items-center border-2 border-black px-2 py-0.5 text-xs font-bold ${muted ? 'opacity-40 line-through' : ''}`} style={{ background: SKILL_CAT_STYLE[category] || '#eef0f2' }}>{name}</span>
+        );
+
+        const fmtSalary = (n) => (n || n === 0) ? '$' + Number(n).toLocaleString('en-US') : '—';
+
+        const CourseRefChip = ({ item, onClick }) => (
+            <button
+                onClick={() => onClick && item.code && onClick(item.code)}
+                title={item.title || item.code}
+                className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#a3e635]' : 'bg-white'}`}
+            >
+                <span className="bg-black text-white px-1.5 py-1">{item.code}</span>
+                <span className="truncate max-w-[11rem] py-1">{item.title || ''}</span>
+            </button>
+        );
+
+        const InsightSection = ({ icon: IconC, title, accent, children }) => (
+            <div className="border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="p-1.5 border-2 border-black flex items-center justify-center" style={{ background: accent || '#fff' }}><IconC className="w-4 h-4" /></span>
+                    <h3 className="font-black uppercase tracking-tight text-lg">{title}</h3>
+                </div>
+                {children}
+            </div>
+        );
+
+        const CourseInsightModal = ({ initialCode, onClose, onViewTeacher, onAddCourse, switchToOptimizer }) => {
+            const [history, setHistory] = useState([]);
+            const [code, setCode] = useState(initialCode);
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [showEnglish, setShowEnglish] = useState(false);
+            const bodyRef = useRef(null);
+
+            useEffect(() => {
+                let alive = true;
+                setLoading(true); setError(null);
+                fetch(`/api/course/${encodeURIComponent(code)}`)
+                    .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+                    .then(d => { if (alive) { setData(d); setLoading(false); if (bodyRef.current) bodyRef.current.scrollTop = 0; } })
+                    .catch(e => { if (alive) { setError((e && e.error) || '加载失败'); setLoading(false); } });
+                return () => { alive = false; };
+            }, [code]);
+
+            const navTo = (c) => { if (c && c !== code) { setHistory(h => [...h, code]); setShowEnglish(false); setCode(c); } };
+            const goBack = () => setHistory(h => { if (!h.length) return h; setCode(h[h.length - 1]); setShowEnglish(false); return h.slice(0, -1); });
+
+            const e = data && data.enrichment;
+            const lvl = e && e.difficulty ? Number(e.difficulty.level) || 0 : 0;
+            const metaChips = [];
+            if (data) {
+                if (data.dept) metaChips.push(data.dept);
+                if (data.level) metaChips.push(`${data.level} 字头`);
+                (data.offering_units || []).forEach(u => metaChips.push(u));
+                (data.offering_programmes || []).forEach(p => metaChips.push(p));
+                (data.curriculum_types || []).forEach(t => metaChips.push(t));
+                (data.years || []).forEach(y => metaChips.push(y));
+            }
+
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4">
+                    <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+                    <div className="relative bg-[#f4efe6] w-full max-w-5xl max-h-[94vh] flex flex-col border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+                        {/* Header */}
+                        <div className="bg-black text-white p-4 md:p-5 shrink-0">
+                            <div className="flex justify-between items-start gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                        {history.length > 0 && (
+                                            <button onClick={goBack} className="bg-white text-black px-2 py-0.5 font-black text-xs border-2 border-white hover:bg-[#a3e635] flex items-center gap-1"><ArrowRight className="w-3 h-3 rotate-180" /> 返回</button>
+                                        )}
+                                        <span className="bg-[#d6ff62] text-black px-2 py-0.5 font-black text-lg">{code}</span>
+                                        {data && <span className="bg-white/20 px-2 py-0.5 font-bold text-xs border border-white/40">{data.units || '—'} Units</span>}
+                                        {data && (data.offered
+                                            ? <span className="bg-[#a3e635] text-black px-2 py-0.5 font-bold text-xs">本学期开设</span>
+                                            : <span className="bg-white/10 text-white/70 px-2 py-0.5 font-bold text-xs border border-white/30">本学期未开设</span>)}
+                                    </div>
+                                    <h2 className="text-xl md:text-2xl font-black leading-tight truncate">{data ? data.title : '加载中…'}</h2>
+                                    {e && e.tagline && <p className="text-[#d6ff62] font-bold mt-1 text-sm md:text-base">{e.tagline}</p>}
+                                </div>
+                                <button onClick={onClose} className="shrink-0 bg-white text-black p-1.5 hover:bg-red-400 transition-colors border-2 border-white"><X className="w-5 h-5" /></button>
+                            </div>
+                            {metaChips.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-3">
+                                    {metaChips.map((m, i) => <span key={i} className="bg-white/10 border border-white/30 px-2 py-0.5 text-[11px] font-bold text-white/90">{m}</span>)}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Body */}
+                        <div ref={bodyRef} className="overflow-auto custom-scrollbar grow p-4 md:p-5 space-y-4">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-24 opacity-50">
+                                    <Loader2 className="w-10 h-10 animate-spin mb-3" /><p className="font-black">加载课程详情…</p>
+                                </div>
+                            ) : error ? (
+                                <div className="text-center py-24 font-black text-red-600">{error}</div>
+                            ) : data && (
+                            <React.Fragment>
+                                {!e && (
+                                    <div className="border-2 border-dashed border-black/40 bg-white/60 p-3 font-bold text-sm flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4" /> 这门课的 AI 深度分析正在生成中，稍后回来即可查看就业升学、推荐与相似课分析。
+                                    </div>
+                                )}
+
+                                {/* Intro */}
+                                <InsightSection icon={BookOpen} title="课程介绍" accent="#d6ff62">
+                                    <p className="leading-relaxed text-[15px] whitespace-pre-line">{(e && e.summary_zh) || data.description || '暂无课程简介。'}</p>
+                                    {data.description && (
+                                        <div className="mt-3">
+                                            <button onClick={() => setShowEnglish(v => !v)} className="text-xs font-bold underline hover:text-blue-600 flex items-center gap-1">
+                                                <ChevronDown className={`w-3 h-3 transition-transform ${showEnglish ? 'rotate-180' : ''}`} /> {showEnglish ? '收起' : '查看官方英文简介'}
+                                            </button>
+                                            {showEnglish && <p className="mt-2 text-sm text-gray-600 leading-relaxed border-l-4 border-black/20 pl-3">{data.description}</p>}
+                                        </div>
+                                    )}
+                                    {e && e.topics && e.topics.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mt-4">
+                                            {e.topics.map((t, i) => <span key={i} className="bg-[#f4efe6] border-2 border-black px-2 py-1 text-xs font-bold">{t}</span>)}
+                                        </div>
+                                    )}
+                                </InsightSection>
+
+                                {/* Skills taught (SkillPath) */}
+                                {data.skillpath && data.skillpath.skills && data.skillpath.skills.length > 0 && (
+                                    <InsightSection icon={Target} title="掌握技能" accent="#c7f9cc">
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {data.skillpath.skills.map((s, i) => <SkillChip key={i} name={s.name} category={s.category} />)}
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-2 font-medium">技能由课程描述自动抽取（SkillPath）</p>
+                                    </InsightSection>
+                                )}
+
+                                {/* Difficulty & workload */}
+                                {e && (e.difficulty || e.workload) && (
+                                    <InsightSection icon={Flame} title="难度 & 投入" accent="#ff7a1f">
+                                        {e.difficulty && (
+                                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                                <div className="flex items-center gap-1">
+                                                    {[1,2,3,4,5].map(n => <span key={n} className={`w-7 h-4 border-2 border-black ${n <= lvl ? 'bg-[#ec4899]' : 'bg-white'}`} />)}
+                                                </div>
+                                                <span className="font-black">{lvl}/5</span>
+                                                {e.difficulty.note && <span className="text-sm font-bold text-gray-700">· {e.difficulty.note}</span>}
+                                            </div>
+                                        )}
+                                        {e.workload && <p className="text-sm leading-relaxed flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" />{e.workload}</p>}
+                                    </InsightSection>
+                                )}
+
+                                {/* Prerequisites */}
+                                <InsightSection icon={Network} title="前置课要求" accent="#3b82f6">
+                                    {(data.prereqs && data.prereqs.length > 0) ? (
+                                        <React.Fragment>
+                                            <div className="flex flex-wrap gap-2">{data.prereqs.map((p, i) => <CourseRefChip key={i} item={p} onClick={navTo} />)}</div>
+                                            {(data.prereq_text_zh || data.prereq_text) && <p className="text-xs text-gray-500 mt-2 font-medium">原始要求：{data.prereq_text_zh || data.prereq_text}</p>}
+                                        </React.Fragment>
+                                    ) : (
+                                        <p className="font-bold text-gray-500">无前置课要求，可直接选修。</p>
+                                    )}
+                                </InsightSection>
+
+                                {/* Career & Further study */}
+                                {e && e.career && (
+                                    <InsightSection icon={Briefcase} title="就业方向" accent="#a3e635">
+                                        <p className="leading-relaxed text-[15px] whitespace-pre-line">{e.career}</p>
+                                    </InsightSection>
+                                )}
+
+                                {/* Matched careers + salary (SkillPath, from LinkedIn data) */}
+                                {data.skillpath && data.skillpath.careers && data.skillpath.careers.length > 0 && (
+                                    <InsightSection icon={TrendingUp} title="对口岗位 & 薪资" accent="#a0e7e5">
+                                        <div className="space-y-2">
+                                            {data.skillpath.careers.map((c, i) => (
+                                                <div key={i} className="flex items-center justify-between gap-2 border-2 border-black bg-white px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="bg-black text-white text-[10px] font-bold px-1.5 py-0.5 shrink-0">{c.faculty}</span>
+                                                        <span className="font-black truncate">{c.label}</span>
+                                                    </div>
+                                                    <span className="font-mono font-bold text-sm shrink-0">{fmtSalary(c.salary_median)}<span className="text-[10px] text-gray-400"> /yr</span></span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-2 font-medium">薪资中位数来自 2023-24 LinkedIn（美国市场，USD/年），仅供参考</p>
+                                    </InsightSection>
+                                )}
+                                {e && e.further_study && (
+                                    <InsightSection icon={GraduationCap} title="升学 & 科研" accent="#c4b5fd">
+                                        <p className="leading-relaxed text-[15px] whitespace-pre-line">{e.further_study}</p>
+                                    </InsightSection>
+                                )}
+
+                                {/* Recommendation */}
+                                {e && (e.recommend_for || e.tips || e.caution) && (
+                                    <InsightSection icon={Lightbulb} title="选课建议" accent="#fde047">
+                                        {e.recommend_for && <p className="mb-2 text-[15px] leading-relaxed flex items-start gap-2"><Target className="w-4 h-4 mt-1 shrink-0" /><span><span className="font-black">适合：</span>{e.recommend_for}</span></p>}
+                                        {e.tips && <p className="mb-2 text-[15px] leading-relaxed flex items-start gap-2"><Sparkles className="w-4 h-4 mt-1 shrink-0" /><span><span className="font-black">建议：</span>{e.tips}</span></p>}
+                                        {e.caution && <p className="text-[15px] leading-relaxed flex items-start gap-2 bg-[#ffe4e6] border-2 border-black p-2"><Flame className="w-4 h-4 mt-1 shrink-0" /><span><span className="font-black">注意：</span>{e.caution}</span></p>}
+                                    </InsightSection>
+                                )}
+
+                                {/* Teachers */}
+                                {data.teachers && data.teachers.length > 0 && (
+                                    <InsightSection icon={Users} title="授课老师" accent="#93c5fd">
+                                        <div className="flex flex-wrap gap-2">
+                                            {data.teachers.map((t, i) => (
+                                                <button key={i} onClick={() => onViewTeacher && onViewTeacher(t)} className="inline-flex items-center gap-1.5 bg-white border-2 border-black px-2 py-1 font-bold text-xs hover:bg-[#3b82f6] hover:text-white transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                    <User className="w-3.5 h-3.5" />{t}<ExternalLink className="w-3 h-3 opacity-60" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </InsightSection>
+                                )}
+
+                                {/* Similar courses */}
+                                {e && e.similar && e.similar.length > 0 && (
+                                    <InsightSection icon={Sparkles} title="相似 & 相关课程" accent="#f0abfc">
+                                        <div className="space-y-2">
+                                            {e.similar.map((s, i) => (
+                                                <div key={i} className="flex items-start gap-2 border-l-4 border-black pl-3 py-1">
+                                                    <CourseRefChip item={s} onClick={navTo} />
+                                                    {s.reason && <span className="text-sm text-gray-700 pt-1">{s.reason}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </InsightSection>
+                                )}
+
+                                {/* Unlocks */}
+                                {data.unlocks && data.unlocks.length > 0 && (
+                                    <InsightSection icon={ArrowRight} title="修完可解锁" accent="#fdba74">
+                                        <div className="flex flex-wrap gap-2">{data.unlocks.map((u, i) => <CourseRefChip key={i} item={u} onClick={navTo} />)}</div>
+                                    </InsightSection>
+                                )}
+
+                                {/* Sessions */}
+                                {data.offered && data.sessions && data.sessions.length > 0 && (
+                                    <InsightSection icon={Clock} title="本学期开课安排" accent="#67e8f9">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse">
+                                                <thead><tr className="bg-black text-white">
+                                                    {['Session', '老师', '时间', '教室'].map(h => <th key={h} className="border border-black p-2 text-left font-bold">{h}</th>)}
+                                                </tr></thead>
+                                                <tbody>
+                                                    {data.sessions.map((s, i) => (
+                                                        <tr key={i} className="bg-white hover:bg-[#f4efe6]">
+                                                            <td className="border border-black p-2 font-bold">{s.session || '—'}</td>
+                                                            <td className="border border-black p-2">{s.teacher || '—'}</td>
+                                                            <td className="border border-black p-2 whitespace-nowrap">{s.schedule || 'TBA'}</td>
+                                                            <td className="border border-black p-2">{s.classroom || 'TBA'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </InsightSection>
+                                )}
+                            </React.Fragment>
+                            )}
+                        </div>
+
+                        {/* Footer action */}
+                        {data && data.offered && (
+                            <div className="shrink-0 border-t-4 border-black bg-white p-3 flex justify-end">
+                                <button
+                                    onClick={() => { onAddCourse && onAddCourse({ code: data.code, name: data.title }, ''); switchToOptimizer && switchToOptimizer(); onClose(); }}
+                                    className="bg-black text-white font-black py-2.5 px-5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                    <Plus className="w-5 h-5" /> 添加到排课
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -2382,6 +2689,10 @@
                             <div className="mono-ui mt-3 text-[10px] uppercase tracking-[0.24em] text-[#a08c7d]">
                                 · Fin ·
                             </div>
+                            <a href="https://github.com/xiaohuliming" target="_blank" rel="noopener noreferrer"
+                                className="mono-ui inline-flex items-center gap-1.5 mt-4 text-[11px] tracking-[0.16em] text-[#a08c7d] hover:text-[#1a140d] transition-colors">
+                                <Github className="w-3.5 h-3.5" /> github.com/xiaohuliming
+                            </a>
                         </footer>
                     </section>
                 </div>
@@ -2608,12 +2919,227 @@
             );
         };
 
+        const FACULTY_LABEL = { FST: '理工 FST', FBM: '工商管理 FBM', FHSS: '人文社科 FHSS', Science: '理科', Cross: '通用' };
+
+        const CareerPlannerView = ({ onViewCourse, onAddCourse, switchToOptimizer }) => {
+            const [careers, setCareers] = useState([]);
+            const [career, setCareer] = useState('');
+            const [completedText, setCompletedText] = useState('');
+            const [offeredOnly, setOfferedOnly] = useState(true);
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [caveat, setCaveat] = useState('');
+            const [error, setError] = useState('');
+            const [uploading, setUploading] = useState(false);
+            const [parseMsg, setParseMsg] = useState('');
+
+            const handleTranscriptUpload = async (ev) => {
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = '';
+                if (!file) return;
+                setUploading(true); setParseMsg(''); setError('');
+                try {
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    const res = await fetch('/api/parse-transcript', { method: 'POST', body: fd });
+                    const d = await res.json();
+                    if (!res.ok) throw new Error(d.error || '解析失败');
+                    if (!d.codes || d.codes.length === 0) {
+                        setParseMsg('未从文件中识别到已修课程，请确认上传的是成绩单或毕业审核报告 PDF。');
+                    } else {
+                        setCompletedText(d.codes.join(', '));
+                        const ignored = (d.count || 0) - (d.recognized_count || 0);
+                        setParseMsg(`已从成绩单解析出 ${d.count} 门已修课程` + (ignored > 0 ? `（其中 ${ignored} 门不在课程库中，仅供参考）` : '') + '。');
+                    }
+                } catch (err) {
+                    setParseMsg('');
+                    setError(err.message || '成绩单解析失败');
+                }
+                setUploading(false);
+            };
+
+            useEffect(() => {
+                fetch('/api/careers').then(r => r.json()).then(d => {
+                    setCareers(d.careers || []);
+                    setCaveat(d.caveat || '');
+                }).catch(() => {});
+            }, []);
+
+            const grouped = useMemo(() => {
+                const g = {};
+                careers.forEach(c => { (g[c.faculty] = g[c.faculty] || []).push(c); });
+                return g;
+            }, [careers]);
+
+            const run = async () => {
+                if (!career) { setError('请先选择一个职业目标'); return; }
+                setLoading(true); setError('');
+                try {
+                    const completed = completedText.split(/[,，\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+                    const res = await fetch('/api/recommend', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ career, completed, offered_only: offeredOnly, limit: 12 })
+                    });
+                    const d = await res.json();
+                    if (!res.ok) throw new Error(d.error || '推荐失败');
+                    setResult(d);
+                } catch (e) { setError(e.message || '推荐失败'); setResult(null); }
+                setLoading(false);
+            };
+
+            const gapHave = result ? result.skill_gap.filter(s => s.have).length : 0;
+            const gapTotal = result ? result.skill_gap.length : 0;
+            const coverage = gapTotal ? Math.round(gapHave / gapTotal * 100) : 0;
+            const sal = result && result.career.salary;
+
+            return (
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <h2 className="text-4xl font-black uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">职业规划 <span className="text-[#3b82f6]">SKILLPATH</span></h2>
+                            <span className="bg-[#ff7a1f] text-black text-xs font-black uppercase tracking-wider px-2 py-1 border-2 border-black -rotate-2">开发中 BETA</span>
+                        </div>
+                        <p className="font-bold text-gray-600 mt-2">选定职业目标 → 按<span className="bg-[#a3e635] px-1 border border-black">技能缺口</span>推荐能补齐差距的课程，每条都给出理由</p>
+                    </div>
+                    {/* Input card */}
+                    <div className="bg-white border-4 border-black p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] space-y-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-black uppercase block mb-1">职业目标</label>
+                                <select value={career} onChange={e => setCareer(e.target.value)} className="w-full border-2 border-black p-3 font-bold bg-white focus:bg-[#a3e635] focus:outline-none">
+                                    <option value="">— 选择目标职业 —</option>
+                                    {Object.keys(grouped).map(fac => (
+                                        <optgroup key={fac} label={FACULTY_LABEL[fac] || fac}>
+                                            {grouped[fac].map(c => (
+                                                <option key={c.label} value={c.label}>{c.label}{c.salary && c.salary.median ? `  ·  ${fmtSalary(c.salary.median)}/yr` : ''}{c.low_sample ? '  · 样本少' : ''}</option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-black uppercase block mb-1">已修课程 <span className="text-gray-400 normal-case font-bold">（可选，用于算技能缺口）</span></label>
+                                <div className="flex gap-2">
+                                    <input value={completedText} onChange={e => setCompletedText(e.target.value)} placeholder="如 COMP1003, AI1013 或上传成绩单"
+                                        className="flex-1 min-w-0 border-2 border-black p-3 font-bold bg-gray-100 focus:bg-white focus:outline-none" />
+                                    <label className={`shrink-0 border-2 border-black px-3 font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${uploading ? 'bg-gray-200 cursor-wait' : 'bg-white hover:bg-[#a3e635]'}`} title="上传成绩单 / 毕业审核报告 PDF，自动识别已修课程">
+                                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                        <span className="hidden sm:inline text-sm">成绩单</span>
+                                        <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleTranscriptUpload} disabled={uploading} />
+                                    </label>
+                                </div>
+                                {parseMsg && <p className="text-[11px] text-green-700 font-bold mt-1 flex items-start gap-1"><FileText className="w-3.5 h-3.5 mt-0.5 shrink-0" />{parseMsg}</p>}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                            <label className="flex items-center gap-2 font-bold text-sm cursor-pointer select-none">
+                                <input type="checkbox" checked={offeredOnly} onChange={e => setOfferedOnly(e.target.checked)} className="w-4 h-4 accent-black" />
+                                只看本学期开设
+                            </label>
+                            <button onClick={run} disabled={loading} className="bg-black text-white font-black py-3 px-6 border-2 border-black hover:bg-[#3b82f6] active:translate-y-0.5 transition-colors">
+                                {loading ? '生成中…' : '生成选课推荐'}
+                            </button>
+                        </div>
+                        {error && <p className="text-red-600 font-bold text-sm">{error}</p>}
+                        {caveat && <p className="text-[11px] text-gray-400 font-medium border-t-2 border-dashed border-gray-200 pt-2">⚠︎ {caveat}</p>}
+                    </div>
+
+                    {result && (
+                        <React.Fragment>
+                            {/* Career summary + skill gap */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="bg-[#101820] text-white border-4 border-black p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                        <span className="bg-[#d6ff62] text-black text-[10px] font-black px-1.5 py-0.5">{result.career.faculty}</span>
+                                        <h3 className="text-2xl font-black">{result.career.label}</h3>
+                                        {result.career.low_sample && <span className="bg-[#ff7a1f] text-black text-[10px] font-black px-1.5 py-0.5" title="该职业在数据集中样本较少，技能画像部分借鉴相关职业">样本较少</span>}
+                                    </div>
+                                    {result.career.low_sample && <p className="text-[11px] text-white/50 mb-2">该职业在数据集中招聘样本较少，技能画像部分借鉴相关职业，仅供参考。</p>}
+                                    {sal && sal.median ? (
+                                        <div className="font-mono">
+                                            <div className="text-3xl font-black text-[#d6ff62]">{fmtSalary(sal.median)}<span className="text-sm text-white/50"> /yr 中位</span></div>
+                                            <div className="text-xs text-white/60 mt-1">区间 {fmtSalary(sal.p25)} – {fmtSalary(sal.p75)} · 样本 {sal.n} 岗 · 共 {result.career.n_postings} 条招聘</div>
+                                        </div>
+                                    ) : <p className="text-white/50 text-sm">该职业薪资样本不足</p>}
+                                </div>
+                                <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="font-black uppercase">技能缺口</h3>
+                                        <span className="font-mono font-black text-sm">已具备 {gapHave}/{gapTotal} · {coverage}%</span>
+                                    </div>
+                                    <div className="w-full h-3 border-2 border-black bg-gray-100 mb-3">
+                                        <div className="h-full bg-[#a3e635]" style={{ width: coverage + '%' }} />
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {result.skill_gap.map((s, i) => <SkillChip key={i} name={s.name} category={s.category} muted={!s.have} title={s.have ? '已具备' : '待补齐'} />)}
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 mt-2">实心=已具备，删除线=待补齐（由已修课程推断）</p>
+                                </div>
+                            </div>
+
+                            {/* Recommendations */}
+                            <div>
+                                <h3 className="text-2xl font-black uppercase mb-3">推荐课程 <span className="text-gray-400 text-base">按 PageRank 排序</span></h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {result.recommendations.map((r, idx) => (
+                                        <div key={r.code} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+                                            <div className="flex justify-between items-start mb-1 gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="bg-black text-white font-black text-xs w-6 h-6 flex items-center justify-center shrink-0">{idx + 1}</span>
+                                                    <button onClick={() => onViewCourse && onViewCourse(r.code)} className="bg-[#d6ff62] border-2 border-black px-1.5 font-black hover:bg-[#ec4899] transition-colors">{r.code}</button>
+                                                    {r.offered ? <span className="bg-[#a3e635] border border-black text-[10px] font-bold px-1">开设</span> : <span className="bg-gray-100 border border-gray-300 text-[10px] font-bold px-1 text-gray-500">未开设</span>}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-400 shrink-0">{r.units}学分</span>
+                                            </div>
+                                            <button onClick={() => onViewCourse && onViewCourse(r.code)} className="font-black text-lg leading-tight text-left hover:underline decoration-2 mb-1">{r.title}</button>
+                                            {r.tagline && <p className="text-xs text-gray-500 font-bold mb-2">{r.tagline}</p>}
+                                            {r.bridge_skills && r.bridge_skills.length > 0 && (
+                                                <div className="bg-[#f0fff0] border-2 border-black p-2 mb-2">
+                                                    <p className="text-[10px] font-black uppercase text-green-700 mb-1 flex items-center gap-1"><ArrowRight className="w-3 h-3" /> 补齐技能缺口</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {r.bridge_skills.map((b, i) => <SkillChip key={i} name={b.name} category={b.category} />)}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {r.unmet_prereqs && r.unmet_prereqs.length > 0 && (
+                                                <p className="text-[11px] text-orange-600 font-bold mb-2 flex items-start gap-1"><Network className="w-3 h-3 mt-0.5 shrink-0" /> 建议先修 {r.unmet_prereqs.map(p => p.code).join(', ')}</p>
+                                            )}
+                                            <div className="mt-auto grid grid-cols-2 gap-2 pt-1">
+                                                <button onClick={() => onViewCourse && onViewCourse(r.code)} className="bg-white text-black font-bold py-2 border-2 border-black hover:bg-[#d6ff62] transition-colors text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4" /> 详情</button>
+                                                <button onClick={() => { onAddCourse && onAddCourse({ code: r.code, name: r.title }, ''); switchToOptimizer && switchToOptimizer(); }} className="bg-black text-white font-bold py-2 border-2 border-black hover:bg-[#ec4899] transition-colors text-sm flex items-center justify-center gap-1"><Plus className="w-4 h-4" /> 排课</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Why not */}
+                            {result.why_not && result.why_not.length > 0 && (
+                                <div className="bg-gray-50 border-2 border-dashed border-black/40 p-4">
+                                    <h4 className="font-black uppercase text-sm mb-2 text-gray-500">为什么这些高分课没进推荐？</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {result.why_not.map((w, i) => (
+                                            <button key={i} onClick={() => onViewCourse && onViewCourse(w.code)} className="inline-flex items-center gap-1.5 bg-white border-2 border-black px-2 py-1 text-xs font-bold hover:-translate-y-0.5 transition-transform">
+                                                <span className="bg-black text-white px-1">{w.code}</span>
+                                                <span className="text-gray-400">{w.reason}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </React.Fragment>
+                    )}
+                </div>
+            );
+        };
+
         const App = () => {
             const [currentView, setCurrentView] = useState('home');
             const [availableCourses, setAvailableCourses] = useState([]);
             const [selectedCodes, setSelectedCodes] = useState([]);
             const [searchQuery, setSearchQuery] = useState("");
             const [viewingCourse, setViewingCourse] = useState(null);
+            const [insightCourse, setInsightCourse] = useState(null);
             const [viewingTeacher, setViewingTeacher] = useState(null);
             const [viewingRoom, setViewingRoom] = useState(null);
             const [startTime, setStartTime] = useState("08:00");
@@ -2697,8 +3223,11 @@
 
             const navItems = [
                 { key: 'home', label: '主页', Icon: House },
-                { key: 'optimizer', label: '排课', Icon: Calculator },
-                { key: 'explorer', label: '课程', Icon: BookOpen },
+                { label: '选课', Icon: BookOpen, children: [
+                    { key: 'explorer', label: '课程', Icon: BookOpen },
+                    { key: 'optimizer', label: '排课', Icon: Calculator },
+                    { key: 'career', label: '职业规划', Icon: Briefcase, wip: true },
+                ] },
                 { key: 'classrooms', label: '空教室', Icon: Building2 },
                 { key: 'ddl', label: 'DDL', Icon: CheckSquare },
                 { key: 'teachers', label: '老师', Icon: UserCheck },
@@ -2794,6 +3323,41 @@
 
                                 <div className="hidden lg:flex items-baseline gap-7">
                                     {navItems.map((item) => {
+                                        if (item.children) {
+                                            const groupActive = item.children.some(c => c.key === currentView);
+                                            return (
+                                                <div key={item.label} className="relative group">
+                                                    <button
+                                                        className={`book-serif text-base pb-1 inline-flex items-baseline gap-1 transition-colors ${
+                                                            groupActive
+                                                                ? 'text-[#1a140d] border-b border-[#1a140d]'
+                                                                : 'text-[#7a6a5d] border-b border-transparent hover:text-[#1a140d] hover:border-[#1a140d]/40'
+                                                        }`}
+                                                    >
+                                                        {item.label}<span className="text-[9px]">▾</span>
+                                                    </button>
+                                                    <div className="absolute left-0 top-full pt-3 hidden group-hover:block z-50">
+                                                        <div className="bg-[#fbf5ec] border border-[#1a140d]/20 min-w-[172px] shadow-[4px_4px_0px_rgba(26,20,13,0.12)]">
+                                                            {item.children.map((child, ci) => {
+                                                                const active = currentView === child.key;
+                                                                return (
+                                                                    <button
+                                                                        key={child.key}
+                                                                        onClick={() => goToView(child.key)}
+                                                                        className={`book-serif w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 ${ci > 0 ? 'border-t border-[#1a140d]/10' : ''} ${
+                                                                            active ? 'text-[#1a140d] bg-[#1a140d]/[0.06]' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.03]'
+                                                                        }`}
+                                                                    >
+                                                                        <span>{child.label}</span>
+                                                                        {child.wip && <span className="mono-ui text-[9px] uppercase tracking-wider bg-[#ff7a1f] text-[#1a140d] px-1.5 py-0.5 shrink-0">开发中</span>}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
                                         const isActive = currentView === item.key;
                                         return (
                                             <button
@@ -2839,17 +3403,38 @@
                                     </button>
                                     <div className={`absolute right-0 top-full mt-4 w-60 ${isMenuOpen ? 'block' : 'hidden'}`}>
                                         <div className="bg-[#fbf5ec] border border-[#1a140d]/20 overflow-hidden">
-                                            {navItems.map((item, idx) => {
+                                            {navItems.map((item) => {
+                                                if (item.children) {
+                                                    return (
+                                                        <div key={item.label}>
+                                                            <div className="book-serif px-5 pt-3 pb-1 text-[10px] uppercase tracking-[0.22em] text-[#a08c7d] border-t border-[#1a140d]/10">{item.label}</div>
+                                                            {item.children.map((child) => {
+                                                                const active = currentView === child.key;
+                                                                return (
+                                                                    <button
+                                                                        key={child.key}
+                                                                        onClick={() => goToView(child.key)}
+                                                                        className={`book-serif w-full text-left pl-9 pr-5 py-2.5 flex items-center justify-between gap-2 ${
+                                                                            active ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
+                                                                        }`}
+                                                                    >
+                                                                        <span>{child.label}</span>
+                                                                        {child.wip && <span className="mono-ui text-[9px] uppercase tracking-wider bg-[#ff7a1f] text-[#1a140d] px-1.5 py-0.5">开发中</span>}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    );
+                                                }
                                                 const isActive = currentView === item.key;
                                                 return (
                                                     <button
                                                         key={item.key}
                                                         onClick={() => goToView(item.key)}
-                                                        className={`book-serif w-full text-left px-5 py-3 flex items-baseline gap-3 ${idx > 0 ? 'border-t border-[#1a140d]/10' : ''} ${
+                                                        className={`book-serif w-full text-left px-5 py-3 flex items-baseline gap-3 border-t border-[#1a140d]/10 ${
                                                             isActive ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
                                                         }`}
                                                     >
-                                                        <span className="book-serif italic text-[#a08c7d] text-sm w-6">{toRoman(idx + 1)}.</span>
                                                         <span>{item.label}</span>
                                                     </button>
                                                 );
@@ -2881,12 +3466,21 @@
                         />
                     ) : currentView === 'explorer' ? (
                         <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8">
-                             <ExplorerView 
-                                availableCourses={availableCourses} 
-                                onAddCourse={addCourse} 
-                                switchToOptimizer={() => goToView('optimizer')} 
+                             <ExplorerView
+                                availableCourses={availableCourses}
+                                onAddCourse={addCourse}
+                                switchToOptimizer={() => goToView('optimizer')}
                                 onViewTeacher={(name) => setViewingTeacher(name)}
+                                onViewCourse={(code) => setInsightCourse(code)}
                              />
+                        </div>
+                    ) : currentView === 'career' ? (
+                        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8">
+                            <CareerPlannerView
+                                onViewCourse={(code) => setInsightCourse(code)}
+                                onAddCourse={addCourse}
+                                switchToOptimizer={() => goToView('optimizer')}
+                            />
                         </div>
                     ) : currentView === 'teachers' ? (
                         <TeacherListView onViewTeacher={(name) => setViewingTeacher(name)} />
@@ -2947,7 +3541,7 @@
                                                         <div className="flex justify-between items-start w-full">
                                                             <span className="font-bold text-xs bg-black text-white px-1 mb-1 inline-block">{course.code}</span>
                                                             <div className="flex gap-2">
-                                                                <button className="text-black opacity-40 hover:opacity-100 hover:text-blue-600 transition-opacity" onClick={(e) => { e.stopPropagation(); setViewingCourse(course); }} title="View Details"><Info className="w-4 h-4" /></button>
+                                                                <button className="text-black opacity-40 hover:opacity-100 hover:text-blue-600 transition-opacity" onClick={(e) => { e.stopPropagation(); setInsightCourse(course.code); }} title="课程详情"><Info className="w-4 h-4" /></button>
                                                                 <button className="text-black opacity-20 group-hover:opacity-100 group-hover:text-red-600 transition-opacity" onClick={(e) => { e.stopPropagation(); removeCourse(course.code); }}><Trash2 className="w-4 h-4" /></button>
                                                             </div>
                                                         </div>
@@ -3047,6 +3641,13 @@
                     )}
 
                     {viewingCourse && <CourseDetailsModal course={viewingCourse} onClose={() => setViewingCourse(null)} />}
+                    {insightCourse && <CourseInsightModal
+                        initialCode={insightCourse}
+                        onClose={() => setInsightCourse(null)}
+                        onViewTeacher={(name) => setViewingTeacher(name)}
+                        onAddCourse={addCourse}
+                        switchToOptimizer={() => goToView('optimizer')}
+                    />}
                     {viewingTeacher && <TeacherProfileModal teacherName={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
                     {viewingRoom && <ClassroomDetailModal room={viewingRoom} onClose={() => setViewingRoom(null)} />}
                     {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={setUser} />}
