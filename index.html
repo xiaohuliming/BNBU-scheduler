@@ -863,9 +863,22 @@
 
         const CourseRefChip = ({ item, onClick }) => {
             // Codes not in the catalog (legacy / equivalent codes referenced only
-            // inside prerequisite rules, e.g. GCLA1903 = old code for UCLC1013)
-            // have no title and no detail page — show a muted, non-clickable tag.
+            // inside prerequisite rules, e.g. GCLA1903 = old code for UCLC1013).
+            // If we know its current-catalog equivalent, link to that instead.
             if (!item.title) {
+                if (item.equiv) {
+                    return (
+                        <button
+                            onClick={() => onClick && onClick(item.equiv.code)}
+                            title={`旧课程代码，等价于 ${item.equiv.code} ${item.equiv.title}`}
+                            className="inline-flex items-center border-2 border-black font-bold text-xs bg-gray-50 transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                        >
+                            <span className="bg-gray-400 text-white px-1.5 py-1">{item.code}</span>
+                            <span className="px-1.5 py-1 text-gray-600">≈ {item.equiv.code}</span>
+                            <span className="pr-1.5 py-1 truncate max-w-[9rem] text-gray-500">{item.equiv.title}</span>
+                        </button>
+                    );
+                }
                 return (
                     <span title="旧课程代码 / 等价课程，不在课程库中" className="inline-flex items-center border-2 border-black/25 font-bold text-xs bg-gray-50 text-gray-500">
                         <span className="bg-gray-400 text-white px-1.5 py-1">{item.code}</span>
@@ -1076,6 +1089,16 @@
                                         <p className="font-bold text-gray-500">无前置课要求，可直接选修。</p>
                                     )}
                                 </InsightSection>
+
+                                {/* Equivalent / mutually exclusive courses */}
+                                {data.equivalents && data.equivalents.length > 0 && (
+                                    <InsightSection icon={RefreshCcw} title="等价 / 互斥课程" accent="#eef0f2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {data.equivalents.map((e, i) => <CourseRefChip key={i} item={e} onClick={navTo} />)}
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-2 font-medium">与本课内容高度重合，通常只能修读其一；部分可等价认定学分（以教务审核为准）</p>
+                                    </InsightSection>
+                                )}
 
                                 {/* Career & Further study */}
                                 {e && e.career && (
@@ -3167,11 +3190,12 @@
         const PlanCourseChip = ({ c, onViewCourse }) => (
             <button
                 onClick={() => c.in_catalog && onViewCourse && onViewCourse(c.code)}
-                title={`${c.code} ${c.title}${c.plan && c.plan.length ? ` · 建议 Y${c.plan[0][0]}S${c.plan[0][1]}` : ''}`}
+                title={`${c.code} ${c.title}${c.via ? ` · 以 ${c.via} 等价认定` : ''}${c.plan && c.plan.length ? ` · 建议 Y${c.plan[0][0]}S${c.plan[0][1]}` : ''}`}
                 className={`inline-flex items-center gap-1.5 border-2 text-left font-bold text-xs transition-all ${c.in_catalog ? 'border-black hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'border-black/30 cursor-default'} ${c.completed ? 'bg-[#d6ff62]' : 'bg-white'}`}
             >
                 <span className={`px-1.5 py-1 text-white ${c.completed ? 'bg-black' : c.in_catalog ? 'bg-black/80' : 'bg-gray-400'}`}>{c.code}</span>
                 <span className="truncate max-w-[10rem] py-1">{c.title}</span>
+                {c.via && <span className="mr-1 shrink-0 text-[10px] bg-black text-[#d6ff62] px-1 py-0.5" title={`已修 ${c.via}，按等价课认定`}>≈{c.via}</span>}
                 {c.completed && <Check className="w-3.5 h-3.5 mr-1.5 shrink-0" />}
                 {!c.completed && c.plan && c.plan.length > 0 && <span className="mr-1.5 text-[10px] text-gray-400 shrink-0">Y{c.plan[0][0]}S{c.plan[0][1]}</span>}
             </button>

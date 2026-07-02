@@ -806,6 +806,16 @@ def get_course_textbooks():
     return _load_json_cached(COURSE_TEXTBOOKS_PATH, _textbooks_cache)
 
 
+# Course equivalences derived from prereq exclusion/alternative texts
+# (build_equivalences.py). Symmetric pairs, no transitive closure.
+COURSE_EQUIV_PATH = os.path.join(APP_ROOT, 'course_equivalences.json')
+_equiv_cache = {"mtime": None, "data": None}
+
+
+def get_course_equivalences():
+    return _load_json_cached(COURSE_EQUIV_PATH, _equiv_cache)
+
+
 # Programme handbooks (four-year study plans) parsed by build_programmes.py
 PROGRAMME_REQ_PATH = os.path.join(APP_ROOT, 'programme_requirements.json')
 _programme_req_cache = {"mtime": None, "data": None}
@@ -882,15 +892,24 @@ def get_course_desc_extra():
 
 
 def _resolve_course_refs(codes, catalog, enrichment):
+    equiv_map = get_course_equivalences()
     resolved = []
     for code in codes:
         course = catalog.get(code)
-        resolved.append({
+        entry = {
             "code": code,
             "title": course["title"] if course else "",
             "offered": bool(course["offered"]) if course else False,
             "has_enrichment": code in enrichment,
-        })
+        }
+        if not course:
+            # legacy code: point at its current-catalog equivalent if we know one
+            for e in equiv_map.get(code, []):
+                ref = catalog.get(e)
+                if ref:
+                    entry["equiv"] = {"code": e, "title": ref["title"], "offered": bool(ref["offered"])}
+                    break
+        resolved.append(entry)
     return resolved
 
 
@@ -948,6 +967,18 @@ def get_course_detail(code):
 
     # Which programme study plans (handbooks) include this course
     result["programmes"] = course_programme_tags(code)
+
+    # Equivalent / mutually-exclusive courses (registry substitution relation)
+    equiv_map = get_course_equivalences()
+    result["equivalents"] = [
+        {
+            "code": e,
+            "title": catalog[e]["title"] if e in catalog else "",
+            "offered": bool(catalog[e]["offered"]) if e in catalog else False,
+            "in_catalog": e in catalog,
+        }
+        for e in equiv_map.get(code, [])
+    ]
     return jsonify(result)
 
 
@@ -1188,36 +1219,73 @@ def programme_map():
             "units": entry.get("units") or course_units(code),
             "plan": entry.get("plan", []),
             "completed": code in completed,
+            "via": None,
             "offered": bool(ref["offered"]) if ref else False,
             "in_catalog": ref is not None,
         }
 
+    equiv_map = get_course_equivalences()
     matched = set()
     sections_out = []
     for section in plan.get("sections", []):
         courses = [resolve(c) for c in section.get("courses", [])]
         pool = [resolve(c) for c in section.get("pool", [])]
-        gained = 0
         for c in courses:
             if c["completed"]:
-                gained += c["units"]
                 matched.add(c["code"])
         for c in pool:
-            if c["completed"] and c["code"] not in matched:
-                gained += c["units"]
+            if c["completed"]:
                 matched.add(c["code"])
-        auto = bool(courses or pool)
         sections_out.append({
             "numeral": section["numeral"],
             "title": section["title"],
             "units": section["units"],
             "courses": courses,
             "pool": pool,
-            "gained": min(gained, section["units"]) if auto else 0,
-            "auto": auto,
+            "gained": 0,
+            "auto": bool(courses or pool),
             "estimated": False,
             "matched_extra": [],
         })
+
+    # Equivalence pass: an uncompleted requirement counts as satisfied when the
+    # student completed a registry-equivalent course (e.g. DS1013 for AI1003),
+    # as long as that course isn't itself a listed requirement or already used.
+    # Guard: mutual exclusion alone is overlap, not substitutability (the audit
+    # does NOT count MATH1073 for MATH1123) — additionally require one course
+    # title to contain the other ("Python Programming" ⊂ "Python Programming
+    # for Beginners").
+    def _norm_title(text):
+        text = re.sub(r'\([^)]*\)', ' ', str(text or ''))
+        return ' '.join(re.sub(r'[^a-z0-9]+', ' ', text.lower()).split())
+
+    def _substitutable(req_title, cand_code):
+        a = _norm_title(req_title)
+        b = _norm_title(catalog.get(cand_code, {}).get('title', ''))
+        return bool(a) and bool(b) and (a in b or b in a)
+
+    all_listed = {c["code"] for s in sections_out for c in s["courses"]}
+    for s in sections_out:
+        for c in s["courses"]:
+            if c["completed"]:
+                continue
+            via = next((e for e in equiv_map.get(c["code"], [])
+                        if e in completed and e not in matched and e not in all_listed
+                        and _substitutable(c["title"], e)), None)
+            if via:
+                c["completed"] = True
+                c["via"] = via
+                matched.add(via)
+
+    # Unit tally per section (direct + via for listed courses; pool dedup'd)
+    pool_counted = set()
+    for s in sections_out:
+        gained = sum(c["units"] for c in s["courses"] if c["completed"])
+        for c in s["pool"]:
+            if c["completed"] and c["code"] not in all_listed and c["code"] not in pool_counted:
+                gained += c["units"]
+                pool_counted.add(c["code"])
+        s["gained"] = min(gained, s["units"]) if s["auto"] else 0
 
     # Heuristic for GE / Free-elective sections: distribute leftover completed
     # courses (GE by code prefix first, the rest to free electives). Estimates.
@@ -1258,7 +1326,7 @@ def programme_map():
         "unassigned": [
             {"code": c, "title": catalog.get(c, {}).get("title", "")} for c in leftovers
         ],
-        "note": "主修/核心课按官方修读计划核对；GE 与自由选修为按已修课程的估算，请以 MIS 毕业审核为准。",
+        "note": "主修/核心课按官方修读计划核对（含等价课自动认定，标 ≈ 号）；GE 与自由选修为按已修课程的估算，请以 MIS 毕业审核为准。",
     })
 
 
