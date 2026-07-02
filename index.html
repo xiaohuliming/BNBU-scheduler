@@ -550,28 +550,28 @@
                             />
                             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold">
-                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                        <div className="flex overflow-x-auto pb-1 -mx-1 px-1 md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold md:overflow-visible">
+                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Offering Unit</option>
                                 {uniqueOptions.units.map(u => <option key={u} value={u}>{u}</option>)}
                              </select>
-                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Programme</option>
                                 {uniqueOptions.programmes.map(p => <option key={p} value={p}>{p}</option>)}
                              </select>
-                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Type</option>
                                 {uniqueOptions.types.map(t => <option key={t} value={t}>{t}</option>)}
                              </select>
-                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Day</option>
                                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <option key={d} value={d}>{d}</option>)}
                              </select>
-                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Hours</option>
                                 {uniqueOptions.hours.map(h => <option key={h} value={h}>{h}</option>)}
                              </select>
-                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="border-2 border-black p-2 bg-white focus:bg-[#a3e635] focus:outline-none">
+                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Session</option>
                                 {uniqueOptions.sessions.map(s => <option key={s} value={s}>{s}</option>)}
                              </select>
@@ -597,7 +597,7 @@
                             <div key={idx} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group">
                               <div className="flex justify-between items-start mb-2">
                                 <button onClick={() => onViewCourse && onViewCourse(course.code)} title="查看课程详情" className="bg-black text-white px-2 py-1 font-black text-lg hover:bg-[#ec4899] transition-colors">{course.code}</button>
-                                <span className="bg-[#a3e635] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
+                                <span className="bg-[#d6ff62] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
                               </div>
                               <h3 onClick={() => onViewCourse && onViewCourse(course.code)} className="font-black text-xl leading-tight mb-3 min-h-[3rem] cursor-pointer hover:underline decoration-2 underline-offset-2">{course.title}</h3>
                               <div className="space-y-2 text-sm font-bold text-gray-700 flex-grow">
@@ -627,7 +627,7 @@
                                 </button>
                                 {cartCodes.includes(course.code) ? (
                                   <button onClick={() => onRemoveCourse && onRemoveCourse(course.code)} title="已在选课购物车，点击移除"
-                                    className="bg-[#a3e635] text-black font-black py-3 border-2 border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
+                                    className="bg-[#d6ff62] text-black font-black py-3 border-2 border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
                                     <Check className="w-4 h-4" /> 已加入
                                   </button>
                                 ) : (
@@ -708,7 +708,7 @@
             <button
                 onClick={() => onClick && item.code && onClick(item.code)}
                 title={item.title || item.code}
-                className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#a3e635]' : 'bg-white'}`}
+                className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#d6ff62]' : 'bg-white'}`}
             >
                 <span className="bg-black text-white px-1.5 py-1">{item.code}</span>
                 <span className="truncate max-w-[11rem] py-1">{item.title || ''}</span>
@@ -769,12 +769,12 @@
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap mb-1">
                                         {history.length > 0 && (
-                                            <button onClick={goBack} className="bg-white text-black px-2 py-0.5 font-black text-xs border-2 border-white hover:bg-[#a3e635] flex items-center gap-1"><ArrowRight className="w-3 h-3 rotate-180" /> 返回</button>
+                                            <button onClick={goBack} className="bg-white text-black px-2 py-0.5 font-black text-xs border-2 border-white hover:bg-[#d6ff62] flex items-center gap-1"><ArrowRight className="w-3 h-3 rotate-180" /> 返回</button>
                                         )}
                                         <span className="bg-[#d6ff62] text-black px-2 py-0.5 font-black text-lg">{code}</span>
                                         {data && <span className="bg-white/20 px-2 py-0.5 font-bold text-xs border border-white/40">{data.units || '—'} Units</span>}
                                         {data && (data.offered
-                                            ? <span className="bg-[#a3e635] text-black px-2 py-0.5 font-bold text-xs">本学期开设</span>
+                                            ? <span className="bg-[#d6ff62] text-black px-2 py-0.5 font-bold text-xs">本学期开设</span>
                                             : <span className="bg-white/10 text-white/70 px-2 py-0.5 font-bold text-xs border border-white/30">本学期未开设</span>)}
                                     </div>
                                     <h2 className="text-xl md:text-2xl font-black leading-tight truncate">{data ? data.title : '加载中…'}</h2>
@@ -863,7 +863,7 @@
 
                                 {/* Career & Further study */}
                                 {e && e.career && (
-                                    <InsightSection icon={Briefcase} title="就业方向" accent="#a3e635">
+                                    <InsightSection icon={Briefcase} title="就业方向" accent="#d6ff62">
                                         <p className="leading-relaxed text-[15px] whitespace-pre-line">{e.career}</p>
                                     </InsightSection>
                                 )}
@@ -967,7 +967,7 @@
                                     <button
                                         onClick={() => onRemoveCourse && onRemoveCourse(data.code)}
                                         title="已在选课购物车，点击移除"
-                                        className="bg-[#a3e635] text-black font-black py-2.5 px-5 border-2 border-black active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                        className="bg-[#d6ff62] text-black font-black py-2.5 px-5 border-2 border-black active:translate-y-0.5 transition-colors flex items-center gap-2">
                                         <Check className="w-5 h-5" /> 已在购物车 · 点击移除
                                     </button>
                                 ) : (
@@ -1032,7 +1032,7 @@
                             </div>
                             <div className="flex justify-end gap-4">
                                 <button onClick={onClose} className="px-6 py-2 font-bold border-2 border-black hover:bg-gray-100">Cancel</button>
-                                <button onClick={handleSave} disabled={saving} className="px-6 py-2 font-bold bg-black text-white border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors flex items-center gap-2">
+                                <button onClick={handleSave} disabled={saving} className="px-6 py-2 font-bold bg-black text-white border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors flex items-center gap-2">
                                     {saving ? <Loader2 className="animate-spin w-4 h-4"/> : <React.Fragment><CheckSquare className="w-4 h-4"/> Save Notes</React.Fragment>}
                                 </button>
                             </div>
@@ -1099,7 +1099,7 @@
             };
 
             const ratingLabels = [
-                { val: 5, label: "🔥 夯", color: "bg-[#a3e635]" },
+                { val: 5, label: "🔥 夯", color: "bg-[#d6ff62]" },
                 { val: 4, label: "🌟 顶级", color: "bg-purple-200" },
                 { val: 3, label: "🧐 人上人", color: "bg-blue-200" },
                 { val: 2, label: "😐 NPC", color: "bg-yellow-200" },
@@ -1118,7 +1118,7 @@
                             <div>
                                 <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">{teacherName}</h2>
                                 <div className="flex flex-wrap items-center gap-4">
-                                    <div className="bg-black text-[#a3e635] px-3 py-1 font-black text-xl border-2 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                                    <div className="bg-black text-[#d6ff62] px-3 py-1 font-black text-xl border-2 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
                                         RATING: {data ? (data.average_rating ? data.average_rating.toFixed(1) : "N/A") : "..."}
                                     </div>
                                     <span className="font-bold text-sm bg-white text-black px-2 py-1">{data ? data.rating_count : 0} VOTES</span>
@@ -1197,7 +1197,7 @@
                                                     <button 
                                                         onClick={handleSubmit}
                                                         disabled={submitting || !userRating}
-                                                        className="w-full bg-black text-white px-4 py-3 font-black text-lg border-2 border-black hover:bg-[#a3e635] hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                        className="w-full bg-black text-white px-4 py-3 font-black text-lg border-2 border-black hover:bg-[#d6ff62] hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                     >
                                                         {submitting ? <Loader2 className="animate-spin" /> : "SUBMIT REVIEW"}
                                                     </button>
@@ -1545,7 +1545,7 @@
                                 <CheckSquare className="w-10 h-10" /> My Tasks
                             </h1>
                             <div className="flex gap-4 flex-wrap">
-                                <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 font-bold hover:text-[#a3e635] bg-black text-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
+                                <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 font-bold hover:text-[#d6ff62] bg-black text-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
                                     <Plus className="w-5 h-5" /> Add Task
                                 </button>
                                 <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 font-bold hover:text-[#3b82f6] bg-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
@@ -1576,7 +1576,7 @@
                                                         </div>
                                                     </div>
                                                     <span className={`text-[10px] font-black uppercase px-2 py-1 border-2 border-black ${
-                                                        notificationDraft.email_service_configured ? 'bg-[#a3e635] text-black' : 'bg-yellow-100 text-black'
+                                                        notificationDraft.email_service_configured ? 'bg-[#d6ff62] text-black' : 'bg-yellow-100 text-black'
                                                     }`}>
                                                         {notificationDraft.email_service_configured ? 'SMTP Ready' : 'Need SMTP'}
                                                     </span>
@@ -1643,7 +1643,7 @@
                                                     <button
                                                         type="submit"
                                                         disabled={notificationSaving}
-                                                        className="bg-black text-white font-black py-2 border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors disabled:opacity-60"
+                                                        className="bg-black text-white font-black py-2 border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors disabled:opacity-60"
                                                     >
                                                         {notificationSaving ? '保存中' : '保存'}
                                                     </button>
@@ -1680,7 +1680,7 @@
                                 </button>
                                 <button 
                                     onClick={() => setViewMode('completed')}
-                                    className={`px-4 py-1 font-bold border-2 border-black transition-all ${viewMode === 'completed' ? 'bg-[#a3e635] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-gray-200'}`}
+                                    className={`px-4 py-1 font-bold border-2 border-black transition-all ${viewMode === 'completed' ? 'bg-[#d6ff62] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-gray-200'}`}
                                 >
                                     Completed
                                 </button>
@@ -1748,7 +1748,7 @@
                                         onChange={e => setNewTodo({...newTodo, description: e.target.value})}
                                     />
                                 </div>
-                                <button type="submit" className="col-span-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors">ADD TASK</button>
+                                <button type="submit" className="col-span-full bg-black text-white font-black py-3 border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors">ADD TASK</button>
                             </form>
                         </div>
                     )}
@@ -1818,7 +1818,7 @@
                                             )}
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
-                                                className={`flex-1 text-center font-bold py-2 border-2 border-black transition-colors flex items-center justify-center gap-2 text-xs ${todo.is_completed ? 'bg-gray-200 hover:bg-gray-300' : 'bg-[#a3e635] hover:bg-green-400'}`}
+                                                className={`flex-1 text-center font-bold py-2 border-2 border-black transition-colors flex items-center justify-center gap-2 text-xs ${todo.is_completed ? 'bg-gray-200 hover:bg-gray-300' : 'bg-[#d6ff62] hover:bg-green-400'}`}
                                             >
                                                 {todo.is_completed ? 'UNDO' : 'DONE'} <CheckSquare className="w-3 h-3" />
                                             </button>
@@ -2390,7 +2390,7 @@
                                 placeholder="Search Teachers..." 
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-white border-2 border-black p-2 pl-10 font-bold focus:outline-none focus:bg-[#a3e635] transition-colors"
+                                className="w-full bg-white border-2 border-black p-2 pl-10 font-bold focus:outline-none focus:bg-[#d6ff62] transition-colors"
                             />
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
@@ -2412,7 +2412,7 @@
                                     
                                     <div className="flex justify-between items-center mt-auto">
                                         <div className="flex items-center gap-2">
-                                            <div className={`px-2 py-1 font-black text-sm border-2 border-black ${t.rating_count > 0 ? (t.average_rating >= 4 ? 'bg-[#a3e635]' : t.average_rating >= 3 ? 'bg-blue-200' : 'bg-yellow-200') : 'bg-gray-100 text-gray-500'}`}>
+                                            <div className={`px-2 py-1 font-black text-sm border-2 border-black ${t.rating_count > 0 ? (t.average_rating >= 4 ? 'bg-[#d6ff62]' : t.average_rating >= 3 ? 'bg-blue-200' : 'bg-yellow-200') : 'bg-gray-100 text-gray-500'}`}>
                                                 {t.rating_count > 0 ? t.average_rating.toFixed(1) : "N/A"}
                                             </div>
                                             <span className="text-xs font-bold text-gray-500">{t.rating_count} ratings</span>
@@ -2518,13 +2518,13 @@
                                             type="text" 
                                             value={displayName}
                                             onChange={(e) => setDisplayName(e.target.value)}
-                                            className="flex-1 border-2 border-black p-2 font-bold focus:bg-[#a3e635] focus:outline-none transition-colors"
+                                            className="flex-1 border-2 border-black p-2 font-bold focus:bg-[#d6ff62] focus:outline-none transition-colors"
                                             placeholder="Enter display name"
                                         />
                                         <button 
                                             onClick={handleUpdateProfile}
                                             disabled={updating || displayName === user.display_name}
-                                            className="bg-black text-white px-4 font-bold border-2 border-black hover:bg-[#a3e635] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            className="bg-black text-white px-4 font-bold border-2 border-black hover:bg-[#d6ff62] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             {updating ? <Loader2 className="animate-spin w-4 h-4" /> : "SAVE"}
                                         </button>
@@ -3024,14 +3024,14 @@
                             <h2 className="text-4xl font-black uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">职业规划 <span className="text-[#3b82f6]">SKILLPATH</span></h2>
                             <span className="bg-[#ff7a1f] text-black text-xs font-black uppercase tracking-wider px-2 py-1 border-2 border-black -rotate-2">开发中 BETA</span>
                         </div>
-                        <p className="font-bold text-gray-600 mt-2">选定职业目标 → 按<span className="bg-[#a3e635] px-1 border border-black">技能缺口</span>推荐能补齐差距的课程，每条都给出理由</p>
+                        <p className="font-bold text-gray-600 mt-2">选定职业目标 → 按<span className="bg-[#d6ff62] px-1 border border-black">技能缺口</span>推荐能补齐差距的课程，每条都给出理由</p>
                     </div>
                     {/* Input card */}
                     <div className="bg-white border-4 border-black p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] space-y-4">
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-black uppercase block mb-1">职业目标</label>
-                                <select value={career} onChange={e => setCareer(e.target.value)} className="w-full border-2 border-black p-3 font-bold bg-white focus:bg-[#a3e635] focus:outline-none">
+                                <select value={career} onChange={e => setCareer(e.target.value)} className="w-full border-2 border-black p-3 font-bold bg-white focus:bg-[#d6ff62] focus:outline-none">
                                     <option value="">— 选择目标职业 —</option>
                                     {Object.keys(grouped).map(fac => (
                                         <optgroup key={fac} label={FACULTY_LABEL[fac] || fac}>
@@ -3047,7 +3047,7 @@
                                 <div className="flex gap-2">
                                     <input value={completedText} onChange={e => setCompletedText(e.target.value)} placeholder="如 COMP1003, AI1013 或上传成绩单"
                                         className="flex-1 min-w-0 border-2 border-black p-3 font-bold bg-gray-100 focus:bg-white focus:outline-none" />
-                                    <label className={`shrink-0 border-2 border-black px-3 font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${uploading ? 'bg-gray-200 cursor-wait' : 'bg-white hover:bg-[#a3e635]'}`} title="上传成绩单 / 毕业审核报告 PDF，自动识别已修课程">
+                                    <label className={`shrink-0 border-2 border-black px-3 font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${uploading ? 'bg-gray-200 cursor-wait' : 'bg-white hover:bg-[#d6ff62]'}`} title="上传成绩单 / 毕业审核报告 PDF，自动识别已修课程">
                                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                                         <span className="hidden sm:inline text-sm">成绩单</span>
                                         <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleTranscriptUpload} disabled={uploading} />
@@ -3093,7 +3093,7 @@
                                         <span className="font-mono font-black text-sm">已具备 {gapHave}/{gapTotal} · {coverage}%</span>
                                     </div>
                                     <div className="w-full h-3 border-2 border-black bg-gray-100 mb-3">
-                                        <div className="h-full bg-[#a3e635]" style={{ width: coverage + '%' }} />
+                                        <div className="h-full bg-[#d6ff62]" style={{ width: coverage + '%' }} />
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
                                         {result.skill_gap.map((s, i) => <SkillChip key={i} name={s.name} category={s.category} muted={!s.have} title={s.have ? '已具备' : '待补齐'} />)}
@@ -3112,7 +3112,7 @@
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <span className="bg-black text-white font-black text-xs w-6 h-6 flex items-center justify-center shrink-0">{idx + 1}</span>
                                                     <button onClick={() => onViewCourse && onViewCourse(r.code)} className="bg-[#d6ff62] border-2 border-black px-1.5 font-black hover:bg-[#ec4899] transition-colors">{r.code}</button>
-                                                    {r.offered ? <span className="bg-[#a3e635] border border-black text-[10px] font-bold px-1">开设</span> : <span className="bg-gray-100 border border-gray-300 text-[10px] font-bold px-1 text-gray-500">未开设</span>}
+                                                    {r.offered ? <span className="bg-[#d6ff62] border border-black text-[10px] font-bold px-1">开设</span> : <span className="bg-gray-100 border border-gray-300 text-[10px] font-bold px-1 text-gray-500">未开设</span>}
                                                 </div>
                                                 <span className="text-[10px] font-bold text-gray-400 shrink-0">{r.units}学分</span>
                                             </div>
@@ -3132,7 +3132,7 @@
                                             <div className="mt-auto grid grid-cols-2 gap-2 pt-1">
                                                 <button onClick={() => onViewCourse && onViewCourse(r.code)} className="bg-white text-black font-bold py-2 border-2 border-black hover:bg-[#d6ff62] transition-colors text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4" /> 详情</button>
                                                 {cartCodes.includes(r.code) ? (
-                                                    <button onClick={() => onRemoveCourse && onRemoveCourse(r.code)} title="已在选课购物车，点击移除" className="bg-[#a3e635] text-black font-bold py-2 border-2 border-black transition-colors text-sm flex items-center justify-center gap-1"><Check className="w-4 h-4" /> 已加入</button>
+                                                    <button onClick={() => onRemoveCourse && onRemoveCourse(r.code)} title="已在选课购物车，点击移除" className="bg-[#d6ff62] text-black font-bold py-2 border-2 border-black transition-colors text-sm flex items-center justify-center gap-1"><Check className="w-4 h-4" /> 已加入</button>
                                                 ) : (
                                                     <button onClick={() => { onAddCourse && onAddCourse({ code: r.code, name: r.title }, ''); }} className="bg-black text-white font-bold py-2 border-2 border-black hover:bg-[#ec4899] transition-colors text-sm flex items-center justify-center gap-1"><Plus className="w-4 h-4" /> 加入</button>
                                                 )}
@@ -3193,7 +3193,7 @@
                             </div>
                             <div className="p-3 border-t-4 border-black flex items-center justify-between gap-2 shrink-0">
                                 <button onClick={onClear} className="text-xs font-bold underline text-gray-500 hover:text-red-600">清空</button>
-                                <button onClick={onGoOptimize} className="bg-black text-white font-black py-2 px-4 border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors flex items-center gap-1.5 text-sm">
+                                <button onClick={onGoOptimize} className="bg-black text-white font-black py-2 px-4 border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors flex items-center gap-1.5 text-sm">
                                     去排课 <ArrowRight className="w-4 h-4" />
                                 </button>
                             </div>
@@ -3240,6 +3240,20 @@
             const [user, setUser] = useState(null);
             const [showAuthModal, setShowAuthModal] = useState(false);
             const [isMenuOpen, setIsMenuOpen] = useState(false);
+            const mobileMenuRef = useRef(null);
+            useEffect(() => {
+                if (!isMenuOpen) return;
+                const onPointerDown = (e) => {
+                    if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) setIsMenuOpen(false);
+                };
+                const onKeyDown = (e) => { if (e.key === 'Escape') setIsMenuOpen(false); };
+                document.addEventListener('pointerdown', onPointerDown);
+                document.addEventListener('keydown', onKeyDown);
+                return () => {
+                    document.removeEventListener('pointerdown', onPointerDown);
+                    document.removeEventListener('keydown', onKeyDown);
+                };
+            }, [isMenuOpen]);
 
             useEffect(() => {
                 fetch('/api/user').then(res => res.json()).then(data => {
@@ -3406,7 +3420,7 @@
                                 </button>
 
                                 <div className="hidden lg:flex items-baseline gap-7">
-                                    {navItems.map((item) => {
+                                    {navItems.filter(item => item.children || (item.key !== 'home' && item.key !== 'settings')).map((item) => {
                                         if (item.children) {
                                             const groupActive = item.children.some(c => c.key === currentView);
                                             return (
@@ -3421,7 +3435,7 @@
                                                     >
                                                         {item.label}<span className="text-[9px]">▾</span>
                                                     </button>
-                                                    <div className="absolute left-0 top-full pt-3 hidden group-hover:block z-50">
+                                                    <div className="absolute left-0 top-full pt-3 hidden group-hover:block group-focus-within:block z-50">
                                                         <div className="bg-[#fbf5ec] border border-[#1a140d]/20 min-w-[172px] shadow-[4px_4px_0px_rgba(26,20,13,0.12)]">
                                                             {item.children.map((child, ci) => {
                                                                 const active = currentView === child.key;
@@ -3462,6 +3476,16 @@
                             </div>
 
                             <div className="flex items-baseline gap-5">
+                                <button
+                                    onClick={() => goToView('settings')}
+                                    className={`hidden lg:inline book-serif text-base pb-1 transition-colors ${
+                                        currentView === 'settings'
+                                            ? 'text-[#1a140d] border-b border-[#1a140d]'
+                                            : 'text-[#7a6a5d] border-b border-transparent hover:text-[#1a140d] hover:border-[#1a140d]/40'
+                                    }`}
+                                >
+                                    设置
+                                </button>
                                 {user ? (
                                     <div className="hidden md:flex items-baseline gap-2">
                                         <span className="mono-ui text-[10px] uppercase tracking-[0.24em] text-[#8a7666]">Reader</span>
@@ -3479,51 +3503,61 @@
                                     </button>
                                 )}
 
-                                <div className="lg:hidden relative z-50">
+                                <div className="lg:hidden relative z-50" ref={mobileMenuRef}>
                                     <button
                                         className="book-serif flex items-baseline gap-2 text-[#1a140d] border-b border-[#1a140d]/40 hover:border-[#1a140d] pb-0.5 transition-colors"
                                         onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                        aria-haspopup="true"
+                                        aria-expanded={isMenuOpen}
                                     >
                                         目录
                                     </button>
-                                    <div className={`absolute right-0 top-full mt-4 w-60 ${isMenuOpen ? 'block' : 'hidden'}`}>
+                                    <div className={`absolute right-0 top-full mt-4 w-60 ${isMenuOpen ? 'block animate-fade-in' : 'hidden'}`}>
                                         <div className="bg-[#fbf5ec] border border-[#1a140d]/20 overflow-hidden">
-                                            {navItems.map((item) => {
-                                                if (item.children) {
-                                                    return (
-                                                        <div key={item.label}>
-                                                            <div className="book-serif px-5 pt-3 pb-1 text-[10px] uppercase tracking-[0.22em] text-[#a08c7d] border-t border-[#1a140d]/10">{item.label}</div>
-                                                            {item.children.map((child) => {
-                                                                const active = currentView === child.key;
-                                                                return (
-                                                                    <button
-                                                                        key={child.key}
-                                                                        onClick={() => goToView(child.key)}
-                                                                        className={`book-serif w-full text-left pl-9 pr-5 py-2.5 flex items-center justify-between gap-2 ${
-                                                                            active ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
-                                                                        }`}
-                                                                    >
-                                                                        <span>{child.label}</span>
-                                                                        {child.wip && <span className="mono-ui text-[9px] uppercase tracking-wider bg-[#ff7a1f] text-[#1a140d] px-1.5 py-0.5">开发中</span>}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    );
-                                                }
-                                                const isActive = currentView === item.key;
-                                                return (
-                                                    <button
-                                                        key={item.key}
-                                                        onClick={() => goToView(item.key)}
-                                                        className={`book-serif w-full text-left px-5 py-3 flex items-baseline gap-3 border-t border-[#1a140d]/10 ${
-                                                            isActive ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
-                                                        }`}
-                                                    >
-                                                        <span>{item.label}</span>
-                                                    </button>
-                                                );
-                                            })}
+                                            {(() => {
+                                                let entryNo = 0;
+                                                const rows = [];
+                                                navItems.forEach((item) => {
+                                                    if (item.children) {
+                                                        rows.push(
+                                                            <div key={`group-${item.label}`} className="book-serif px-5 pt-3 pb-1 text-[10px] uppercase tracking-[0.22em] text-[#a08c7d] border-t border-[#1a140d]/10">{item.label}</div>
+                                                        );
+                                                        item.children.forEach((child) => {
+                                                            entryNo += 1;
+                                                            const active = currentView === child.key;
+                                                            rows.push(
+                                                                <button
+                                                                    key={child.key}
+                                                                    onClick={() => goToView(child.key)}
+                                                                    className={`book-serif w-full text-left pl-6 pr-5 py-2.5 flex items-baseline gap-3 ${
+                                                                        active ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
+                                                                    }`}
+                                                                >
+                                                                    <span className="book-serif italic text-[#a08c7d] text-sm w-7 shrink-0">{toRoman(entryNo)}.</span>
+                                                                    <span className="grow">{child.label}</span>
+                                                                    {child.wip && <span className="mono-ui text-[9px] uppercase tracking-wider bg-[#ff7a1f] text-[#1a140d] px-1.5 py-0.5 shrink-0">开发中</span>}
+                                                                </button>
+                                                            );
+                                                        });
+                                                    } else {
+                                                        entryNo += 1;
+                                                        const active = currentView === item.key;
+                                                        rows.push(
+                                                            <button
+                                                                key={item.key}
+                                                                onClick={() => goToView(item.key)}
+                                                                className={`book-serif w-full text-left px-5 py-3 flex items-baseline gap-3 border-t border-[#1a140d]/10 ${
+                                                                    active ? 'text-[#1a140d] bg-[#1a140d]/5' : 'text-[#3d3025] hover:bg-[#1a140d]/[0.025]'
+                                                                }`}
+                                                            >
+                                                                <span className="book-serif italic text-[#a08c7d] text-sm w-7 shrink-0">{toRoman(entryNo)}.</span>
+                                                                <span>{item.label}</span>
+                                                            </button>
+                                                        );
+                                                    }
+                                                });
+                                                return rows;
+                                            })()}
                                             {!user ? (
                                                 <button onClick={() => { setShowAuthModal(true); setIsMenuOpen(false); }} className="book-serif italic w-full text-left px-5 py-3 text-[#3d3025] border-t border-[#1a140d]/20 hover:bg-[#1a140d]/[0.025]">
                                                     登录
@@ -3587,7 +3621,7 @@
                             <h1 className="text-5xl md:text-7xl font-black text-black tracking-tighter uppercase mb-4 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                                 SCHEDULER<span className="text-[#ec4899]">MAX</span>
                             </h1>
-                            <p className="text-xl font-bold text-gray-800 bg-[#a3e635] inline-block px-4 py-1 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rotate-[-2deg]">
+                            <p className="text-xl font-bold text-gray-800 bg-[#d6ff62] inline-block px-4 py-1 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rotate-[-2deg]">
                                 智能排课 · 自动优化
                             </p>
                         </header>
@@ -3686,7 +3720,7 @@
                                 <div className="bg-[#3b82f6] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
                                     <h2 className="text-3xl font-black text-white mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">开始计算</h2>
                                     <p className="font-bold text-black mb-6">系统将自动尝试所有Session组合以避免时间冲突</p>
-                                    <button onClick={calculateOptimal} disabled={selectedCodes.length === 0 || isCalculating} className="bg-[#a3e635] text-black font-black text-2xl py-6 px-12 border-4 border-black hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:-translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                                    <button onClick={calculateOptimal} disabled={selectedCodes.length === 0 || isCalculating} className="bg-[#d6ff62] text-black font-black text-2xl py-6 px-12 border-4 border-black hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:-translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
                                         {isCalculating ? <React.Fragment><RefreshCcw className="animate-spin w-8 h-8" /> 计算中...</React.Fragment> : <React.Fragment><Calculator className="w-8 h-8" /> 计算最优课表</React.Fragment>}
                                     </button>
                                 </div>
@@ -3706,7 +3740,7 @@
                                             </div>
                                             <div className="grid gap-4">
                                                 {optimalSchedule.flatSchedule.map((slot, idx) => (
-                                                    <div key={`${slot.id}-${idx}`} className="bg-white border-4 border-transparent hover:border-[#a3e635] p-4 flex flex-col md:flex-row justify-between items-center transition-all">
+                                                    <div key={`${slot.id}-${idx}`} className="bg-white border-4 border-transparent hover:border-[#d6ff62] p-4 flex flex-col md:flex-row justify-between items-center transition-all">
                                                         <div className="flex items-center gap-4 w-full md:w-auto">
                                                             <div className={`w-3 h-full self-stretch ${slot.color} border-r-2 border-black mr-2 hidden md:block`}></div>
                                                             <div>
