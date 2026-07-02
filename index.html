@@ -3409,8 +3409,7 @@
                 <div className="min-h-screen bg-transparent font-sans selection:bg-[#1a140d] selection:text-[#fbf5ec] pb-8">
                     <nav className="sticky top-0 z-50 border-b border-[#1a140d]/15 bg-[#faf4ea]">
                         <div className="max-w-6xl mx-auto px-6 md:px-10 py-5 flex justify-between items-baseline relative gap-6">
-                            <div className="flex items-baseline gap-8 min-w-0">
-                                <button className="text-left shrink-0 group" onClick={() => goToView('home')}>
+                            <button className="text-left shrink-0 group" onClick={() => goToView('home')}>
                                     <span className="book-serif block text-xl md:text-2xl font-normal tracking-[0.04em] text-[#1a140d]">
                                         Maxcourse
                                     </span>
@@ -3419,7 +3418,7 @@
                                     </span>
                                 </button>
 
-                                <div className="hidden lg:flex items-baseline gap-7">
+                            <div className="hidden lg:flex flex-1 min-w-0 justify-center items-baseline gap-7">
                                     {navItems.filter(item => item.children || (item.key !== 'home' && item.key !== 'settings')).map((item) => {
                                         if (item.children) {
                                             const groupActive = item.children.some(c => c.key === currentView);
@@ -3472,19 +3471,20 @@
                                             </button>
                                         );
                                     })}
-                                </div>
                             </div>
 
-                            <div className="flex items-baseline gap-5">
+                            <div className="flex items-baseline gap-5 shrink-0">
                                 <button
                                     onClick={() => goToView('settings')}
-                                    className={`hidden lg:inline book-serif text-base pb-1 transition-colors ${
+                                    title="设置"
+                                    aria-label="设置"
+                                    className={`hidden lg:inline-flex self-center transition-colors ${
                                         currentView === 'settings'
-                                            ? 'text-[#1a140d] border-b border-[#1a140d]'
-                                            : 'text-[#7a6a5d] border-b border-transparent hover:text-[#1a140d] hover:border-[#1a140d]/40'
+                                            ? 'text-[#1a140d]'
+                                            : 'text-[#7a6a5d] hover:text-[#1a140d]'
                                     }`}
                                 >
-                                    设置
+                                    <Settings className="w-[18px] h-[18px]" />
                                 </button>
                                 {user ? (
                                     <div className="hidden md:flex items-baseline gap-2">
