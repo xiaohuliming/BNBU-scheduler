@@ -1316,6 +1316,30 @@ def programme_map():
             for c in used
         ]
 
+    # Browsable candidate pool for GE sections: the handbook lists none, but the
+    # eligible set is identifiable from the catalog by GE code prefixes. Purely
+    # informational — attached after unit tallying so it never affects progress.
+    for s in sections_out:
+        if "general education" in s["title"].lower() and not s["pool"] and not s["courses"]:
+            ge_pool = []
+            for ge_code in sorted(catalog):
+                if not GE_CODE_PREFIX.match(ge_code):
+                    continue
+                ref = catalog[ge_code]
+                ge_pool.append({
+                    "code": ge_code,
+                    "title": ref.get("title") or ge_code,
+                    "units": ref.get("units") or 3,
+                    "plan": [],
+                    "completed": ge_code in completed,
+                    "via": None,
+                    "offered": bool(ref.get("offered")),
+                    "in_catalog": True,
+                })
+            ge_pool.sort(key=lambda c: (not c["completed"], not c["offered"], c["code"]))
+            s["pool"] = ge_pool
+            s["pool_synthetic"] = True
+
     total = plan.get("total_units") or sum(s["units"] for s in sections_out)
     overall_gained = sum(s["gained"] for s in sections_out)
     return jsonify({

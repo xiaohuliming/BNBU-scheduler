@@ -3390,15 +3390,22 @@
                                                         {s.pool.filter(c => !c.completed).map(c => <PlanCourseChip key={c.code} c={c} onViewCourse={onViewCourse} />)}
                                                     </div>
                                                 )}
+                                                {s.pool_synthetic && (
+                                                    <p className="text-[11px] text-gray-400 mt-2 font-medium">备选清单按课程库 GE 代码（GC/GT/GF）自动生成，仅供浏览，具体以选课系统为准</p>
+                                                )}
                                             </div>
                                         )}
-                                        {s.matched_extra.length > 0 && (
+                                        {!s.pool.length && s.matched_extra.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5">
                                                 {s.matched_extra.map(c => <PlanCourseChip key={c.code} c={{ ...c, completed: true, in_catalog: !!c.title, plan: [] }} onViewCourse={onViewCourse} />)}
                                             </div>
                                         )}
                                         {!s.courses.length && !s.pool.length && !s.matched_extra.length && (
-                                            <p className="text-sm font-bold text-gray-400">该部分无固定课程清单，修满 {s.units} 学分即可。</p>
+                                            <p className="text-sm font-bold text-gray-400">
+                                                {s.title.toLowerCase().includes('free elective')
+                                                    ? `任意课程均可计入，修满 ${s.units} 学分即可 —— 可在「课程」页自由探索。`
+                                                    : `该部分无固定课程清单，修满 ${s.units} 学分即可。`}
+                                            </p>
                                         )}
                                     </div>
                                 );
