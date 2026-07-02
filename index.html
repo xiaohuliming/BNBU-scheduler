@@ -448,6 +448,17 @@
             const [semesters, setSemesters] = useState([]);
             const [scopeData, setScopeData] = useState({});
             const [scopeLoading, setScopeLoading] = useState(false);
+            const [scopeOpen, setScopeOpen] = useState(false);
+            const scopeRef = useRef(null);
+
+            useEffect(() => {
+                if (!scopeOpen) return;
+                const onDown = (e) => { if (scopeRef.current && !scopeRef.current.contains(e.target)) setScopeOpen(false); };
+                const onKey = (e) => { if (e.key === 'Escape') setScopeOpen(false); };
+                document.addEventListener('pointerdown', onDown);
+                document.addEventListener('keydown', onKey);
+                return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
+            }, [scopeOpen]);
 
             useEffect(() => {
                 fetch('/api/semesters').then(r => r.json()).then(d => {
@@ -580,16 +591,39 @@
                                 />
                                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
                             </div>
-                            <select
-                                value={scope}
-                                onChange={(e) => setScope(e.target.value)}
-                                title="搜索范围：本学期 / 全部课程库 / 历史学期"
-                                className="shrink-0 max-w-[8.5rem] md:max-w-none border-2 border-black px-2 md:px-3 font-bold text-sm bg-white focus:bg-[#d6ff62] focus:outline-none"
-                            >
-                                <option value="current">{currentLabel}（本学期）</option>
-                                <option value="all">全部课程库</option>
-                                {semesters.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                            </select>
+                            <div className="relative shrink-0" ref={scopeRef}>
+                                <button
+                                    onClick={() => setScopeOpen(v => !v)}
+                                    title="搜索范围：本学期 / 全部课程库 / 历史学期"
+                                    aria-haspopup="true"
+                                    aria-expanded={scopeOpen}
+                                    className={`h-full max-w-[9rem] md:max-w-none border-2 border-black px-3 font-bold text-sm flex items-center gap-1.5 transition-colors ${scope !== 'current' ? 'bg-[#d6ff62]' : 'bg-white hover:bg-gray-50'}`}
+                                >
+                                    <span className="truncate">{scope === 'current' ? currentLabel : scope === 'all' ? '全部课程库' : ((semesters.find(s => s.key === scope) || {}).label || scope)}</span>
+                                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scopeOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {scopeOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] z-50 animate-fade-in">
+                                        {[{ key: 'current', label: `${currentLabel}（本学期）` }, { key: 'all', label: '全部课程库' }].map(opt => (
+                                            <button key={opt.key} onClick={() => { setScope(opt.key); setScopeOpen(false); }}
+                                                className={`w-full text-left px-3 py-2.5 font-bold text-sm flex items-center justify-between gap-2 border-b border-black/10 ${scope === opt.key ? 'bg-[#d6ff62]' : 'hover:bg-gray-100'}`}>
+                                                <span>{opt.label}</span>
+                                                {scope === opt.key && <Check className="w-4 h-4 shrink-0" />}
+                                            </button>
+                                        ))}
+                                        {semesters.length > 0 && (
+                                            <div className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-black/10 bg-gray-50">历史学期</div>
+                                        )}
+                                        {semesters.map((s, i) => (
+                                            <button key={s.key} onClick={() => { setScope(s.key); setScopeOpen(false); }}
+                                                className={`w-full text-left px-3 py-2.5 font-bold text-sm flex items-center justify-between gap-2 ${i < semesters.length - 1 ? 'border-b border-black/10' : ''} ${scope === s.key ? 'bg-[#d6ff62]' : 'hover:bg-gray-100'}`}>
+                                                <span>{s.label}</span>
+                                                {scope === s.key && <Check className="w-4 h-4 shrink-0" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="flex overflow-x-auto pb-1 -mx-1 px-1 md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold md:overflow-visible">
                              <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
