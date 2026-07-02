@@ -806,6 +806,77 @@ def get_course_textbooks():
     return _load_json_cached(COURSE_TEXTBOOKS_PATH, _textbooks_cache)
 
 
+# Programme handbooks (four-year study plans) parsed by build_programmes.py
+PROGRAMME_REQ_PATH = os.path.join(APP_ROOT, 'programme_requirements.json')
+_programme_req_cache = {"mtime": None, "data": None}
+GE_CODE_PREFIX = re.compile(r'^(GC|GT|GF)')
+
+
+def get_programme_requirements():
+    return _load_json_cached(PROGRAMME_REQ_PATH, _programme_req_cache)
+
+
+_programme_course_index = {"mtime": None, "index": None}
+_PROGRAMME_ROLE_ORDER = {"主修必修": 0, "BBA 核心": 1, "主修选修": 2, "大学核心": 3}
+
+
+def _programme_role(title):
+    t = title.lower()
+    if "major" in t and "required" in t:
+        return "主修必修"
+    if "major" in t and "elective" in t:
+        return "主修选修"
+    if "university core" in t:
+        return "大学核心"
+    if "bba" in t:
+        return "BBA 核心"
+    return title
+
+
+def get_programme_course_index():
+    """code -> {(programme_key, role): set(cohorts)} across all handbooks."""
+    reqs = get_programme_requirements()
+    mtime = _programme_req_cache.get("mtime")
+    if _programme_course_index["index"] is not None and _programme_course_index["mtime"] == mtime:
+        return _programme_course_index["index"]
+    index = {}
+    for pkey, prog in reqs.items():
+        for cohort, plan in prog.get("cohorts", {}).items():
+            for section in plan.get("sections", []):
+                role = _programme_role(section.get("title", ""))
+                for lst in (section.get("courses", []), section.get("pool", [])):
+                    for c in lst:
+                        index.setdefault(c["code"], {}).setdefault((pkey, role), set()).add(cohort)
+    _programme_course_index.update(mtime=mtime, index=index)
+    return index
+
+
+def course_programme_tags(code):
+    """Aggregated 'which study plans include this course' tags for the modal."""
+    entry = get_programme_course_index().get(code)
+    if not entry:
+        return []
+    reqs = get_programme_requirements()
+    by_role = {}
+    for (pkey, role), cohorts in entry.items():
+        if role not in _PROGRAMME_ROLE_ORDER:
+            continue  # free-elective / GE suggestion lists carry no real signal
+        by_role.setdefault(role, []).append((pkey, cohorts))
+    out = []
+    for role, items in by_role.items():
+        # University-core rows appear in almost every programme — collapse.
+        if role == "大学核心" and len(items) >= 20:
+            all_cohorts = sorted(set().union(*[c for _, c in items]))
+            out.append({"key": "ALL", "name": "各专业通用", "faculty": "", "role": role, "cohorts": all_cohorts})
+            continue
+        for pkey, cohorts in items:
+            p = reqs.get(pkey, {})
+            out.append({"key": pkey, "name": p.get("name", pkey), "faculty": p.get("faculty", ""),
+                        "role": role, "cohorts": sorted(cohorts)})
+    out.sort(key=lambda x: (_PROGRAMME_ROLE_ORDER.get(x["role"], 9), x["key"]))
+    return out
+
+
 def get_course_desc_extra():
     return _load_json_cached(COURSE_DESC_EXTRA_PATH, _desc_extra_cache)
 
@@ -874,6 +945,9 @@ def get_course_detail(code):
     # SkillPath layer: skills taught + matched careers (with US-market salary)
     skillpath_courses = get_skillpath_courses()
     result["skillpath"] = skillpath_courses.get(code, {"skills": [], "careers": []})
+
+    # Which programme study plans (handbooks) include this course
+    result["programmes"] = course_programme_tags(code)
     return jsonify(result)
 
 
@@ -1043,6 +1117,148 @@ def parse_transcript():
         "unrecognized": unrecognized,
         "count": len(codes),
         "recognized_count": len(recognized),
+    })
+
+
+@app.route('/api/programmes', methods=['GET'])
+def list_programmes():
+    data = get_programme_requirements()
+    out = []
+    for key, p in data.items():
+        out.append({
+            "key": key,
+            "name": p.get("name", key),
+            "faculty": p.get("faculty", ""),
+            "department": p.get("department", ""),
+            "cohorts": sorted(p.get("cohorts", {}).keys()),
+        })
+    out.sort(key=lambda x: (x["faculty"], x["name"]))
+    return jsonify({"programmes": out})
+
+
+@app.route('/api/programme-courses', methods=['GET'])
+def programme_courses():
+    """code -> role (主修必修/BBA 核心/主修选修) for one programme, union of cohorts.
+    Used by the explorer's programme filter; university-core rows are excluded
+    (they are common to every programme)."""
+    key = (request.args.get('programme') or '').strip().upper()
+    reqs = get_programme_requirements()
+    if key not in reqs:
+        return jsonify({"error": "Unknown programme"}), 400
+    priority = {"主修必修": 0, "BBA 核心": 1, "主修选修": 2}
+    out = {}
+    for code, entry in get_programme_course_index().items():
+        for (pkey, role), _cohorts in entry.items():
+            if pkey != key or role not in priority:
+                continue
+            if code not in out or priority[role] < priority[out[code]]:
+                out[code] = role
+    return jsonify({"programme": key, "courses": out})
+
+
+@app.route('/api/programme-map', methods=['POST'])
+def programme_map():
+    body = request.get_json(silent=True) or {}
+    key = str(body.get('programme') or '').strip().upper()
+    cohort = str(body.get('cohort') or '').strip()
+    completed = {str(c).strip().upper() for c in (body.get('completed') or []) if str(c).strip()}
+
+    data = get_programme_requirements()
+    prog = data.get(key)
+    if not prog:
+        return jsonify({"error": "Unknown programme"}), 400
+    plan = prog.get("cohorts", {}).get(cohort)
+    if not plan:
+        return jsonify({"error": "Unknown cohort"}), 400
+
+    catalog = get_course_catalog()
+
+    def course_units(code, fallback=3):
+        c = catalog.get(code)
+        if c and c.get("units"):
+            return c["units"]
+        return fallback
+
+    def resolve(entry):
+        code = entry["code"]
+        ref = catalog.get(code)
+        return {
+            "code": code,
+            "title": entry.get("title") or (ref["title"] if ref else ""),
+            "units": entry.get("units") or course_units(code),
+            "plan": entry.get("plan", []),
+            "completed": code in completed,
+            "offered": bool(ref["offered"]) if ref else False,
+            "in_catalog": ref is not None,
+        }
+
+    matched = set()
+    sections_out = []
+    for section in plan.get("sections", []):
+        courses = [resolve(c) for c in section.get("courses", [])]
+        pool = [resolve(c) for c in section.get("pool", [])]
+        gained = 0
+        for c in courses:
+            if c["completed"]:
+                gained += c["units"]
+                matched.add(c["code"])
+        for c in pool:
+            if c["completed"] and c["code"] not in matched:
+                gained += c["units"]
+                matched.add(c["code"])
+        auto = bool(courses or pool)
+        sections_out.append({
+            "numeral": section["numeral"],
+            "title": section["title"],
+            "units": section["units"],
+            "courses": courses,
+            "pool": pool,
+            "gained": min(gained, section["units"]) if auto else 0,
+            "auto": auto,
+            "estimated": False,
+            "matched_extra": [],
+        })
+
+    # Heuristic for GE / Free-elective sections: distribute leftover completed
+    # courses (GE by code prefix first, the rest to free electives). Estimates.
+    leftovers = [c for c in sorted(completed - matched)]
+    for section in sections_out:
+        if section["auto"]:
+            continue
+        title = section["title"].lower()
+        picked = []
+        if "general education" in title:
+            picked = [c for c in leftovers if GE_CODE_PREFIX.match(c)]
+        elif "free elective" in title:
+            picked = list(leftovers)
+        if not picked:
+            continue
+        gained = 0
+        used = []
+        for code in picked:
+            if gained >= section["units"]:
+                break
+            gained += course_units(code)
+            used.append(code)
+        leftovers = [c for c in leftovers if c not in used]
+        section["gained"] = min(gained, section["units"])
+        section["estimated"] = True
+        section["matched_extra"] = [
+            {"code": c, "title": catalog.get(c, {}).get("title", ""), "units": course_units(c)}
+            for c in used
+        ]
+
+    total = plan.get("total_units") or sum(s["units"] for s in sections_out)
+    overall_gained = sum(s["gained"] for s in sections_out)
+    return jsonify({
+        "programme": {"key": key, "name": prog.get("name", key), "faculty": prog.get("faculty", ""),
+                      "department": prog.get("department", ""), "cohort": cohort},
+        "sections": sections_out,
+        "overall": {"gained": overall_gained, "total": total},
+        "unassigned": [
+            {"code": c, "title": catalog.get(c, {}).get("title", "")} for c in leftovers
+        ],
+        "note": "主修/核心课按官方修读计划核对；GE 与自由选修为按已修课程的估算，请以 MIS 毕业审核为准。",
     })
 
 
