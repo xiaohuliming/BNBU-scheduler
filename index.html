@@ -816,6 +816,9 @@
                                             {showEnglish && <p className="mt-2 text-sm text-gray-600 leading-relaxed border-l-4 border-black/20 pl-3">{data.description}</p>}
                                         </div>
                                     )}
+                                    {data.description_cn && (
+                                        <p className="mt-3 text-sm text-gray-700 leading-relaxed border-l-4 border-[#d6ff62] pl-3">{data.description_cn}</p>
+                                    )}
                                     {e && e.topics && e.topics.length > 0 && (
                                         <div className="flex flex-wrap gap-1.5 mt-4">
                                             {e.topics.map((t, i) => <span key={i} className="bg-[#f4efe6] border-2 border-black px-2 py-1 text-xs font-bold">{t}</span>)}
@@ -830,6 +833,25 @@
                                             {data.skillpath.skills.map((s, i) => <SkillChip key={i} name={s.name} category={s.category} />)}
                                         </div>
                                         <p className="text-[11px] text-gray-400 mt-2 font-medium">技能由课程描述自动抽取（SkillPath）</p>
+                                    </InsightSection>
+                                )}
+
+                                {/* Textbooks (from official semester textbook list) */}
+                                {data.textbooks && data.textbooks.length > 0 && (
+                                    <InsightSection icon={BookOpen} title="教材" accent="#fde047">
+                                        <div className="space-y-2">
+                                            {data.textbooks.map((b, i) => (
+                                                <div key={i} className="border-2 border-black bg-white p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                    <div className="font-black text-[15px] leading-snug">{b.title}</div>
+                                                    <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                                                        {b.author && <span>{b.author}</span>}
+                                                        {b.publisher && <span>· {b.publisher}</span>}
+                                                        {b.edition && <span>· {b.edition} ed.</span>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-2 font-medium">数据来自本学期官方教材清单，具体以任课老师为准</p>
                                     </InsightSection>
                                 )}
 

@@ -1,0 +1,1648 @@
+{
+ "ACCT2003": [
+  {
+   "title": "Fundamental Accounting Principles (IFRS)",
+   "author": "John J.Wild, Winston Kwok, Sundar Venkatesh, Ken W Shaw",
+   "publisher": "McGraw Hill",
+   "edition": "3rd",
+   "category": "MR"
+  }
+ ],
+ "ACCT2043": [
+  {
+   "title": "Fundamental Accounting Principles (IFRS)",
+   "author": "John J.Wild, Winston Kwok, Sundar Venkatesh, Ken W Shaw",
+   "publisher": "McGraw Hill",
+   "edition": "3rd",
+   "category": "MR"
+  }
+ ],
+ "ACCT2053": [
+  {
+   "title": "Fundamental Accounting Principles (IFRS)",
+   "author": "John J.Wild, Winston Kwok, Sundar Venkatesh, Ken W Shaw",
+   "publisher": "McGraw Hill",
+   "edition": "3rd",
+   "category": "MR"
+  }
+ ],
+ "ACCT2063": [
+  {
+   "title": "Accounting with IFRS Essentials",
+   "author": "Warren, Carl S; Reeve, James M; Duchac, Jonathan E; Ng, Jeff",
+   "publisher": "Cengage Learning",
+   "edition": "2019, Asian Ed.",
+   "category": "MR"
+  }
+ ],
+ "ACCT3003": [
+  {
+   "title": "Horngren's Cost Accounting:A Managerial Emphasis",
+   "author": "Srikant M. Datar & Madhav V. Rajan",
+   "publisher": "Pearson",
+   "edition": "17th, Global Ed.",
+   "category": "MR"
+  }
+ ],
+ "ACCT3033": [
+  {
+   "title": "Intermediate Accounting,IFRS",
+   "author": "Spiceland / Thomas / Nelson / Tan / Low & Low",
+   "publisher": "McGraw-Hill",
+   "edition": "3rd, Global Ed.",
+   "category": "MR"
+  }
+ ],
+ "ACCT4003": [
+  {
+   "title": "The Audit Process: Principles, Practice and Cases",
+   "author": "Gray, I, Manson, S.,  Crawford, L., Bradley, L. and Currie, L.",
+   "publisher": "Cengage Learning",
+   "edition": "8th",
+   "category": "MR"
+  }
+ ],
+ "ACCT4043": [
+  {
+   "title": "Advanced Financial Accounting, An IFRS Standards approach",
+   "author": "Pearl Tan, Chu Yeong Lim, Ee Wen Kuah",
+   "publisher": "McGraw Hill/Irwin",
+   "edition": "4th",
+   "category": "MR"
+  }
+ ],
+ "BUS2013": [
+  {
+   "title": "Hong Kong Legal Principles: \nImportant Topics for Students and Professionals",
+   "author": "Stephen D Mau",
+   "publisher": "Hong Kong University Press",
+   "edition": "2nd, 2013",
+   "category": "MR"
+  }
+ ],
+ "BUS2053": [
+  {
+   "title": "Hong Kong Legal Principles: \nImportant Topics for Students and Professionals",
+   "author": "Stephen D Mau",
+   "publisher": "Hong Kong University Press",
+   "edition": "2nd, 2013",
+   "category": "MR"
+  }
+ ],
+ "BA1003": [
+  {
+   "title": "Modern Database Management",
+   "author": "Hoffer, J. A., Venkataraman, R. and Topi, H.",
+   "publisher": "Prentice Hall",
+   "edition": "13th",
+   "category": "MR"
+  }
+ ],
+ "BA2013": [
+  {
+   "title": "Introduction to Data Mining",
+   "author": "Tan, P. N., Steinbach, M., Karpatne, A. & Kumar, V.",
+   "publisher": "Pearson",
+   "edition": "2nd",
+   "category": "MR"
+  }
+ ],
+ "BA2033": [
+  {
+   "title": "Algorithms for Optimization",
+   "author": "Mykel J. Kochenderfer, Tim A. Wheeler",
+   "publisher": "The MIT Press",
+   "edition": "2019",
+   "category": "MR"
+  },
+  {
+   "title": "Operations Research: Applications and Algorithms",
+   "author": "Winston W.L.",
+   "publisher": "Duxbury Press",
+   "edition": "4th",
+   "category": "MR"
+  }
+ ],
+ "BA3093": [
+  {
+   "title": "Simulation",
+   "author": "Sheldon M. Ross",
+   "publisher": "Academic Press",
+   "edition": "2013",
+   "category": "MR"
+  },
+  {
+   "title": "Introduction to Mathematical Portfolio Theory",
+   "author": "Joshi, M. & Paterson, J.M.",
+   "publisher": "Cambridge University Press",
+   "edition": "1st, 2013",
+   "category": "MR"
+  }
+ ],
+ "BA3083": [
+  {
+   "title": "Multiple Criteria Decision Analysis: State of the Art Surveys",
+   "author": "Greco S., Ehrgott, M., Figueira, J. R.",
+   "publisher": "Springer",
+   "edition": "2016",
+   "category": "MR"
+  }
+ ],
+ "BA3113": [
+  {
+   "title": "Principles of Global Supply Chain Management",
+   "author": "Lau, Y.Y, Ng, A.K.Y., & Acevedo Alarid, J.",
+   "publisher": "Anthem, London",
+   "edition": "2019",
+   "category": "MR"
+  }
+ ],
+ "BA3103": [
+  {
+   "title": "Business Statistics: For Contemporary Decision-Making",
+   "author": "Black, K.",
+   "publisher": "Wiley",
+   "edition": "10th, Asian Ed.",
+   "category": "MR"
+  }
+ ],
+ "BUS1013": [
+  {
+   "title": "BUSN: Introduction to Business",
+   "author": "Marcella Kelly, Chuck Williams",
+   "publisher": "Cengage",
+   "edition": "11th, Asian Ed.",
+   "category": "MR"
+  }
+ ],
+ "BUS2003": [
+  {
+   "title": "Organizational Behavior",
+   "author": "Robbins and Judge",
+   "publisher": "Pearson",
+   "edition": "19th",
+   "category": "MR"
+  }
+ ],
+ "BUS4093": [
+  {
+   "title": "Management Information Systems: Managing the Digital Firm",
+   "author": "Kenneth C. Laudon and Jane Price Laudon",
+   "publisher": "Prentice Hall",
+   "edition": "17th",
+   "category": "MR"
+  }
+ ],
+ "FIN2003": [
+  {
+   "title": "Essentials of Financial Management",
+   "author": "Eugene F. Brigham, Joel F. Houston ; adapted by Jun-Ming Hsu, Yoon Kee Kong, A. N. Bany-Ariffin.",
+   "publisher": "Cengage Learning",
+   "edition": "5th",
+   "category": "MR"
+  }
+ ],
+ "FIN2023": [
+  {
+   "title": "Essentials of Financial Management",
+   "author": "Eugene F. Brigham, Joel F. Houston ; adapted by Jun-Ming Hsu, Yoon Kee Kong, A. N. Bany-Ariffin.",
+   "publisher": "Cengage Learning",
+   "edition": "5th",
+   "category": "MR"
+  }
+ ],
+ "FIN3033": [
+  {
+   "title": "Fundamentals of Futures & Options Markets",
+   "author": "Hull John C.",
+   "publisher": "Prentice Hall",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "FIN3093": [
+  {
+   "title": "Fundamentals of Corporate Finance",
+   "author": "Ross, Westererfield, Jordan",
+   "publisher": "McGraw Hill",
+   "edition": "14th",
+   "category": "MR"
+  }
+ ],
+ "ECON2003": [
+  {
+   "title": "Principles of Economics",
+   "author": "N. Gregory Mankiw",
+   "publisher": "Cengage Learning",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "ECON2013": [
+  {
+   "title": "Principles of Economics",
+   "author": "N. Gregory Mankiw",
+   "publisher": "Cengage Learning",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "ECON3013": [
+  {
+   "title": "Introductory Econometrics: A Modern Approach",
+   "author": "Wooldridge, J.M.",
+   "publisher": "Cengage Learning",
+   "edition": "2025",
+   "category": "MR"
+  }
+ ],
+ "ECON3063": [
+  {
+   "title": "Microeconomics",
+   "author": "Pindyck, R.S. and Daniel Rubinfeld, L.",
+   "publisher": "Pearson",
+   "edition": "9th, International Ed.",
+   "category": "MR"
+  }
+ ],
+ "ECON4043": [
+  {
+   "title": "Public Finance and Public Policy",
+   "author": "Gruber, Jonathan",
+   "publisher": "Worth Publishers",
+   "edition": "7th",
+   "category": "MR"
+  }
+ ],
+ "MHR3003": [
+  {
+   "title": "Human Resource Management: Gaining A Competitive Advantage",
+   "author": "Noe, R.A.,Hollenbeck, J. R., Gerhart,B., & Wright, P. M.",
+   "publisher": "McGraw-Hill",
+   "edition": "2025",
+   "category": "MR"
+  }
+ ],
+ "MHR3013": [
+  {
+   "title": "Employee Training and Development",
+   "author": "Noe, R.A.",
+   "publisher": "McGraw-Hill International",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "MHR3033": [
+  {
+   "title": "Performance Management and Rewards",
+   "author": "Aguinis, H.",
+   "publisher": "Pearson Education",
+   "edition": "3rd",
+   "category": "MR"
+  }
+ ],
+ "MKT2003": [
+  {
+   "title": "M: Marketing (The International Student Edition)",
+   "author": "Dhruv Grewal, Michael Levy",
+   "publisher": "McGraw-Hill",
+   "edition": "8th",
+   "category": "MR"
+  }
+ ],
+ "MKT3013": [
+  {
+   "title": "International Marketing",
+   "author": "Cateora, P., & Graham, J.",
+   "publisher": "McGraw-Hill",
+   "edition": "2023",
+   "category": "MR"
+  }
+ ],
+ "MKT4003": [
+  {
+   "title": "Strategic Marketing",
+   "author": "Cravens, D. W. & Piercy, N. F.",
+   "publisher": "McGraw-Hill",
+   "edition": "2013",
+   "category": "MR"
+  },
+  {
+   "title": "Marketing Strategy and Competitive Positioning",
+   "author": "Graham Hooley, Brigitte Nicoulaud, Nigel Piercy, John Rudd & Nick Lee",
+   "publisher": "Pearson",
+   "edition": "8th",
+   "category": "MR"
+  }
+ ],
+ "EBIS2023": [
+  {
+   "title": "Business Analytics",
+   "author": "Sanjiv Jaggia, Alison Kelly, Kevin Lertwachara, Leida Chen",
+   "publisher": "McGraw-Hill",
+   "edition": "2023",
+   "category": "MR"
+  }
+ ],
+ "EBIS3023": [
+  {
+   "title": "E-Commerce 2023-2024: Business, Technology and Society",
+   "author": "Laudon, K. C., & Traver, C. G.",
+   "publisher": "Pearson Education",
+   "edition": "18th, Global Ed.",
+   "category": "MR"
+  }
+ ],
+ "EBIS3033": [
+  {
+   "title": "Introduction to Computation and Programming using Python: With Application to Understanding Data",
+   "author": "John V. Guttag.",
+   "publisher": "The MIT Press",
+   "edition": "3rd, 2016",
+   "category": "MR"
+  }
+ ],
+ "EPIN3023": [
+  {
+   "title": "Entrepreneurial Marketing: How to Develop Customer Demand",
+   "author": "Nijssen, E.",
+   "publisher": "Routledge",
+   "edition": "2021",
+   "category": "MR"
+  },
+  {
+   "title": "Entrepreneurship Marketing: Principles and Practice of SME Marketing",
+   "author": "Nwankwo, S & Gbadamosi, A",
+   "publisher": "Routledge",
+   "edition": "2020",
+   "category": "MR"
+  }
+ ],
+ "EPIN4003": [
+  {
+   "title": "Corporate Innovation and Entrepreneurship",
+   "author": "Kuratko, D. F., Morris, M. H., & Covin, J. G.",
+   "publisher": "South Western International Edition",
+   "edition": "2011",
+   "category": "MR"
+  }
+ ],
+ "DMM2003": [
+  {
+   "title": "Designing for Growth: A Design Thinking Tool Kit for Managers",
+   "author": "Liedtka, J. & Ogilvie, T.",
+   "publisher": "Columbia Business School Publishing",
+   "edition": "2011",
+   "category": "MR"
+  },
+  {
+   "title": "The Design Thinking Playbook: Mindful Digital Transformation of Teams, Products, Services, Businesses and Ecosystems",
+   "author": "Lewrick et al.",
+   "publisher": "Wiley",
+   "edition": "2018",
+   "category": "MR"
+  }
+ ],
+ "DMM2013": [
+  {
+   "title": "No Compulsory textbooks",
+   "author": "",
+   "publisher": "",
+   "edition": "",
+   "category": "MR"
+  }
+ ],
+ "DMM3003": [
+  {
+   "title": "Data Science from Scratch",
+   "author": "Grus, J.",
+   "publisher": "O’Reilly",
+   "edition": "2nd, 2019",
+   "category": "MR"
+  }
+ ],
+ "DMM3013": [
+  {
+   "title": "Management of electronic and digital media",
+   "author": "Albarran, A. B.",
+   "publisher": "Cengage Learning",
+   "edition": "2017",
+   "category": "MR"
+  },
+  {
+   "title": "Business Analytics",
+   "author": "Evans, James R.",
+   "publisher": "Pearson",
+   "edition": "2019",
+   "category": "MR"
+  },
+  {
+   "title": "Digital marketing analytics: Making sense of consumer data in a digital world",
+   "author": "Hemann, C., & Burbary, K.",
+   "publisher": "Pearson Education",
+   "edition": "2013",
+   "category": "MR"
+  }
+ ],
+ "DMM3023": [
+  {
+   "title": "Digital storytelling: Form and content",
+   "author": "Dunford, M., & Jenkins, T.",
+   "publisher": "London: Palgrave Macmillan",
+   "edition": "2017",
+   "category": "MR"
+  },
+  {
+   "title": "Digital storytelling in the classroom: New media pathways to literacy, learning, and creativity",
+   "author": "Ohler, J. B.",
+   "publisher": "Corwin Press",
+   "edition": "2013",
+   "category": "MR"
+  }
+ ],
+ "BUS3003": [
+  {
+   "title": "Excellence in Business Communication",
+   "author": "Thill J. & Bovee",
+   "publisher": "Pearson",
+   "edition": "14th",
+   "category": "MR"
+  }
+ ],
+ "BUS3023": [
+  {
+   "title": "Business Research Methods",
+   "author": "Donald R. Cooper, Pamela S. Schindler.",
+   "publisher": "McGraw-Hill",
+   "edition": "2025",
+   "category": "MR"
+  }
+ ],
+ "BUS4013": [
+  {
+   "title": "Strategic Management: Text and Cases",
+   "author": "Dess, G. G., Lumpkin, G. T., Eisner, A. B., & McNamara, G.",
+   "publisher": "McGraw-Hill",
+   "edition": "11th",
+   "category": "MR"
+  }
+ ],
+ "GFVM1003": [
+  {
+   "title": "Business Ethics Now",
+   "author": "Ghillyer, A.",
+   "publisher": "McGraw-Hill",
+   "edition": "7th",
+   "category": "GE2021"
+  }
+ ],
+ "GFVM1063": [
+  {
+   "title": "No Compulsory textbooks",
+   "author": "",
+   "publisher": "",
+   "edition": "",
+   "category": "GE"
+  }
+ ],
+ "GFQR1053": [
+  {
+   "title": "Probability and Statistics for Engineering and the Sciences",
+   "author": "Devore, J. L.",
+   "publisher": "Cengage Learning",
+   "edition": "2015",
+   "category": "GE2021"
+  },
+  {
+   "title": "Understanding Machine Learning: From Theory to Algorithms",
+   "author": "Shalev-Shwartz, S., & Ben-David, S.",
+   "publisher": "Cambridge University Press",
+   "edition": "2014",
+   "category": "GE2021"
+  }
+ ],
+ "GCAP3213": [
+  {
+   "title": "Service Leadership: Leading with Competence, Character and Care in the Service Economy",
+   "author": "Hoshmand, A. Reza & Chung, Po.",
+   "publisher": "Routledge",
+   "edition": "2021",
+   "category": "GE2021"
+  }
+ ],
+ "GFHC1103": [
+  {
+   "title": "The Evolution of Economic Thought",
+   "author": "Stanley Brue, Randy Grant",
+   "publisher": "Cengage Learning",
+   "edition": "8th",
+   "category": "GE2021"
+  }
+ ],
+ "GFHC1203": [
+  {
+   "title": "Your Career in the Media & Creative Industries. In Building Employability Skills",
+   "author": "Stone, G., & Kerry, M.",
+   "publisher": "Sage Publications",
+   "edition": "1st",
+   "category": "GE2021"
+  },
+  {
+   "title": "Understanding Media Industries",
+   "author": "Havens, T., & Lotz, A.",
+   "publisher": "Oxford University Press",
+   "edition": "2017",
+   "category": "GE2021"
+  }
+ ],
+ "GTCU2043": [
+  {
+   "title": "Sustainability: A Comprehensive Foundation",
+   "author": "Theis, T., & Tomkin, J.",
+   "publisher": "\\",
+   "edition": "Available on-line http://www.earth.illinois.edu/sustain/sustainability_text.html",
+   "category": "GE2021"
+  },
+  {
+   "title": "Business Sustainability",
+   "author": "Rezaee, Z.",
+   "publisher": "Taylor & Francis",
+   "edition": "2015",
+   "category": "GE2021"
+  },
+  {
+   "title": "Corporate Sustainability: Integrating Performance and Reporting",
+   "author": "Brockett, A., & Rezaee, Z.",
+   "publisher": "Wiley",
+   "edition": "2012",
+   "category": "GE2021"
+  }
+ ],
+ "GTSC2133": [
+  {
+   "title": "Applied artificial intelligence in business",
+   "author": "Chan, L., Hogaboam, L., & Cao, R.",
+   "publisher": "Springer",
+   "edition": "2022",
+   "category": "GE2021"
+  },
+  {
+   "title": "Artificial intelligence for business: An implementation guide containing practical and industry-specific case studies",
+   "author": "Hemachandran, K., & Rodriguez, R. V.",
+   "publisher": "CRC Press",
+   "edition": "2023",
+   "category": "GE2021"
+  }
+ ],
+ "GTSU2003": [
+  {
+   "title": "Sustainable Logistics and Supply Chain Management - Principles and Practices for Sustainable Operations and Management",
+   "author": "David B. Grant, Chee Yew Wong, Alexander Trautrims",
+   "publisher": "Kogan Page",
+   "edition": "3rd",
+   "category": "GE2021"
+  }
+ ],
+ "UCLC1033": [
+  {
+   "title": "Oxford EAP: A course in English for Academic Purposes (Upper-Intermediate/B2)- Student's Book and DVD-ROM Pack",
+   "author": "Martin de Chazal & Sam McCarter",
+   "publisher": "Oxford University Press",
+   "edition": "2012",
+   "category": "UC"
+  }
+ ],
+ "UCLC1003": [
+  {
+   "title": "大学国文",
+   "author": "伍鸿宇",
+   "publisher": "Guangdong Higher Education Press",
+   "edition": "2020",
+   "category": "UC"
+  }
+ ],
+ "CHI1063": [
+  {
+   "title": "中国近现代史纲要",
+   "author": "本书编写组",
+   "publisher": "Higher Education Press",
+   "edition": "2023",
+   "category": "UC"
+  },
+  {
+   "title": "历史与文明",
+   "author": "伍鸿宇",
+   "publisher": "Guangdong Higher Education Press",
+   "edition": "2020",
+   "category": "UC"
+  }
+ ],
+ "CHI1253": [
+  {
+   "title": "习近平新时代中国特色社会主义思想概论",
+   "author": "本书编写组",
+   "publisher": "Higher Education Press",
+   "edition": "2023",
+   "category": "UC"
+  }
+ ],
+ "GCCH2003": [
+  {
+   "title": "走进中国：中级汉语口语",
+   "author": "王玉、刘立新",
+   "publisher": "北京大学出版社",
+   "edition": "2011",
+   "category": "UC"
+  }
+ ],
+ "GCCH2013": [
+  {
+   "title": "走进中国：中级汉语",
+   "author": "刘立新、王玉",
+   "publisher": "北京大学出版社",
+   "edition": "2011",
+   "category": "UC"
+  }
+ ],
+ "GCCH3013": [
+  {
+   "title": "走进中国：高级汉语",
+   "author": "刘元满、王文龙",
+   "publisher": "北京大学出版社",
+   "edition": "2012",
+   "category": "UC"
+  }
+ ],
+ "AI1023": [
+  {
+   "title": "Database System Concepts",
+   "author": "Abraham Silberschatz, Henry F. Korth, and S. Sudarshan",
+   "publisher": "McGraw Hill Publishers",
+   "edition": "7th",
+   "category": "MR"
+  }
+ ],
+ "COMP3063": [
+  {
+   "title": "软件工程(英文版)(第9版)",
+   "author": "Ian Sommerville",
+   "publisher": "机械工业出版社",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "MATH2003": [
+  {
+   "title": "Discrete Mathematics and Its Application",
+   "author": "Kenneth H. Rosen",
+   "publisher": "China Machine Press",
+   "edition": "8th",
+   "category": "MR"
+  }
+ ],
+ "PSY3023": [
+  {
+   "title": "Abnormal Psychology in a changing world",
+   "author": "Nevid, J. S.; Rathus, S.A.; Greene, B.",
+   "publisher": "Prentice Hall- Pearson Educational",
+   "edition": "11th",
+   "category": "MR"
+  }
+ ],
+ "PSY3043": [
+  {
+   "title": "Consumer Behavior",
+   "author": "Schiffman, L. and Kanuk, L.",
+   "publisher": "Prentice Hall- Pearson Educational",
+   "edition": "Global Ed.",
+   "category": "MR"
+  }
+ ],
+ "PSY3183": [
+  {
+   "title": "Foundations of psychological testing: A practical approach",
+   "author": "Miller, L. A., & Lovier, R. L.",
+   "publisher": "Sage Publications",
+   "edition": "6th",
+   "category": "MR"
+  }
+ ],
+ "PSY3053": [
+  {
+   "title": "教育心理学理论与实践 Educational Psychology: Theory and Practice",
+   "author": "Slavin, Robert E.",
+   "publisher": "人民邮电出版社",
+   "edition": "12th",
+   "category": "MR"
+  }
+ ],
+ "PSY2023": [
+  {
+   "title": "Social Psychology",
+   "author": "Meyers, D.",
+   "publisher": "McGraw Hill Pubs",
+   "edition": "2025",
+   "category": "MR/FE"
+  }
+ ],
+ "AI2073": [
+  {
+   "title": "Sensation & Perception",
+   "author": "Goldstein, E.B.",
+   "publisher": "Cengage Learning",
+   "edition": "11th",
+   "category": "MR"
+  }
+ ],
+ "PSY2013": [
+  {
+   "title": "Research Methods for the Behavioral Sciences",
+   "author": "Frederick J Gravetter | Lori-Ann B. Forzano",
+   "publisher": "Boston, MA: Cengage Learning, Inc.",
+   "edition": "6th",
+   "category": "MR"
+  }
+ ],
+ "PSY2033": [
+  {
+   "title": "HDEV: Human Lifespan Development",
+   "author": "Spencer A. Rathus",
+   "publisher": "Cengage Learning",
+   "edition": "6th",
+   "category": "MR/FE"
+  }
+ ],
+ "ENV3003": [
+  {
+   "title": "Natural Resource Conservation – Management for a Sustainable Future",
+   "author": "Daniel D. Chiras John P. Reganold",
+   "publisher": "Benjamin Cummings",
+   "edition": "International Ed.",
+   "category": "MR/FE"
+  }
+ ],
+ "BIOL2093": [
+  {
+   "title": "Prescott's Microbiology",
+   "author": "Joanne Willey, Kathleen Sandman and Dorothy Wood",
+   "publisher": "Mc Graw Hill",
+   "edition": "12th",
+   "category": "MR"
+  }
+ ],
+ "BIOL2003": [
+  {
+   "title": "Biology - concept and investigations",
+   "author": "Marielle Hoefnagels",
+   "publisher": "McGraw-Hill",
+   "edition": "6th",
+   "category": "MR/FE"
+  },
+  {
+   "title": "Biology: Concepts and Investigations",
+   "author": "Marielle Hoefnagels",
+   "publisher": "McGraw-Hill",
+   "edition": "2021",
+   "category": "MR/FE"
+  }
+ ],
+ "BIOL1023": [
+  {
+   "title": "Biology",
+   "author": "Mader, S.",
+   "publisher": "McGraw-Hill Education",
+   "edition": "13th or latest",
+   "category": "MR"
+  }
+ ],
+ "ENV3073": [
+  {
+   "title": "Introduction to Geographic Information Systems",
+   "author": "Chang, Kang-tsung",
+   "publisher": "McGraw-Hill Science/Engineering/Math, 2015",
+   "edition": "8th, International Ed.",
+   "category": "MR/ME"
+  }
+ ],
+ "MATH3033": [
+  {
+   "title": "Elementary Differential Equations and Boundary Value Problems",
+   "author": "William E. Boyce and Richard C. DiPrima",
+   "publisher": "William E. Boyce and Richard C. DiPrima",
+   "edition": "10th",
+   "category": "MR/ME"
+  }
+ ],
+ "MATH3163": [
+  {
+   "title": "A User-Friendly Introduction to Lebesgue Measure and Integration",
+   "author": "Gail S. Nelson",
+   "publisher": "American Mathematical Society",
+   "edition": "1st",
+   "category": "MR/ME"
+  }
+ ],
+ "ECON2113": [
+  {
+   "title": "Macroeconomics",
+   "author": "Rudiger Dornbusch, Stanley Fischer, Richard Startz",
+   "publisher": "McGraw-Hill",
+   "edition": "13th",
+   "category": "MR"
+  }
+ ],
+ "FINM3033": [
+  {
+   "title": "Risk Management and Financial Institutions",
+   "author": "John Hull",
+   "publisher": "John Wiley",
+   "edition": "6th",
+   "category": "MR"
+  }
+ ],
+ "FINM3133": [
+  {
+   "title": "Time series analysis with applications in R",
+   "author": "Jonathan D. Cryer and Kung-Sik Chan",
+   "publisher": "Springer",
+   "edition": "2nd",
+   "category": "MR/ME"
+  }
+ ],
+ "FINM4073": [
+  {
+   "title": "Derivatives Markets",
+   "author": "Robert L. McDonald",
+   "publisher": "Pearson",
+   "edition": "3rd",
+   "category": "MR"
+  }
+ ],
+ "MATH4083": [
+  {
+   "title": "Numerical Analysis",
+   "author": "Timothy Sauer",
+   "publisher": "Pearson",
+   "edition": "3rd",
+   "category": "MR/ME"
+  }
+ ],
+ "OR4023": [
+  {
+   "title": "Linear and Nonlinear Programming",
+   "author": "David G. Luenberger, Yinyu Ye",
+   "publisher": "Springer",
+   "edition": "5th",
+   "category": "MR/ME"
+  }
+ ],
+ "STAT3083": [
+  {
+   "title": "Statistical Computing with R",
+   "author": "M. L. Rizzo",
+   "publisher": "Chapman & Hall/CRC, 2019.",
+   "edition": "2nd",
+   "category": "MR"
+  }
+ ],
+ "COMP3283": [
+  {
+   "title": "Introduction to Algorithms",
+   "author": "Thomas H. Cormen / Charles E. Leiserson / Ronald L. Rivest / Clifford Stein",
+   "publisher": "The MIT Press",
+   "edition": "4th",
+   "category": "MR"
+  }
+ ],
+ "MATH2033": [
+  {
+   "title": "Introduction to Mathematical Statistics",
+   "author": "HOGG, MCKEAN,and CRAIG",
+   "publisher": "Pearson",
+   "edition": "8th",
+   "category": "MR"
+  }
+ ],
+ "MATH1063": [
+  {
+   "title": "Linear Algebra with Applications",
+   "author": "Steven J. Leon",
+   "publisher": "Prentice Hall/Pearson, 2004",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "MATH1083": [
+  {
+   "title": "Calculus: Early Transcendentals",
+   "author": "James Stewart, Daniel Clegg, Saleem Watson",
+   "publisher": "McGraw-Hill",
+   "edition": "9th",
+   "category": "MR"
+  }
+ ],
+ "MATH1003": [
+  {
+   "title": "Linear Algebra with Applications",
+   "author": "Steven J. Leon",
+   "publisher": "Pearson Education",
+   "edition": "10th",
+   "category": "MR"
+  }
+ ],
+ "STAT2013": [
+  {
+   "title": "Classical and Modern Regression with Applications （Second Edition）经典和现代回归分析及其应用（影印版）",
+   "author": "Raymond H. Myers 麦尔斯",
+   "publisher": "高等教育出版社",
+   "edition": "2nd",
+   "category": "MR"
+  }
+ ],
+ "DS2003": [
+  {
+   "title": "Database System Concepts",
+   "author": "Abraham Silberschatz, Henry F. Korth, and S. Sudarshan",
+   "publisher": "McGraw Hill",
+   "edition": "7th",
+   "category": "MR"
+  }
+ ],
+ "MATH4063": [
+  {
+   "title": "A First Course in Mathematical Modeling",
+   "author": "Giordano, Fox, Horton and Weir",
+   "publisher": "CENGAGE",
+   "edition": "5th",
+   "category": "MR"
+  }
+ ],
+ "STAT4043": [
+  {
+   "title": "An introduction to categorical data analysis",
+   "author": "Alan Agresti",
+   "publisher": "Wiley",
+   "edition": "2nd",
+   "category": "MR"
+  }
+ ],
+ "STAT4063": [
+  {
+   "title": "Introduction to Time Series Analysis and Forecasting",
+   "author": "Douglas C. Montgomery",
+   "publisher": "A JOHN  WILEY &SONS,INC.,PUBLICATION",
+   "edition": "1st",
+   "category": "MR"
+  }
+ ],
+ "STAT1033": [
+  {
+   "title": "A First Course in Probability",
+   "author": "Sheldon Ross",
+   "publisher": "Pearson",
+   "edition": "Global Ed.",
+   "category": "MR"
+  }
+ ],
+ "ACCT3013": [
+  {
+   "title": "Cost Accounting, A Managerial Emphasis",
+   "author": "Srikant M. Datar & Madhav V. Rajan",
+   "publisher": "Pearson",
+   "edition": "18th, Global Ed.",
+   "category": "ME/FE"
+  }
+ ],
+ "ACCT3083": [
+  {
+   "title": "税法（注册会计师全国统一考试辅导教材）",
+   "author": "中国注册会计师协会",
+   "publisher": "中国财政经济出版社",
+   "edition": "2025",
+   "category": "ME/FE"
+  }
+ ],
+ "ACCT3093": [
+  {
+   "title": "经济法（2024年注册会计师全国统一考试辅导教材）",
+   "author": "中国注册会计师协会",
+   "publisher": "中国财政经济出版社",
+   "edition": "2025",
+   "category": "ME/FE"
+  }
+ ],
+ "FIN2013": [
+  {
+   "title": "Focus on Personal Finance: An Active Approach to Help You Develop Successful Financial Skills",
+   "author": "Kapoor, J.R., Dlabay, L.R., & Hughes, R.J.",
+   "publisher": "McGraw-Hill",
+   "edition": "7th",
+   "category": "FE"
+  }
+ ],
+ "FIN3013": [
+  {
+   "title": "Fundamentals of Corporate Finance",
+   "author": "Ross, Westererfield, Jordan",
+   "publisher": "McGraw Hill",
+   "edition": "11th",
+   "category": "FE"
+  }
+ ],
+ "FIN4043": [
+  {
+   "title": "Business Analysis and Valuation Using Financial Statements,Text and Cases",
+   "author": "Palepu, K.G., Paul, V.L., Healy,M. & Erik, P.",
+   "publisher": "Cengage Learning",
+   "edition": "English Version",
+   "category": "ME"
+  }
+ ],
+ "FIN3043": [
+  {
+   "title": "Investments",
+   "author": "Zvi Bodie, Alex Kane, Alan J. Marcus",
+   "publisher": "McGraw Hill Education",
+   "edition": "13th",
+   "category": "FE"
+  }
+ ],
+ "FIN4053": [
+  {
+   "title": "Financial System: An Introduction",
+   "author": "Faure, A. P.",
+   "publisher": "Quoin Institute (Pty) Limited & bookboon.com",
+   "edition": "2013",
+   "category": "ME"
+  }
+ ],
+ "FIN3073": [
+  {
+   "title": "Options, Futures, \nand Other Derivatives",
+   "author": "JOHN C HULL",
+   "publisher": "Pearson",
+   "edition": "10th",
+   "category": "FE"
+  }
+ ],
+ "FIN3083": [
+  {
+   "title": "Little SAS Book: A Primer",
+   "author": "Delwiche, Lora D. and Susan J. Slaughter",
+   "publisher": "SAS Institute Inc.",
+   "edition": "2019",
+   "category": "ME/FE"
+  },
+  {
+   "title": "Using SAS in Financial Research",
+   "author": "Boehmer, Ekkehart and John Paul Broussard",
+   "publisher": "SAS Institute Inc.",
+   "edition": "2010",
+   "category": "ME/FE"
+  }
+ ],
+ "FIN4013": [
+  {
+   "title": "Applied Economic Forecasting using Time Series Methods",
+   "author": "Ghysels, E. and Marcellino, M.",
+   "publisher": "Oxford University Press",
+   "edition": "2018",
+   "category": "ME"
+  }
+ ],
+ "ECON2023": [
+  {
+   "title": "Fundamental Methods of Mathematical Economics",
+   "author": "Chiang, A. C. and Kevin Wainwright",
+   "publisher": "McGraw-Hill",
+   "edition": "4th",
+   "category": "ME"
+  }
+ ],
+ "ECON2063": [
+  {
+   "title": "Principles of Economics",
+   "author": "Mankiw, N.Gregory",
+   "publisher": "Cengage Learning",
+   "edition": "9th",
+   "category": "FE"
+  }
+ ],
+ "ECON3073": [
+  {
+   "title": "Game Theory for Applied Economists",
+   "author": "Gibbons, Robert",
+   "publisher": "Princeton University Press",
+   "edition": "1992",
+   "category": "ME"
+  }
+ ],
+ "ECON3113": [
+  {
+   "title": "Linear algebra for economists",
+   "author": "Aleskerov, F, Ersel, & H, Piontkovski, D.",
+   "publisher": "Springer",
+   "edition": "2011",
+   "category": "ME"
+  }
+ ],
+ "ECON3203": [
+  {
+   "title": "International Economics: Theory and Policy",
+   "author": "Krugman, P., Obstfeld, M. & Melitz, M.",
+   "publisher": "Pearson",
+   "edition": "2022",
+   "category": "ME"
+  }
+ ],
+ "ECON4013": [
+  {
+   "title": "Industrial Organization: Theory and Practice",
+   "author": "Waldman, Don E. and Jensen, Elizabeth J.",
+   "publisher": "Routledge",
+   "edition": "5th",
+   "category": "ME"
+  }
+ ],
+ "ECON4083": [
+  {
+   "title": "International Economics: Theory and Policy",
+   "author": "Krugman, Paul R., Obstfeld, Maurice, and Melitz, Marc.",
+   "publisher": "Pearson Addison-Wesley",
+   "edition": "12th, Global Ed.",
+   "category": "ME"
+  }
+ ],
+ "ECON4093": [
+  {
+   "title": "Urban Economics",
+   "author": "O’Sullivan, Arthur",
+   "publisher": "McGraw-Hill",
+   "edition": "9th",
+   "category": "ME"
+  }
+ ],
+ "ECON4113": [
+  {
+   "title": "Environmental Economics: An Introduction",
+   "author": "Barry Field and Martha Field",
+   "publisher": "McGraw-Hill",
+   "edition": "2024",
+   "category": "ME"
+  },
+  {
+   "title": "Environmental and Natural Resource Economics",
+   "author": "Thomas Tietenberg and Lynne Lewis",
+   "publisher": "Pearson",
+   "edition": "10th",
+   "category": "ME"
+  }
+ ],
+ "ECON4123": [
+  {
+   "title": "Commercial Real Estate Analysis and Investments",
+   "author": "D.Geltner, N.Miller, J.Clayton & P.Eichholtz",
+   "publisher": "Oncourse Learning",
+   "edition": "2014",
+   "category": "ME"
+  }
+ ],
+ "BA3023": [
+  {
+   "title": "Introduction to Economics and Computation",
+   "author": "David Parkes Sven Seuken",
+   "publisher": "Cambridge University Press",
+   "edition": "2016",
+   "category": "ME"
+  }
+ ],
+ "MHR3073": [
+  {
+   "title": "Social Psychology",
+   "author": "David Myers",
+   "publisher": "McGraw Hill",
+   "edition": "14th",
+   "category": "ME/FE"
+  }
+ ],
+ "MHR4013": [
+  {
+   "title": "Human Resources Management in China: Cases in HR Practice",
+   "author": "Davies, D. & Wei, L.",
+   "publisher": "Chandos Publishing",
+   "edition": "2011",
+   "category": "ME/FE"
+  }
+ ],
+ "MKT3043": [
+  {
+   "title": "Strategic Brand Management: building, measuring, and managing brand equity",
+   "author": "Keller, K.L., & Swaminathan, V.",
+   "publisher": "Pearson",
+   "edition": "5th",
+   "category": "FE"
+  }
+ ],
+ "MKT3073": [
+  {
+   "title": "Advertising and Promotion – An Integrated Marketing Communications Perspective",
+   "author": "Belch, G. E. & Belch, M. A.",
+   "publisher": "McGraw-Hill",
+   "edition": "13th",
+   "category": "FE"
+  }
+ ],
+ "MKT4023": [
+  {
+   "title": "Marketing Management in Asia",
+   "author": "Iacobucci,D., Shannon,R.E. & Grigoriou, N.",
+   "publisher": "Cengage",
+   "edition": "2021",
+   "category": "FE"
+  },
+  {
+   "title": "Marketing Management in China",
+   "author": "Kotler, P., Keller, K. L. & Lu, T. H.",
+   "publisher": "Pearson",
+   "edition": "2009",
+   "category": "FE"
+  }
+ ],
+ "EBIS3093": [
+  {
+   "title": "App Inventor 2: Create Your own Android Apps",
+   "author": "Wolber, D., Abelson, H., Spertus, E., & L.Looney",
+   "publisher": "O' Reilly Media",
+   "edition": "2nd",
+   "category": "ME/FE"
+  },
+  {
+   "title": "Social Media Marketing",
+   "author": "Tuten, T., and Solomon, M.",
+   "publisher": "SAGE Publications",
+   "edition": "5th",
+   "category": "ME/FE"
+  }
+ ],
+ "EBIS3113": [
+  {
+   "title": "Fundamentals of machine learning for predictive data analytics: algorithms, worked examples, and case studies",
+   "author": "Kelleher, J. D., Mac Namee, B., & D'arcy, A.",
+   "publisher": "MIT Press",
+   "edition": "2020",
+   "category": "ME/FE"
+  },
+  {
+   "title": "How to use IBM SPSS statistics: A step-by-step guide to analysis and interpretation",
+   "author": "Cronk, B. C.",
+   "publisher": "Routledge",
+   "edition": "2024",
+   "category": "ME/FE"
+  }
+ ],
+ "EBIS4043": [
+  {
+   "title": "A Hands-on Introduction to Big Data Analytics",
+   "author": "Obembe, F., & Engel, O.",
+   "publisher": "SAGE Publications",
+   "edition": "1st",
+   "category": "ME/FE"
+  },
+  {
+   "title": "Business Analytics",
+   "author": "Sanjiv Jaggia, Alison Kelly, Kevin Lertwachara, Leida Chen.",
+   "publisher": "McGraw-Hill",
+   "edition": "2025",
+   "category": "ME/FE"
+  }
+ ],
+ "EPIN3063": [
+  {
+   "title": "The digital transformation playbook: Rethink your business for the digital age",
+   "author": "Rogers, D. L.",
+   "publisher": "Columbia University Press",
+   "edition": "2016",
+   "category": "ME/FE"
+  },
+  {
+   "title": "Digital Transformation: Strategy, Execution and Technology",
+   "author": "Hoe, S. L.",
+   "publisher": "CRC Press",
+   "edition": "2022",
+   "category": "ME/FE"
+  }
+ ],
+ "EPIN4033": [
+  {
+   "title": "Strategic management of technological innovation",
+   "author": "Schilling, M. A.",
+   "publisher": "McGraw-Hill",
+   "edition": "2022",
+   "category": "ME/FE"
+  }
+ ],
+ "BUS4063": [
+  {
+   "title": "Global Business",
+   "author": "Peng W",
+   "publisher": "Cengage",
+   "edition": "4th",
+   "category": "FE"
+  }
+ ],
+ "ENG3813": [
+  {
+   "title": "Essentials of Business Communication: An Asia Edition 3rd Edition",
+   "author": "Mary Ellen Guffey",
+   "publisher": "Cengage Learning",
+   "edition": "2016",
+   "category": "FE"
+  }
+ ],
+ "ENG3803": [
+  {
+   "title": "Skillful Listening & Speaking Student's Book 4",
+   "author": "Pathare, E. and Pathare, G.",
+   "publisher": "Macmillan",
+   "edition": "3rd, 2024",
+   "category": "FE"
+  }
+ ],
+ "CHI1033": [
+  {
+   "title": "演而优则士",
+   "author": "董铁柱",
+   "publisher": "中华书局",
+   "edition": "2nd, 2022",
+   "category": "FE"
+  },
+  {
+   "title": "未尽的快乐",
+   "author": "董铁柱",
+   "publisher": "广东人民出版社",
+   "edition": "1st, 2025",
+   "category": "FE"
+  }
+ ],
+ "AI3133": [
+  {
+   "title": "Natural Language Processing: A Textbook with Python Implementations",
+   "author": "Raymond S. T. Lee",
+   "publisher": "Springer",
+   "edition": "1st",
+   "category": "ME"
+  }
+ ],
+ "COMP4033": [
+  {
+   "title": "Interactive Computer Graphics: A Top-Down Approach Usign OpenGL",
+   "author": "Edward Angel",
+   "publisher": "Pearson",
+   "edition": "Global Ed.",
+   "category": "ME"
+  }
+ ],
+ "COMP4153": [
+  {
+   "title": "Quantum Finance and Intelligent  Trading Systems",
+   "author": "Raymond S.T.Lee",
+   "publisher": "Springer",
+   "edition": "1st",
+   "category": "ME"
+  }
+ ],
+ "AI3123": [
+  {
+   "title": "Digital Image Processing",
+   "author": "Rafael C. Gonzalez, Richard E. Woods",
+   "publisher": "Pearson",
+   "edition": "Global Ed.",
+   "category": "ME"
+  }
+ ],
+ "PSY4093": [
+  {
+   "title": "Ecological Psychology in Context",
+   "author": "Harry Heft",
+   "publisher": "Psychology Press",
+   "edition": "2008",
+   "category": "ME"
+  }
+ ],
+ "PSY2003": [
+  {
+   "title": "Discovering Behavioral Neuroscience:An Introduction to Biological Psychology",
+   "author": "Freberg",
+   "publisher": "Cengage Learning",
+   "edition": "4th",
+   "category": "ME/FE"
+  }
+ ],
+ "PSY4123": [
+  {
+   "title": "Counseling and Psycho therapy Theories and Interventions",
+   "author": "David Capuzzi&Mark D. Stauffer",
+   "publisher": "American Counseling Association",
+   "edition": "7th",
+   "category": "ME"
+  }
+ ],
+ "GCAP3153": [
+  {
+   "title": "Intergenerational New Silk Route: The Greater “Win-Win” Bay AreaIntergenerational New Silk Route: The Greater “Win-Win” Bay Area",
+   "author": "Lai Alan, Qi John, and Luo Tree",
+   "publisher": "China Culture Publishing House",
+   "edition": "1st",
+   "category": "GE2021"
+  }
+ ],
+ "PSY2043": [
+  {
+   "title": "Introduction to Psychology",
+   "author": "Atkinson, Hilgard",
+   "publisher": "Thompson Wadsworth. Singapore",
+   "edition": "16th",
+   "category": "FE"
+  }
+ ],
+ "ENV3183": [
+  {
+   "title": "Practical Environmental Analysis",
+   "author": "M. Radojevic and V. Bashkin",
+   "publisher": "Royal Society of Chemistry",
+   "edition": "2nd",
+   "category": "ME"
+  }
+ ],
+ "ENV1043": [
+  {
+   "title": "Environmental Science: A Global Concern",
+   "author": "Cunningham, W",
+   "publisher": "McGraw Hill",
+   "edition": "15th",
+   "category": "FE"
+  }
+ ],
+ "MATH4143": [
+  {
+   "title": "Introductory Functional Analysis with Applications",
+   "author": "E. Kreyszig",
+   "publisher": "Wiley, 1989",
+   "edition": "Latest Edition",
+   "category": "ME"
+  }
+ ],
+ "OR3023": [
+  {
+   "title": "Simulation",
+   "author": "Sheldon M. Ross",
+   "publisher": "Academic Press",
+   "edition": "6th",
+   "category": "ME"
+  }
+ ],
+ "FINM4063": [
+  {
+   "title": "Stochastic Calculus for Finance II: Continuous-time Models",
+   "author": "Steven E. Shreve",
+   "publisher": "Springer, 2004.",
+   "edition": "1st",
+   "category": "ME"
+  }
+ ],
+ "FIN3063": [
+  {
+   "title": "Principles of Corporate Finance",
+   "author": "Brealey, Myers and Allen",
+   "publisher": "Irwin McGraw Hill, 2011",
+   "edition": "10th",
+   "category": "ME"
+  }
+ ],
+ "GTSC2003": [
+  {
+   "title": "Mathematical Culture",
+   "author": "Tao Tang",
+   "publisher": "Not published yet",
+   "edition": "",
+   "category": "GE2021"
+  }
+ ],
+ "FINM3013": [
+  {
+   "title": "Fundamentals of Futures & Options Markets",
+   "author": "Hull, John",
+   "publisher": "Prentice Hall",
+   "edition": "8th",
+   "category": "ME"
+  }
+ ],
+ "MATH3183": [
+  {
+   "title": "Advanced Engineering Mathematics",
+   "author": "Erwin Kreyszig",
+   "publisher": "Wiley",
+   "edition": "8th, SI Ed.",
+   "category": "ME"
+  }
+ ],
+ "MATH1103": [
+  {
+   "title": "Calculus: Early Transcendentals",
+   "author": "James Stewart, Daniel Clegg, Saleem Watson",
+   "publisher": "McGraw-Hill",
+   "edition": "9th",
+   "category": "FE/MATH"
+  }
+ ],
+ "MATH1113": [
+  {
+   "title": "Calculus for Business, Economics, and the Social and Life Sciences, Brief Version",
+   "author": "Hoffmann and Bradley",
+   "publisher": "McGraw Hill",
+   "edition": "International Ed.",
+   "category": "FE/MATH"
+  }
+ ],
+ "MATH1173": [
+  {
+   "title": "Linear Algebra with Applications",
+   "author": "Steven J. Leon",
+   "publisher": "Pearson Education",
+   "edition": "10th",
+   "category": "FE"
+  }
+ ],
+ "FINM2073": [
+  {
+   "title": "Introduction to Python for Computational Science and Engineering",
+   "author": "David J. Pine",
+   "publisher": "CRC Press, 2024",
+   "edition": "2nd",
+   "category": "ME"
+  }
+ ],
+ "SCIT1033": [
+  {
+   "title": "Introduction to Flight",
+   "author": "John D. Anderson and Mary L. Bowden",
+   "publisher": "McGraw Hill LLC",
+   "edition": "9th",
+   "category": "FE"
+  }
+ ],
+ "COMP4023": [
+  {
+   "title": "Cryptography and Network Security: Principles and Practice",
+   "author": "William Stallings",
+   "publisher": "Pearson",
+   "edition": "8th, 2022",
+   "category": "ME"
+  }
+ ],
+ "DS4093": [
+  {
+   "title": "Dive into Deep Learning",
+   "author": "Aston Zhang et al",
+   "publisher": "d2l.ai",
+   "edition": "preview version",
+   "category": "ME"
+  }
+ ],
+ "MATH4033": [
+  {
+   "title": "Options, Futures and Other Derivatives Securities 期权，期货和其他衍生品",
+   "author": "John C. Hull 约翰.赫尔",
+   "publisher": "清华大学出版社/Prentice Hall",
+   "edition": "7th",
+   "category": "ME"
+  }
+ ],
+ "STAT3033": [
+  {
+   "title": "Bayesian Data Analysis",
+   "author": "Andrew Gelman, John Carlin, Hal Stern, David Dunson, Aki Vehtari, and Donald Rubin",
+   "publisher": "Chapman & Hall/CRC",
+   "edition": "3rd",
+   "category": "ME"
+  }
+ ],
+ "GFQR1023": [
+  {
+   "title": "Business Statistics in Practice",
+   "author": "Bowerman/O'Connell/Murphree",
+   "publisher": "McGRAW-HILL",
+   "edition": "6th",
+   "category": "GE2021"
+  }
+ ],
+ "STAT3003": [
+  {
+   "title": "Elementary Survey Sampling",
+   "author": "Scheaffer, R.L., Mendenhall W., Ott, L., & Gerow K. G.",
+   "publisher": "Brooks/Cole",
+   "edition": "7th",
+   "category": "FE"
+  }
+ ]
+}

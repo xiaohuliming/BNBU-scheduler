@@ -794,6 +794,22 @@ def get_course_enrichment():
     return _load_json_cached(COURSE_ENRICHMENT_PATH, _enrichment_cache)
 
 
+# Extra data extracted from the official ECM files (textbook list per semester,
+# WPEC/GE course descriptions that the main PDF catalog is missing).
+COURSE_TEXTBOOKS_PATH = os.path.join(APP_ROOT, 'course_textbooks.json')
+COURSE_DESC_EXTRA_PATH = os.path.join(APP_ROOT, 'course_descriptions_extra.json')
+_textbooks_cache = {"mtime": None, "data": None}
+_desc_extra_cache = {"mtime": None, "data": None}
+
+
+def get_course_textbooks():
+    return _load_json_cached(COURSE_TEXTBOOKS_PATH, _textbooks_cache)
+
+
+def get_course_desc_extra():
+    return _load_json_cached(COURSE_DESC_EXTRA_PATH, _desc_extra_cache)
+
+
 def _resolve_course_refs(codes, catalog, enrichment):
     resolved = []
     for code in codes:
@@ -827,6 +843,17 @@ def get_course_detail(code):
     result = dict(course)
     result["prereqs"] = _resolve_course_refs(course.get("prereq_codes", []), catalog, enrichment_map)
     result["unlocks"] = _resolve_course_refs(course.get("unlocks", []), catalog, enrichment_map)
+
+    # Textbooks (from the semester textbook list) + description fallback for
+    # courses the main PDF catalog has no description for (WPEC/GE courses).
+    result["textbooks"] = get_course_textbooks().get(code, [])
+    if not (result.get("description") or "").strip():
+        extra = get_course_desc_extra().get(code)
+        if extra:
+            if extra.get("description"):
+                result["description"] = extra["description"]
+            result["description_cn"] = extra.get("description_cn", "")
+            result["description_source"] = extra.get("source", "")
 
     enrichment = enrichment_map.get(code)
     if enrichment:
