@@ -2215,32 +2215,96 @@ def get_classroom_schedule(room):
         "days": days,
     })
 
+# Historical semester offerings baked by build_semesters.py; the current
+# semester always comes live from the timetable xlsx (get_df).
+SEMESTERS_INDEX_PATH = os.path.join(APP_ROOT, 'semesters_index.json')
+CURRENT_SEMESTER_LABEL = '25-26 第二学期'
+_semesters_index_cache = {"mtime": None, "data": None}
+_semester_caches = {}
+
+
+def get_semesters_index():
+    data = _load_json_cached(SEMESTERS_INDEX_PATH, _semesters_index_cache)
+    return data if isinstance(data, list) else []
+
+
+def get_semester_courses(key):
+    cache = _semester_caches.setdefault(key, {"mtime": None, "data": None})
+    path = os.path.join(APP_ROOT, f'course_semester_{key}.json')
+    data = _load_json_cached(path, cache)
+    return data if isinstance(data, list) else []
+
+
+def _group_df_courses():
+    df = get_df()
+    courses = []
+    for code, group in df.groupby('Course Code'):
+        title_full = str(group['Course Title & Session'].iloc[0])
+        title = title_full.split('(')[0].strip()
+        teachers = [str(t) for t in group['Teachers'].unique().tolist() if pd.notna(t)]
+        details = []
+        for _, row in group.iterrows():
+            details.append(row.where(pd.notnull(row), "").to_dict())
+        courses.append({"code": code, "name": title, "teachers": teachers, "details": details})
+    return courses
+
+
+@app.route('/api/semesters', methods=['GET'])
+def list_semesters():
+    return jsonify({
+        "current": {"key": "current", "label": CURRENT_SEMESTER_LABEL},
+        "semesters": [
+            {"key": s.get("key"), "label": s.get("label")}
+            for s in get_semesters_index() if s.get("key")
+        ],
+    })
+
+
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
     try:
-        df = get_df()
-        courses = []
-        grouped = df.groupby('Course Code')
-        
-        for code, group in grouped:
-            title_full = str(group['Course Title & Session'].iloc[0])
-            title = title_full.split('(')[0].strip()
-            teachers = group['Teachers'].unique().tolist()
-            teachers = [str(t) for t in teachers if pd.notna(t)]
-            
-            details = []
-            for _, row in group.iterrows():
-                row_data = row.where(pd.notnull(row), "").to_dict()
-                details.append(row_data)
+        semester = (request.args.get('semester') or 'current').strip()
 
-            courses.append({
-                "code": code,
-                "name": title,
-                "teachers": teachers,
-                "details": details
-            })
-            
-        return jsonify(courses)
+        if semester in ('', 'current'):
+            return jsonify(_group_df_courses())
+
+        if semester == 'all':
+            # current offerings + one synthesized card per catalog course that
+            # is not offered this semester (so the whole catalog is searchable)
+            courses = _group_df_courses()
+            seen = {c["code"] for c in courses}
+            catalog = get_course_catalog()
+            for code in sorted(catalog):
+                if code in seen:
+                    continue
+                c = catalog[code]
+                courses.append({
+                    "code": code,
+                    "name": c.get("title") or code,
+                    "teachers": [],
+                    "details": [{
+                        "Course Code": code,
+                        "Course Title & Session": c.get("title") or code,
+                        "Offering Unit": " / ".join(c.get("offering_units") or []),
+                        "Offering Programme": " / ".join(c.get("offering_programmes") or []),
+                        "Units": c.get("units") or "",
+                        "Curriculum Type": " / ".join(c.get("curriculum_types") or []),
+                        "Elective Type": " / ".join(c.get("elective_types") or []),
+                        "Teachers": "",
+                        "Class Schedule": "",
+                        "Hours": "",
+                        "Classroom": "",
+                        "Requirements": c.get("prereq_text_zh") or "",
+                        "Remarks": "",
+                    }],
+                })
+            return jsonify(courses)
+
+        # whitelist against the baked index (no path injection)
+        valid_keys = {s.get("key") for s in get_semesters_index()}
+        if semester not in valid_keys:
+            return jsonify({"error": "Unknown semester"}), 400
+        return jsonify(get_semester_courses(semester))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
