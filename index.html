@@ -442,10 +442,39 @@
             const [currentPage, setCurrentPage] = useState(1);
             const ITEMS_PER_PAGE = 50;
 
+            // Search scope: current semester (live) / whole catalog / a past semester
+            const [scope, setScope] = useState('current');
+            const [currentLabel, setCurrentLabel] = useState('本学期');
+            const [semesters, setSemesters] = useState([]);
+            const [scopeData, setScopeData] = useState({});
+            const [scopeLoading, setScopeLoading] = useState(false);
+
+            useEffect(() => {
+                fetch('/api/semesters').then(r => r.json()).then(d => {
+                    setSemesters(d.semesters || []);
+                    if (d.current && d.current.label) setCurrentLabel(d.current.label);
+                }).catch(() => {});
+            }, []);
+
+            useEffect(() => {
+                if (scope === 'current' || scopeData[scope]) return;
+                let alive = true;
+                setScopeLoading(true);
+                fetch('/api/courses?semester=' + encodeURIComponent(scope))
+                    .then(r => r.json())
+                    .then(d => { if (alive && Array.isArray(d)) setScopeData(prev => ({ ...prev, [scope]: d })); })
+                    .catch(() => {})
+                    .finally(() => { if (alive) setScopeLoading(false); });
+                return () => { alive = false; };
+            }, [scope]);
+
+            const activeCourses = scope === 'current' ? availableCourses : (scopeData[scope] || []);
+            const currentCodes = useMemo(() => new Set((availableCourses || []).map(c => c.code)), [availableCourses]);
+
             const allOfferings = useMemo(() => {
-                if (!availableCourses) return [];
+                if (!activeCourses) return [];
                 const offerings = [];
-                availableCourses.forEach(course => {
+                activeCourses.forEach(course => {
                     if (!course.details) return;
                     course.details.forEach(row => {
                          const titleAndSession = row['Course Title & Session'] || course.name;
@@ -472,7 +501,7 @@
                     });
                 });
                 return offerings;
-            }, [availableCourses]);
+            }, [activeCourses]);
 
             const uniqueOptions = useMemo(() => {
                 const units = new Set();
@@ -496,7 +525,7 @@
                 };
             }, [allOfferings]);
 
-            const hasActiveSearch = searchQuery.length > 0 || Object.values(filters).some(Boolean);
+            const hasActiveSearch = searchQuery.length > 0 || Object.values(filters).some(Boolean) || scope !== 'current';
 
             const filteredDatabase = useMemo(() => {
                 if (!hasActiveSearch) return [];
@@ -520,7 +549,7 @@
                 return result; 
             }, [searchQuery, filters, allOfferings, hasActiveSearch]);
 
-            useEffect(() => setCurrentPage(1), [searchQuery, filters]);
+            useEffect(() => setCurrentPage(1), [searchQuery, filters, scope]);
 
             const paginatedResults = useMemo(() => {
                 const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -540,15 +569,27 @@
                         <h2 className="text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
                             FIND YOUR <span className="text-[#ec4899]">TARGET</span>
                         </h2>
-                        <div className="relative mb-4">
-                            <input 
-                                type="text" 
-                                placeholder="搜索 Code / 课程名 / 老师 / 教室 ..." 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-gray-100 border-2 border-black p-4 pl-14 font-bold text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
-                            />
-                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
+                        <div className="mb-4 flex gap-2">
+                            <div className="relative flex-1 min-w-0">
+                                <input
+                                    type="text"
+                                    placeholder="搜索 Code / 课程名 / 老师 / 教室 ..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-gray-100 border-2 border-black p-4 pl-14 font-bold text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
+                                />
+                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
+                            </div>
+                            <select
+                                value={scope}
+                                onChange={(e) => setScope(e.target.value)}
+                                title="搜索范围：本学期 / 全部课程库 / 历史学期"
+                                className="shrink-0 max-w-[8.5rem] md:max-w-none border-2 border-black px-2 md:px-3 font-bold text-sm bg-white focus:bg-[#d6ff62] focus:outline-none"
+                            >
+                                <option value="current">{currentLabel}（本学期）</option>
+                                <option value="all">全部课程库</option>
+                                {semesters.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                            </select>
                         </div>
                         <div className="flex overflow-x-auto pb-1 -mx-1 px-1 md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold md:overflow-visible">
                              <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
@@ -587,7 +628,12 @@
                     {hasActiveSearch && (
                     <React.Fragment>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                        {paginatedResults.length === 0 ? (
+                        {scopeLoading && paginatedResults.length === 0 ? (
+                           <div className="col-span-full text-center py-20 opacity-50">
+                              <Loader2 className="w-14 h-14 mx-auto mb-4 animate-spin" />
+                              <p className="text-xl font-black">加载学期数据…</p>
+                           </div>
+                        ) : paginatedResults.length === 0 ? (
                            <div className="col-span-full text-center py-20 opacity-40">
                               <Search className="w-20 h-20 mx-auto mb-4" />
                               <p className="text-2xl font-black">NO RESULTS FOUND</p>
@@ -595,9 +641,12 @@
                         ) : (
                           paginatedResults.map((course, idx) => (
                             <div key={idx} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group">
-                              <div className="flex justify-between items-start mb-2">
+                              <div className="flex justify-between items-start mb-2 gap-2">
                                 <button onClick={() => onViewCourse && onViewCourse(course.code)} title="查看课程详情" className="bg-black text-white px-2 py-1 font-black text-lg hover:bg-[#ec4899] transition-colors">{course.code}</button>
-                                <span className="bg-[#d6ff62] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                  {!currentCodes.has(course.code) && <span className="bg-gray-100 border-2 border-black px-2 py-0.5 font-bold text-xs text-gray-500">本学期未开设</span>}
+                                  <span className="bg-[#d6ff62] border-2 border-black px-2 py-0.5 font-bold text-xs">{course.units} Units</span>
+                                </div>
                               </div>
                               <h3 onClick={() => onViewCourse && onViewCourse(course.code)} className="font-black text-xl leading-tight mb-3 min-h-[3rem] cursor-pointer hover:underline decoration-2 underline-offset-2">{course.title}</h3>
                               <div className="space-y-2 text-sm font-bold text-gray-700 flex-grow">
@@ -625,7 +674,11 @@
                                   className="bg-white text-black font-black py-3 border-2 border-black hover:bg-[#d6ff62] active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
                                   <BookOpen className="w-4 h-4" /> 详情
                                 </button>
-                                {cartCodes.includes(course.code) ? (
+                                {!currentCodes.has(course.code) ? (
+                                  <span title="本学期未开设，无法加入排课" className="bg-gray-100 text-gray-400 font-black py-3 border-2 border-gray-300 flex items-center justify-center gap-1.5 cursor-not-allowed select-none">
+                                    未开设
+                                  </span>
+                                ) : cartCodes.includes(course.code) ? (
                                   <button onClick={() => onRemoveCourse && onRemoveCourse(course.code)} title="已在选课购物车，点击移除"
                                     className="bg-[#d6ff62] text-black font-black py-3 border-2 border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
                                     <Check className="w-4 h-4" /> 已加入
@@ -711,16 +764,29 @@
             return ZLIB_BASE + encodeURIComponent(q);
         };
 
-        const CourseRefChip = ({ item, onClick }) => (
-            <button
-                onClick={() => onClick && item.code && onClick(item.code)}
-                title={item.title || item.code}
-                className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#d6ff62]' : 'bg-white'}`}
-            >
-                <span className="bg-black text-white px-1.5 py-1">{item.code}</span>
-                <span className="truncate max-w-[11rem] py-1">{item.title || ''}</span>
-            </button>
-        );
+        const CourseRefChip = ({ item, onClick }) => {
+            // Codes not in the catalog (legacy / equivalent codes referenced only
+            // inside prerequisite rules, e.g. GCLA1903 = old code for UCLC1013)
+            // have no title and no detail page — show a muted, non-clickable tag.
+            if (!item.title) {
+                return (
+                    <span title="旧课程代码 / 等价课程，不在课程库中" className="inline-flex items-center border-2 border-black/25 font-bold text-xs bg-gray-50 text-gray-500">
+                        <span className="bg-gray-400 text-white px-1.5 py-1">{item.code}</span>
+                        <span className="px-1.5 py-1 italic">旧代码</span>
+                    </span>
+                );
+            }
+            return (
+                <button
+                    onClick={() => onClick && item.code && onClick(item.code)}
+                    title={item.title || item.code}
+                    className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#d6ff62]' : 'bg-white'}`}
+                >
+                    <span className="bg-black text-white px-1.5 py-1">{item.code}</span>
+                    <span className="truncate max-w-[11rem] py-1">{item.title}</span>
+                </button>
+            );
+        };
 
         const InsightSection = ({ icon: IconC, title, accent, children }) => (
             <div className="border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
