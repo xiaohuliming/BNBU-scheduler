@@ -314,6 +314,8 @@
         const Upload = (p) => <Icon name="Upload" {...p} />;
         const FileText = (p) => <Icon name="FileText" {...p} />;
         const Github = (p) => <Icon name="Github" {...p} />;
+        const ShoppingCart = (p) => <Icon name="ShoppingCart" {...p} />;
+        const Check = (p) => <Icon name="Check" {...p} />;
 
         const SCHOOL_DAY_OPTIONS = [
             { value: 'Mon', label: '周一' },
@@ -434,7 +436,7 @@
         };
 
         // --- Explorer View ---
-        const ExplorerView = ({ availableCourses, onAddCourse, switchToOptimizer, onViewTeacher, onViewCourse }) => {
+        const ExplorerView = ({ availableCourses, onAddCourse, switchToOptimizer, onViewTeacher, onViewCourse, cartCodes = [], onRemoveCourse }) => {
             const [searchQuery, setSearchQuery] = useState('');
             const [filters, setFilters] = useState({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
             const [currentPage, setCurrentPage] = useState(1);
@@ -623,10 +625,17 @@
                                   className="bg-white text-black font-black py-3 border-2 border-black hover:bg-[#d6ff62] active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
                                   <BookOpen className="w-4 h-4" /> 详情
                                 </button>
-                                <button onClick={() => { onAddCourse({ code: course.code, name: course.name }, course.teacher); switchToOptimizer(); }}
-                                  className="bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
-                                  <Plus className="w-4 h-4" /> 排课
-                                </button>
+                                {cartCodes.includes(course.code) ? (
+                                  <button onClick={() => onRemoveCourse && onRemoveCourse(course.code)} title="已在选课购物车，点击移除"
+                                    className="bg-[#a3e635] text-black font-black py-3 border-2 border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
+                                    <Check className="w-4 h-4" /> 已加入
+                                  </button>
+                                ) : (
+                                  <button onClick={() => onAddCourse({ code: course.code, name: course.name }, course.teacher)}
+                                    className="bg-black text-white font-black py-3 border-2 border-black hover:bg-[#ec4899] hover:border-black active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
+                                    <Plus className="w-4 h-4" /> 加入
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))
@@ -716,7 +725,7 @@
             </div>
         );
 
-        const CourseInsightModal = ({ initialCode, onClose, onViewTeacher, onAddCourse, switchToOptimizer }) => {
+        const CourseInsightModal = ({ initialCode, onClose, onViewTeacher, onAddCourse, switchToOptimizer, cartCodes = [], onRemoveCourse }) => {
             const [history, setHistory] = useState([]);
             const [code, setCode] = useState(initialCode);
             const [data, setData] = useState(null);
@@ -954,11 +963,20 @@
                         {/* Footer action */}
                         {data && data.offered && (
                             <div className="shrink-0 border-t-4 border-black bg-white p-3 flex justify-end">
-                                <button
-                                    onClick={() => { onAddCourse && onAddCourse({ code: data.code, name: data.title }, ''); switchToOptimizer && switchToOptimizer(); onClose(); }}
-                                    className="bg-black text-white font-black py-2.5 px-5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center gap-2">
-                                    <Plus className="w-5 h-5" /> 添加到排课
-                                </button>
+                                {cartCodes.includes(data.code) ? (
+                                    <button
+                                        onClick={() => onRemoveCourse && onRemoveCourse(data.code)}
+                                        title="已在选课购物车，点击移除"
+                                        className="bg-[#a3e635] text-black font-black py-2.5 px-5 border-2 border-black active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                        <Check className="w-5 h-5" /> 已在购物车 · 点击移除
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => onAddCourse && onAddCourse({ code: data.code, name: data.title }, '')}
+                                        className="bg-black text-white font-black py-2.5 px-5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                        <ShoppingCart className="w-5 h-5" /> 加入选课购物车
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -2561,13 +2579,34 @@
             const chapters = [
                 {
                     numeral: 'I',
+                    key: 'explorer',
+                    title: '课程浏览',
+                    en: 'Course Explorer',
+                    detail: '搜索课程，查看介绍 / 前置课 / 技能与就业分析。'
+                },
+                {
+                    numeral: 'II',
+                    key: 'optimizer',
+                    title: '排课优化',
+                    en: 'Schedule Optimizer',
+                    detail: '选定课程与空闲时间，生成不冲突的课表。'
+                },
+                {
+                    numeral: 'III',
                     key: 'classrooms',
                     title: '空教室查询',
                     en: 'Free Classrooms',
                     detail: '按时间与教学楼查看可用教室。'
                 },
                 {
-                    numeral: 'II',
+                    numeral: 'IV',
+                    key: 'ddl',
+                    title: 'iSpace DDL',
+                    en: 'Deadlines',
+                    detail: '同步 iSpace 作业截止日期与待办事项。'
+                },
+                {
+                    numeral: 'V',
                     key: 'media-dl',
                     title: '无水印下载',
                     en: 'Media Downloader',
@@ -2575,7 +2614,7 @@
                     href: '/media-dl/index.html'
                 },
                 {
-                    numeral: 'III',
+                    numeral: 'VI',
                     key: 'print-setup',
                     title: '校园打印一键配置',
                     en: 'Campus Printing',
@@ -2583,21 +2622,7 @@
                     href: '/print-setup/index.html'
                 },
                 {
-                    numeral: 'IV',
-                    key: 'optimizer',
-                    title: '排课优化',
-                    en: 'Schedule Optimizer',
-                    detail: '选定课程与空闲时间，生成不冲突的课表。'
-                },
-                {
-                    numeral: 'V',
-                    key: 'ddl',
-                    title: 'iSpace DDL',
-                    en: 'Deadlines',
-                    detail: '同步 iSpace 作业截止日期与待办事项。'
-                },
-                {
-                    numeral: 'VI',
+                    numeral: 'VII',
                     key: 'eatwhat',
                     title: '今天吃什么',
                     en: 'What to Eat',
@@ -2921,7 +2946,7 @@
 
         const FACULTY_LABEL = { FST: '理工 FST', FBM: '工商管理 FBM', FHSS: '人文社科 FHSS', Science: '理科', Cross: '通用' };
 
-        const CareerPlannerView = ({ onViewCourse, onAddCourse, switchToOptimizer }) => {
+        const CareerPlannerView = ({ onViewCourse, onAddCourse, switchToOptimizer, cartCodes = [], onRemoveCourse }) => {
             const [careers, setCareers] = useState([]);
             const [career, setCareer] = useState('');
             const [completedText, setCompletedText] = useState('');
@@ -3106,7 +3131,11 @@
                                             )}
                                             <div className="mt-auto grid grid-cols-2 gap-2 pt-1">
                                                 <button onClick={() => onViewCourse && onViewCourse(r.code)} className="bg-white text-black font-bold py-2 border-2 border-black hover:bg-[#d6ff62] transition-colors text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4" /> 详情</button>
-                                                <button onClick={() => { onAddCourse && onAddCourse({ code: r.code, name: r.title }, ''); switchToOptimizer && switchToOptimizer(); }} className="bg-black text-white font-bold py-2 border-2 border-black hover:bg-[#ec4899] transition-colors text-sm flex items-center justify-center gap-1"><Plus className="w-4 h-4" /> 排课</button>
+                                                {cartCodes.includes(r.code) ? (
+                                                    <button onClick={() => onRemoveCourse && onRemoveCourse(r.code)} title="已在选课购物车，点击移除" className="bg-[#a3e635] text-black font-bold py-2 border-2 border-black transition-colors text-sm flex items-center justify-center gap-1"><Check className="w-4 h-4" /> 已加入</button>
+                                                ) : (
+                                                    <button onClick={() => { onAddCourse && onAddCourse({ code: r.code, name: r.title }, ''); }} className="bg-black text-white font-bold py-2 border-2 border-black hover:bg-[#ec4899] transition-colors text-sm flex items-center justify-center gap-1"><Plus className="w-4 h-4" /> 加入</button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -3133,13 +3162,68 @@
             );
         };
 
+        const CartWidget = ({ items, open, setOpen, onRemove, onClear, onGoOptimize, onViewCourse, onClearTeacher }) => {
+            if (!items || items.length === 0) return null;
+            return (
+                <div className="fixed bottom-5 right-5 z-[9998] flex flex-col items-end gap-3">
+                    {open && (
+                        <div className="w-80 max-w-[calc(100vw-2.5rem)] bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[70vh] animate-fade-in">
+                            <div className="bg-black text-white px-4 py-3 flex items-center justify-between shrink-0">
+                                <span className="font-black flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> 选课购物车 · {items.length}</span>
+                                <button onClick={() => setOpen(false)} className="hover:text-red-400"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="overflow-auto custom-scrollbar grow">
+                                {items.map((c) => (
+                                    <div key={c.code} className="flex items-center gap-2 px-3 py-2 border-b-2 border-black/10 last:border-0">
+                                        <span className={`w-2.5 h-9 shrink-0 border border-black ${c.color || 'bg-gray-300'}`} />
+                                        <div className="min-w-0 grow">
+                                            <button onClick={() => onViewCourse && onViewCourse(c.code)} className="font-black text-sm hover:underline decoration-2 text-left" title="查看课程详情">{c.code}</button>
+                                            <div className="text-xs text-gray-500 truncate">{c.name}</div>
+                                            {c.preferredTeacher && (
+                                                <div className="mt-0.5 inline-flex items-center gap-1 bg-[#fef3c7] border border-black px-1.5 py-0.5 text-[10px] font-bold max-w-full">
+                                                    <User className="w-3 h-3 shrink-0" />
+                                                    <span className="truncate">仅 {c.preferredTeacher}</span>
+                                                    <button onClick={() => onClearTeacher && onClearTeacher(c.code)} title="改为任意老师" className="shrink-0 hover:text-red-600"><X className="w-3 h-3" /></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button onClick={() => onRemove(c.code)} className="shrink-0 text-gray-300 hover:text-red-600 transition-colors" title="移除"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-3 border-t-4 border-black flex items-center justify-between gap-2 shrink-0">
+                                <button onClick={onClear} className="text-xs font-bold underline text-gray-500 hover:text-red-600">清空</button>
+                                <button onClick={onGoOptimize} className="bg-black text-white font-black py-2 px-4 border-2 border-black hover:bg-[#a3e635] hover:text-black transition-colors flex items-center gap-1.5 text-sm">
+                                    去排课 <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <button onClick={() => setOpen(!open)} title="选课购物车"
+                        className="relative bg-[#d6ff62] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-14 h-14 flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0 transition-transform">
+                        <ShoppingCart className="w-6 h-6" strokeWidth={2.5} />
+                        <span className="absolute -top-2 -right-2 bg-[#ec4899] text-white border-2 border-black rounded-full min-w-[1.4rem] h-6 px-1 flex items-center justify-center text-xs font-black">{items.length}</span>
+                    </button>
+                </div>
+            );
+        };
+
         const App = () => {
             const [currentView, setCurrentView] = useState('home');
             const [availableCourses, setAvailableCourses] = useState([]);
-            const [selectedCodes, setSelectedCodes] = useState([]);
+            const [selectedCodes, setSelectedCodes] = useState(() => {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('maxcourse_cart') || '[]');
+                    return Array.isArray(saved) ? saved.filter(c => c && c.code) : [];
+                } catch (e) { return []; }
+            });
+            useEffect(() => {
+                try { localStorage.setItem('maxcourse_cart', JSON.stringify(selectedCodes)); } catch (e) {}
+            }, [selectedCodes]);
             const [searchQuery, setSearchQuery] = useState("");
             const [viewingCourse, setViewingCourse] = useState(null);
             const [insightCourse, setInsightCourse] = useState(null);
+            const [cartOpen, setCartOpen] = useState(false);
             const [viewingTeacher, setViewingTeacher] = useState(null);
             const [viewingRoom, setViewingRoom] = useState(null);
             const [startTime, setStartTime] = useState("08:00");
@@ -3328,6 +3412,7 @@
                                             return (
                                                 <div key={item.label} className="relative group">
                                                     <button
+                                                        onClick={() => goToView(item.children[0].key)}
                                                         className={`book-serif text-base pb-1 inline-flex items-baseline gap-1 transition-colors ${
                                                             groupActive
                                                                 ? 'text-[#1a140d] border-b border-[#1a140d]'
@@ -3472,6 +3557,8 @@
                                 switchToOptimizer={() => goToView('optimizer')}
                                 onViewTeacher={(name) => setViewingTeacher(name)}
                                 onViewCourse={(code) => setInsightCourse(code)}
+                                cartCodes={selectedCodes.map(c => c.code)}
+                                onRemoveCourse={removeCourse}
                              />
                         </div>
                     ) : currentView === 'career' ? (
@@ -3480,6 +3567,8 @@
                                 onViewCourse={(code) => setInsightCourse(code)}
                                 onAddCourse={addCourse}
                                 switchToOptimizer={() => goToView('optimizer')}
+                                cartCodes={selectedCodes.map(c => c.code)}
+                                onRemoveCourse={removeCourse}
                             />
                         </div>
                     ) : currentView === 'teachers' ? (
@@ -3647,8 +3736,22 @@
                         onViewTeacher={(name) => setViewingTeacher(name)}
                         onAddCourse={addCourse}
                         switchToOptimizer={() => goToView('optimizer')}
+                        cartCodes={selectedCodes.map(c => c.code)}
+                        onRemoveCourse={removeCourse}
                     />}
                     {viewingTeacher && <TeacherProfileModal teacherName={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
+                    {currentView !== 'optimizer' && (
+                        <CartWidget
+                            items={selectedCodes}
+                            open={cartOpen}
+                            setOpen={setCartOpen}
+                            onRemove={removeCourse}
+                            onClear={() => { setSelectedCodes([]); setOptimalSchedule(null); }}
+                            onGoOptimize={() => { setCartOpen(false); goToView('optimizer'); }}
+                            onViewCourse={(code) => setInsightCourse(code)}
+                            onClearTeacher={(code) => updatePreferredTeacher(code, '')}
+                        />
+                    )}
                     {viewingRoom && <ClassroomDetailModal room={viewingRoom} onClose={() => setViewingRoom(null)} />}
                     {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={setUser} />}
                 </div>
