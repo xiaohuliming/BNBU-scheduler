@@ -316,6 +316,8 @@
         const Github = (p) => <Icon name="Github" {...p} />;
         const ShoppingCart = (p) => <Icon name="ShoppingCart" {...p} />;
         const Check = (p) => <Icon name="Check" {...p} />;
+        const Presentation = (p) => <Icon name="Presentation" {...p} />;
+        const MessagesSquare = (p) => <Icon name="MessagesSquare" {...p} />;
 
         const SCHOOL_DAY_OPTIONS = [
             { value: 'Mon', label: '周一' },
@@ -2832,20 +2834,38 @@
                 },
                 {
                     numeral: 'III',
+                    key: 'slidecraft',
+                    title: 'SlideCraft PPT 助手',
+                    en: 'AI Slides',
+                    detail: '一句话生成可编辑的演示文稿。',
+                    href: 'https://ppt.bnbscheduler.top/',
+                    external: true
+                },
+                {
+                    numeral: 'IV',
+                    key: 'omnichat',
+                    title: 'OmniChat 多模型对话',
+                    en: 'Multimodal AI Chat',
+                    detail: '多家大模型 + 多模态输入的 AI 对话中转站。',
+                    href: 'https://chat.bnbscheduler.top/',
+                    external: true
+                },
+                {
+                    numeral: 'V',
                     key: 'classrooms',
                     title: '空教室查询',
                     en: 'Free Classrooms',
                     detail: '按时间与教学楼查看可用教室。'
                 },
                 {
-                    numeral: 'IV',
+                    numeral: 'VI',
                     key: 'ddl',
                     title: 'iSpace DDL',
                     en: 'Deadlines',
                     detail: '同步 iSpace 作业截止日期与待办事项。'
                 },
                 {
-                    numeral: 'V',
+                    numeral: 'VII',
                     key: 'media-dl',
                     title: '无水印下载',
                     en: 'Media Downloader',
@@ -2853,7 +2873,7 @@
                     href: '/media-dl/index.html'
                 },
                 {
-                    numeral: 'VI',
+                    numeral: 'VIII',
                     key: 'print-setup',
                     title: '校园打印一键配置',
                     en: 'Campus Printing',
@@ -2861,7 +2881,7 @@
                     href: '/print-setup/index.html'
                 },
                 {
-                    numeral: 'VII',
+                    numeral: 'IX',
                     key: 'eatwhat',
                     title: '今天吃什么',
                     en: 'What to Eat',
@@ -2912,13 +2932,13 @@
                                     <div
                                         key={chapter.key}
                                         className="book-entry"
-                                        onClick={() => chapter.href ? (window.location.href = chapter.href) : onNavigate(chapter.key)}
+                                        onClick={() => chapter.href ? (chapter.external ? window.open(chapter.href, '_blank', 'noopener') : (window.location.href = chapter.href)) : onNavigate(chapter.key)}
                                         role="button"
                                         tabIndex={0}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
-                                                chapter.href ? (window.location.href = chapter.href) : onNavigate(chapter.key);
+                                                chapter.href ? (chapter.external ? window.open(chapter.href, '_blank', 'noopener') : (window.location.href = chapter.href)) : onNavigate(chapter.key);
                                             }
                                         }}
                                     >
@@ -2964,6 +2984,30 @@
         };
 
         const TOOLBOX_ITEMS = [
+            {
+                key: 'slidecraft',
+                title: 'SlideCraft PPT 助手',
+                subtitle: '一句话生成可编辑的演示文稿',
+                description: '输入主题或大纲，AI 智能体自动生成结构化幻灯片，可在线编辑、切换模板并导出。',
+                href: 'https://ppt.bnbscheduler.top/',
+                badge: 'AI Slides',
+                Icon: Presentation,
+                accent: 'bg-[#f97316]',
+                external: true,
+                cta: '打开工具'
+            },
+            {
+                key: 'omnichat',
+                title: 'OmniChat 多模型对话',
+                subtitle: '多模型 AI 对话与多模态中转站',
+                description: '在一个界面调用多家大模型，支持图片等多模态输入，适合日常问答、写作与代码。',
+                href: 'https://chat.bnbscheduler.top/',
+                badge: 'AI Chat',
+                Icon: MessagesSquare,
+                accent: 'bg-[#7c3aed]',
+                external: true,
+                cta: '打开工具'
+            },
             {
                 key: 'eatwhat',
                 title: '今天吃什么',
