@@ -2527,6 +2527,11 @@ def get_classroom_schedule(room):
 # semester always comes live from the timetable xlsx (get_df).
 SEMESTERS_INDEX_PATH = os.path.join(APP_ROOT, 'semesters_index.json')
 CURRENT_SEMESTER_LABEL = '25-26 第二学期'
+# Academic-year start + semester number of the current timetable; used by the
+# frontend to map an admission cohort to its current study year (Y = ay_start -
+# cohort + 1). Update together with CURRENT_SEMESTER_LABEL each semester swap.
+CURRENT_SEMESTER_AY_START = 2025
+CURRENT_SEMESTER_NO = 2
 _semesters_index_cache = {"mtime": None, "data": None}
 _semester_caches = {}
 
@@ -2560,7 +2565,8 @@ def _group_df_courses():
 @app.route('/api/semesters', methods=['GET'])
 def list_semesters():
     return jsonify({
-        "current": {"key": "current", "label": CURRENT_SEMESTER_LABEL},
+        "current": {"key": "current", "label": CURRENT_SEMESTER_LABEL,
+                    "ay_start": CURRENT_SEMESTER_AY_START, "sem": CURRENT_SEMESTER_NO},
         "semesters": [
             {"key": s.get("key"), "label": s.get("label")}
             for s in get_semesters_index() if s.get("key")

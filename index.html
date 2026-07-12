@@ -3685,6 +3685,144 @@
             );
         };
 
+        const ProgrammePreselect = ({ onAddCourses, cartCodes = [], onViewCourse }) => {
+            const [programmes, setProgrammes] = useState([]);
+            const [programme, setProgramme] = useState('');
+            const [cohort, setCohort] = useState('');
+            const [cur, setCur] = useState(null);
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [showOverdue, setShowOverdue] = useState(false);
+
+            useEffect(() => {
+                fetch('/api/programmes').then(r => r.json()).then(d => setProgrammes(d.programmes || [])).catch(() => {});
+                fetch('/api/semesters').then(r => r.json()).then(d => setCur(d.current || null)).catch(() => {});
+                try {
+                    const saved = JSON.parse(localStorage.getItem('maxcourse_programme_profile') || 'null');
+                    if (saved && saved.programme) {
+                        setProgramme(saved.programme);
+                        if (saved.cohort) setCohort(saved.cohort);
+                    }
+                } catch (e) {}
+            }, []);
+
+            useEffect(() => {
+                if (!programme || !cohort) { setData(null); return; }
+                let alive = true;
+                setLoading(true); setError('');
+                let completed = [];
+                try {
+                    const saved = JSON.parse(localStorage.getItem('maxcourse_programme_profile') || 'null') || {};
+                    if (saved.completed) completed = String(saved.completed).split(/[,，\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+                    localStorage.setItem('maxcourse_programme_profile', JSON.stringify({ ...saved, programme, cohort }));
+                } catch (e) {}
+                fetch('/api/programme-map', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ programme, cohort, completed })
+                })
+                    .then(r => r.json())
+                    .then(d => { if (!alive) return; if (d.error) { setError(d.error); setData(null); } else setData(d); })
+                    .catch(() => { if (alive) setError('加载失败'); })
+                    .finally(() => { if (alive) setLoading(false); });
+                return () => { alive = false; };
+            }, [programme, cohort]);
+
+            const selectedProg = programmes.find(p => p.key === programme);
+            const grouped = useMemo(() => {
+                const g = {};
+                programmes.forEach(p => { (g[p.faculty] = g[p.faculty] || []).push(p); });
+                return g;
+            }, [programmes]);
+
+            const year = (cur && cur.ay_start && cohort) ? (cur.ay_start - parseInt(cohort, 10) + 1) : null;
+            const sem = cur ? cur.sem : null;
+
+            const { planned, overdue } = useMemo(() => {
+                if (!data || !year || !sem) return { planned: [], overdue: [] };
+                const plannedList = [], overdueList = [];
+                data.sections.forEach(s => (s.courses || []).forEach(c => {
+                    if (!c.plan || !c.plan.length) return;
+                    if (c.plan.some(p => p[0] === year && p[1] === sem)) plannedList.push(c);
+                    else if (!c.completed && c.offered && c.plan.every(p => p[0] < year || (p[0] === year && p[1] < sem))) overdueList.push(c);
+                }));
+                return { planned: plannedList, overdue: overdueList };
+            }, [data, year, sem]);
+
+            const addable = planned.filter(c => !c.completed && c.offered && !cartCodes.includes(c.code));
+            const overdueAddable = overdue.filter(c => !cartCodes.includes(c.code));
+
+            return (
+                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 relative">
+                    <div className="absolute top-0 right-0 bg-[#d6ff62] text-black px-3 py-1 font-bold text-sm border-l-2 border-b-2 border-black">按专业预选</div>
+                    <h2 className="text-xl font-black mb-4 flex items-center gap-2"><Layers className="w-5 h-5" /> 本学期专业课</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        <select value={programme} onChange={e => { setProgramme(e.target.value); setCohort(''); }} className="border-2 border-black p-2 font-bold text-sm bg-white focus:bg-[#d6ff62] focus:outline-none">
+                            <option value="">— 选择专业 —</option>
+                            {Object.keys(grouped).map(fac => (
+                                <optgroup key={fac} label={FACULTY_LABEL[fac] || fac}>
+                                    {grouped[fac].map(p => <option key={p.key} value={p.key}>{p.key} · {p.name}</option>)}
+                                </optgroup>
+                            ))}
+                        </select>
+                        <select value={cohort} onChange={e => setCohort(e.target.value)} disabled={!selectedProg} className="border-2 border-black p-2 font-bold text-sm bg-white focus:bg-[#d6ff62] focus:outline-none disabled:bg-gray-100 disabled:text-gray-400">
+                            <option value="">— 入学年份 —</option>
+                            {(selectedProg ? selectedProg.cohorts : []).map(c => <option key={c} value={c}>{c} 级</option>)}
+                        </select>
+                    </div>
+                    {error && <p className="text-red-600 font-bold text-sm">{error}</p>}
+                    {loading && <p className="text-sm font-bold text-gray-400 flex items-center gap-1"><Loader2 className="w-4 h-4 animate-spin" /> 读取修读计划…</p>}
+                    {!programme && !loading && <p className="text-sm font-bold text-gray-400">选择专业和入学年份，按官方修读计划一键加入本学期该修的课。</p>}
+                    {data && year && sem && (
+                        year > 4 || year < 1 ? (
+                            <p className="text-sm font-bold text-gray-500">{cohort} 级当前已超出四年修读计划范围。</p>
+                        ) : (
+                        <React.Fragment>
+                            <p className="text-xs font-bold text-gray-500 mb-2">按 {programme} {cohort} 级计划，当前为 <span className="bg-black text-[#d6ff62] px-1">Y{year}S{sem}</span>，本学期计划 {planned.length} 门：</p>
+                            {planned.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                    {planned.map(c => <PlanCourseChip key={c.code} c={c} onViewCourse={onViewCourse} />)}
+                                </div>
+                            ) : (
+                                <p className="text-sm font-bold text-gray-400 mb-3">本学期没有计划中的固定课程（以选修为主）。</p>
+                            )}
+                            {addable.length > 0 ? (
+                                <button onClick={() => onAddCourses(addable)}
+                                    className="w-full bg-black text-white font-black py-2.5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center justify-center gap-2">
+                                    <Plus className="w-4 h-4" /> 一键加入 {addable.length} 门待排课程
+                                </button>
+                            ) : planned.length > 0 && (
+                                <p className="text-sm font-bold text-green-700">本学期计划课程均已修过 / 已在待排列表。</p>
+                            )}
+                            {overdue.length > 0 && (
+                                <div className="mt-3 border-t-2 border-dashed border-black/20 pt-2">
+                                    <button onClick={() => setShowOverdue(v => !v)} className="text-xs font-bold underline hover:text-blue-600 flex items-center gap-1">
+                                        <ChevronDown className={`w-3 h-3 transition-transform ${showOverdue ? 'rotate-180' : ''}`} />
+                                        往学期未修的必修 ({overdue.length} 门，本学期有开)
+                                    </button>
+                                    {showOverdue && (
+                                        <React.Fragment>
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                {overdue.map(c => <PlanCourseChip key={c.code} c={c} onViewCourse={onViewCourse} />)}
+                                            </div>
+                                            {overdueAddable.length > 0 && (
+                                                <button onClick={() => onAddCourses(overdueAddable)}
+                                                    className="mt-2 w-full bg-white text-black font-black py-2 border-2 border-black hover:bg-[#fde047] active:translate-y-0.5 transition-colors flex items-center justify-center gap-2 text-sm">
+                                                    <Plus className="w-4 h-4" /> 补修课一并加入 ({overdueAddable.length} 门)
+                                                </button>
+                                            )}
+                                        </React.Fragment>
+                                    )}
+                                </div>
+                            )}
+                            <p className="text-[11px] text-gray-400 mt-3 font-medium">已修课程以「专业地图」里保存的记录为准；选修课可去课程页用「培养方案」筛选挑选。</p>
+                        </React.Fragment>
+                        )
+                    )}
+                </div>
+            );
+        };
+
         const CartWidget = ({ items, open, setOpen, onRemove, onClear, onGoOptimize, onViewCourse, onClearTeacher }) => {
             if (!items || items.length === 0) return null;
             return (
@@ -3873,6 +4011,28 @@
                 }
                 setSelectedCodes([...selectedCodes, { ...course, color: randomColor, preferredTeacher: preferredTeacher, teachers: teacherList }]);
                 setSearchQuery("");
+                setOptimalSchedule(null);
+            };
+
+            const CART_COLORS = ['bg-pink-400', 'bg-lime-400', 'bg-cyan-400', 'bg-yellow-400', 'bg-orange-400', 'bg-purple-400', 'bg-emerald-400', 'bg-rose-400'];
+            const addCourses = (list) => {
+                setSelectedCodes(prev => {
+                    const have = new Set(prev.map(c => c.code));
+                    const additions = [];
+                    (list || []).forEach(item => {
+                        if (!item || !item.code || have.has(item.code)) return;
+                        have.add(item.code);
+                        const found = availableCourses.find(ac => ac.code === item.code);
+                        additions.push({
+                            code: item.code,
+                            name: item.name || item.title || (found ? found.name : item.code),
+                            color: CART_COLORS[(prev.length + additions.length) % CART_COLORS.length],
+                            preferredTeacher: '',
+                            teachers: found && found.teachers ? found.teachers : [],
+                        });
+                    });
+                    return additions.length ? [...prev, ...additions] : prev;
+                });
                 setOptimalSchedule(null);
             };
 
@@ -4175,6 +4335,12 @@
                                         )}
                                     </div>
                                 </div>
+
+                                <ProgrammePreselect
+                                    onAddCourses={addCourses}
+                                    cartCodes={selectedCodes.map(c => c.code)}
+                                    onViewCourse={(code) => setInsightCourse(code)}
+                                />
 
                                 <div className="bg-[#e5e7eb] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
                                     <div className="flex justify-between items-center mb-4">
