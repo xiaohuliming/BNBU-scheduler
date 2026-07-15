@@ -35,7 +35,9 @@ from pypdf import PdfReader
 
 from maximize_credits import load_timetable
 
-PDF_PATH = "/Users/xhlm/Desktop/Study/大数据/小组项目/data/Course Descriptions_20260421.pdf"
+# cp the source PDF into /tmp/srcdata first (macOS TCC: never point python at
+# ~/Downloads or ~/Documents directly).
+PDF_PATH = "/tmp/srcdata/Course Descriptions_20260710.pdf"
 XLSX_PATH = "Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx"
 OUT_PATH = "course_catalog.json"
 # Codes present in the previous catalog but in neither the PDF nor the new
