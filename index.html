@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="1471274116-300513+12027406">
+<html lang="en" data-compiled-sum="4005452560-313664+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1471274116-300513+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=4005452560-313664+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1471274116-300513+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=4005452560-313664+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -358,6 +358,10 @@
         const Check = (p) => <Icon name="Check" {...p} />;
         const Presentation = (p) => <Icon name="Presentation" {...p} />;
         const MessagesSquare = (p) => <Icon name="MessagesSquare" {...p} />;
+        const FolderOpen = (p) => <Icon name="FolderOpen" {...p} />;
+        const ListChecks = (p) => <Icon name="ListChecks" {...p} />;
+        const ArrowLeftRight = (p) => <Icon name="ArrowLeftRight" {...p} />;
+        const Lock = (p) => <Icon name="Lock" {...p} />;
 
         const SCHOOL_DAY_OPTIONS = [
             { value: 'Mon', label: '周一' },
@@ -3118,6 +3122,17 @@
                 cta: '打开工具'
             },
             {
+                key: 'files',
+                title: '校园文件中心',
+                subtitle: '选课 · 加减课 · 转专业 · VPN · 培养方案',
+                description: '把散落各处的官方文件收在一处：教务处选课与加减课 FAQ、转专业规则、VPN 客户端、培养方案手册，直接查看或下载，更多文件一键跳转官方文件站。',
+                internalView: 'files',
+                badge: 'Docs Hub',
+                Icon: FolderOpen,
+                accent: 'bg-[#6366f1]',
+                cta: '进入文件中心'
+            },
+            {
                 key: 'print-setup',
                 title: '校园打印一键配置',
                 subtitle: '一键把图书馆共享打印机加到你的电脑',
@@ -3130,7 +3145,7 @@
             }
         ];
 
-        const ToolboxView = () => {
+        const ToolboxView = ({ onOpenView }) => {
             return (
                 <main className="max-w-6xl mx-auto px-4 md:px-8 xl:px-12 py-10">
                     <section className="mb-8">
@@ -3150,14 +3165,10 @@
                     <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                         {TOOLBOX_ITEMS.map((tool) => {
                             const ToolIcon = tool.Icon;
-                            return (
-                                <a
-                                    key={tool.key}
-                                    href={tool.href}
-                                    target={tool.external ? '_blank' : undefined}
-                                    rel={tool.external ? 'noopener noreferrer' : undefined}
-                                    className="group block rounded-[2rem] border border-black/10 bg-white/80 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]"
-                                >
+                            const internal = !!tool.internalView;
+                            const cardClass = "group block w-full text-left rounded-[2rem] border border-black/10 bg-white/80 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]";
+                            const inner = (
+                                <React.Fragment>
                                     <div className="flex items-start justify-between gap-4">
                                         <div className={`grid h-14 w-14 place-items-center rounded-2xl border border-black/10 ${tool.accent} text-white shadow-[4px_4px_0px_rgba(16,24,32,1)]`}>
                                             <ToolIcon className="w-7 h-7" />
@@ -3176,8 +3187,23 @@
                                         {tool.description}
                                     </p>
                                     <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820]">
-                                        {tool.cta || '打开工具'} <ExternalLink className="w-4 h-4" />
+                                        {tool.cta || '打开工具'} {internal ? <ArrowRight className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
                                     </div>
+                                </React.Fragment>
+                            );
+                            return internal ? (
+                                <button key={tool.key} type="button" onClick={() => onOpenView && onOpenView(tool.internalView)} className={cardClass}>
+                                    {inner}
+                                </button>
+                            ) : (
+                                <a
+                                    key={tool.key}
+                                    href={tool.href}
+                                    target={tool.external ? '_blank' : undefined}
+                                    rel={tool.external ? 'noopener noreferrer' : undefined}
+                                    className={cardClass}
+                                >
+                                    {inner}
                                 </a>
                             );
                         })}
@@ -3191,6 +3217,183 @@
                             </h2>
                         </div>
                     </section>
+                </main>
+            );
+        };
+
+        // --- Campus File Center (工具箱 > 校园文件中心) ---
+        const FilesView = ({ onOpenView }) => {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+            const [query, setQuery] = useState('');
+
+            useEffect(() => {
+                let alive = true;
+                fetch('/api/campus-docs')
+                    .then(r => r.json())
+                    .then(d => { if (alive) { setData(d); setLoading(false); } })
+                    .catch(() => { if (alive) { setError('文件列表加载失败，请稍后再试。'); setLoading(false); } });
+                return () => { alive = false; };
+            }, []);
+
+            const q = query.trim().toLowerCase();
+            const categories = (data && data.categories) || [];
+            const filtered = useMemo(() => {
+                if (!q) return categories;
+                return categories
+                    .map(cat => ({
+                        ...cat,
+                        docs: (cat.docs || []).filter(doc =>
+                            (doc.title || '').toLowerCase().includes(q) ||
+                            (doc.desc || '').toLowerCase().includes(q) ||
+                            (doc.meta || '').toLowerCase().includes(q))
+                    }))
+                    .filter(cat => cat.docs.length > 0);
+            }, [categories, q]);
+
+            const totalDocs = categories.reduce((n, c) => n + (c.docs ? c.docs.length : 0), 0);
+
+            const DocCard = ({ doc }) => {
+                const kind = doc.type === 'pdf' ? 'pdf' : doc.type === 'download' ? 'download' : 'link';
+                const iconBg = kind === 'link' ? 'bg-[#3b82f6]' : kind === 'download' ? 'bg-[#0ea5e9]' : 'bg-[#101820]';
+                const KindIcon = kind === 'link' ? Globe : kind === 'download' ? Download : FileText;
+                const badge = kind === 'pdf' ? 'PDF' : kind === 'download' ? (doc.badge || '安装包') : '外链';
+                const ctaText = kind === 'download' ? '下载' : kind === 'pdf' ? '查看 / 下载' : '打开';
+                const CtaIcon = kind === 'link' ? ExternalLink : Download;
+                return (
+                    <a
+                        href={doc.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={kind === 'download' ? '' : undefined}
+                        className="group flex flex-col rounded-[1.6rem] border border-black/10 bg-white/80 p-5 shadow-[0_14px_36px_rgba(16,24,32,0.07)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_22px_54px_rgba(16,24,32,0.14)]"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-black/10 ${iconBg} text-white shadow-[3px_3px_0px_rgba(16,24,32,1)]`}>
+                                <KindIcon className="w-5 h-5" />
+                            </div>
+                            <span className="mono-ui rounded-full border border-black/10 bg-[#f4efe6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-black/55">
+                                {badge}
+                            </span>
+                        </div>
+                        <h3 className="mt-4 text-lg font-black tracking-[-0.03em] text-[#101820]">{doc.title}</h3>
+                        {doc.desc && <p className="mt-1.5 flex-1 text-sm leading-6 text-black/58">{doc.desc}</p>}
+                        <div className="mt-4 flex items-center justify-between gap-2">
+                            {doc.meta && <span className="mono-ui text-[11px] uppercase tracking-[0.1em] text-black/40">{doc.meta}</span>}
+                            <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#101820] group-hover:text-[#ff7a1f] transition-colors">
+                                {ctaText}
+                                <CtaIcon className="w-4 h-4" />
+                            </span>
+                        </div>
+                    </a>
+                );
+            };
+
+            return (
+                <main className="max-w-6xl mx-auto px-4 md:px-8 xl:px-12 py-10">
+                    <section className="mb-8">
+                        <button
+                            onClick={() => onOpenView && onOpenView('toolbox')}
+                            className="mono-ui inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.14em] text-black/45 hover:text-black transition-colors"
+                        >
+                            <ArrowRight className="w-3.5 h-3.5 rotate-180" /> 返回工具箱
+                        </button>
+                        <div className="section-kicker mt-3">File Center</div>
+                        <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <h1 className="text-4xl md:text-6xl font-black tracking-[-0.08em] text-[#101820]">
+                                    校园文件中心
+                                </h1>
+                                {data && data.intro && (
+                                    <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">{data.intro}</p>
+                                )}
+                            </div>
+                            <div className="rounded-3xl border border-black/10 bg-white/70 px-4 py-3 mono-ui text-xs uppercase tracking-[0.16em] text-black/45 whitespace-nowrap">
+                                {totalDocs} files
+                            </div>
+                        </div>
+                        <div className="relative mt-6 max-w-md">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35" />
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={e => setQuery(e.target.value)}
+                                placeholder="搜索文件，如“选课”“转专业”“REPLACE”"
+                                className="w-full rounded-full border border-black/15 bg-white/80 py-3 pl-11 pr-4 text-sm font-medium text-[#101820] placeholder-black/35 focus:border-black focus:outline-none transition-colors"
+                            />
+                        </div>
+                    </section>
+
+                    {loading && (
+                        <div className="flex items-center gap-2 text-black/45 py-16 justify-center">
+                            <Loader2 className="w-5 h-5 animate-spin" /> 正在加载文件列表…
+                        </div>
+                    )}
+                    {error && !loading && (
+                        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>
+                    )}
+
+                    {!loading && !error && (
+                        <React.Fragment>
+                            {data && data.station && (
+                                <a
+                                    href={data.station.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group mb-10 flex flex-col gap-3 rounded-[1.8rem] border border-dashed border-black/25 bg-white/50 p-6 transition-all hover:bg-white/80 md:flex-row md:items-center md:justify-between"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-black/10 bg-[#101820] text-white shadow-[4px_4px_0px_rgba(16,24,32,1)]">
+                                            <FolderOpen className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h2 className="text-xl font-black tracking-[-0.03em] text-[#101820]">{data.station.title}</h2>
+                                                {data.station.sso && (
+                                                    <span className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-[#fde047] px-2 py-0.5 text-[10px] font-bold text-black/70">
+                                                        <Lock className="w-3 h-3" /> 需登录
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {data.station.desc && <p className="mt-1 max-w-xl text-sm leading-6 text-black/55">{data.station.desc}</p>}
+                                        </div>
+                                    </div>
+                                    <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820] md:self-auto">
+                                        前往官方文件站 <ExternalLink className="w-4 h-4" />
+                                    </span>
+                                </a>
+                            )}
+
+                            {filtered.length === 0 && (
+                                <div className="py-16 text-center text-black/40">没有匹配的文件，换个关键词试试。</div>
+                            )}
+
+                            <div className="space-y-12">
+                                {filtered.map(cat => (
+                                    <section key={cat.key}>
+                                        <div className="flex items-center gap-3 mb-5">
+                                            <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-black/10 ${cat.accent || 'bg-[#101820]'} text-white shadow-[4px_4px_0px_rgba(16,24,32,1)]`}>
+                                                <Icon name={cat.icon || 'FileText'} className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-2xl font-black tracking-[-0.04em] text-[#101820]">{cat.title}</h2>
+                                                {cat.desc && <p className="text-sm text-black/50">{cat.desc}</p>}
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                            {(cat.docs || []).map((doc, i) => <DocCard key={doc.href || i} doc={doc} />)}
+                                        </div>
+                                        {cat.hint && (
+                                            <p className="mt-4 flex items-start gap-1.5 text-xs text-black/45">
+                                                <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#ff7a1f]" /> {cat.hint}
+                                            </p>
+                                        )}
+                                    </section>
+                                ))}
+                            </div>
+                        </React.Fragment>
+                    )}
                 </main>
             );
         };
@@ -4470,7 +4673,9 @@
                     ) : currentView === 'ddl' ? (
                         <DDLView user={user} onLoginRequest={() => setShowAuthModal(true)} />
                     ) : currentView === 'toolbox' ? (
-                        <ToolboxView />
+                        <ToolboxView onOpenView={goToView} />
+                    ) : currentView === 'files' ? (
+                        <FilesView onOpenView={goToView} />
                     ) : currentView === 'settings' ? (
                         <SettingsView user={user} onLogout={() => { setUser(null); goToView('home'); }} />
                     ) : (

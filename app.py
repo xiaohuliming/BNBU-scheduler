@@ -807,6 +807,18 @@ def get_course_textbooks():
     return _load_json_cached(COURSE_TEXTBOOKS_PATH, _textbooks_cache)
 
 
+# Campus file center (工具箱 > 校园文件中心): curated high-frequency student
+# documents. Hosted PDFs live under /docs/, external entries link to the
+# official AR pages / the SSO-gated ECM station. Regenerate by hand-editing
+# campus_docs.json; the loader picks up changes by mtime without a restart.
+CAMPUS_DOCS_PATH = os.path.join(APP_ROOT, 'campus_docs.json')
+_campus_docs_cache = {"mtime": None, "data": None}
+
+
+def get_campus_docs():
+    return _load_json_cached(CAMPUS_DOCS_PATH, _campus_docs_cache)
+
+
 # Course equivalences derived from prereq exclusion/alternative texts
 # (build_equivalences.py). Symmetric pairs, no transitive closure.
 COURSE_EQUIV_PATH = os.path.join(APP_ROOT, 'course_equivalences.json')
@@ -1166,6 +1178,16 @@ def list_programmes():
         })
     out.sort(key=lambda x: (x["faculty"], x["name"]))
     return jsonify({"programmes": out})
+
+
+@app.route('/api/campus-docs', methods=['GET'])
+def api_campus_docs():
+    """Curated campus file center for the toolbox. Serves campus_docs.json as-is
+    (hosted PDFs under /docs/ + external official links); empty categories on a
+    missing/broken file so the view degrades gracefully."""
+    data = get_campus_docs() or {}
+    data.setdefault("categories", [])
+    return jsonify(data)
 
 
 @app.route('/api/programme-courses', methods=['GET'])

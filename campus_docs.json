@@ -1,0 +1,152 @@
+{
+  "updated": "2026-07",
+  "intro": "常用校园文件一处搞定：教务处等官方指引已收录，可直接在线查看或下载。更多校内文件请到学校官方文件站（需登录）。",
+  "station": {
+    "title": "学校官方文件站",
+    "desc": "各部门通知、表格、手册的完整目录都在这里。需用 BNBU 统一身份（SSO）登录后查看。",
+    "href": "https://ecm.bnbu.edu.cn/index.html#doc/enterprise/64062?key=17841114877554994",
+    "sso": true
+  },
+  "categories": [
+    {
+      "key": "course-selection",
+      "title": "选课",
+      "icon": "ListChecks",
+      "accent": "bg-[#3b82f6]",
+      "desc": "在线选课系统怎么用、各类课程怎么选",
+      "docs": [
+        {
+          "title": "在线选课常见问题问答",
+          "desc": "选课与加减课的区别、选课流程，以及 ME / FE / GE 等各类课程如何选。教务处官方 FAQ。",
+          "href": "/docs/course-selection/course-selection-faq.pdf",
+          "type": "pdf",
+          "meta": "2025-26 学期二 · 教务处 AR"
+        },
+        {
+          "title": "选课流程图",
+          "desc": "一张图看懂在线选课的完整步骤。",
+          "href": "/docs/course-selection/course-selection-flowchart.pdf",
+          "type": "pdf",
+          "meta": "2025-26 学期二 · 教务处 AR"
+        },
+        {
+          "title": "选课轮候递补名单操作指南",
+          "desc": "选修课满员时如何加入轮候（waitlist），以及递补规则与系统操作步骤。",
+          "href": "/docs/course-selection/course-selection-waitlist-guide.pdf",
+          "type": "pdf",
+          "meta": "教务处 AR"
+        }
+      ]
+    },
+    {
+      "key": "add-drop",
+      "title": "加减课",
+      "icon": "RefreshCcw",
+      "accent": "bg-[#ec4899]",
+      "desc": "补修、重修、退课的规则与系统操作",
+      "docs": [
+        {
+          "title": "加减课常见问题问答",
+          "desc": "加减课的用途、时间窗口、重修与退课规则等常见问题。教务处官方 FAQ。",
+          "href": "/docs/add-drop/add-drop-faq.pdf",
+          "type": "pdf",
+          "meta": "2025-26 学期二 · 教务处 AR"
+        },
+        {
+          "title": "REPLACE 功能使用说明",
+          "desc": "加减课系统里用 REPLACE 一步完成“退旧课 + 选新课”的操作指引。",
+          "href": "/docs/add-drop/add-drop-replace-function.pdf",
+          "type": "pdf",
+          "meta": "2026 · 教务处 AR"
+        }
+      ]
+    },
+    {
+      "key": "programme-transfer",
+      "title": "转专业",
+      "icon": "ArrowLeftRight",
+      "accent": "bg-[#f97316]",
+      "desc": "转专业的规则、志愿与录取办法",
+      "docs": [
+        {
+          "title": "转专业录取规则及参考指南",
+          "desc": "志愿数量、录取顺序、按 cGPA 排名的核心规则。想转专业先读这份。",
+          "href": "/docs/programme-transfer/programme-transfer-rules.pdf",
+          "type": "pdf",
+          "meta": "教务处 AR"
+        },
+        {
+          "title": "转专业申请公告与安排",
+          "desc": "本学年转专业的申请时间、名额与流程安排，含各专业接收计划。",
+          "href": "/docs/programme-transfer/programme-transfer-announcement.pdf",
+          "type": "pdf",
+          "meta": "2025-26 学期二 · 教务处 AR"
+        }
+      ]
+    },
+    {
+      "key": "vpn",
+      "title": "VPN 与校园网",
+      "icon": "ShieldCheck",
+      "accent": "bg-[#0ea5e9]",
+      "desc": "校外访问校内资源（图书馆数据库、教务系统、内网应用等）需先连 VPN。服务器地址：v.uic.edu.cn",
+      "hint": "两步走：① 装宁盾令牌 Dkey Token（App Store / 应用商店，鸿蒙用微信小程序），用 BNBU 账号扫码激活，动态码每 60 秒刷新；② 装 Cisco AnyConnect，服务器地址填 v.uic.edu.cn，登录时输 BNBU 账号密码 + 令牌动态码。手机端在应用商店搜 Cisco Secure Client。完整图文见下方官方指南。",
+      "docs": [
+        {
+          "title": "官方 VPN 使用指南",
+          "desc": "宁盾令牌 Dkey Token 激活 + Cisco AnyConnect 设置的完整图文步骤，含服务器地址、分组选择、登录与常见问题。",
+          "href": "/docs/vpn/vpn-service-guide.pdf",
+          "type": "pdf",
+          "meta": "ITSC · v202603"
+        },
+        {
+          "title": "Cisco AnyConnect · Windows 安装包",
+          "desc": "Windows 电脑的 VPN 客户端，下载后双击 .msi 安装。",
+          "href": "/docs/vpn/anyconnect-windows.msi",
+          "type": "download",
+          "badge": "Windows",
+          "meta": "Cisco AnyConnect 4.10 · 16.5MB"
+        },
+        {
+          "title": "Cisco AnyConnect · macOS 安装包",
+          "desc": "Mac 电脑的 VPN 客户端，下载后双击 .pkg 安装。",
+          "href": "/docs/vpn/anyconnect-macos.pkg",
+          "type": "download",
+          "badge": "macOS",
+          "meta": "Cisco AnyConnect 4.9 · 16.1MB"
+        }
+      ]
+    },
+    {
+      "key": "handbook",
+      "title": "培养方案 & 课程",
+      "icon": "GraduationCap",
+      "accent": "bg-[#10b981]",
+      "desc": "各专业培养方案与课程描述，官方公开页、实时最新",
+      "hint": "想按你的专业交互核对已修学分？试试 选课 › 专业地图。",
+      "docs": [
+        {
+          "title": "专业培养方案手册",
+          "desc": "32 个专业各届的 Programme Handbook（学习计划、修读要求）。官方公开页，永远最新。",
+          "href": "https://ar.bnbu.edu.cn/current_students/student_handbook/programme_handbook.htm",
+          "type": "link",
+          "meta": "教务处官网"
+        },
+        {
+          "title": "课程描述查询",
+          "desc": "全校课程的英文课程描述（Course Description）。",
+          "href": "https://ar.bnbu.edu.cn/current_students/student_handbook/course_Deescription.htm",
+          "type": "link",
+          "meta": "教务处官网"
+        },
+        {
+          "title": "学生手册总览",
+          "desc": "教务处学生手册主页，含各类学术规章与指引。",
+          "href": "https://ar.bnbu.edu.cn/current_students/student_handbook.htm",
+          "type": "link",
+          "meta": "教务处官网"
+        }
+      ]
+    }
+  ]
+}
