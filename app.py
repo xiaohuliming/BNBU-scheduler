@@ -96,7 +96,7 @@ app.config.update(
 
 GZIP_MIN_BYTES = 1024
 GZIP_MIME_PREFIXES = ('text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml')
-LONG_CACHE_PREFIXES = ('/vendor/',)
+LONG_CACHE_PREFIXES = ('/vendor/', '/app.compiled.js')
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
     '/tests', '/venv', '/.venv', '/logs',

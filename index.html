@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-compiled-sum="2570998779-300513+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,8 +10,35 @@
     <script src="/vendor/tailwind.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com/3.4.16';"></script>
     <script src="/vendor/react.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react@18.3.1/umd/react.production.min.js';"></script>
     <script src="/vendor/react-dom.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js';"></script>
-    <script src="/vendor/babel.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/@babel/standalone@7.24.7/babel.min.js';"></script>
+    <!-- babel-standalone 不再无条件加载:页尾的引导脚本在预编译产物
+         (app.compiled.js) 与 JSX 源码校验和一致时直接用产物,只有校验和
+         不一致(改了 JSX 忘了跑 node precompile.js)才动态回退到浏览器内
+         Babel。省掉 ~900KB 传输 + 数秒转译。 -->
     <script src="/vendor/lucide.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js';"></script>
+    <style>
+    /* 开屏占位:脚本没就绪前先画出来,别让用户盯白屏 */
+    #boot-splash {
+        position: fixed; inset: 0; z-index: 99999;
+        display: grid; place-items: center;
+        background: #faf4ea; transition: opacity 0.25s ease;
+    }
+    #boot-splash .bs-mark {
+        font: 700 28px/1.2 Georgia, 'Times New Roman', serif;
+        color: #1a140d; letter-spacing: 0.02em;
+        animation: bs-pulse 1.15s ease-in-out infinite;
+    }
+    @keyframes bs-pulse {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 1; }
+    }
+    /* 12 秒还没起来,纯 CSS 露出提示(脚本挂掉也能显示) */
+    #boot-splash .bs-hint {
+        position: absolute; bottom: 14vh;
+        font-size: 13px; font-weight: 600; color: #675f4d;  /* ≥4.5:1 on the paper bg */
+        opacity: 0; animation: bs-hint 0.4s ease 12s forwards;
+    }
+    @keyframes bs-hint { to { opacity: 1; } }
+    </style>
     <style>
         :root {
             --paper: #f4efe6;
@@ -236,9 +263,10 @@
     </style>
 </head>
 <body>
+    <div id="boot-splash"><div class="bs-mark">Maxcourse</div><div class="bs-hint">网络有点慢，仍在加载…刷新可重试</div></div>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react">
         const { useState, useEffect, useMemo, useRef } = React;
 
         const toRoman = (n) => {
@@ -3991,6 +4019,11 @@
         };
 
         const App = () => {
+            // 首次挂载完成即撤掉开屏占位(effect 在 DOM 提交后运行,后台标签页也会触发)
+            useEffect(() => {
+                const sp = document.getElementById('boot-splash');
+                if (sp) { sp.style.opacity = '0'; setTimeout(() => sp.remove(), 260); }
+            }, []);
             const [currentView, setCurrentView] = useState('home');
             const [availableCourses, setAvailableCourses] = useState([]);
             const [selectedCodes, setSelectedCodes] = useState(() => {
@@ -4644,6 +4677,45 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+    // Babel 回退加载器:动态建新 <script>(老的 onerror 里改 this.src 不会重新
+    // 抓取,是死代码),本地失败换 CDN;若 babel 在 DOMContentLoaded 之后才就位,
+    // 它自己的自动转译钩子不会再触发,需要手动调 transformScriptTags。
+    window.__bootBabel = function (src) {
+        var b = document.createElement('script');
+        b.src = src;
+        b.onload = function () {
+            if (document.readyState !== 'loading' && window.Babel && Babel.transformScriptTags) {
+                Babel.transformScriptTags();
+            }
+        };
+        b.onerror = function () {
+            if (src.indexOf('unpkg.com') === -1) {
+                window.__bootBabel('https://unpkg.com/@babel/standalone@7.24.7/babel.min.js');
+            }
+        };
+        document.body.appendChild(b);
+    };
+    (function () {
+        // 预编译引导:JSX 校验和与 <html data-compiled-sum> 的前段匹配 → 直接跑
+        // app.compiled.js(跳过 Babel 下载与现场转译);不匹配(改了 JSX 没重跑
+        // node precompile.js)或产物加载失败(404/断网)→ 回退浏览器内 Babel,
+        // 页面照常能用只是慢。stamp 的 "+build" 后缀把转译工具链版本编进缓存
+        // URL:JSX 没变但预编译选项变了,也能击穿一年 immutable 缓存。
+        var src = document.querySelector('script[type="text/babel"]').textContent;
+        var h = 0;
+        for (var i = 0; i < src.length; i++) h = (h * 31 + src.charCodeAt(i)) | 0;
+        var sum = String(h >>> 0) + '-' + src.length;
+        var stamp = document.documentElement.getAttribute('data-compiled-sum') || '';
+        if (stamp.split('+')[0] === sum) {
+            document.write('<script src="/app.compiled.js?v=' + encodeURIComponent(stamp)
+                + '" onerror="__bootBabel(\'/vendor/babel.min.js\')"><\/script>');
+        } else {
+            if (window.console) console.warn('app.compiled.js 校验和不匹配,回退到浏览器内 Babel(改了 JSX 记得跑 node precompile.js)');
+            window.__bootBabel('/vendor/babel.min.js');
+        }
+    })();
     </script>
 </body>
 </html>
