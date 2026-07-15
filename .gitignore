@@ -5,3 +5,4 @@ __pycache__/
 venv/
 maxcourse.db
 enrich_work/
+backups/
