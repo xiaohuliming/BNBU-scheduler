@@ -2673,6 +2673,31 @@
             const [deleting, setDeleting] = useState(false);
             const [displayName, setDisplayName] = useState(user ? (user.display_name || user.username) : '');
             const [updating, setUpdating] = useState(false);
+            const [bindSid, setBindSid] = useState('');
+            const [bindPw, setBindPw] = useState('');
+            const [binding, setBinding] = useState(false);
+
+            const handleBindIspace = async () => {
+                if (!bindSid.trim() || !bindPw) { alert("请输入学号和 iSpace 密码"); return; }
+                setBinding(true);
+                try {
+                    const res = await fetch('/api/user/bind/ispace', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: bindSid.trim(), password: bindPw })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert("绑定成功！今后可直接用 iSpace 登录此账号，DDL 已同步。");
+                        window.location.reload();
+                    } else {
+                        alert("绑定失败: " + (data.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    alert("Network error");
+                }
+                setBinding(false);
+            };
 
             useEffect(() => {
                 if (user) setDisplayName(user.display_name || user.username);
@@ -2778,13 +2803,22 @@
                                 </div>
                                 <div>
                                     <label className="block text-xs font-black uppercase mb-1 text-gray-500">iSpace Linked</label>
-                                    <div className="font-bold text-xl flex items-center gap-2 p-2">
-                                        {user.ispace_username ? (
+                                    {user.ispace_username ? (
+                                        <div className="font-bold text-xl flex items-center gap-2 p-2">
                                             <span className="text-green-600 flex items-center gap-1"><CheckSquare className="w-4 h-4" /> {user.ispace_username}</span>
-                                        ) : (
-                                            <span className="text-gray-400">Not linked</span>
-                                        )}
-                                    </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 p-2">
+                                            <p className="text-sm font-bold text-gray-500">未绑定。绑定后可直接用 iSpace 登录此账号，并自动同步 DDL。</p>
+                                            <div className="flex flex-col md:flex-row gap-2">
+                                                <input value={bindSid} onChange={e => setBindSid(e.target.value)} placeholder="学号" className="border-2 border-black p-2 font-bold flex-1 min-w-0" />
+                                                <input type="password" value={bindPw} onChange={e => setBindPw(e.target.value)} placeholder="iSpace 密码" className="border-2 border-black p-2 font-bold flex-1 min-w-0" />
+                                                <button onClick={handleBindIspace} disabled={binding} className="bg-[#3b82f6] text-white font-black px-4 py-2 border-2 border-black hover:opacity-80 disabled:opacity-50 flex items-center justify-center">
+                                                    {binding ? <Loader2 className="animate-spin w-4 h-4" /> : "LINK"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

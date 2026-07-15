@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from html import escape
 from flask import Flask, abort, request, jsonify, send_from_directory, session
+import sso_bridge
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
@@ -1486,6 +1487,31 @@ def favicon():
 
 
 @app.before_request
+def sso_attach():
+    # OmniChat / SlideCraft set a parent-domain sso_token on login; with no
+    # local session, silently sign the shared user in here too.
+    if 'user_id' in session:
+        return
+    shared = sso_bridge.shared_user_for_token(request.cookies.get('sso_token'))
+    if not shared:
+        return
+    uname = shared['username']
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE username = ?', (uname,))
+    user = c.fetchone()
+    if user is None:
+        c.execute('INSERT INTO users (username, display_name) VALUES (?, ?)',
+                  (uname, uname))
+        conn.commit()
+        c.execute('SELECT * FROM users WHERE username = ?', (uname,))
+        user = c.fetchone()
+    conn.close()
+    display = user['display_name'] or user['ispace_username'] or user['username']
+    set_authenticated_session(user['id'], user['username'], display)
+
+
+@app.before_request
 def refresh_logged_in_session():
     if 'user_id' in session:
         session.permanent = True
@@ -1537,7 +1563,9 @@ def login():
     if user and stored_password_hash and check_password_hash(stored_password_hash, password):
         display_name = user['display_name'] if user['display_name'] else user['ispace_username'] or user['username']
         set_authenticated_session(user['id'], user['username'], display_name)
-        return jsonify({"success": True, "user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": session['display_name']}})
+        resp = jsonify({"success": True, "user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": session['display_name']}})
+        sso_bridge.set_sso_cookie(resp, sso_bridge.issue_shared_token(user['username']))
+        return resp
     
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -1563,15 +1591,27 @@ def login_ispace():
     # Strategy: We treat iSpace login as a way to "bind" or "quick login".
     # If a user with this username exists, we log them in. If not, we create a shadow user.
     
-    c.execute('SELECT * FROM users WHERE username = ?', (username,))
+    # Resolve by explicit binding first (accounts linked via
+    # /api/user/bind/ispace or earlier verified logins), then by same name.
+    c.execute('SELECT * FROM users WHERE ispace_username = ? ORDER BY id LIMIT 1', (username,))
     user = c.fetchone()
-    
+    if user is None:
+        c.execute('SELECT * FROM users WHERE username = ?', (username,))
+        user = c.fetchone()
+        if user and user['password_hash']:
+            # Same-named local PASSWORD account never verified via iSpace:
+            # silently merging would hand this login to whoever set that
+            # password (student-id squatting). Require the bind flow, which
+            # proves both sides.
+            conn.close()
+            return jsonify({"error": "该学号已被一个本地密码账号占用。若那是你的账号:请先用密码登录,再绑定 iSpace;若不是,请联系管理员。"}), 409
+
     user_id = None
     display_name = username # Default display name is username (Student ID)
-    
+
     if user:
         user_id = user['id']
-        # Update ispace_username if not set
+        # Update ispace_username if not set (passwordless same-named account)
         if not user['ispace_username']:
             c.execute('UPDATE users SET ispace_username = ? WHERE id = ?', (username, user_id))
         
@@ -1598,18 +1638,71 @@ def login_ispace():
     conn.commit()
     conn.close()
     
-    set_authenticated_session(user_id, username, display_name)
-    
-    return jsonify({
+    # Bound accounts keep their own username; the shared SSO identity follows
+    # the local account. Same-named (pure iSpace) identities stay ispace=True;
+    # a bound self-chosen name is a password identity on the shared side.
+    local_username = user['username'] if user else username
+    set_authenticated_session(user_id, local_username, display_name)
+
+    resp = jsonify({
         "success": True,
-        "user": {"id": user_id, "username": username, "ispace_username": username, "display_name": display_name},
+        "user": {"id": user_id, "username": local_username, "ispace_username": username, "display_name": display_name},
         "sync": sync_stats,
     })
+    sso_bridge.set_sso_cookie(resp, sso_bridge.issue_shared_token(
+        local_username, ispace=(local_username == username)))
+    return resp
+
+@app.route('/api/user/bind/ispace', methods=['POST'])
+def bind_ispace():
+    """Bind an iSpace (student id) identity onto the CURRENTLY logged-in
+    account. Proves both sides: the session (local password login) and live
+    iSpace credentials. Self-serve path for accounts registered under a
+    self-chosen username, and for student-id-named password accounts."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json or {}
+    sid = (data.get('username') or '').strip()
+    password = data.get('password')
+    if not sid or not password:
+        return jsonify({"error": "\u5b66\u53f7\u548c iSpace \u5bc6\u7801\u90fd\u9700\u8981\u586b\u5199"}), 400
+
+    # 1. Verify with iSpace (same check as /api/login/ispace)
+    result = fetch_timeline(sid, password)
+    if isinstance(result, dict) and "error" in result:
+        return jsonify({"error": "iSpace login failed: " + result["error"]}), 401
+    ddls = result
+
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],))
+        me = c.fetchone()
+        if me is None:
+            return jsonify({"error": "Unauthorized"}), 401
+        if me['ispace_username'] and me['ispace_username'] != sid:
+            return jsonify({"error": "\u8be5\u8d26\u53f7\u5df2\u7ed1\u5b9a\u5b66\u53f7 " + me['ispace_username']}), 409
+        # the student id must not already be linked to a different account
+        c.execute('SELECT id FROM users WHERE ispace_username = ? AND id != ?', (sid, me['id']))
+        if c.fetchone():
+            return jsonify({"error": "\u8be5\u5b66\u53f7\u5df2\u7ed1\u5b9a\u5176\u4ed6\u8d26\u53f7,\u8bf7\u8054\u7cfb\u7ba1\u7406\u5458"}), 409
+
+        c.execute('UPDATE users SET ispace_username = ? WHERE id = ?', (sid, me['id']))
+        sync_stats = sync_ispace_todos_for_user(conn, me['id'], ddls)
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({"success": True, "ispace_username": sid, "sync": sync_stats})
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
-    return jsonify({"success": True})
+    sso_bridge.revoke_token(request.cookies.get('sso_token'))
+    resp = jsonify({"success": True})
+    sso_bridge.clear_sso_cookie(resp)
+    return resp
 
 @app.route('/api/user', methods=['GET'])
 def get_current_user():
