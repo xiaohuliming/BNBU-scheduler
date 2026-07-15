@@ -3859,7 +3859,7 @@
 
         // Shown once per NOTICE_VERSION on the user's first visit after an update;
         // bump the version string whenever a new announcement should appear.
-        const NOTICE_VERSION = '2026S1';
+        const NOTICE_VERSION = '2026S1b';
         const UpdateNotice = () => {
             const [seen, setSeen] = useState(() => {
                 try { return localStorage.getItem('maxcourse_notice_seen') === NOTICE_VERSION; } catch (e) { return true; }
@@ -3873,18 +3873,19 @@
             return (
                 <div className="border-b-2 border-black bg-[#d6ff62]">
                     <div className="max-w-6xl mx-auto px-4 md:px-8 py-2.5">
-                        <div className="flex items-center gap-3">
+                        {/* 收起态一行:整体居中,别让内容全挤在左边显得不对称 */}
+                        <div className="flex items-center justify-center gap-3">
                             <span className="bg-black text-[#d6ff62] text-[10px] font-black px-1.5 py-0.5 shrink-0 uppercase tracking-wider">Update</span>
-                            <p className="font-bold text-sm min-w-0 truncate">新学期已就绪：26-27 学年第一学期课表上线，空教室 / 排课 / 课程数据全面更新 🎁</p>
+                            <p className="font-bold text-sm min-w-0 truncate">新学期已就绪：26-27 学年课表与课程数据全面更新 · 🎁 OmniChat 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span></p>
                             <button onClick={() => setOpen(v => !v)} className="shrink-0 text-xs font-black underline hover:text-blue-700">{open ? '收起' : '更新内容'}</button>
                             <button onClick={dismiss} className="shrink-0 hover:text-red-600" title="知道了，不再显示"><X className="w-4 h-4" /></button>
                         </div>
                         {open && (
-                            <div className="pb-2.5 pt-1.5 text-sm font-bold space-y-1.5 border-t border-black/20 mt-2">
+                            <div className="max-w-4xl mx-auto pb-2.5 pt-1.5 text-sm font-bold space-y-1.5 border-t border-black/20 mt-2">
                                 <p>· 课表切换至 <span className="bg-black text-[#d6ff62] px-1">26-27 学年第一学期</span>：582 门课 / 2490 个班次，排课优化、空教室查询、老师目录均已按新课表计算</p>
                                 <p>· 课程数据全量更新：最新官方课程介绍（2026-07 版）、WPEC / 语言中心补充介绍、本学期教材清单、全部 1393 门课的 AI 介绍与就业升学分析</p>
                                 <p>· 上学期（25-26 第二学期）已归档，课程搜索的学期范围里可随时回看；专业地图与「按专业预选」已自动前滚到新学期</p>
-                                <p>· 🎁 新学期福利：<a href="https://chat.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">OmniChat</a> 限量 200 个兑换码，一码 +2000 积分（登录后在用量面板输入，先到先得）；也欢迎用 <a href="https://ppt.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">SlideCraft</a> 一句话生成 PPT</p>
+                                <p>· 🎁 新学期福利：<a href="https://chat.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">OmniChat</a> 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span>，登录后点右上角积分输入即可 +2000 积分，前 200 名先到先得；也欢迎用 <a href="https://ppt.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">SlideCraft</a> 一句话生成 PPT</p>
                             </div>
                         )}
                     </div>
