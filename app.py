@@ -2785,11 +2785,14 @@ def optimize():
         formatted_courses = []
         for c in sol:
             schedules = []
-            for day_idx, start_min, end_min in c['meetings']:
+            meeting_rooms = c.get('meeting_rooms') or []
+            for i, (day_idx, start_min, end_min) in enumerate(c['meetings']):
                 schedules.append({
                     "day": REV_DAY[day_idx],
                     "start": f"{start_min//60:02d}:{start_min%60:02d}",
-                    "end": f"{end_min//60:02d}:{end_min%60:02d}"
+                    "end": f"{end_min//60:02d}:{end_min%60:02d}",
+                    # per-meeting classroom: a session can move rooms by day
+                    "room": meeting_rooms[i] if i < len(meeting_rooms) else ""
                 })
                 
             formatted_courses.append({
@@ -2798,6 +2801,7 @@ def optimize():
                 "teacher": c['teacher'],
                 "session": c['session'],
                 "units": c.get('units', 0),
+                "room": c.get('room', ''),
                 "schedules": schedules,
                 "id": f"{c['course_code']}-{c['session']}"
             })

@@ -144,9 +144,20 @@ def maximize_credits(
         if sess is None or (isinstance(sess, float) and pd.isna(sess)):
             continue
 
-        meetings = [m for m in g["Meeting"].tolist() if m is not None]
-        if len(meetings) == 0:
+        # pair each parsed meeting with its own row's room — a session can meet
+        # in different classrooms on different days (column is "Room" in older
+        # semester files, "Classroom" in newer ones)
+        room_col = "Room" if "Room" in g.columns else ("Classroom" if "Classroom" in g.columns else None)
+        rooms_raw = g[room_col].tolist() if room_col else [""] * len(g)
+        pairs = [
+            (m, str(r).strip() if room_col and pd.notna(r) else "")
+            for m, r in zip(g["Meeting"].tolist(), rooms_raw)
+            if m is not None
+        ]
+        if len(pairs) == 0:
             continue
+        meetings = [p[0] for p in pairs]
+        meeting_rooms = [p[1] for p in pairs]
 
         # Check teacher constraint
         teacher = str(g["Teachers"].iloc[0]) if "Teachers" in g.columns else ""
@@ -183,7 +194,8 @@ def maximize_credits(
         title = str(g["Course Title & Session"].iloc[0])
         teacher = str(g["Teachers"].iloc[0]) if "Teachers" in g.columns else ""
         category = str(g["Course Category"].iloc[0]) if "Course Category" in g.columns else ""
-        room = str(g["Room"].iloc[0]) if "Room" in g.columns else ""
+        # session-level room = the distinct rooms it meets in, in meeting order
+        room = " / ".join(dict.fromkeys(r for r in meeting_rooms if r))
         remark = str(g["Remark"].iloc[0]) if "Remark" in g.columns else ""
 
         options[cc][str(sess)] = {
@@ -193,6 +205,7 @@ def maximize_credits(
             "teacher": teacher,
             "category": category,
             "room": room,
+            "meeting_rooms": meeting_rooms,
             "remark": remark,
             "units": units,
             "meetings": meetings,
