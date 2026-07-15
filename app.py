@@ -2526,12 +2526,12 @@ def get_classroom_schedule(room):
 # Historical semester offerings baked by build_semesters.py; the current
 # semester always comes live from the timetable xlsx (get_df).
 SEMESTERS_INDEX_PATH = os.path.join(APP_ROOT, 'semesters_index.json')
-CURRENT_SEMESTER_LABEL = '25-26 第二学期'
+CURRENT_SEMESTER_LABEL = '26-27 第一学期'
 # Academic-year start + semester number of the current timetable; used by the
 # frontend to map an admission cohort to its current study year (Y = ay_start -
 # cohort + 1). Update together with CURRENT_SEMESTER_LABEL each semester swap.
-CURRENT_SEMESTER_AY_START = 2025
-CURRENT_SEMESTER_NO = 2
+CURRENT_SEMESTER_AY_START = 2026
+CURRENT_SEMESTER_NO = 1
 _semesters_index_cache = {"mtime": None, "data": None}
 _semester_caches = {}
 

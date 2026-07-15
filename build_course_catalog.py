@@ -36,8 +36,12 @@ from pypdf import PdfReader
 from maximize_credits import load_timetable
 
 PDF_PATH = "/Users/xhlm/Desktop/Study/大数据/小组项目/data/Course Descriptions_20260421.pdf"
-XLSX_PATH = "Course List and Timetable_Semester 2 of AY2025-26_20260112.xlsx"
+XLSX_PATH = "Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx"
 OUT_PATH = "course_catalog.json"
+# Codes present in the previous catalog but in neither the PDF nor the new
+# timetable are carried over (offered=False) so historical-semester browsing,
+# enrichment and prereq links never lose entries across semester swaps.
+PREV_CATALOG = "course_catalog.json"
 
 CODE_RE = re.compile(r"[A-Z]{2,4}\d{4}")
 
@@ -141,7 +145,7 @@ def parse_xlsx(path):
         offered[code] = {
             "code": code,
             "title": title,
-            "units": int(clean(first.get("Units", "")) or 0) or None,
+            "units": int(float(clean(first.get("Units", "")) or 0)) or None,
             "offering_units": uniq("Offering Unit"),
             "offering_programmes": uniq("Offering Programme"),
             "curriculum_types": uniq("Curriculum Type"),
@@ -159,9 +163,22 @@ def main():
     pdf = parse_pdf(PDF_PATH)
     xlsx = parse_xlsx(XLSX_PATH)
 
-    all_codes = sorted(set(pdf) | set(xlsx))
+    try:
+        with open(PREV_CATALOG, encoding="utf-8") as f:
+            prev = json.load(f)
+    except (OSError, ValueError):
+        prev = {}
+
+    all_codes = sorted(set(pdf) | set(xlsx) | set(prev))
     catalog = {}
+    carried = []
     for code in all_codes:
+        if code not in pdf and code not in xlsx:
+            entry = dict(prev[code])
+            entry.update(offered=False, sessions=[], teachers=[], unlocks=[], similar=[])
+            catalog[code] = entry
+            carried.append(code)
+            continue
         p = pdf.get(code, {})
         x = xlsx.get(code, {})
         dept = re.match(r"[A-Z]+", code)
@@ -219,6 +236,7 @@ def main():
 
     offered = [c for c in catalog.values() if c["offered"]]
     offered_desc = [c for c in offered if c["has_description"]]
+    print(f"carried from prev catalog: {len(carried)} (not offered, kept for history/links)")
     print(f"total courses in catalog : {len(catalog)}")
     print(f"offered this semester    : {len(offered)}")
     print(f"offered WITH description : {len(offered_desc)}")

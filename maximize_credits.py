@@ -179,7 +179,7 @@ def maximize_credits(
         if not is_in_range:
             continue
 
-        units = int(g["Units"].iloc[0])
+        units = int(float(g["Units"].iloc[0]))  # tolerate '3' / 3.0 / '3.0'
         title = str(g["Course Title & Session"].iloc[0])
         teacher = str(g["Teachers"].iloc[0]) if "Teachers" in g.columns else ""
         category = str(g["Course Category"].iloc[0]) if "Course Category" in g.columns else ""
