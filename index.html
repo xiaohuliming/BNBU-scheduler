@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2570998779-300513+12027406">
+<html lang="en" data-compiled-sum="1471274116-300513+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,26 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
     <link rel="apple-touch-icon" href="/favicon.png">
     <link href="/vendor/fonts.css" rel="stylesheet">
-    <script src="/vendor/tailwind.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com/3.4.16';"></script>
-    <script src="/vendor/react.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react@18.3.1/umd/react.production.min.js';"></script>
-    <script src="/vendor/react-dom.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js';"></script>
+    <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
+         HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1471274116-300513+12027406" as="script">
+    <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
+         tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
+         和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1471274116-300513+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <script>
+    // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
+    // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
+    // 镜像选国内可达的 bootcdn / npmmirror,unpkg 在大陆基本不可用。
+    function __vfb(u) { document.write('<script src="' + u + '"><\/script>'); }
+    </script>
+    <script src="/vendor/react.production.min.js" onerror="__vfb('https://cdn.bootcdn.net/ajax/libs/react/18.3.1/umd/react.production.min.js')"></script>
+    <script src="/vendor/react-dom.production.min.js" onerror="__vfb('https://cdn.bootcdn.net/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js')"></script>
     <!-- babel-standalone 不再无条件加载:页尾的引导脚本在预编译产物
          (app.compiled.js) 与 JSX 源码校验和一致时直接用产物,只有校验和
          不一致(改了 JSX 忘了跑 node precompile.js)才动态回退到浏览器内
          Babel。省掉 ~900KB 传输 + 数秒转译。 -->
-    <script src="/vendor/lucide.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js';"></script>
+    <script src="/vendor/lucide.min.js" onerror="__vfb('https://registry.npmmirror.com/lucide/0.453.0/files/dist/umd/lucide.min.js')"></script>
     <style>
     /* 开屏占位:脚本没就绪前先画出来,别让用户盯白屏 */
     #boot-splash {
@@ -3144,7 +3156,7 @@
                                     href={tool.href}
                                     target={tool.external ? '_blank' : undefined}
                                     rel={tool.external ? 'noopener noreferrer' : undefined}
-                                    className="group block rounded-[2rem] border border-black/10 bg-white/78 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]"
+                                    className="group block rounded-[2rem] border border-black/10 bg-white/80 p-5 shadow-[0_18px_45px_rgba(16,24,32,0.08)] transition-all hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(16,24,32,0.14)]"
                                 >
                                     <div className="flex items-start justify-between gap-4">
                                         <div className={`grid h-14 w-14 place-items-center rounded-2xl border border-black/10 ${tool.accent} text-white shadow-[4px_4px_0px_rgba(16,24,32,1)]`}>
@@ -4691,8 +4703,8 @@
             }
         };
         b.onerror = function () {
-            if (src.indexOf('unpkg.com') === -1) {
-                window.__bootBabel('https://unpkg.com/@babel/standalone@7.24.7/babel.min.js');
+            if (src.indexOf('bootcdn.net') === -1) {
+                window.__bootBabel('https://cdn.bootcdn.net/ajax/libs/babel-standalone/7.24.7/babel.min.js');
             }
         };
         document.body.appendChild(b);
