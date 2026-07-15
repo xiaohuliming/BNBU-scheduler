@@ -19,6 +19,7 @@ import pandas as pd
 
 # (key, label, source file in /tmp/sem)
 SEMESTERS = [
+    ("2526S2", "25-26 第二学期", "/tmp/sem/2526S2.xlsx"),
     ("2526S1", "25-26 第一学期", "/tmp/sem/2526S1.xlsx"),
     ("2425S2", "24-25 第二学期", "/tmp/sem/2425S2.xls"),
     ("2425S1", "24-25 第一学期", "/tmp/sem/2425S1.xlsx"),

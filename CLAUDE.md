@@ -17,14 +17,14 @@ MAXCOURSE (production: https://www.bnbscheduler.top) is a campus toolkit web app
 ./venv/bin/python -m pytest tests/test_app.py::AppTestCase::test_optimize_returns_real_course_units   # single test
 
 # Course optimizer as a standalone CLI
-./venv/bin/python maximize_credits.py --file "Course List and Timetable_Semester 2 of AY2025-26_20260112.xlsx" --courses AI1013 AI3013
+./venv/bin/python maximize_credits.py --file "Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx" --courses AI1013 AI3013
 ```
 
-There is **no `requirements.txt`**. The committed `venv/` holds the deps (Flask, pandas, requests, beautifulsoup4, openpyxl). `yt-dlp` is an **optional** runtime dep imported lazily in `media_dl/ytdlp.py`; the app runs without it, but YouTube/Douyin/etc. resolution fails until it is installed. Tests set `MAXCOURSE_SECRET_KEY` themselves and use a throwaway temp DB, so they need no server or real data.
+`requirements.txt` lists the runtime deps: Flask, pandas, openpyxl, requests, beautifulsoup4, **numpy + scipy** (SkillPath PPR recommender, `/api/recommend`), and **pypdf** (transcript parsing `/api/parse-transcript` + the offline catalog build). `yt-dlp` is an **optional** dep imported lazily in `media_dl/ytdlp.py` (YouTube/Douyin/etc. resolution fails until it's installed). `pdfplumber` and `xlrd` are **build-time-only** (data-regeneration scripts) and are deliberately not in `requirements.txt` / not on the server. The committed `venv/` holds the local deps. Tests set `MAXCOURSE_SECRET_KEY` themselves and use a throwaway temp DB, so they need no server or real data.
 
 ## Architecture
 
-### Backend: one monolithic Flask app (`app.py`, ~1950 lines)
+### Backend: one monolithic Flask app (`app.py`, ~2700 lines)
 
 - **The repo root is the web root.** The app is created with `static_folder='.', static_url_path=''`, so any file in the project is potentially served. The `block_sensitive_project_files` `before_request` hook is the security boundary — it 404s dotfiles, `.py`, `.db`, `.env`, `/tests`, `/venv`, etc. **Any new secret/source file type must be covered here**, or it becomes publicly downloadable.
 - **SQLite (`maxcourse.db`, gitignored).** `init_db()` runs at import time. Schema migrations are idempotent `ALTER TABLE ... ADD COLUMN` calls wrapped in `try/except sqlite3.OperationalError` — follow that pattern to add columns rather than editing `CREATE TABLE`. Tables: `users`, `todos`, `teacher_ratings`, `page_views`, `media_dl_events`, `email_notification_deliveries`.
@@ -68,8 +68,9 @@ At runtime `app.py` loads the `.npz` + node maps once (numpy/scipy only — no n
 
 ### Frontend: no build step
 
-- **`index.html`** (~190 KB) is the main SPA: a single file using React 18 + in-browser Babel (`<script type="text/babel">`) + Tailwind + Lucide, all loaded from local `/vendor/` with a CDN `onerror` fallback. There is no bundler — edit the JSX directly inside `index.html`. Views are switched by a `currentView` state string (`home`, `explorer`, `teachers`, `classrooms`, `ddl`, `toolbox`, `settings`); top-level components are `HomeView`, `ExplorerView`, `TeacherListView`, `FreeClassroomView`, `DDLView`, `ToolboxView`, `SettingsView` plus modals. The visual system is a "paper/book" aesthetic driven by CSS vars (`--paper`, `--ink`, `--signal`).
+- **`index.html`** (~220 KB) is the main SPA: a single file using React 18 + in-browser Babel (`<script type="text/babel">`) + Tailwind + Lucide, all loaded from local `/vendor/` with a CDN `onerror` fallback. There is no bundler — edit the JSX directly inside `index.html`; **validate a change by running the babel-standalone transform over the `<script type="text/babel">` block via node, and headless-render the touched component with jsdom** (a single JSX error blanks the whole page). Views are switched by a `currentView` state string (`home`, `explorer`, `optimizer`, `career`, `programme`, `classrooms`, `ddl`, `teachers`, `toolbox`, `settings`); the top nav groups the four course views (课程/排课/职业规划/专业地图) under a `选课` submenu. Course picks live in a `selectedCodes` cart (`CartWidget`, persisted to `localStorage`); the rich course detail is `CourseInsightModal`. The visual system is a "paper/book" aesthetic (CSS vars `--paper`/`--ink`/`--signal`) for chrome + a neo-brutalist card style (thick black borders, hard shadows, brand green `#d6ff62`) inside the tool views.
 - **Standalone static pages** served from their own directories, independent of the SPA: `stats/index.html` (analytics dashboard reading `/api/analytics/summary`), `media-dl/index.html` (downloader UI), `eatwhat/index.html` ("今天吃什么" food picker, Three.js), `print-setup/index.html` (campus printer setup guide), and the legacy `ddl.html` / `todolist.html`.
+- **Two sibling apps on their own subdomains** (separate deployments, not served by this Flask app) are linked from the home chapter list + toolbox: **SlideCraft** (`ppt.bnbscheduler.top`, AI slide generation) and **OmniChat** (`chat.bnbscheduler.top`, multi-model chat + text-to-image/video), which share one account/credits system with each other.
 
 ### Standalone sub-projects (not wired into Flask)
 
@@ -82,4 +83,4 @@ DDL reminder emails go out via SMTP, configured entirely through env vars (see `
 
 ### Deployment
 
-Push to `main` triggers `.github/workflows/deploy-maxcourse.yml`, which SSHes to the production host and runs a server-side `maxcourse-deploy` command. `.user.ini` (`open_basedir=/www/wwwroot/maxcourse/`) indicates a BT-panel (宝塔) host.
+Push to `main` triggers `.github/workflows/deploy-maxcourse.yml`, which SSHes to the production host (`103.106.188.87`, `/www/wwwroot/maxcourse/`, BT-panel/宝塔) and runs `/usr/local/bin/deploy-maxcourse.sh`: it backs up `maxcourse.db` and **refuses the deploy if the push modifies `maxcourse.db`**, then `git pull --ff-only`, `pip install -r requirements.txt`, runs the `unittest` suite, and `systemctl restart maxcourse.service`. The app runs as `python app.py` under **systemd** (not gunicorn), so a new runtime dep must land in `requirements.txt` or the endpoint using it 500s in prod (the loaders return `{}` / degrade, e.g. `/api/recommend` → 503 without scipy). The GitHub-Actions SSH step is occasionally flaky (`Connection reset by peer`); just re-run the failed job (`gh run rerun <id> --failed`). Data files (`course_catalog.json`, `course_enrichment.json`, `skillpath_*`, `programme_requirements.json`, `course_*.json`, `semesters_index.json`) are committed and shipped as-is; regenerate them per semester with the root-level `build_*.py` scripts.

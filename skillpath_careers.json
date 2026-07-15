@@ -46,27 +46,7 @@
     "category": "Other"
    },
    {
-    "name": "JavaScript",
-    "weight": 0.25,
-    "category": "Programming Languages"
-   },
-   {
-    "name": "HTML",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
-    "name": "Artificial Intelligence",
-    "weight": 0.25,
-    "category": "ML & AI"
-   },
-   {
-    "name": "Chatbot Development",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
-    "name": "Code Review",
+    "name": "Coding Problems",
     "weight": 0.25,
     "category": "Other"
    },
@@ -76,9 +56,14 @@
     "category": "Other"
    },
    {
-    "name": "Performance Optimization",
+    "name": "Artificial Intelligence",
     "weight": 0.25,
-    "category": "Math & Stats"
+    "category": "ML & AI"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.25,
+    "category": "Other"
    },
    {
     "name": "C++",
@@ -86,12 +71,27 @@
     "category": "Programming Languages"
    },
    {
+    "name": "Code Review",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.25,
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Performance Optimization",
+    "weight": 0.25,
+    "category": "Math & Stats"
+   },
+   {
     "name": "C#",
     "weight": 0.25,
     "category": "Programming Languages"
    },
    {
-    "name": "Coding Problems",
+    "name": "Chatbot Development",
     "weight": 0.25,
     "category": "Other"
    },
@@ -111,17 +111,7 @@
     "category": "Math & Stats"
    },
    {
-    "name": "Machine Learning",
-    "weight": 0.167,
-    "category": "ML & AI"
-   },
-   {
-    "name": "Natural Language Processing",
-    "weight": 0.167,
-    "category": "ML & AI"
-   },
-   {
-    "name": "Regular Expressions",
+    "name": "Text Analysis",
     "weight": 0.167,
     "category": "Other"
    },
@@ -129,6 +119,16 @@
     "name": "Syntax Analysis",
     "weight": 0.167,
     "category": "Other"
+   },
+   {
+    "name": "Natural Language Processing",
+    "weight": 0.167,
+    "category": "ML & AI"
+   },
+   {
+    "name": "Machine Learning",
+    "weight": 0.167,
+    "category": "ML & AI"
    }
   ],
   "salary": {
@@ -217,14 +217,14 @@
     "category": "Other"
    },
    {
-    "name": "SQL",
-    "weight": 0.444,
-    "category": "Data Systems"
-   },
-   {
     "name": "AWS",
     "weight": 0.444,
     "category": "Tools & Platforms"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.444,
+    "category": "Data Systems"
    },
    {
     "name": "Statistical Analysis",
@@ -287,22 +287,22 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Data Engineering",
-    "weight": 0.222,
-    "category": "Data Systems"
-   },
-   {
     "name": "Predictive Modeling",
     "weight": 0.222,
     "category": "Other"
    },
    {
-    "name": "Data Visualization",
+    "name": "Data Engineering",
+    "weight": 0.222,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Data Analytics",
     "weight": 0.111,
     "category": "Other"
    },
    {
-    "name": "Data Analytics",
+    "name": "Data Visualization",
     "weight": 0.111,
     "category": "Other"
    },
@@ -312,14 +312,14 @@
     "category": "Other"
    },
    {
-    "name": "Unix",
+    "name": "Data Mining",
     "weight": 0.111,
     "category": "Other"
    },
    {
-    "name": "Algorithms",
+    "name": "Numerical Optimization",
     "weight": 0.111,
-    "category": "Other"
+    "category": "Math & Stats"
    }
   ],
   "salary": {
@@ -335,6 +335,10 @@
     2.333
    ],
    [
+    "STAT4103",
+    2.111
+   ],
+   [
     "FIN3103",
     2.11
    ],
@@ -343,16 +347,12 @@
     2.0
    ],
    [
-    "STAT4103",
-    2.0
+    "GTSC2203",
+    1.888
    ],
    [
     "COMP4223",
-    1.889
-   ],
-   [
-    "GTSC2203",
-    1.888
+    1.778
    ],
    [
     "BA3023",
@@ -375,7 +375,7 @@
     1.444
    ],
    [
-    "AI2013",
+    "STAT3043",
     1.333
    ]
   ],
@@ -418,17 +418,7 @@
     "category": "ML & AI"
    },
    {
-    "name": "SQL",
-    "weight": 0.25,
-    "category": "Data Systems"
-   },
-   {
     "name": "Optimization",
-    "weight": 0.25,
-    "category": "Math & Stats"
-   },
-   {
-    "name": "Statistics",
     "weight": 0.25,
     "category": "Math & Stats"
    },
@@ -438,9 +428,19 @@
     "category": "ML & AI"
    },
    {
+    "name": "SQL",
+    "weight": 0.25,
+    "category": "Data Systems"
+   },
+   {
     "name": "Scala",
     "weight": 0.25,
     "category": "Programming Languages"
+   },
+   {
+    "name": "Statistics",
+    "weight": 0.25,
+    "category": "Math & Stats"
    },
    {
     "name": "Artificial Intelligence",
@@ -463,12 +463,12 @@
     "category": "ML & AI"
    },
    {
-    "name": "DevOps",
+    "name": "Data Pipelines",
     "weight": 0.125,
-    "category": "Other"
+    "category": "Data Systems"
    },
    {
-    "name": "Microservices",
+    "name": "Data Management",
     "weight": 0.125,
     "category": "Other"
    },
@@ -478,9 +478,9 @@
     "category": "Other"
    },
    {
-    "name": "Data Engineering",
+    "name": "Distributed Training",
     "weight": 0.125,
-    "category": "Data Systems"
+    "category": "Other"
    },
    {
     "name": "Machine Learning Lifecycle Management",
@@ -488,27 +488,27 @@
     "category": "ML & AI"
    },
    {
-    "name": "Agile Development",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Distributed Training",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Computational Modeling",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
     "name": "Testing Methodologies",
     "weight": 0.125,
     "category": "Other"
    },
    {
+    "name": "DevOps",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
     "name": "Cloud Computing",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Engineering",
+    "weight": 0.125,
+    "category": "Data Systems"
+   },
+   {
+    "name": "Agile Development",
     "weight": 0.125,
     "category": "Other"
    }
@@ -654,14 +654,14 @@
     "category": "Tools & Platforms"
    },
    {
-    "name": "NoSQL",
-    "weight": 0.265,
-    "category": "Data Systems"
-   },
-   {
     "name": "Node.js",
     "weight": 0.265,
     "category": "Other"
+   },
+   {
+    "name": "NoSQL",
+    "weight": 0.265,
+    "category": "Data Systems"
    },
    {
     "name": "CSS",
@@ -770,9 +770,9 @@
   "n_postings": 198,
   "skills": [
    {
-    "name": "Python",
+    "name": "HTML",
     "weight": 0.625,
-    "category": "Programming Languages"
+    "category": "Other"
    },
    {
     "name": "SQL",
@@ -785,9 +785,9 @@
     "category": "Programming Languages"
    },
    {
-    "name": "HTML",
+    "name": "Python",
     "weight": 0.625,
-    "category": "Other"
+    "category": "Programming Languages"
    },
    {
     "name": "C#",
@@ -805,7 +805,7 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Distributed Systems",
+    "name": "RESTful APIs",
     "weight": 0.312,
     "category": "Other"
    },
@@ -815,22 +815,17 @@
     "category": "Other"
    },
    {
-    "name": "Docker",
-    "weight": 0.312,
-    "category": "Tools & Platforms"
-   },
-   {
-    "name": "RESTful APIs",
+    "name": "React",
     "weight": 0.312,
     "category": "Other"
    },
    {
-    "name": "Unit Testing",
+    "name": "Kotlin",
     "weight": 0.312,
-    "category": "Other"
+    "category": "Programming Languages"
    },
    {
-    "name": "Amazon Web Services",
+    "name": "Spring Boot",
     "weight": 0.312,
     "category": "Other"
    },
@@ -840,14 +835,19 @@
     "category": "Other"
    },
    {
-    "name": "Object-Oriented Programming",
+    "name": "Amazon Web Services",
     "weight": 0.312,
     "category": "Other"
    },
    {
-    "name": "React",
+    "name": "Distributed Systems",
     "weight": 0.312,
     "category": "Other"
+   },
+   {
+    "name": "Docker",
+    "weight": 0.312,
+    "category": "Tools & Platforms"
    },
    {
     "name": "Cloud Computing",
@@ -855,9 +855,9 @@
     "category": "Other"
    },
    {
-    "name": "Spring Boot",
+    "name": "Java",
     "weight": 0.312,
-    "category": "Other"
+    "category": "Programming Languages"
    }
   ],
   "salary": {
@@ -868,10 +868,6 @@
    "currency": "USD"
   },
   "top_courses": [
-   [
-    "MAD1013",
-    1.562
-   ],
    [
     "COMP3233",
     1.25
@@ -885,6 +881,10 @@
     1.25
    ],
    [
+    "MAD1013",
+    1.25
+   ],
+   [
     "STAT4103",
     1.25
    ],
@@ -893,15 +893,11 @@
     0.937
    ],
    [
-    "COMP3153",
+    "AI3053",
     0.937
    ],
    [
     "DS2033",
-    0.937
-   ],
-   [
-    "GD1003",
     0.937
    ],
    [
@@ -914,6 +910,10 @@
    ],
    [
     "AI2053",
+    0.625
+   ],
+   [
+    "AI3063",
     0.625
    ]
   ],
@@ -946,14 +946,14 @@
     "category": "Programming Languages"
    },
    {
-    "name": "React",
-    "weight": 0.438,
-    "category": "Other"
-   },
-   {
     "name": "AWS",
     "weight": 0.438,
     "category": "Tools & Platforms"
+   },
+   {
+    "name": "React",
+    "weight": 0.438,
+    "category": "Other"
    },
    {
     "name": "Data Visualization",
@@ -966,12 +966,12 @@
     "category": "Programming Languages"
    },
    {
-    "name": "UI Design",
+    "name": "Wireframing",
     "weight": 0.291,
     "category": "Other"
    },
    {
-    "name": "Wireframing",
+    "name": "UI Design",
     "weight": 0.291,
     "category": "Other"
    },
@@ -981,9 +981,9 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Azure",
+    "name": "Dashboard Development",
     "weight": 0.146,
-    "category": "Tools & Platforms"
+    "category": "Other"
    },
    {
     "name": "MS Office",
@@ -991,27 +991,27 @@
     "category": "Other"
    },
    {
-    "name": "PHP",
-    "weight": 0.146,
-    "category": "Programming Languages"
-   },
-   {
     "name": "Symfony",
     "weight": 0.146,
     "category": "Other"
    },
    {
-    "name": "Database Management",
-    "weight": 0.146,
-    "category": "Other"
-   },
-   {
-    "name": "GitHub",
+    "name": "Azure",
     "weight": 0.146,
     "category": "Tools & Platforms"
    },
    {
+    "name": "PHP",
+    "weight": 0.146,
+    "category": "Programming Languages"
+   },
+   {
     "name": "Web Development",
+    "weight": 0.146,
+    "category": "Other"
+   },
+   {
+    "name": "Database Management",
     "weight": 0.146,
     "category": "Other"
    }
@@ -1045,11 +1045,11 @@
     0.582
    ],
    [
-    "BA3043",
-    0.291
+    "DS4073",
+    0.437
    ],
    [
-    "DS4073",
+    "BA3043",
     0.291
    ],
    [
@@ -1062,10 +1062,6 @@
    ],
    [
     "ENV3073",
-    0.146
-   ],
-   [
-    "MCOM2103",
     0.146
    ]
   ],
@@ -1108,12 +1104,12 @@
     "category": "Other"
    },
    {
-    "name": "Kubernetes",
+    "name": "Docker",
     "weight": 0.636,
     "category": "Tools & Platforms"
    },
    {
-    "name": "Docker",
+    "name": "Kubernetes",
     "weight": 0.636,
     "category": "Tools & Platforms"
    },
@@ -1133,14 +1129,14 @@
     "category": "Other"
    },
    {
-    "name": "Python",
-    "weight": 0.455,
-    "category": "Programming Languages"
-   },
-   {
     "name": "React",
     "weight": 0.455,
     "category": "Other"
+   },
+   {
+    "name": "Python",
+    "weight": 0.455,
+    "category": "Programming Languages"
    },
    {
     "name": "Node.js",
@@ -1168,12 +1164,12 @@
     "category": "Data Systems"
    },
    {
-    "name": "Front-End Development",
+    "name": "Full-Stack Development",
     "weight": 0.273,
     "category": "Other"
    },
    {
-    "name": "Full-Stack Development",
+    "name": "Front-End Development",
     "weight": 0.273,
     "category": "Other"
    },
@@ -1319,14 +1315,14 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Scala",
-    "weight": 0.278,
-    "category": "Programming Languages"
-   },
-   {
     "name": "Snowflake",
     "weight": 0.278,
     "category": "Data Systems"
+   },
+   {
+    "name": "Scala",
+    "weight": 0.278,
+    "category": "Programming Languages"
    },
    {
     "name": "Google Cloud Platform",
@@ -1364,22 +1360,22 @@
     "category": "Data Systems"
    },
    {
-    "name": "Amazon S3",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
     "name": "Apache Airflow",
     "weight": 0.167,
     "category": "Data Systems"
    },
    {
-    "name": "AWS Glue",
+    "name": "Amazon S3",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "CI/CD",
     "weight": 0.167,
     "category": "Tools & Platforms"
    },
    {
-    "name": "CI/CD",
+    "name": "AWS Glue",
     "weight": 0.167,
     "category": "Tools & Platforms"
    },
@@ -1389,9 +1385,9 @@
     "category": "Other"
    },
    {
-    "name": "JavaScript",
+    "name": "NoSQL",
     "weight": 0.167,
-    "category": "Programming Languages"
+    "category": "Data Systems"
    }
   ],
   "salary": {
@@ -1470,19 +1466,19 @@
     "category": "Other"
    },
    {
-    "name": "Docker",
-    "weight": 0.857,
-    "category": "Tools & Platforms"
-   },
-   {
     "name": "CI/CD",
     "weight": 0.857,
     "category": "Tools & Platforms"
    },
    {
-    "name": "Python",
+    "name": "Docker",
+    "weight": 0.857,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Ansible",
     "weight": 0.714,
-    "category": "Programming Languages"
+    "category": "Other"
    },
    {
     "name": "Terraform",
@@ -1490,9 +1486,9 @@
     "category": "Other"
    },
    {
-    "name": "Ansible",
+    "name": "Python",
     "weight": 0.714,
-    "category": "Other"
+    "category": "Programming Languages"
    },
    {
     "name": "AWS",
@@ -1520,14 +1516,14 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Azure",
-    "weight": 0.429,
-    "category": "Tools & Platforms"
-   },
-   {
     "name": "PowerShell",
     "weight": 0.429,
     "category": "Other"
+   },
+   {
+    "name": "Azure",
+    "weight": 0.429,
+    "category": "Tools & Platforms"
    },
    {
     "name": "Infrastructure as Code",
@@ -1560,7 +1556,7 @@
     "category": "Tools & Platforms"
    },
    {
-    "name": "Cloud Migration",
+    "name": "SonarQube",
     "weight": 0.143,
     "category": "Other"
    },
@@ -1570,17 +1566,17 @@
     "category": "Tools & Platforms"
    },
    {
-    "name": "SonarQube",
-    "weight": 0.143,
-    "category": "Other"
-   },
-   {
     "name": "Sonatype",
     "weight": 0.143,
     "category": "Other"
    },
    {
-    "name": "Distributed Systems",
+    "name": "Cloud Migration",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Infrastructure Scaling",
     "weight": 0.143,
     "category": "Other"
    }
@@ -1616,10 +1612,6 @@
    [
     "DS3043",
     0.571
-   ],
-   [
-    "AI4093",
-    0.143
    ]
   ],
   "low_sample": false
@@ -1701,27 +1693,7 @@
     "category": "Other"
    },
    {
-    "name": "Statistical Analysis",
-    "weight": 0.143,
-    "category": "Math & Stats"
-   },
-   {
-    "name": "SAS/QC",
-    "weight": 0.143,
-    "category": "Programming Languages"
-   },
-   {
-    "name": "ODS",
-    "weight": 0.143,
-    "category": "Other"
-   },
-   {
-    "name": "Macro Programming",
-    "weight": 0.143,
-    "category": "Other"
-   },
-   {
-    "name": "Business Objects",
+    "name": "Predictive Modeling",
     "weight": 0.143,
     "category": "Other"
    },
@@ -1731,9 +1703,19 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Excel",
+    "name": "SAS/STAT",
     "weight": 0.143,
-    "category": "Tools & Platforms"
+    "category": "Programming Languages"
+   },
+   {
+    "name": "Business Objects",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "Statistical Analysis",
+    "weight": 0.143,
+    "category": "Math & Stats"
    },
    {
     "name": "SAS/GRAPH",
@@ -1741,19 +1723,29 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Predictive Modeling",
-    "weight": 0.143,
-    "category": "Other"
-   },
-   {
     "name": "Forecasting",
     "weight": 0.143,
     "category": "Other"
    },
    {
-    "name": "SAS/STAT",
+    "name": "ODS",
+    "weight": 0.143,
+    "category": "Other"
+   },
+   {
+    "name": "SAS/QC",
     "weight": 0.143,
     "category": "Programming Languages"
+   },
+   {
+    "name": "Excel",
+    "weight": 0.143,
+    "category": "Tools & Platforms"
+   },
+   {
+    "name": "Macro Programming",
+    "weight": 0.143,
+    "category": "Other"
    }
   ],
   "salary": {
@@ -1847,6 +1839,11 @@
     "category": "Data Systems"
    },
    {
+    "name": "Stored Procedures",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
     "name": "ETL",
     "weight": 0.25,
     "category": "Data Systems"
@@ -1857,12 +1854,12 @@
     "category": "Data Systems"
    },
    {
-    "name": "Stored Procedures",
+    "name": "High Availability",
     "weight": 0.25,
     "category": "Other"
    },
    {
-    "name": "High Availability",
+    "name": "Backup and Recovery",
     "weight": 0.25,
     "category": "Other"
    },
@@ -1872,7 +1869,7 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Backup and Recovery",
+    "name": "Databricks",
     "weight": 0.25,
     "category": "Other"
    },
@@ -1882,22 +1879,17 @@
     "category": "Data Systems"
    },
    {
-    "name": "Databricks",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
     "name": "Database Security",
     "weight": 0.25,
     "category": "Other"
    },
    {
-    "name": "Views",
+    "name": "Indexes",
     "weight": 0.125,
     "category": "Other"
    },
    {
-    "name": "SSIS",
+    "name": ".NET",
     "weight": 0.125,
     "category": "Other"
    },
@@ -1907,12 +1899,17 @@
     "category": "Other"
    },
    {
-    "name": "IBM DB2",
+    "name": "XML",
     "weight": 0.125,
     "category": "Other"
    },
    {
-    "name": "Indexes",
+    "name": "Views",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "IBM DB2",
     "weight": 0.125,
     "category": "Other"
    },
@@ -1922,27 +1919,22 @@
     "category": "Other"
    },
    {
+    "name": "SSIS",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
     "name": "C#",
     "weight": 0.125,
     "category": "Programming Languages"
    },
    {
-    "name": ".NET",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "XML",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Data Storage Design",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
     "name": "Neo4j",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Database Clustering",
     "weight": 0.125,
     "category": "Other"
    }
@@ -1984,12 +1976,12 @@
     "category": "Other"
    },
    {
-    "name": "Risk Management",
+    "name": "Identity and Access Management",
     "weight": 0.25,
     "category": "Other"
    },
    {
-    "name": "Identity and Access Management",
+    "name": "Risk Management",
     "weight": 0.25,
     "category": "Other"
    },
@@ -2009,27 +2001,7 @@
     "category": "Other"
    },
    {
-    "name": "IT Demand Management",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
     "name": "Business Process Analysis",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Rollout Planning",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "IT Security",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Agile Methodology",
     "weight": 0.125,
     "category": "Other"
    },
@@ -2039,27 +2011,7 @@
     "category": "Other"
    },
    {
-    "name": "Release Management",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Change Management",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Workshop Facilitation",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Incident Management",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Root Cause Analysis",
+    "name": "IT Security",
     "weight": 0.125,
     "category": "Other"
    },
@@ -2069,7 +2021,52 @@
     "category": "Other"
    },
    {
+    "name": "Change Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "IT Demand Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Rollout Planning",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Release Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Workshop Facilitation",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
     "name": "Testing",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Root Cause Analysis",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Agile Methodology",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Incident Management",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft Teams",
     "weight": 0.125,
     "category": "Other"
    },
@@ -2079,19 +2076,14 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft PowerPoint",
+    "name": "Policy Development",
     "weight": 0.125,
     "category": "Other"
    },
    {
-    "name": "Data Gathering",
+    "name": "Microsoft Excel",
     "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Strategic Planning",
-    "weight": 0.125,
-    "category": "Other"
+    "category": "Tools & Platforms"
    }
   ],
   "salary": {
@@ -2113,10 +2105,6 @@
    [
     "EBIS4063",
     0.5
-   ],
-   [
-    "DS3043",
-    0.25
    ],
    [
     "ENV3123",
@@ -2148,6 +2136,10 @@
    ],
    [
     "FINM3063",
+    0.25
+   ],
+   [
+    "FINM4043",
     0.25
    ]
   ],
@@ -2184,13 +2176,13 @@
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Budgeting",
+    "name": "Financial Reporting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Financial Reporting",
+    "name": "Budgeting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
@@ -2220,15 +2212,15 @@
     "borrowed_from": "Data Scientist"
    },
    {
-    "name": "SQL",
-    "weight": 0.266,
-    "category": "Data Systems",
-    "borrowed_from": "Data Scientist"
-   },
-   {
     "name": "AWS",
     "weight": 0.266,
     "category": "Tools & Platforms",
+    "borrowed_from": "Data Scientist"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.266,
+    "category": "Data Systems",
     "borrowed_from": "Data Scientist"
    },
    {
@@ -2400,31 +2392,7 @@
     "borrowed_from": "Data Analyst"
    },
    {
-    "name": "JavaScript",
-    "weight": 0.15,
-    "category": "Programming Languages",
-    "borrowed_from": "Data Analyst"
-   },
-   {
-    "name": "HTML",
-    "weight": 0.15,
-    "category": "Other",
-    "borrowed_from": "Data Analyst"
-   },
-   {
-    "name": "Artificial Intelligence",
-    "weight": 0.15,
-    "category": "ML & AI",
-    "borrowed_from": "Data Analyst"
-   },
-   {
-    "name": "Chatbot Development",
-    "weight": 0.15,
-    "category": "Other",
-    "borrowed_from": "Data Analyst"
-   },
-   {
-    "name": "Code Review",
+    "name": "Coding Problems",
     "weight": 0.15,
     "category": "Other",
     "borrowed_from": "Data Analyst"
@@ -2436,9 +2404,33 @@
     "borrowed_from": "Data Analyst"
    },
    {
-    "name": "Performance Optimization",
+    "name": "Artificial Intelligence",
     "weight": 0.15,
-    "category": "Math & Stats",
+    "category": "ML & AI",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "HTML",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "C++",
+    "weight": 0.15,
+    "category": "Programming Languages",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "Code Review",
+    "weight": 0.15,
+    "category": "Other",
+    "borrowed_from": "Data Analyst"
+   },
+   {
+    "name": "JavaScript",
+    "weight": 0.15,
+    "category": "Programming Languages",
     "borrowed_from": "Data Analyst"
    }
   ],
@@ -2544,13 +2536,13 @@
     "borrowed_from": "Full-Stack Developer"
    },
    {
-    "name": "Kubernetes",
+    "name": "Docker",
     "weight": 0.382,
     "category": "Tools & Platforms",
     "borrowed_from": "Full-Stack Developer"
    },
    {
-    "name": "Docker",
+    "name": "Kubernetes",
     "weight": 0.382,
     "category": "Tools & Platforms",
     "borrowed_from": "Full-Stack Developer"
@@ -2574,15 +2566,15 @@
     "borrowed_from": "Full-Stack Developer"
    },
    {
-    "name": "Python",
-    "weight": 0.273,
-    "category": "Programming Languages",
-    "borrowed_from": "Full-Stack Developer"
-   },
-   {
     "name": "React",
     "weight": 0.273,
     "category": "Other",
+    "borrowed_from": "Full-Stack Developer"
+   },
+   {
+    "name": "Python",
+    "weight": 0.273,
+    "category": "Programming Languages",
     "borrowed_from": "Full-Stack Developer"
    },
    {
@@ -2598,13 +2590,13 @@
     "borrowed_from": "Frontend Developer"
    },
    {
-    "name": "UI Design",
+    "name": "Wireframing",
     "weight": 0.2,
     "category": "Other",
     "borrowed_from": "Frontend Developer"
    },
    {
-    "name": "Wireframing",
+    "name": "UI Design",
     "weight": 0.2,
     "category": "Other",
     "borrowed_from": "Frontend Developer"
@@ -2651,10 +2643,6 @@
    [
     "DS3043",
     0.327
-   ],
-   [
-    "DS4073",
-    0.2
    ],
    [
     "GD3113",
@@ -2871,12 +2859,12 @@
     "category": "Tools & Platforms"
    },
    {
-    "name": "Risk Management",
+    "name": "Regulatory Compliance",
     "weight": 1.0,
     "category": "Other"
    },
    {
-    "name": "Regulatory Compliance",
+    "name": "Risk Management",
     "weight": 1.0,
     "category": "Other"
    },
@@ -2906,12 +2894,12 @@
     "category": "Other"
    },
    {
-    "name": "Compliance",
+    "name": "Data Analytics",
     "weight": 0.667,
     "category": "Other"
    },
    {
-    "name": "Data Analytics",
+    "name": "Compliance",
     "weight": 0.667,
     "category": "Other"
    },
@@ -2926,12 +2914,12 @@
     "category": "Other"
    },
    {
-    "name": "Financial Reconciliation",
+    "name": "Transaction Posting",
     "weight": 0.333,
     "category": "Other"
    },
    {
-    "name": "Transaction Posting",
+    "name": "Financial Reconciliation",
     "weight": 0.333,
     "category": "Other"
    },
@@ -2946,7 +2934,7 @@
     "category": "Other"
    },
    {
-    "name": "Lean Manufacturing",
+    "name": "Quality Auditing",
     "weight": 0.333,
     "category": "Other"
    },
@@ -2956,32 +2944,32 @@
     "category": "Other"
    },
    {
-    "name": "Manufacturing",
-    "weight": 0.333,
-    "category": "Other"
-   },
-   {
-    "name": "Quality Systems",
-    "weight": 0.333,
-    "category": "Other"
-   },
-   {
-    "name": "Microsoft PowerPoint",
-    "weight": 0.333,
-    "category": "Other"
-   },
-   {
-    "name": "SAP",
-    "weight": 0.333,
-    "category": "Other"
-   },
-   {
     "name": "Visual Inspection",
     "weight": 0.333,
     "category": "Other"
    },
    {
-    "name": "Quality Auditing",
+    "name": "Acceptance Criteria",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Bill of Materials",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Manufacturing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Lean Manufacturing",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
+    "name": "Quality Systems",
     "weight": 0.333,
     "category": "Other"
    }
@@ -3067,12 +3055,12 @@
     "category": "Other"
    },
    {
-    "name": "Budgeting",
+    "name": "Financial Reporting",
     "weight": 0.8,
     "category": "Other"
    },
    {
-    "name": "Financial Reporting",
+    "name": "Budgeting",
     "weight": 0.8,
     "category": "Other"
    },
@@ -3112,14 +3100,14 @@
     "category": "Other"
    },
    {
-    "name": "SQL",
-    "weight": 0.2,
-    "category": "Data Systems"
-   },
-   {
     "name": "Process Improvement",
     "weight": 0.2,
     "category": "Other"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.2,
+    "category": "Data Systems"
    },
    {
     "name": "GAAP",
@@ -3157,22 +3145,22 @@
     "category": "Other"
    },
    {
-    "name": "Revenue Analysis",
-    "weight": 0.2,
-    "category": "Other"
-   },
-   {
     "name": "ERP Systems",
     "weight": 0.2,
     "category": "Other"
    },
    {
-    "name": "Account Reconciliation",
+    "name": "Revenue Analysis",
     "weight": 0.2,
     "category": "Other"
    },
    {
     "name": "Reporting",
+    "weight": 0.2,
+    "category": "Other"
+   },
+   {
+    "name": "Account Reconciliation",
     "weight": 0.2,
     "category": "Other"
    }
@@ -3261,13 +3249,13 @@
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Budgeting",
+    "name": "Financial Reporting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Financial Reporting",
+    "name": "Budgeting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
@@ -3315,15 +3303,15 @@
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "SQL",
-    "weight": 0.12,
-    "category": "Data Systems",
-    "borrowed_from": "Financial Analyst"
-   },
-   {
     "name": "Process Improvement",
     "weight": 0.12,
     "category": "Other",
+    "borrowed_from": "Financial Analyst"
+   },
+   {
+    "name": "SQL",
+    "weight": 0.12,
+    "category": "Data Systems",
     "borrowed_from": "Financial Analyst"
    },
    {
@@ -3435,26 +3423,26 @@
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Budgeting",
-    "weight": 0.48,
-    "category": "Other",
-    "borrowed_from": "Financial Analyst"
-   },
-   {
     "name": "Financial Reporting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Power BI",
-    "weight": 0.375,
-    "category": "Tools & Platforms"
+    "name": "Budgeting",
+    "weight": 0.48,
+    "category": "Other",
+    "borrowed_from": "Financial Analyst"
    },
    {
     "name": "R",
     "weight": 0.375,
     "category": "Other"
+   },
+   {
+    "name": "Power BI",
+    "weight": 0.375,
+    "category": "Tools & Platforms"
    },
    {
     "name": "Actuarial Science",
@@ -3498,22 +3486,22 @@
     "borrowed_from": "Financial Analyst"
    },
    {
+    "name": "Pricing Models",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
+    "name": "Predictive Analytics",
+    "weight": 0.188,
+    "category": "Other"
+   },
+   {
     "name": "Data Visualization",
     "weight": 0.188,
     "category": "Other"
    },
    {
-    "name": "Python",
-    "weight": 0.188,
-    "category": "Programming Languages"
-   },
-   {
-    "name": "Tableau",
-    "weight": 0.188,
-    "category": "Tools & Platforms"
-   },
-   {
-    "name": "Predictive Analytics",
+    "name": "Generalized Linear Models",
     "weight": 0.188,
     "category": "Other"
    }
@@ -3526,10 +3514,6 @@
    "currency": "USD"
   },
   "top_courses": [
-   [
-    "GTSC2193",
-    1.351
-   ],
    [
     "ACCT3033",
     1.26
@@ -3572,6 +3556,10 @@
    ],
    [
     "ECON3063",
+    0.6
+   ],
+   [
+    "ECON3133",
     0.6
    ]
   ],
@@ -3629,7 +3617,12 @@
     "category": "Domain Knowledge"
    },
    {
-    "name": "Estimated Tax Payments",
+    "name": "State Income Tax Returns",
+    "weight": 0.208,
+    "category": "Other"
+   },
+   {
+    "name": "Federal Income Tax Returns",
     "weight": 0.208,
     "category": "Other"
    },
@@ -3639,17 +3632,12 @@
     "category": "Domain Knowledge"
    },
    {
-    "name": "Fiduciary Accounting",
-    "weight": 0.208,
-    "category": "Domain Knowledge"
-   },
-   {
     "name": "Estate Accounting",
     "weight": 0.208,
     "category": "Domain Knowledge"
    },
    {
-    "name": "Form 1023",
+    "name": "Estimated Tax Payments",
     "weight": 0.208,
     "category": "Other"
    },
@@ -3659,9 +3647,9 @@
     "category": "Other"
    },
    {
-    "name": "Trust Accounting",
+    "name": "Probate",
     "weight": 0.208,
-    "category": "Programming Languages"
+    "category": "Other"
    },
    {
     "name": "Form 990-PF",
@@ -3669,9 +3657,9 @@
     "category": "Other"
    },
    {
-    "name": "Probate",
+    "name": "Fiduciary Accounting",
     "weight": 0.208,
-    "category": "Other"
+    "category": "Domain Knowledge"
    }
   ],
   "salary": {
@@ -3737,12 +3725,12 @@
     "category": "Other"
    },
    {
-    "name": "Wealth Management",
+    "name": "Estate Planning",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Estate Planning",
+    "name": "Wealth Management",
     "weight": 0.5,
     "category": "Other"
    },
@@ -3767,17 +3755,17 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft PowerPoint",
-    "weight": 0.375,
-    "category": "Other"
-   },
-   {
     "name": "Microsoft Excel",
     "weight": 0.375,
     "category": "Tools & Platforms"
    },
    {
     "name": "Microsoft Word",
+    "weight": 0.375,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
     "weight": 0.375,
     "category": "Other"
    },
@@ -3817,12 +3805,7 @@
     "category": "Other"
    },
    {
-    "name": "Administrative Support",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
-    "name": "Microsoft Office",
+    "name": "Financial Services",
     "weight": 0.25,
     "category": "Other"
    },
@@ -3832,7 +3815,12 @@
     "category": "Other"
    },
    {
-    "name": "Financial Services",
+    "name": "Microsoft Office",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Administrative Support",
     "weight": 0.25,
     "category": "Other"
    },
@@ -3847,14 +3835,14 @@
     "category": "Other"
    },
    {
-    "name": "Financial Analysis",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
     "name": "Accounting",
     "weight": 0.25,
     "category": "Domain Knowledge"
+   },
+   {
+    "name": "Financial Analysis",
+    "weight": 0.25,
+    "category": "Other"
    }
   ],
   "salary": {
@@ -3983,12 +3971,12 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft PowerPoint",
+    "name": "Microsoft Word",
     "weight": 0.286,
     "category": "Other"
    },
    {
-    "name": "Microsoft Word",
+    "name": "Microsoft PowerPoint",
     "weight": 0.286,
     "category": "Other"
    },
@@ -4008,14 +3996,14 @@
     "category": "Programming Languages"
    },
    {
-    "name": "Marketing Analytics",
-    "weight": 0.286,
-    "category": "Domain Knowledge"
-   },
-   {
     "name": "A/B Testing",
     "weight": 0.286,
     "category": "Other"
+   },
+   {
+    "name": "Marketing Analytics",
+    "weight": 0.286,
+    "category": "Domain Knowledge"
    },
    {
     "name": "Product Marketing",
@@ -4023,14 +4011,14 @@
     "category": "Domain Knowledge"
    },
    {
-    "name": "Market Analysis",
-    "weight": 0.214,
-    "category": "Other"
-   },
-   {
     "name": "Search Engine Optimization",
     "weight": 0.214,
     "category": "Math & Stats"
+   },
+   {
+    "name": "Market Analysis",
+    "weight": 0.214,
+    "category": "Other"
    },
    {
     "name": "User Experience",
@@ -4149,13 +4137,18 @@
     "category": "Other"
    },
    {
+    "name": "Google Ads",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
     "name": "Email Marketing",
     "weight": 0.429,
     "category": "Domain Knowledge"
    },
    {
-    "name": "Google Ads",
-    "weight": 0.429,
+    "name": "SEMrush",
+    "weight": 0.286,
     "category": "Other"
    },
    {
@@ -4165,11 +4158,6 @@
    },
    {
     "name": "SEO Audits",
-    "weight": 0.286,
-    "category": "Other"
-   },
-   {
-    "name": "SEMrush",
     "weight": 0.286,
     "category": "Other"
    },
@@ -4184,12 +4172,12 @@
     "category": "Other"
    },
    {
-    "name": "Project Management",
+    "name": "Photography",
     "weight": 0.286,
     "category": "Other"
    },
    {
-    "name": "Photography",
+    "name": "Project Management",
     "weight": 0.286,
     "category": "Other"
    },
@@ -4219,12 +4207,12 @@
     "category": "Other"
    },
    {
-    "name": "Door-to-Door Sales",
+    "name": "Direct Marketing",
     "weight": 0.143,
-    "category": "Other"
+    "category": "Domain Knowledge"
    },
    {
-    "name": "Prospecting",
+    "name": "Cold Calling",
     "weight": 0.143,
     "category": "Other"
    },
@@ -4234,9 +4222,9 @@
     "category": "Other"
    },
    {
-    "name": "Direct Marketing",
+    "name": "Business Development",
     "weight": 0.143,
-    "category": "Domain Knowledge"
+    "category": "Other"
    }
   ],
   "salary": {
@@ -4377,13 +4365,13 @@
     "borrowed_from": "Marketing Manager"
    },
    {
-    "name": "Microsoft PowerPoint",
+    "name": "Microsoft Word",
     "weight": 0.172,
     "category": "Other",
     "borrowed_from": "Marketing Manager"
    },
    {
-    "name": "Microsoft Word",
+    "name": "Microsoft PowerPoint",
     "weight": 0.172,
     "category": "Other",
     "borrowed_from": "Marketing Manager"
@@ -4407,9 +4395,9 @@
     "borrowed_from": "Marketing Manager"
    },
    {
-    "name": "Marketing Analytics",
+    "name": "A/B Testing",
     "weight": 0.172,
-    "category": "Domain Knowledge",
+    "category": "Other",
     "borrowed_from": "Marketing Manager"
    }
   ],
@@ -4423,18 +4411,18 @@
   "top_courses": [
    [
     "BA4043",
-    1.715
+    1.543
    ],
    [
     "GCAP3083",
     1.243
    ],
    [
-    "MKT3093",
-    1.072
+    "MKT2023",
+    0.9
    ],
    [
-    "MKT2023",
+    "MKT3093",
     0.9
    ],
    [
@@ -4514,12 +4502,12 @@
     "category": "Tools & Platforms"
    },
    {
-    "name": "User Acceptance Testing",
+    "name": "Microsoft Office",
     "weight": 0.294,
     "category": "Other"
    },
    {
-    "name": "Microsoft Office",
+    "name": "User Acceptance Testing",
     "weight": 0.294,
     "category": "Other"
    },
@@ -4574,12 +4562,12 @@
     "category": "Other"
    },
    {
-    "name": "System Integration Testing",
+    "name": "Jira",
     "weight": 0.176,
     "category": "Other"
    },
    {
-    "name": "Jira",
+    "name": "System Integration Testing",
     "weight": 0.176,
     "category": "Other"
    },
@@ -4690,7 +4678,7 @@
     "category": "Other"
    },
    {
-    "name": "Program Management",
+    "name": "Business Development",
     "weight": 1.0,
     "category": "Other"
    },
@@ -4700,12 +4688,12 @@
     "category": "Other"
    },
    {
-    "name": "Project Management",
+    "name": "Program Management",
     "weight": 1.0,
     "category": "Other"
    },
    {
-    "name": "Business Development",
+    "name": "Project Management",
     "weight": 1.0,
     "category": "Other"
    },
@@ -4715,12 +4703,17 @@
     "category": "Other"
    },
    {
-    "name": "Quantitative Research",
+    "name": "Grant Writing",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Research Methods",
+    "name": "SPSS",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Quantitative Research",
     "weight": 0.5,
     "category": "Other"
    },
@@ -4730,14 +4723,14 @@
     "category": "Other"
    },
    {
-    "name": "Qualitative Data Analysis",
+    "name": "Stata",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Grant Writing",
+    "name": "Organizational Behavior",
     "weight": 0.5,
-    "category": "Other"
+    "category": "ML & AI"
    },
    {
     "name": "Literature Reviews",
@@ -4745,7 +4738,12 @@
     "category": "Other"
    },
    {
-    "name": "SPSS",
+    "name": "Qualitative Research",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Research Methods",
     "weight": 0.5,
     "category": "Other"
    },
@@ -4760,37 +4758,27 @@
     "category": "Other"
    },
    {
-    "name": "Organizational Behavior",
-    "weight": 0.5,
-    "category": "ML & AI"
-   },
-   {
-    "name": "Stata",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Qualitative Research",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
     "name": "Applied Research",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Commissioning",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Electrical Engineering",
+    "name": "Qualitative Data Analysis",
     "weight": 0.5,
     "category": "Other"
    },
    {
     "name": "Hardware Integration",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Schematic Design",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Industrial Automation",
     "weight": 0.5,
     "category": "Other"
    }
@@ -4876,22 +4864,22 @@
     "category": "Other"
    },
    {
-    "name": "Employment Law",
-    "weight": 0.6,
-    "category": "Domain Knowledge"
-   },
-   {
     "name": "Employee Relations",
     "weight": 0.6,
     "category": "Other"
    },
    {
-    "name": "Applicant Tracking Systems",
+    "name": "Employment Law",
+    "weight": 0.6,
+    "category": "Domain Knowledge"
+   },
+   {
+    "name": "Background Checks",
     "weight": 0.6,
     "category": "Other"
    },
    {
-    "name": "Background Checks",
+    "name": "Applicant Tracking Systems",
     "weight": 0.6,
     "category": "Other"
    },
@@ -4926,12 +4914,12 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft Office",
+    "name": "Data Analysis",
     "weight": 0.4,
     "category": "Other"
    },
    {
-    "name": "Data Analysis",
+    "name": "Microsoft Office",
     "weight": 0.4,
     "category": "Other"
    },
@@ -5078,17 +5066,17 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft PowerPoint",
-    "weight": 0.222,
-    "category": "Other"
-   },
-   {
     "name": "Continuous Improvement",
     "weight": 0.222,
     "category": "Other"
    },
    {
     "name": "Microsoft Word",
+    "weight": 0.222,
+    "category": "Other"
+   },
+   {
+    "name": "Microsoft PowerPoint",
     "weight": 0.222,
     "category": "Other"
    },
@@ -5148,22 +5136,22 @@
     "category": "Other"
    },
    {
-    "name": "Statistical Analysis",
-    "weight": 0.111,
-    "category": "Math & Stats"
-   },
-   {
     "name": "Forecasting",
     "weight": 0.111,
     "category": "Other"
    },
    {
-    "name": "Manufacturing",
+    "name": "Statistical Analysis",
+    "weight": 0.111,
+    "category": "Math & Stats"
+   },
+   {
+    "name": "Purchasing",
     "weight": 0.111,
     "category": "Other"
    },
    {
-    "name": "Purchasing",
+    "name": "Manufacturing",
     "weight": 0.111,
     "category": "Other"
    },
@@ -5274,17 +5262,17 @@
     "category": "Other"
    },
    {
+    "name": "Microsoft Office",
+    "weight": 0.429,
+    "category": "Other"
+   },
+   {
     "name": "Compliance",
     "weight": 0.429,
     "category": "Other"
    },
    {
     "name": "Microsoft PowerPoint",
-    "weight": 0.429,
-    "category": "Other"
-   },
-   {
-    "name": "Microsoft Office",
     "weight": 0.429,
     "category": "Other"
    },
@@ -5319,17 +5307,17 @@
     "category": "Other"
    },
    {
-    "name": "Automation",
-    "weight": 0.286,
-    "category": "Other"
-   },
-   {
     "name": "Robotics",
     "weight": 0.286,
     "category": "Other"
    },
    {
-    "name": "Performance Management",
+    "name": "Automation",
+    "weight": 0.286,
+    "category": "Other"
+   },
+   {
+    "name": "Financial Reporting",
     "weight": 0.286,
     "category": "Other"
    },
@@ -5339,7 +5327,7 @@
     "category": "Other"
    },
    {
-    "name": "Financial Reporting",
+    "name": "Performance Management",
     "weight": 0.286,
     "category": "Other"
    },
@@ -5505,12 +5493,12 @@
     "category": "Other"
    },
    {
-    "name": "User Stories",
+    "name": "Jira",
     "weight": 0.188,
     "category": "Other"
    },
    {
-    "name": "Jira",
+    "name": "User Stories",
     "weight": 0.188,
     "category": "Other"
    },
@@ -5535,17 +5523,17 @@
     "category": "Other"
    },
    {
-    "name": "API Design",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
     "name": "Data Science",
     "weight": 0.125,
     "category": "Other"
    },
    {
-    "name": "SaaS",
+    "name": "API Design",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Product Ownership",
     "weight": 0.125,
     "category": "Other"
    },
@@ -5645,13 +5633,13 @@
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Budgeting",
+    "name": "Financial Reporting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
    },
    {
-    "name": "Financial Reporting",
+    "name": "Budgeting",
     "weight": 0.48,
     "category": "Other",
     "borrowed_from": "Financial Analyst"
@@ -5810,12 +5798,12 @@
     "category": "Other"
    },
    {
-    "name": "Video Editing",
+    "name": "Adobe Photoshop",
     "weight": 0.556,
     "category": "Other"
    },
    {
-    "name": "Adobe Photoshop",
+    "name": "Video Editing",
     "weight": 0.556,
     "category": "Other"
    },
@@ -5845,12 +5833,12 @@
     "category": "Other"
    },
    {
-    "name": "Layout Design",
+    "name": "Animation",
     "weight": 0.222,
     "category": "Other"
    },
    {
-    "name": "Animation",
+    "name": "Layout Design",
     "weight": 0.222,
     "category": "Other"
    },
@@ -5875,14 +5863,14 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft Excel",
-    "weight": 0.222,
-    "category": "Tools & Platforms"
-   },
-   {
     "name": "Project Management",
     "weight": 0.222,
     "category": "Other"
+   },
+   {
+    "name": "Microsoft Excel",
+    "weight": 0.222,
+    "category": "Tools & Platforms"
    },
    {
     "name": "Presentation Design",
@@ -5895,12 +5883,12 @@
     "category": "Other"
    },
    {
-    "name": "Illustrator",
+    "name": "InDesign",
     "weight": 0.222,
     "category": "Other"
    },
    {
-    "name": "InDesign",
+    "name": "Photoshop",
     "weight": 0.222,
     "category": "Other"
    },
@@ -5910,7 +5898,7 @@
     "category": "Other"
    },
    {
-    "name": "Photoshop",
+    "name": "Illustrator",
     "weight": 0.222,
     "category": "Other"
    },
@@ -5996,12 +5984,12 @@
     "category": "Other"
    },
    {
-    "name": "Usability Testing",
+    "name": "Interaction Design",
     "weight": 0.625,
     "category": "Other"
    },
    {
-    "name": "Interaction Design",
+    "name": "Usability Testing",
     "weight": 0.625,
     "category": "Other"
    },
@@ -6021,12 +6009,12 @@
     "category": "Other"
    },
    {
-    "name": "User Research",
+    "name": "Information Architecture",
     "weight": 0.375,
     "category": "Other"
    },
    {
-    "name": "Information Architecture",
+    "name": "User Research",
     "weight": 0.375,
     "category": "Other"
    },
@@ -6036,12 +6024,12 @@
     "category": "Other"
    },
    {
-    "name": "User-Centered Design",
+    "name": "Human-Computer Interaction",
     "weight": 0.25,
     "category": "Other"
    },
    {
-    "name": "Human-Computer Interaction",
+    "name": "User-Centered Design",
     "weight": 0.25,
     "category": "Other"
    },
@@ -6056,32 +6044,7 @@
     "category": "Other"
    },
    {
-    "name": "SLA",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "Compliance",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
     "name": "OKR",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "High-Fidelity Prototyping",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "User Feedback Analysis",
-    "weight": 0.125,
-    "category": "Other"
-   },
-   {
-    "name": "KPI",
     "weight": 0.125,
     "category": "Other"
    },
@@ -6091,7 +6054,22 @@
     "category": "Other"
    },
    {
+    "name": "High-Fidelity Prototyping",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Product Development Lifecycle",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
     "name": "Privacy Regulations",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Compliance",
     "weight": 0.125,
     "category": "Other"
    },
@@ -6101,12 +6079,22 @@
     "category": "Other"
    },
    {
-    "name": "Design Sprints",
+    "name": "KPI",
     "weight": 0.125,
     "category": "Other"
    },
    {
-    "name": "Product Development Lifecycle",
+    "name": "SLA",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "Data Products",
+    "weight": 0.125,
+    "category": "Other"
+   },
+   {
+    "name": "User Feedback Analysis",
     "weight": 0.125,
     "category": "Other"
    }
@@ -6192,12 +6180,12 @@
     "category": "Domain Knowledge"
    },
    {
-    "name": "SEO",
+    "name": "Slack",
     "weight": 0.6,
     "category": "Other"
    },
    {
-    "name": "Slack",
+    "name": "SEO",
     "weight": 0.6,
     "category": "Other"
    },
@@ -6217,27 +6205,32 @@
     "category": "Other"
    },
    {
-    "name": "Coda",
+    "name": "Google Workspace",
     "weight": 0.4,
     "category": "Other"
    },
    {
-    "name": "Asana",
+    "name": "Web Design",
     "weight": 0.4,
     "category": "Other"
    },
    {
-    "name": "UX Writing",
-    "weight": 0.4,
-    "category": "Other"
-   },
-   {
-    "name": "Blockchain",
+    "name": "Cryptography",
     "weight": 0.4,
     "category": "Other"
    },
    {
     "name": "Internationalization",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Coda",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
+    "name": "Blockchain",
     "weight": 0.4,
     "category": "Other"
    },
@@ -6252,27 +6245,22 @@
     "category": "Other"
    },
    {
+    "name": "UX Writing",
+    "weight": 0.4,
+    "category": "Other"
+   },
+   {
     "name": "Front-end Development",
     "weight": 0.4,
     "category": "Other"
    },
    {
-    "name": "Cryptography",
+    "name": "Asana",
     "weight": 0.4,
     "category": "Other"
    },
    {
     "name": "Information Architecture",
-    "weight": 0.4,
-    "category": "Other"
-   },
-   {
-    "name": "Google Workspace",
-    "weight": 0.4,
-    "category": "Other"
-   },
-   {
-    "name": "Web Design",
     "weight": 0.4,
     "category": "Other"
    },
@@ -6292,7 +6280,7 @@
     "category": "Other"
    },
    {
-    "name": "AI Models",
+    "name": "Chatbots",
     "weight": 0.4,
     "category": "Other"
    },
@@ -6374,12 +6362,7 @@
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "Web Publishing",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Non-linear Editing",
+    "name": "Content Management Systems",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6389,7 +6372,7 @@
     "category": "Other"
    },
    {
-    "name": "Multimedia Production",
+    "name": "Videography",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6399,12 +6382,12 @@
     "category": "Other"
    },
    {
-    "name": "Video Editing",
+    "name": "AP Style Writing",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "AP Style Writing",
+    "name": "Video Editing",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6419,7 +6402,7 @@
     "category": "Other"
    },
    {
-    "name": "Content Management Systems",
+    "name": "Web Publishing",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6429,22 +6412,22 @@
     "category": "Other"
    },
    {
-    "name": "Videography",
+    "name": "Multimedia Production",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Digital Recording",
-    "weight": 0.5,
-    "category": "Tools & Platforms"
-   },
-   {
-    "name": "Exposure Adjustment",
+    "name": "Non-linear Editing",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Audio and Video Technology",
+    "name": "Equipment Maintenance",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Log Note Taking",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6454,7 +6437,12 @@
     "category": "Other"
    },
    {
-    "name": "Remote Technical Support",
+    "name": "Microphone Placement",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Audio/Video Equipment Setup",
     "weight": 0.5,
     "category": "Other"
    }
@@ -6555,14 +6543,14 @@
     "category": "Other"
    },
    {
-    "name": "Marketing Analytics",
-    "weight": 0.5,
-    "category": "Domain Knowledge"
-   },
-   {
     "name": "Content Creation",
     "weight": 0.5,
     "category": "Other"
+   },
+   {
+    "name": "Marketing Analytics",
+    "weight": 0.5,
+    "category": "Domain Knowledge"
    },
    {
     "name": "Content Marketing",
@@ -6580,22 +6568,17 @@
     "category": "Other"
    },
    {
-    "name": "Microsoft Office Suite",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
     "name": "Strategic Communications",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "New Business Development",
-    "weight": 0.25,
+    "name": "Microsoft Office Suite",
+    "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Paid Media",
+    "name": "Earned Media",
     "weight": 0.25,
     "category": "Other"
    },
@@ -6610,11 +6593,6 @@
     "category": "Other"
    },
    {
-    "name": "Earned Media",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
     "name": "Influencer Marketing",
     "weight": 0.25,
     "category": "Domain Knowledge"
@@ -6625,17 +6603,12 @@
     "category": "Other"
    },
    {
-    "name": "Human Resources Information Systems",
+    "name": "Paid Media",
     "weight": 0.25,
     "category": "Other"
    },
    {
-    "name": "Copywriting",
-    "weight": 0.25,
-    "category": "Other"
-   },
-   {
-    "name": "Documentation",
+    "name": "New Business Development",
     "weight": 0.25,
     "category": "Other"
    },
@@ -6645,7 +6618,22 @@
     "category": "Other"
    },
    {
+    "name": "Graphic Design",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
     "name": "AP Style",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Documentation",
+    "weight": 0.25,
+    "category": "Other"
+   },
+   {
+    "name": "Data Analysis",
     "weight": 0.25,
     "category": "Other"
    }
@@ -6659,12 +6647,12 @@
   },
   "top_courses": [
    [
-    "PRA3093",
+    "BA4043",
     1.5
    ],
    [
-    "BA4043",
-    1.25
+    "PRA3093",
+    1.5
    ],
    [
     "EPIN4013",
@@ -6679,7 +6667,7 @@
     1.25
    ],
    [
-    "TRA4033",
+    "PRA4663",
     1.25
    ],
    [
@@ -6734,13 +6722,13 @@
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "SEO",
+    "name": "Slack",
     "weight": 0.36,
     "category": "Other",
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "Slack",
+    "name": "SEO",
     "weight": 0.36,
     "category": "Other",
     "borrowed_from": "Content Writer"
@@ -6764,31 +6752,37 @@
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "Coda",
+    "name": "Google Workspace",
     "weight": 0.24,
     "category": "Other",
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "Asana",
+    "name": "Web Design",
     "weight": 0.24,
     "category": "Other",
     "borrowed_from": "Content Writer"
    },
    {
-    "name": "UX Writing",
-    "weight": 0.24,
-    "category": "Other",
-    "borrowed_from": "Content Writer"
-   },
-   {
-    "name": "Blockchain",
+    "name": "Cryptography",
     "weight": 0.24,
     "category": "Other",
     "borrowed_from": "Content Writer"
    },
    {
     "name": "Internationalization",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Coda",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
+    "name": "Blockchain",
     "weight": 0.24,
     "category": "Other",
     "borrowed_from": "Content Writer"
@@ -6806,19 +6800,13 @@
     "borrowed_from": "Content Writer"
    },
    {
+    "name": "UX Writing",
+    "weight": 0.24,
+    "category": "Other",
+    "borrowed_from": "Content Writer"
+   },
+   {
     "name": "Front-end Development",
-    "weight": 0.24,
-    "category": "Other",
-    "borrowed_from": "Content Writer"
-   },
-   {
-    "name": "Cryptography",
-    "weight": 0.24,
-    "category": "Other",
-    "borrowed_from": "Content Writer"
-   },
-   {
-    "name": "Information Architecture",
     "weight": 0.24,
     "category": "Other",
     "borrowed_from": "Content Writer"
@@ -6835,6 +6823,14 @@
    [
     "GCAP3083",
     1.2
+   ],
+   [
+    "GDST1083",
+    0.72
+   ],
+   [
+    "ENG4123",
+    0.6
    ],
    [
     "PRA3023",
@@ -6869,15 +6865,7 @@
     0.36
    ],
    [
-    "ENG4123",
-    0.36
-   ],
-   [
     "ENG4173",
-    0.36
-   ],
-   [
-    "FOOD4004",
     0.36
    ]
   ],
@@ -6890,7 +6878,7 @@
   "n_postings": 52,
   "skills": [
    {
-    "name": "Video Editing",
+    "name": "Graphic Design",
     "weight": 0.5,
     "category": "Other"
    },
@@ -6900,18 +6888,13 @@
     "category": "Other"
    },
    {
+    "name": "Video Editing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
     "name": "Adobe After Effects",
     "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Graphic Design",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Adobe Creative Suite",
-    "weight": 0.334,
     "category": "Other"
    },
    {
@@ -6925,33 +6908,8 @@
     "category": "Other"
    },
    {
-    "name": "Adobe Lightroom",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
-    "name": "Video Compression",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
-    "name": "HD Post-Production",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
-    "name": "Asana",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
-    "name": "Adobe Media Encoder",
-    "weight": 0.167,
-    "category": "Other"
-   },
-   {
-    "name": "Motion Design",
-    "weight": 0.167,
+    "name": "Adobe Creative Suite",
+    "weight": 0.334,
     "category": "Other"
    },
    {
@@ -6965,17 +6923,47 @@
     "category": "Other"
    },
    {
-    "name": "Figma",
+    "name": "Adobe Media Encoder",
     "weight": 0.167,
     "category": "Other"
    },
    {
-    "name": "Typography",
+    "name": "Video Compression",
     "weight": 0.167,
     "category": "Other"
    },
    {
-    "name": "Brand Design",
+    "name": "Asana",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "HD Post-Production",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Motion Design",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe Lightroom",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Keynote",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Adobe InDesign",
+    "weight": 0.167,
+    "category": "Other"
+   },
+   {
+    "name": "Performance Data Analysis",
     "weight": 0.167,
     "category": "Other"
    }
@@ -6998,10 +6986,6 @@
    ],
    [
     "MAD2043",
-    0.667
-   ],
-   [
-    "PRA2033",
     0.667
    ],
    [
@@ -7034,6 +7018,10 @@
    ],
    [
     "MCOM3103",
+    0.5
+   ],
+   [
+    "PRA2033",
     0.5
    ]
   ],
@@ -7314,17 +7302,17 @@
     "category": "Other"
    },
    {
-    "name": "Adaptive Assessments",
-    "weight": 0.15,
-    "category": "Other"
-   },
-   {
     "name": "Personalized Learning",
     "weight": 0.15,
     "category": "Other"
    },
    {
     "name": "Learning Science",
+    "weight": 0.15,
+    "category": "Other"
+   },
+   {
+    "name": "Adaptive Assessments",
     "weight": 0.15,
     "category": "Other"
    },
@@ -7480,6 +7468,11 @@
     "category": "Other"
    },
    {
+    "name": "Data Management",
+    "weight": 0.333,
+    "category": "Other"
+   },
+   {
     "name": "Data Collection",
     "weight": 0.333,
     "category": "Other"
@@ -7495,22 +7488,17 @@
     "category": "Other"
    },
    {
-    "name": "Data Management",
-    "weight": 0.333,
-    "category": "Other"
-   },
-   {
     "name": "DOT Regulations",
     "weight": 0.333,
     "category": "Other"
    },
    {
-    "name": "Microsoft Office",
+    "name": "GIS",
     "weight": 0.333,
     "category": "Other"
    },
    {
-    "name": "GIS",
+    "name": "Microsoft Office",
     "weight": 0.333,
     "category": "Other"
    },
@@ -7631,17 +7619,7 @@
     "category": "ML & AI"
    },
    {
-    "name": "Algorithms",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "Large-Scale Training",
-    "weight": 0.5,
-    "category": "Other"
-   },
-   {
-    "name": "3D Generation",
+    "name": "Foundation Models",
     "weight": 0.5,
     "category": "Other"
    },
@@ -7651,22 +7629,22 @@
     "category": "ML & AI"
    },
    {
-    "name": "Foundation Models",
+    "name": "Video Processing",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Machine Learning",
+    "name": "Multimodal Machine Learning",
     "weight": 0.5,
     "category": "ML & AI"
    },
    {
-    "name": "Image Processing",
+    "name": "Algorithms",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Video Processing",
+    "name": "3D Generation",
     "weight": 0.5,
     "category": "Other"
    },
@@ -7676,27 +7654,42 @@
     "category": "ML & AI"
    },
    {
+    "name": "Machine Learning",
+    "weight": 0.5,
+    "category": "ML & AI"
+   },
+   {
     "name": "Generative AI",
     "weight": 0.5,
     "category": "ML & AI"
    },
    {
-    "name": "Multimodal Machine Learning",
-    "weight": 0.5,
-    "category": "ML & AI"
-   },
-   {
-    "name": "Scientific Writing",
+    "name": "Large-Scale Training",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Patient Recruitment",
+    "name": "Image Processing",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Informed Consent",
     "weight": 0.5,
     "category": "Other"
    },
    {
     "name": "Research Documentation",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Clinical Research",
+    "weight": 0.5,
+    "category": "Other"
+   },
+   {
+    "name": "Analytical Reporting",
     "weight": 0.5,
     "category": "Other"
    },
@@ -7721,19 +7714,14 @@
     "category": "Other"
    },
    {
-    "name": "Research Laboratory Coordination",
+    "name": "Genomic Medicine",
     "weight": 0.5,
     "category": "Other"
    },
    {
-    "name": "Informed Consent",
+    "name": "Scientific Writing",
     "weight": 0.5,
     "category": "Other"
-   },
-   {
-    "name": "Statistical Reporting",
-    "weight": 0.5,
-    "category": "Math & Stats"
    }
   ],
   "salary": {
@@ -7892,17 +7880,17 @@
     "category": "Other"
    },
    {
-    "name": "Change Management",
-    "weight": 0.101,
-    "category": "Other"
-   },
-   {
     "name": "Project Planning",
     "weight": 0.101,
     "category": "Other"
    },
    {
     "name": "Stakeholder Management",
+    "weight": 0.101,
+    "category": "Other"
+   },
+   {
+    "name": "Change Management",
     "weight": 0.101,
     "category": "Other"
    },
@@ -8033,7 +8021,7 @@
     "category": "Other"
    },
    {
-    "name": "Business Credit Consulting",
+    "name": "Channel Sales",
     "weight": 0.548,
     "category": "Other"
    },
@@ -8043,7 +8031,7 @@
     "category": "Other"
    },
    {
-    "name": "Channel Sales",
+    "name": "Business Credit Consulting",
     "weight": 0.548,
     "category": "Other"
    },
