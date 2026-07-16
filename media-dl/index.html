@@ -252,6 +252,20 @@
             const hasMerge = currentItems.some((it) => it.needs_merge);
             const multi = currentItems.length > 1;
 
+            // Server-side merge: pair the DASH 画面 + 音频 items and, when the
+            // server has ffmpeg (data.can_merge), offer a one-click muxed MP4.
+            const mergeVideo = currentItems.find((it) => it.needs_merge && it.kind === 'video');
+            const mergeAudio = currentItems.find((it) => it.needs_merge && it.kind === 'audio');
+            const canMerge = !!(data.can_merge && mergeVideo && mergeAudio);
+            const mergeName = ((data.title || 'merged')
+                .replace(/[\\/:*?"<>|\r\n\t]+/g, '_').slice(0, 80) || 'merged') + '.mp4';
+            let mergeHref = '';
+            if (canMerge) {
+                const p = new URLSearchParams({ v: mergeVideo.url, a: mergeAudio.url, name: mergeName });
+                if (mergeVideo.referer) p.set('r', mergeVideo.referer);
+                mergeHref = `/api/media-dl/merge?${p.toString()}`;
+            }
+
             const itemsHtml = currentItems.map((item, idx) => {
                 const dims = item.width && item.height ? `${item.width}×${item.height}` : '';
                 const size = fmtBytes(item.filesize);
@@ -272,12 +286,14 @@
                             </div>
                         ` : ''}
                         <div class="p-4 flex flex-col gap-3 flex-1">
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
                                 <span class="pill">${escapeHtml(KIND_LABEL[item.kind] || item.kind)}</span>
                                 ${item.needs_merge ? '<span class="pill" style="color:#7c3aed">需合并</span>' : ''}
+                                <span class="ml-auto"></span>
                                 ${item.needs_proxy
                                     ? '<span class="pill" style="color:#b45309">代理</span>'
                                     : '<span class="pill" style="color:#15803d">直链</span>'}
+                                ${multi ? `<label class="flex items-center cursor-pointer pl-1" title="选择此项"><input type="checkbox" class="item-check w-4 h-4 accent-black" data-idx="${idx}" checked /></label>` : ''}
                             </div>
                             <div class="mono text-xs text-black/60 break-all">${escapeHtml(item.filename)}</div>
                             <div class="mono text-[11px] text-black/45">${escapeHtml(line || '原始品质')}</div>
@@ -309,15 +325,28 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
-                            ${multi ? '<button id="dl-all" class="btn-primary" type="button">下载全部</button>' : ''}
+                            ${multi ? `
+                                <label class="btn-ghost" style="cursor:pointer">
+                                    <input type="checkbox" id="check-all" class="w-4 h-4 accent-black mr-1" checked /> 全选
+                                </label>
+                                <button id="dl-selected" class="btn-primary" type="button">下载选中 (<span id="sel-count">${currentItems.length}</span>)</button>
+                            ` : ''}
                             <a class="btn-ghost" href="${escapeHtml(data.webpage_url || '#')}" target="_blank" rel="noopener">查看原网页 ↗</a>
                         </div>
                     </div>
                     ${hasMerge ? `
                         <div class="note-card mt-5">
-                            ⚠️ 高清晰度为 <b>DASH 分离流</b>：画面与音频为两个文件。可分别播放，或用
-                            <span class="mono">ffmpeg -i 画面 -i 音频 -c copy out.mp4</span> 合并成带声音的视频；
-                            也可直接拖入 VLC 同时播放。
+                            ${canMerge ? `
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <div class="flex-1">高清晰度为 <b>DASH 分离流</b>（画面 + 音频两个文件）。点右侧按钮由服务器用 ffmpeg <b>无损合并</b>成一个带声音的 MP4，无需本地操作。</div>
+                                    <a class="btn-primary merge-btn flex-shrink-0" href="${escapeHtml(mergeHref)}"
+                                       download="${escapeHtml(mergeName)}" target="_self">合并下载（画面+音频）</a>
+                                </div>
+                            ` : `
+                                ⚠️ 高清晰度为 <b>DASH 分离流</b>：画面与音频为两个文件。可分别播放，或用
+                                <span class="mono">ffmpeg -i 画面 -i 音频 -c copy out.mp4</span> 合并成带声音的视频；
+                                也可直接拖入 VLC 同时播放。
+                            `}
                         </div>
                     ` : ''}
                     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">${itemsHtml}</div>
@@ -354,26 +383,72 @@
                 });
             });
 
-            const $all = document.getElementById('dl-all');
-            if ($all) $all.addEventListener('click', () => downloadAll($all));
+            // Merge takes a beat to spin up (ffmpeg fetches both streams then
+            // muxes), so give a longer busy hint than a plain proxied download.
+            const $merge = $result.querySelector('a.merge-btn');
+            if ($merge) $merge.addEventListener('click', () => {
+                $merge.classList.add('busy');
+                const original = $merge.textContent;
+                $merge.textContent = '合并中（首次稍慢）…';
+                setTimeout(() => { $merge.classList.remove('busy'); $merge.textContent = original; }, 7000);
+            });
+
+            // Multi-select wiring: per-item checkboxes + 全选 toggle drive the
+            // "下载选中 (N)" button so users can pick a subset (e.g. a few images
+            // from an xhs album) instead of all-or-one.
+            const $checks = () => [...$result.querySelectorAll('input.item-check')];
+            const $selBtn = document.getElementById('dl-selected');
+            const $selCount = document.getElementById('sel-count');
+            const $checkAll = document.getElementById('check-all');
+
+            const selectedIdxs = () => {
+                const boxes = $checks();
+                if (!boxes.length) return currentItems.map((_, i) => i);
+                return boxes.filter((b) => b.checked).map((b) => Number(b.dataset.idx));
+            };
+            const refreshSelUi = () => {
+                const boxes = $checks();
+                const n = selectedIdxs().length;
+                if ($selCount) $selCount.textContent = n;
+                if ($selBtn) $selBtn.classList.toggle('busy', n === 0);
+                if ($checkAll) {
+                    $checkAll.checked = n === boxes.length && n > 0;
+                    $checkAll.indeterminate = n > 0 && n < boxes.length;
+                }
+            };
+
+            $checks().forEach((b) => b.addEventListener('change', refreshSelUi));
+            if ($checkAll) {
+                $checkAll.addEventListener('change', () => {
+                    $checks().forEach((b) => { b.checked = $checkAll.checked; });
+                    refreshSelUi();
+                });
+            }
+            if ($selBtn) $selBtn.addEventListener('click', () => downloadIdxs(selectedIdxs(), $selBtn));
+            refreshSelUi();
         };
 
-        // Sequential download of every item. Staggered anchor clicks stream each
-        // file to disk via the proxy's Content-Disposition (no in-memory blobs,
-        // so large videos are fine). Chrome may ask once to allow multiple.
-        const downloadAll = (btn) => {
+        // Sequential download of the given item indices. Staggered anchor clicks
+        // stream each file to disk via the proxy's Content-Disposition (no
+        // in-memory blobs, so large videos are fine). Chrome may ask once to
+        // allow multiple downloads.
+        const downloadIdxs = (idxs, btn) => {
+            if (!idxs.length) return;
+            const restore = btn.querySelector('#sel-count') ? null : btn.textContent;
             btn.classList.add('busy');
-            btn.textContent = '下载中…';
+            const label = btn.querySelector('#sel-count');
+            const setLabel = (t) => { if (!label) btn.textContent = t; };
+            setLabel('下载中…');
             let i = 0;
             const step = () => {
-                if (i >= currentItems.length) {
+                if (i >= idxs.length) {
                     btn.classList.remove('busy');
-                    btn.textContent = '下载全部';
+                    if (restore != null) btn.textContent = restore;
                     return;
                 }
-                const item = currentItems[i++];
+                const item = currentItems[idxs[i++]];
                 const { href, direct } = downloadHref(item);
-                if (href !== '#') {
+                if (href && href !== '#') {
                     const a = document.createElement('a');
                     a.href = href;
                     a.download = item.filename || '';

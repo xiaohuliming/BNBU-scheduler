@@ -223,6 +223,27 @@ class AppTestCase(unittest.TestCase):
             {'url': 'https://cdn/v.mp4', 'fragments': [{'url': 'a'}]}))
         self.assertFalse(_is_directly_downloadable({'url': ''}))
 
+    def test_media_merge_validates_params_and_hosts(self):
+        # Missing a param.
+        r = self.client.get('/api/media-dl/merge?v=https://x.bilivideo.com/v.m4s')
+        self.assertEqual(r.status_code, 400)
+        # Non-allowlisted hosts.
+        r = self.client.get('/api/media-dl/merge?v=https://evil.com/v&a=https://evil.com/a')
+        self.assertEqual(r.status_code, 403)
+
+    def test_media_merge_returns_501_when_ffmpeg_absent(self):
+        import media_dl.routes as media_routes
+
+        with mock.patch.object(media_routes, '_ffmpeg_path', return_value=''):
+            r = self.client.get(
+                '/api/media-dl/merge'
+                '?v=https://x.bilivideo.com/v.m4s'
+                '&a=https://x.bilivideo.com/a.m4s'
+                '&r=https://www.bilibili.com'
+            )
+        self.assertEqual(r.status_code, 501)
+        self.assertIn('ffmpeg', r.get_json()['error'])
+
     def test_bilibili_preferred_official_url_always_passes_proxy_allowlist(self):
         # Regression guard: the CDN suffixes bilibili._prefer_official_url picks
         # from must stay a subset of what routes._host_allowed permits.
