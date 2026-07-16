@@ -26,6 +26,11 @@ from media_dl import media_dl_bp
 # Database setup
 DB_PATH = 'maxcourse.db'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# page_views.created_at is stored in UTC (SQLite CURRENT_TIMESTAMP). The site
+# serves a Beijing-time (UTC+8) audience, so every "today" / day / hour bucket
+# must be shifted before it is grouped, or the day would roll over at 08:00 local.
+BEIJING_SQL_OFFSET = '+8 hours'
 SECRET_KEY_FILE = os.path.join(APP_ROOT, '.flask_secret_key')
 SESSION_LIFETIME_DAYS = 36500
 DAY_SEQUENCE = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -189,6 +194,34 @@ def handle_api_errors(error):
     return jsonify({"error": "Internal server error"}), 500
 
 
+def rollup_daily_page_stats(conn, recent_days=None):
+    """Upsert Beijing-day page-view totals into daily_page_stats.
+
+    recent_days=None recomputes the full history (used for the one-time backfill);
+    an int N recomputes only the last N Beijing days (cheap incremental refresh —
+    past days are immutable, so refreshing the tail keeps today/yesterday current).
+    Recomputed from the raw page_views table, so it is always self-correcting.
+    """
+    where = ''
+    if recent_days is not None:
+        where = (
+            f"WHERE date(created_at, '{BEIJING_SQL_OFFSET}') "
+            f">= date('now', '{BEIJING_SQL_OFFSET}', '-{int(recent_days)} days')"
+        )
+    conn.execute(
+        f'''
+        INSERT OR REPLACE INTO daily_page_stats (day, views, visitors, updated_at)
+        SELECT date(created_at, '{BEIJING_SQL_OFFSET}') AS day,
+               COUNT(*) AS views,
+               COUNT(DISTINCT visitor_id) AS visitors,
+               CURRENT_TIMESTAMP
+        FROM page_views
+        {where}
+        GROUP BY day
+        '''
+    )
+
+
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
@@ -331,8 +364,32 @@ def init_db():
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_user_ispace_unique ON todos (user_id, ispace_id) WHERE ispace_id IS NOT NULL')
         except sqlite3.IntegrityError:
             pass
-            
+
+        # Durable per-day rollup of page views (Beijing calendar day). page_views
+        # keeps every raw hit, but this table preserves the daily totals cheaply and
+        # survives even if raw rows are ever pruned; it also makes long-range history
+        # queryable without scanning the full events table.
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS daily_page_stats (
+                day TEXT PRIMARY KEY,
+                views INTEGER NOT NULL DEFAULT 0,
+                visitors INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
+
+        # One-time backfill: if the rollup is empty but raw views exist, compute
+        # every historical Beijing day once. Cheap (single GROUP BY) and idempotent.
+        try:
+            already = c.execute('SELECT COUNT(*) FROM daily_page_stats').fetchone()[0]
+            has_views = c.execute('SELECT 1 FROM page_views LIMIT 1').fetchone()
+            if not already and has_views:
+                rollup_daily_page_stats(conn)  # full history
+                conn.commit()
+        except sqlite3.OperationalError:
+            pass
 
 init_db()
 
@@ -2324,6 +2381,16 @@ def dispatch_due_email_notifications():
     if not supplied_secret or not secrets.compare_digest(supplied_secret, expected_secret):
         return jsonify({"error": "Unauthorized"}), 401
 
+    # Piggyback the daily page-view rollup on the cron heartbeat so daily totals are
+    # persisted even on days nobody opens the dashboard. Best-effort; never blocks email.
+    try:
+        _rconn = get_db()
+        rollup_daily_page_stats(_rconn, recent_days=2)
+        _rconn.commit()
+        _rconn.close()
+    except Exception:
+        app.logger.warning('daily_page_stats rollup (cron) failed', exc_info=True)
+
     if not is_email_service_configured():
         return jsonify({"error": "Email service is not configured on the server"}), 503
 
@@ -2488,33 +2555,205 @@ def track_page_view():
     return jsonify({"success": True})
 
 
+def _classify_referrer_host(referrer, self_host):
+    """Return (host, is_external) for a stored referrer URL, or None to drop it."""
+    if not referrer:
+        return None
+    from urllib.parse import urlparse
+    try:
+        host = (urlparse(referrer).hostname or '').lower()
+    except Exception:
+        host = ''
+    if not host:
+        return None
+    if host.startswith('www.'):
+        host = host[4:]
+    internal = (
+        host == self_host
+        or host in ('localhost', '127.0.0.1', '0.0.0.0')
+        or host.endswith('.bnbscheduler.top')
+        or host == 'bnbscheduler.top'
+    )
+    return (host, not internal)
+
+
 @app.route('/api/analytics/summary', methods=['GET'])
 def get_analytics_summary():
     conn = get_db()
     c = conn.cursor()
+    off = BEIJING_SQL_OFFSET
 
+    # ---- Headline totals (all-time) ----
     total_views = c.execute('SELECT COUNT(*) FROM page_views').fetchone()[0]
     unique_visitors = c.execute('SELECT COUNT(DISTINCT visitor_id) FROM page_views').fetchone()[0]
-    today_views = c.execute(
-        "SELECT COUNT(*) FROM page_views WHERE date(created_at) = date('now')"
+    registered_visitors = c.execute(
+        'SELECT COUNT(DISTINCT user_id) FROM page_views WHERE user_id IS NOT NULL'
     ).fetchone()[0]
 
-    c.execute(
+    # ---- Windowed totals (Beijing day boundaries) ----
+    def window(views_sql):
+        row = c.execute(views_sql).fetchone()
+        return {"views": row[0] or 0, "visitors": row[1] or 0}
+
+    today = window(
+        f"SELECT COUNT(*), COUNT(DISTINCT visitor_id) FROM page_views "
+        f"WHERE date(created_at, '{off}') = date('now', '{off}')"
+    )
+    last7d = window(
+        f"SELECT COUNT(*), COUNT(DISTINCT visitor_id) FROM page_views "
+        f"WHERE date(created_at, '{off}') >= date('now', '{off}', '-6 days')"
+    )
+    last30d = window(
+        f"SELECT COUNT(*), COUNT(DISTINCT visitor_id) FROM page_views "
+        f"WHERE date(created_at, '{off}') >= date('now', '{off}', '-29 days')"
+    )
+
+    # Visitors whose very first pageview landed today (net-new audience).
+    new_visitors_today = c.execute(
+        f'''
+        SELECT COUNT(*) FROM (
+            SELECT visitor_id, MIN(created_at) AS first_seen
+            FROM page_views GROUP BY visitor_id
+        ) WHERE date(first_seen, '{off}') = date('now', '{off}')
         '''
-        SELECT view_name, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
+    ).fetchone()[0]
+
+    # ---- Per-view breakdown, with a 7-day trend column ----
+    c.execute(
+        f'''
+        SELECT view_name,
+               COUNT(*) AS views,
+               COUNT(DISTINCT visitor_id) AS visitors,
+               SUM(CASE WHEN date(created_at, '{off}') >= date('now', '{off}', '-6 days')
+                        THEN 1 ELSE 0 END) AS views_7d
         FROM page_views
         GROUP BY view_name
         ORDER BY views DESC, view_name ASC
         '''
     )
     by_view = [dict(row) for row in c.fetchall()]
+
+    # ---- Daily trend, served from the durable rollup (self-correcting) ----
+    try:
+        days = int(request.args.get('days', 30))
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+    # Refresh the tail (today/yesterday) from raw so the newest hits show, then read
+    # the persisted rollup. Past days are immutable, so refreshing 2 days is enough.
+    try:
+        rollup_daily_page_stats(conn, recent_days=2)
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    c.execute(
+        f'''
+        SELECT day, views, visitors FROM daily_page_stats
+        WHERE day >= date('now', '{off}', '-{days - 1} days')
+        ORDER BY day ASC
+        '''
+    )
+    daily = [dict(row) for row in c.fetchall()]
+    _dmeta = c.execute('SELECT COUNT(*) AS n, MIN(day) AS first FROM daily_page_stats').fetchone()
+    daily_recorded_days = _dmeta['n'] or 0
+    daily_first_day = _dmeta['first']
+
+    # ---- Hour-of-day distribution (last 30 Beijing days) ----
+    c.execute(
+        f'''
+        SELECT CAST(strftime('%H', datetime(created_at, '{off}')) AS INTEGER) AS hour,
+               COUNT(*) AS views
+        FROM page_views
+        WHERE date(created_at, '{off}') >= date('now', '{off}', '-29 days')
+        GROUP BY hour ORDER BY hour ASC
+        '''
+    )
+    hourly_map = {int(row['hour']): row['views'] for row in c.fetchall()}
+    hourly = [{"hour": h, "views": hourly_map.get(h, 0)} for h in range(24)]
+
+    # ---- Device split from user-agent (last 30 Beijing days) ----
+    c.execute(
+        f'''
+        SELECT
+            CASE
+                WHEN user_agent IS NULL OR user_agent = '' THEN 'unknown'
+                WHEN user_agent LIKE '%bot%' OR user_agent LIKE '%spider%'
+                     OR user_agent LIKE '%crawl%' OR user_agent LIKE '%slurp%'
+                     OR user_agent LIKE '%HeadlessChrome%' OR user_agent LIKE '%bingpreview%' THEN 'bot'
+                WHEN user_agent LIKE '%iPad%' OR user_agent LIKE '%Tablet%'
+                     OR (user_agent LIKE '%Android%' AND user_agent NOT LIKE '%Mobile%') THEN 'tablet'
+                WHEN user_agent LIKE '%Mobile%' OR user_agent LIKE '%Android%'
+                     OR user_agent LIKE '%iPhone%' OR user_agent LIKE '%iPod%' THEN 'mobile'
+                ELSE 'desktop'
+            END AS device,
+            COUNT(*) AS views,
+            COUNT(DISTINCT visitor_id) AS visitors
+        FROM page_views
+        WHERE date(created_at, '{off}') >= date('now', '{off}', '-29 days')
+        GROUP BY device
+        '''
+    )
+    devices = [dict(row) for row in c.fetchall()]
+    devices.sort(key=lambda d: d['views'], reverse=True)
+
+    # ---- Referrers (last 30 Beijing days), host-aggregated, external vs internal ----
+    c.execute(
+        f'''
+        SELECT referrer, COUNT(*) AS n
+        FROM page_views
+        WHERE referrer IS NOT NULL AND referrer <> ''
+          AND date(created_at, '{off}') >= date('now', '{off}', '-29 days')
+        GROUP BY referrer
+        '''
+    )
+    self_host = (request.host or '').split(':')[0].lower()
+    if self_host.startswith('www.'):
+        self_host = self_host[4:]
+    ext_hosts = Counter()
+    internal_hits = 0
+    for row in c.fetchall():
+        cls = _classify_referrer_host(row['referrer'], self_host)
+        if cls is None:
+            continue
+        host, is_external = cls
+        if is_external:
+            ext_hosts[host] += row['n']
+        else:
+            internal_hits += row['n']
+    referrers = [{"host": h, "count": n} for h, n in ext_hosts.most_common(12)]
+
     conn.close()
 
+    now_bj = datetime.now(timezone(timedelta(hours=8)))
+
     return jsonify({
+        # Back-compat top-level keys (older cached stats page reads these).
         "totalViews": total_views,
         "uniqueVisitors": unique_visitors,
-        "todayViews": today_views,
+        "todayViews": today["views"],
         "byView": by_view,
+        # Enriched payload.
+        "generatedAt": now_bj.isoformat(timespec='seconds'),
+        "timezone": "UTC+8",
+        "totals": {
+            "views": total_views,
+            "visitors": unique_visitors,
+            "registeredVisitors": registered_visitors,
+            "viewsToday": today["views"],
+            "visitorsToday": today["visitors"],
+            "newVisitorsToday": new_visitors_today,
+            "views7d": last7d["views"],
+            "visitors7d": last7d["visitors"],
+            "views30d": last30d["views"],
+            "visitors30d": last30d["visitors"],
+        },
+        "daily": daily,
+        "dailyRecordedDays": daily_recorded_days,
+        "dailyFirstDay": daily_first_day,
+        "hourly": hourly,
+        "devices": devices,
+        "referrers": referrers,
+        "internalReferrals": internal_hits,
     })
 
 

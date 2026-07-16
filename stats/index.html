@@ -16,6 +16,7 @@
             --rose: #ef4444;
             --emerald: #10b981;
             --sky: #0ea5e9;
+            --violet: #7c3aed;
         }
         * { box-sizing: border-box; }
         html, body {
@@ -72,6 +73,9 @@
             background: var(--accent);
             border-radius: 0 9999px 9999px 0;
         }
+        .stat-card.sky::after { background: var(--sky); }
+        .stat-card.emerald::after { background: var(--emerald); }
+        .stat-card.violet::after { background: var(--violet); }
         .stat-value {
             font-size: clamp(1.8rem, 4vw, 2.4rem);
             font-weight: 900;
@@ -105,6 +109,9 @@
         }
         .bar-fill.alt {
             background: linear-gradient(90deg, var(--sky), #5cc4ff);
+        }
+        .bar-fill.violet {
+            background: linear-gradient(90deg, var(--violet), #a78bfa);
         }
         .row-grid {
             display: grid;
@@ -148,11 +155,30 @@
             cursor: pointer;
             position: relative;
         }
+        .day-bar.sky { background: rgba(14,165,233,0.85); }
         .day-bar:hover {
             opacity: 0.7;
             transform: scaleY(1.04);
             transform-origin: bottom;
         }
+        .hour-grid {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 0.18rem;
+            align-items: end;
+            height: 6rem;
+            padding-top: 1rem;
+        }
+        .hour-bar {
+            background: rgba(124,58,237,0.8);
+            border-radius: 0.2rem 0.2rem 0 0;
+            min-height: 2px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .hour-bar.peak { background: var(--accent); }
+        .hour-bar:hover { opacity: 0.7; transform: scaleY(1.04); transform-origin: bottom; }
         .day-tooltip {
             visibility: hidden;
             position: absolute;
@@ -169,7 +195,7 @@
             z-index: 10;
             pointer-events: none;
         }
-        .day-bar:hover .day-tooltip { visibility: visible; }
+        .day-bar:hover .day-tooltip, .hour-bar:hover .day-tooltip { visibility: visible; }
         .skeleton {
             background: linear-gradient(90deg, #ebe4d8 0%, #f4efe6 50%, #ebe4d8 100%);
             background-size: 200% 100%;
@@ -189,6 +215,7 @@
             cursor: pointer; transition: background 0.15s ease;
         }
         .btn-ghost:hover { background: var(--paper); }
+        .btn-ghost:disabled { opacity: 0.5; cursor: default; }
         .platform-tag {
             display: inline-flex; align-items: center;
             padding: 0.15rem 0.55rem;
@@ -205,7 +232,13 @@
         .platform-tag.douyin { background: #f3e5ff; color: #7c3aed; }
         .platform-tag.tiktok { background: #e0f7ff; color: #0ea5e9; }
         .platform-tag.twitter { background: #e7f4ff; color: #1d9bf0; }
+        .device-chip {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            font-weight: 700; font-size: 0.9rem;
+        }
         section + section { margin-top: 1.25rem; }
+        .win-cell { padding: 0.5rem 0; }
+        .win-cell + .win-cell { border-top: 1px solid rgba(16,24,32,0.06); }
     </style>
 </head>
 <body>
@@ -220,42 +253,130 @@
             <div class="mt-3"><span class="accent-bar"></span></div>
             <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">数据看板</h1>
             <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
-                站点访问、独立访客、各工具受欢迎程度，以及无水印下载器的运行状况。
+                站点访问、独立访客、各工具受欢迎程度、访问时段与来源，以及无水印下载器的运行状况。所有时间按北京时间 (UTC+8) 统计。
             </p>
             <div class="mt-5 flex items-center gap-3 flex-wrap">
                 <button id="refresh" class="btn-ghost" type="button">⟳ 刷新</button>
                 <span id="last-updated" class="mono text-xs text-black/45"></span>
+                <span id="load-error" class="mono text-xs text-[#ef4444]"></span>
             </div>
         </section>
 
-        <!-- Page views -->
+        <!-- Page views headline -->
         <section>
             <div class="kicker mb-3">PAGE VIEWS</div>
-            <div class="grid gap-3 grid-cols-2 lg:grid-cols-3">
+            <div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <div class="stat-card" id="card-total">
                     <div class="stat-label">累计浏览</div>
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">total page views</div>
                 </div>
-                <div class="stat-card" id="card-unique">
+                <div class="stat-card sky" id="card-unique">
                     <div class="stat-label">独立访客</div>
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">unique visitors</div>
                 </div>
-                <div class="stat-card col-span-2 lg:col-span-1" id="card-today">
+                <div class="stat-card emerald" id="card-today">
                     <div class="stat-label">今日浏览</div>
                     <div class="stat-value mono">—</div>
-                    <div class="stat-hint">since 00:00</div>
+                    <div class="stat-hint">since 00:00 (北京)</div>
+                </div>
+                <div class="stat-card violet" id="card-today-visitors">
+                    <div class="stat-label">今日访客</div>
+                    <div class="stat-value mono">—</div>
+                    <div class="stat-hint">unique today</div>
                 </div>
             </div>
         </section>
 
+        <!-- Window comparison -->
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-4">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">时间窗口对比</h2>
+                <span class="mono text-xs text-black/45">浏览 · 访客</span>
+            </div>
+            <div class="grid gap-3 md:grid-cols-3">
+                <div class="rounded-2xl border border-black/10 bg-white p-5">
+                    <div class="kicker">今日</div>
+                    <div class="mt-3 flex items-end gap-3">
+                        <div><div class="stat-value mono" id="win-today-views">—</div><div class="row-sub">浏览</div></div>
+                        <div class="ml-auto text-right"><div class="mono text-lg font-bold" id="win-today-visitors">—</div><div class="row-sub">访客</div></div>
+                    </div>
+                    <div class="row-sub mt-3" id="win-today-new">今日新访客 —</div>
+                </div>
+                <div class="rounded-2xl border border-black/10 bg-white p-5">
+                    <div class="kicker">近 7 天</div>
+                    <div class="mt-3 flex items-end gap-3">
+                        <div><div class="stat-value mono" id="win-7d-views">—</div><div class="row-sub">浏览</div></div>
+                        <div class="ml-auto text-right"><div class="mono text-lg font-bold" id="win-7d-visitors">—</div><div class="row-sub">访客</div></div>
+                    </div>
+                    <div class="row-sub mt-3" id="win-7d-avg">日均 —</div>
+                </div>
+                <div class="rounded-2xl border border-black/10 bg-white p-5">
+                    <div class="kicker">近 30 天</div>
+                    <div class="mt-3 flex items-end gap-3">
+                        <div><div class="stat-value mono" id="win-30d-views">—</div><div class="row-sub">浏览</div></div>
+                        <div class="ml-auto text-right"><div class="mono text-lg font-bold" id="win-30d-visitors">—</div><div class="row-sub">访客</div></div>
+                    </div>
+                    <div class="row-sub mt-3" id="win-reg">注册用户访客 —</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- By view -->
         <section class="panel p-6 md:p-8">
             <div class="flex items-baseline justify-between gap-4 mb-4">
                 <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">页面访问分布</h2>
-                <span class="mono text-xs text-black/45">view → visits / visitors</span>
+                <span class="mono text-xs text-black/45">view → visits / visitors · 近7天</span>
             </div>
             <div id="by-view"><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8"></div></div>
+        </section>
+
+        <!-- Daily page-view trend -->
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-2">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">每日访问趋势</h2>
+                <span class="mono text-xs text-black/45">last 30 days · page views</span>
+            </div>
+            <div id="pv-daily" class="day-grid">
+                <div class="skeleton" style="height:60%"></div><div class="skeleton" style="height:40%"></div><div class="skeleton" style="height:75%"></div>
+            </div>
+            <div class="mono text-[10px] text-black/40 mt-2 flex justify-between">
+                <span id="pv-range-start">—</span><span>↔︎</span><span>今日</span>
+            </div>
+            <div id="pv-persist-note" class="mono text-[10px] text-black/45 mt-2 flex items-center gap-1.5"></div>
+        </section>
+
+        <!-- Hourly + devices -->
+        <section class="grid gap-3 lg:grid-cols-2">
+            <div class="panel p-6 md:p-8">
+                <div class="flex items-baseline justify-between gap-4 mb-1">
+                    <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">访问时段</h2>
+                    <span class="mono text-xs text-black/45">0–23h · 北京</span>
+                </div>
+                <div id="hourly" class="hour-grid">
+                    <div class="skeleton" style="height:40%"></div><div class="skeleton" style="height:60%"></div><div class="skeleton" style="height:30%"></div>
+                </div>
+                <div class="mono text-[10px] text-black/40 mt-2 flex justify-between">
+                    <span>0h</span><span id="peak-hour">—</span><span>23h</span>
+                </div>
+            </div>
+            <div class="panel p-6 md:p-8">
+                <div class="flex items-baseline justify-between gap-4 mb-4">
+                    <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">设备分布</h2>
+                    <span class="mono text-xs text-black/45">last 30 days</span>
+                </div>
+                <div id="devices"><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8"></div></div>
+            </div>
+        </section>
+
+        <!-- Referrers -->
+        <section class="panel p-6 md:p-8">
+            <div class="flex items-baseline justify-between gap-4 mb-4">
+                <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">访问来源</h2>
+                <span class="mono text-xs text-black/45">外部来源 · last 30 days</span>
+            </div>
+            <div id="referrers"><div class="skeleton h-8 mb-2"></div><div class="skeleton h-8"></div></div>
         </section>
 
         <!-- Media downloader -->
@@ -267,17 +388,17 @@
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">resolve calls</div>
                 </div>
-                <div class="stat-card" id="card-success">
+                <div class="stat-card emerald" id="card-success">
                     <div class="stat-label">解析成功率</div>
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">resolve ok / total</div>
                 </div>
-                <div class="stat-card" id="card-proxy">
+                <div class="stat-card sky" id="card-proxy">
                     <div class="stat-label">代理调用</div>
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">proxy calls</div>
                 </div>
-                <div class="stat-card" id="card-bytes">
+                <div class="stat-card violet" id="card-bytes">
                     <div class="stat-label">代理流量</div>
                     <div class="stat-value mono">—</div>
                     <div class="stat-hint">proxied bytes</div>
@@ -326,7 +447,7 @@
     </main>
 
     <footer class="max-w-6xl mx-auto px-5 md:px-8 pb-10 mono text-[10px] uppercase tracking-[0.24em] text-black/40 text-center">
-        · Fin · 数据来自 page_views 与 media_dl_events 两张表 ·
+        · Fin · 数据来自 page_views 与 media_dl_events 两张表 · 北京时间 ·
     </footer>
 
     <script>
@@ -339,15 +460,29 @@
             twitter: 'X (Twitter)',
             unknown: '未知',
         };
+        // Keys mirror the SPA's currentView state strings + standalone page names.
         const VIEW_LABEL = {
             home: '首页',
-            ddl: 'DDL 备忘',
+            explorer: '课程浏览',
+            optimizer: '排课优化',
+            career: '职业规划',
+            programme: '专业地图',
+            classrooms: '空教室',
             'free-classroom': '空教室',
+            teachers: '教师评价',
+            ddl: 'DDL 备忘',
             toolbox: '工具箱',
+            files: '文件中心',
+            settings: '设置',
             'media-dl': '无水印下载',
             'print-setup': '校园打印配置',
             eatwhat: '今天吃什么',
-            settings: '设置',
+        };
+        const DEVICE_LABEL = {
+            desktop: '桌面端', mobile: '手机', tablet: '平板', bot: '爬虫/机器人', unknown: '未知',
+        };
+        const DEVICE_ICON = {
+            desktop: '🖥️', mobile: '📱', tablet: '📲', bot: '🤖', unknown: '❔',
         };
 
         const fmtNumber = (n) => {
@@ -370,7 +505,8 @@
         };
 
         const fmtDate = (iso) => {
-            const d = new Date(iso);
+            const d = new Date(iso + 'T00:00:00');
+            if (isNaN(d)) return iso;
             const m = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${m}/${day}`;
@@ -380,9 +516,24 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
 
-        const setText = (sel, text) => {
-            const el = sel.startsWith('#') ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
-            if (el) el.textContent = text;
+        // Backend groups days by Beijing (UTC+8) date. Build the client-side axis in
+        // the same timezone so bars line up regardless of the viewer's local zone.
+        const beijingDayKeys = (n) => {
+            let todayStr;
+            try {
+                todayStr = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+                }).format(new Date());
+            } catch (e) {
+                todayStr = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+            }
+            const [y, m, d] = todayStr.split('-').map(Number);
+            const base = Date.UTC(y, m - 1, d);
+            const keys = [];
+            for (let i = n - 1; i >= 0; i--) {
+                keys.push(new Date(base - i * 86400000).toISOString().slice(0, 10));
+            }
+            return keys;
         };
 
         const setStatValue = (cardId, value, hint) => {
@@ -393,6 +544,7 @@
             if (v) v.textContent = value;
             if (h && hint) h.textContent = hint;
         };
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
         const renderByView = (rows) => {
             const target = document.getElementById('by-view');
@@ -404,6 +556,7 @@
             target.innerHTML = rows.map((r) => {
                 const label = VIEW_LABEL[r.view_name] || r.view_name || '未知';
                 const w = ((r.views || 0) / max * 100).toFixed(1);
+                const recent = r.views_7d || 0;
                 return `
                     <div class="row-grid border-b border-black/5 last:border-b-0">
                         <div>
@@ -413,11 +566,89 @@
                         <div class="bar-track"><div class="bar-fill" style="width: ${w}%"></div></div>
                         <div class="text-right">
                             <div class="row-value">${fmtNumber(r.views)}</div>
-                            <div class="row-sub">${fmtNumber(r.visitors || 0)} 访客</div>
+                            <div class="row-sub">${fmtNumber(r.visitors || 0)} 访客 · 近7天 ${fmtNumber(recent)}</div>
                         </div>
                     </div>
                 `;
             }).join('');
+        };
+
+        const renderPvDaily = (rows) => {
+            const target = document.getElementById('pv-daily');
+            const dataMap = new Map((rows || []).map((r) => [r.day, r]));
+            const days = beijingDayKeys(30).map((iso) => ({ day: iso, ...(dataMap.get(iso) || { views: 0, visitors: 0 }) }));
+            const max = Math.max(...days.map((d) => d.views || 0), 1);
+            target.innerHTML = days.map((d) => {
+                const h = ((d.views || 0) / max * 100).toFixed(1);
+                return `
+                    <div class="day-bar sky" style="height: ${Math.max(2, h)}%">
+                        <span class="day-tooltip">${fmtDate(d.day)} · 浏览 ${d.views || 0} · 访客 ${d.visitors || 0}</span>
+                    </div>
+                `;
+            }).join('');
+            setText('pv-range-start', days.length ? fmtDate(days[0].day) : '—');
+        };
+
+        const renderHourly = (rows) => {
+            const target = document.getElementById('hourly');
+            const map = new Map((rows || []).map((r) => [r.hour, r.views || 0]));
+            const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, views: map.get(h) || 0 }));
+            const max = Math.max(...hours.map((h) => h.views), 1);
+            const peak = hours.reduce((a, b) => (b.views > a.views ? b : a), hours[0]);
+            target.innerHTML = hours.map((h) => {
+                const height = ((h.views || 0) / max * 100).toFixed(1);
+                const isPeak = h.views > 0 && h.hour === peak.hour;
+                return `
+                    <div class="hour-bar${isPeak ? ' peak' : ''}" style="height: ${Math.max(2, height)}%">
+                        <span class="day-tooltip">${String(h.hour).padStart(2, '0')}:00 · ${h.views} 次</span>
+                    </div>
+                `;
+            }).join('');
+            setText('peak-hour', peak.views > 0 ? `高峰 ${String(peak.hour).padStart(2, '0')}:00` : '暂无数据');
+        };
+
+        const renderDevices = (rows) => {
+            const target = document.getElementById('devices');
+            if (!rows || !rows.length) {
+                target.innerHTML = '<div class="text-sm text-black/45 mono">最近 30 天暂无数据</div>';
+                return;
+            }
+            const total = rows.reduce((s, r) => s + (r.views || 0), 0) || 1;
+            target.innerHTML = rows.map((r) => {
+                const key = r.device || 'unknown';
+                const label = DEVICE_LABEL[key] || key;
+                const w = ((r.views || 0) / total * 100).toFixed(1);
+                return `
+                    <div class="row-grid border-b border-black/5 last:border-b-0">
+                        <div class="device-chip">${DEVICE_ICON[key] || '❔'} ${escapeHtml(label)}</div>
+                        <div class="bar-track"><div class="bar-fill violet" style="width: ${w}%"></div></div>
+                        <div class="text-right">
+                            <div class="row-value">${w}%</div>
+                            <div class="row-sub">${fmtNumber(r.views)} 次 · ${fmtNumber(r.visitors || 0)} 访客</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const renderReferrers = (rows, internal) => {
+            const target = document.getElementById('referrers');
+            const internalNote = `<div class="row-sub mt-3">站内跳转 / 直接访问：<strong>${fmtNumber(internal || 0)}</strong> 次（不计入外部来源）</div>`;
+            if (!rows || !rows.length) {
+                target.innerHTML = '<div class="text-sm text-black/45 mono">最近 30 天没有外部来源，访问主要来自直接打开或站内跳转。</div>' + internalNote;
+                return;
+            }
+            const max = Math.max(...rows.map((r) => r.count || 0), 1);
+            target.innerHTML = rows.map((r) => {
+                const w = ((r.count || 0) / max * 100).toFixed(1);
+                return `
+                    <div class="row-grid border-b border-black/5 last:border-b-0">
+                        <div class="row-label" title="${escapeHtml(r.host)}">${escapeHtml(r.host)}</div>
+                        <div class="bar-track"><div class="bar-fill" style="width: ${w}%"></div></div>
+                        <div class="text-right"><div class="row-value">${fmtNumber(r.count)}</div></div>
+                    </div>
+                `;
+            }).join('') + internalNote;
         };
 
         const renderByPlatform = (rows) => {
@@ -454,14 +685,7 @@
         const renderDaily = (rows) => {
             const target = document.getElementById('daily-trend');
             const dataMap = new Map((rows || []).map((r) => [r.day, r]));
-            const today = new Date();
-            const days = [];
-            for (let i = 29; i >= 0; i--) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const iso = d.toISOString().slice(0, 10);
-                days.push({ day: iso, ...(dataMap.get(iso) || { resolves: 0, proxy_calls: 0, proxy_bytes: 0 }) });
-            }
+            const days = beijingDayKeys(30).map((iso) => ({ day: iso, ...(dataMap.get(iso) || { resolves: 0, proxy_calls: 0, proxy_bytes: 0 }) }));
             const max = Math.max(...days.map((d) => d.resolves || 0), 1);
             target.innerHTML = days.map((d) => {
                 const h = ((d.resolves || 0) / max * 100).toFixed(1);
@@ -471,22 +695,48 @@
                     </div>
                 `;
             }).join('');
-            const start = document.getElementById('day-range-start');
-            const end = document.getElementById('day-range-end');
-            if (start && days.length) start.textContent = fmtDate(days[0].day);
-            if (end) end.textContent = '今日';
+            setText('day-range-start', days.length ? fmtDate(days[0].day) : '—');
+            setText('day-range-end', '今日');
         };
 
         const renderTodayWeek = (today, week) => {
-            const todayBlock = document.getElementById('today-block');
-            const weekBlock = document.getElementById('week-block');
             const block = (data) => `
                 解析次数：<strong>${fmtNumber(data.resolves || 0)}</strong><br />
                 代理调用：<strong>${fmtNumber(data.proxy_calls || 0)}</strong><br />
                 代理流量：<strong>${fmtBytes(data.proxy_bytes || 0)}</strong>
             `;
-            if (todayBlock) todayBlock.innerHTML = block(today || {});
-            if (weekBlock) weekBlock.innerHTML = block(week || {});
+            const t = document.getElementById('today-block');
+            const w = document.getElementById('week-block');
+            if (t) t.innerHTML = block(today || {});
+            if (w) w.innerHTML = block(week || {});
+        };
+
+        const renderPageViews = (s) => {
+            const totals = s.totals || {};
+            setStatValue('card-total', fmtNumber(s.totalViews ?? totals.views));
+            setStatValue('card-unique', fmtNumber(s.uniqueVisitors ?? totals.visitors));
+            setStatValue('card-today', fmtNumber(s.todayViews ?? totals.viewsToday));
+            setStatValue('card-today-visitors', fmtNumber(totals.visitorsToday));
+
+            setText('win-today-views', fmtNumber(totals.viewsToday || 0));
+            setText('win-today-visitors', fmtNumber(totals.visitorsToday || 0));
+            setText('win-today-new', `今日新访客 ${fmtNumber(totals.newVisitorsToday || 0)}`);
+            setText('win-7d-views', fmtNumber(totals.views7d || 0));
+            setText('win-7d-visitors', fmtNumber(totals.visitors7d || 0));
+            setText('win-7d-avg', `日均 ${fmtNumber(Math.round((totals.views7d || 0) / 7))} 浏览`);
+            setText('win-30d-views', fmtNumber(totals.views30d || 0));
+            setText('win-30d-visitors', fmtNumber(totals.visitors30d || 0));
+            setText('win-reg', `注册用户访客 ${fmtNumber(totals.registeredVisitors || 0)}`);
+
+            setText('pv-persist-note', s.dailyRecordedDays
+                ? `🗄 已持久保存 ${fmtNumber(s.dailyRecordedDays)} 天访问记录${s.dailyFirstDay ? '（自 ' + s.dailyFirstDay + '）' : ''}`
+                : '');
+
+            renderByView(s.byView || []);
+            renderPvDaily(s.daily || []);
+            renderHourly(s.hourly || []);
+            renderDevices(s.devices || []);
+            renderReferrers(s.referrers || [], s.internalReferrals || 0);
         };
 
         let inflight = false;
@@ -496,42 +746,43 @@
             inflight = true;
             const refreshBtn = document.getElementById('refresh');
             if (refreshBtn) refreshBtn.disabled = true;
+            setText('load-error', '');
 
-            try {
-                const [summaryRes, statsRes] = await Promise.all([
-                    fetch('/api/analytics/summary').then((r) => r.json()),
-                    fetch('/api/media-dl/stats').then((r) => r.json()),
-                ]);
+            const settle = async (p) => { try { return await p; } catch (e) { return { __error: e }; } };
+            // fetch does not reject on HTTP 4xx/5xx, and /api/* errors carry a JSON body
+            // (Flask funnels them). Reject on !ok so the load-error banner actually fires
+            // instead of silently rendering an error object as zero traffic.
+            const getJson = (url) => fetch(url).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
+            const [summaryRes, statsRes] = await Promise.all([
+                settle(getJson('/api/analytics/summary')),
+                settle(getJson('/api/media-dl/stats')),
+            ]);
 
-                // Top page-view stats
-                setStatValue('card-total', fmtNumber(summaryRes.totalViews));
-                setStatValue('card-unique', fmtNumber(summaryRes.uniqueVisitors));
-                setStatValue('card-today', fmtNumber(summaryRes.todayViews));
-                renderByView(summaryRes.byView || []);
+            const errors = [];
+            if (summaryRes && !summaryRes.__error) {
+                try { renderPageViews(summaryRes); } catch (e) { errors.push('page-views: ' + (e.message || e)); }
+            } else { errors.push('访问统计接口加载失败'); }
 
-                // Media downloader stats
-                const totals = statsRes.totals || {};
-                setStatValue('card-resolves', fmtNumber(totals.resolves || 0));
-                setStatValue('card-success', pct(totals.resolve_ok || 0, totals.resolves || 0),
-                    `${fmtNumber(totals.resolve_ok || 0)} / ${fmtNumber(totals.resolves || 0)}`);
-                setStatValue('card-proxy', fmtNumber(totals.proxy_calls || 0));
-                setStatValue('card-bytes', fmtBytes(totals.proxy_bytes || 0));
+            if (statsRes && !statsRes.__error) {
+                try {
+                    const totals = statsRes.totals || {};
+                    setStatValue('card-resolves', fmtNumber(totals.resolves || 0));
+                    setStatValue('card-success', pct(totals.resolve_ok || 0, totals.resolves || 0),
+                        `${fmtNumber(totals.resolve_ok || 0)} / ${fmtNumber(totals.resolves || 0)}`);
+                    setStatValue('card-proxy', fmtNumber(totals.proxy_calls || 0));
+                    setStatValue('card-bytes', fmtBytes(totals.proxy_bytes || 0));
+                    renderTodayWeek(statsRes.today, statsRes.last7d);
+                    renderByPlatform(statsRes.byPlatform || []);
+                    renderDaily(statsRes.daily || []);
+                } catch (e) { errors.push('media: ' + (e.message || e)); }
+            } else { errors.push('下载器统计接口加载失败'); }
 
-                renderTodayWeek(statsRes.today, statsRes.last7d);
-                renderByPlatform(statsRes.byPlatform || []);
-                renderDaily(statsRes.daily || []);
+            const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            setText('last-updated', `· 最后更新 ${ts}`);
+            if (errors.length) setText('load-error', '· ' + errors.join(' · '));
 
-                const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-                const lu = document.getElementById('last-updated');
-                if (lu) lu.textContent = `· 最后更新 ${ts}`;
-            } catch (err) {
-                console.error('analytics load failed', err);
-                const lu = document.getElementById('last-updated');
-                if (lu) lu.textContent = `· 加载失败：${err.message || err}`;
-            } finally {
-                if (refreshBtn) refreshBtn.disabled = false;
-                inflight = false;
-            }
+            if (refreshBtn) refreshBtn.disabled = false;
+            inflight = false;
         }
 
         document.getElementById('refresh').addEventListener('click', loadAll);
