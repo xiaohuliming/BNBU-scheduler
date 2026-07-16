@@ -258,6 +258,7 @@
             <div class="mt-5 flex items-center gap-3 flex-wrap">
                 <button id="refresh" class="btn-ghost" type="button">⟳ 刷新</button>
                 <span id="last-updated" class="mono text-xs text-black/45"></span>
+                <span id="antiscrape-note" class="mono text-xs text-black/45"></span>
                 <span id="load-error" class="mono text-xs text-[#ef4444]"></span>
             </div>
         </section>
@@ -727,6 +728,11 @@
             setText('win-30d-views', fmtNumber(totals.views30d || 0));
             setText('win-30d-visitors', fmtNumber(totals.visitors30d || 0));
             setText('win-reg', `注册用户访客 ${fmtNumber(totals.registeredVisitors || 0)}`);
+
+            const anti = s.antiScrape;
+            setText('antiscrape-note', anti
+                ? `· 反爬拦截 UA ${fmtNumber(anti.uaBlocked || 0)} / 限速 ${fmtNumber(anti.rateLimited || 0)}（自重启）`
+                : '');
 
             setText('pv-persist-note', s.dailyRecordedDays
                 ? `🗄 已持久保存 ${fmtNumber(s.dailyRecordedDays)} 天访问记录${s.dailyFirstDay ? '（自 ' + s.dailyFirstDay + '）' : ''}`
