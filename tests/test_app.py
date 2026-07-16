@@ -874,6 +874,140 @@ class AppTestCase(unittest.TestCase):
         self.assertNotIn('SP', [item['building'] for item in data['buildings']])
         self.assertNotIn('V22', [item['building'] for item in data['buildings']])
 
+    # ------------------------------------------------------------------
+    # Analytics summary (/api/analytics/summary)
+    # ------------------------------------------------------------------
+    def _insert_page_view(self, visitor_id, view_name='home', user_id=None,
+                          user_agent='Mozilla/5.0 (Macintosh)', referrer='', created_at=None):
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            if created_at is None:
+                conn.execute(
+                    'INSERT INTO page_views (visitor_id, user_id, view_name, referrer, user_agent) '
+                    'VALUES (?, ?, ?, ?, ?)',
+                    (visitor_id, user_id, view_name, referrer, user_agent),
+                )
+            else:
+                conn.execute(
+                    'INSERT INTO page_views (visitor_id, user_id, view_name, referrer, user_agent, created_at) '
+                    'VALUES (?, ?, ?, ?, ?, ?)',
+                    (visitor_id, user_id, view_name, referrer, user_agent, created_at),
+                )
+            conn.commit()
+
+    def test_analytics_summary_empty_db_is_safe(self):
+        response = self.client.get('/api/analytics/summary')
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        # Back-compat top-level keys older cached pages read.
+        self.assertEqual(data['totalViews'], 0)
+        self.assertEqual(data['uniqueVisitors'], 0)
+        self.assertEqual(data['todayViews'], 0)
+        self.assertEqual(data['byView'], [])
+        # Enriched payload degrades to zeros / empties, never crashes.
+        self.assertEqual(data['totals']['views'], 0)
+        self.assertEqual(data['totals']['registeredVisitors'], 0)
+        self.assertEqual(data['daily'], [])
+        self.assertEqual(data['devices'], [])
+        self.assertEqual(data['referrers'], [])
+        self.assertEqual(len(data['hourly']), 24)  # always a full 0-23 axis
+        self.assertEqual(data['timezone'], 'UTC+8')
+
+    def test_analytics_summary_shape_devices_and_referrers(self):
+        # 3 desktop hits from visitor a (one carrying a user_id = registered),
+        # 2 Android-tablet hits from b, 1 Android-phone hit from c.
+        self._insert_page_view('a', view_name='home', user_id=7)
+        self._insert_page_view('a', view_name='explorer')
+        self._insert_page_view('a', view_name='home', referrer='https://www.google.com/search?q=x')
+        tablet_ua = 'Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 Chrome/120 Safari/537.36'
+        self._insert_page_view('b', view_name='home', user_agent=tablet_ua)
+        self._insert_page_view('b', view_name='home', user_agent=tablet_ua, referrer='http://localhost/')
+        phone_ua = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) Chrome/120 Mobile Safari/537.36'
+        self._insert_page_view('c', view_name='home', user_agent=phone_ua)
+
+        data = self.client.get('/api/analytics/summary').get_json()
+
+        self.assertEqual(data['totalViews'], 6)
+        self.assertEqual(data['uniqueVisitors'], 3)
+        self.assertEqual(data['totals']['registeredVisitors'], 1)
+
+        # Device split: Android tablet must NOT be lumped into mobile.
+        devices = {d['device']: d['views'] for d in data['devices']}
+        self.assertEqual(devices.get('desktop'), 3)
+        self.assertEqual(devices.get('tablet'), 2)
+        self.assertEqual(devices.get('mobile'), 1)
+
+        # Referrers: external host aggregated, internal (localhost) excluded.
+        ext_hosts = {r['host']: r['count'] for r in data['referrers']}
+        self.assertEqual(ext_hosts.get('google.com'), 1)
+        self.assertNotIn('localhost', ext_hosts)
+        self.assertGreaterEqual(data['internalReferrals'], 1)
+
+        # Per-view breakdown carries the 7-day trend column.
+        home = next(v for v in data['byView'] if v['view_name'] == 'home')
+        self.assertEqual(home['views'], 5)  # a×2 + b×2 + c×1
+        self.assertEqual(home['visitors'], 3)
+        self.assertIn('views_7d', home)
+
+    def test_analytics_summary_buckets_days_in_beijing_time(self):
+        # 15:00 UTC = 23:00 Beijing same day; 17:00 UTC = 01:00 Beijing next day.
+        # Both must land on their Beijing calendar day, not the UTC one.
+        self._insert_page_view('x', created_at='2026-05-10 15:00:00')
+        self._insert_page_view('y', created_at='2026-05-10 17:00:00')
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT visitor_id, date(created_at, '+8 hours') AS day, "
+                "CAST(strftime('%H', datetime(created_at, '+8 hours')) AS INTEGER) AS hour "
+                "FROM page_views ORDER BY created_at"
+            ).fetchall()
+        by_visitor = {r['visitor_id']: (r['day'], r['hour']) for r in rows}
+        self.assertEqual(by_visitor['x'], ('2026-05-10', 23))
+        self.assertEqual(by_visitor['y'], ('2026-05-11', 1))
+
+    def test_daily_rollup_backfills_and_matches_raw(self):
+        # Three Beijing days; note the 20:00-UTC hit belongs to the *next* Beijing day.
+        self._insert_page_view('a', created_at='2026-03-01 02:00:00')  # 10:00 BJ 03-01
+        self._insert_page_view('b', created_at='2026-03-01 03:00:00')  # 11:00 BJ 03-01
+        self._insert_page_view('a', created_at='2026-03-02 20:00:00')  # 04:00 BJ 03-03
+        self._insert_page_view('c', created_at='2026-03-05 06:00:00')  # 14:00 BJ 03-05
+
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            app_module.rollup_daily_page_stats(conn)  # full backfill (deploy-time path)
+            conn.commit()
+            conn.row_factory = sqlite3.Row
+            roll = {r['day']: (r['views'], r['visitors'])
+                    for r in conn.execute('SELECT day, views, visitors FROM daily_page_stats').fetchall()}
+
+        self.assertEqual(roll['2026-03-01'], (2, 2))
+        self.assertEqual(roll['2026-03-03'], (1, 1))
+        self.assertEqual(roll['2026-03-05'], (1, 1))
+        self.assertNotIn('2026-03-02', roll)  # 20:00 UTC row rolls into Beijing 03-03
+
+        # Endpoint surfaces the persisted history + meta via ?days=.
+        data = self.client.get('/api/analytics/summary?days=365').get_json()
+        days = {d['day']: d['views'] for d in data['daily']}
+        self.assertEqual(days.get('2026-03-01'), 2)
+        self.assertEqual(data['dailyRecordedDays'], 3)
+        self.assertEqual(data['dailyFirstDay'], '2026-03-01')
+
+    def test_daily_rollup_refreshes_on_summary_read(self):
+        def today_views():
+            with sqlite3.connect(app_module.DB_PATH) as conn:
+                row = conn.execute(
+                    "SELECT views FROM daily_page_stats WHERE day = date('now', '+8 hours')"
+                ).fetchone()
+                return row[0] if row else None
+
+        self._insert_page_view('v1')          # created_at defaults to now (Beijing today)
+        self.client.get('/api/analytics/summary')
+        self.assertEqual(today_views(), 1)
+
+        self._insert_page_view('v2')          # a later hit the same day
+        self.client.get('/api/analytics/summary')
+        self.assertEqual(today_views(), 2)    # freshen-on-read picked it up
+
 
 if __name__ == '__main__':
     unittest.main()

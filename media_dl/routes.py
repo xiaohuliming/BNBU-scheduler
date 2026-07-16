@@ -720,7 +720,7 @@ def stats():
                     SUM(CASE WHEN action = 'proxy' THEN 1 ELSE 0 END) AS proxy_calls,
                     COALESCE(SUM(CASE WHEN action = 'proxy' THEN bytes ELSE 0 END), 0) AS proxy_bytes
                 FROM media_dl_events
-                WHERE date(created_at) = date('now')
+                WHERE date(created_at, '+8 hours') = date('now', '+8 hours')
                 """
             ).fetchone()
 
@@ -753,7 +753,7 @@ def stats():
             daily = c.execute(
                 """
                 SELECT
-                    date(created_at) AS day,
+                    date(created_at, '+8 hours') AS day,
                     SUM(CASE WHEN action = 'resolve' THEN 1 ELSE 0 END) AS resolves,
                     SUM(CASE WHEN action = 'proxy' THEN 1 ELSE 0 END) AS proxy_calls,
                     COALESCE(SUM(CASE WHEN action = 'proxy' THEN bytes ELSE 0 END), 0) AS proxy_bytes
