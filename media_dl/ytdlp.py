@@ -138,11 +138,15 @@ def bili_cookie_dict() -> dict[str, str]:
         if cached is not None and now < _bili_cookie_cache.get("expires", 0):
             return cached
         cookies = _harvest_bili_cookies()
-        if not cookies.get("buvid3"):
-            log.warning("bilibili cookie harvest produced no buvid3 — requests may still 412")
+        usable = bool(cookies.get("buvid3") or cookies.get("SESSDATA"))
+        if not usable:
+            # Don't let a failed harvest (blocked IP, transient SPI error) stick
+            # for the full TTL — a bad jar 412s every request until it expires.
+            # Cache briefly so we retry soon without hammering B站's endpoints.
+            log.warning("bilibili cookie harvest produced no buvid3/SESSDATA — retrying soon")
         _bili_cookie_cache["cookies"] = cookies
-        _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
-        log.info("bilibili cookies refreshed (%d entries)", len(cookies))
+        _bili_cookie_cache["expires"] = time.time() + (_BILI_COOKIE_TTL if usable else 60)
+        log.info("bilibili cookies refreshed (%d entries, usable=%s)", len(cookies), usable)
         return cookies
 
 
