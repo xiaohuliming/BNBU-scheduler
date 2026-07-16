@@ -1008,6 +1008,112 @@ class AppTestCase(unittest.TestCase):
         self.client.get('/api/analytics/summary')
         self.assertEqual(today_views(), 2)    # freshen-on-read picked it up
 
+    # ------------------------------------------------------------------
+    # Anti-scraping (static blocklist, UA filter, rate limit)
+    # ------------------------------------------------------------------
+    BROWSER_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1'
+
+    def test_data_files_are_not_public_static_assets(self):
+        for path in (
+            '/course_catalog.json', '/course_enrichment.json', '/campus_docs.json',
+            '/course_equivalences.json', '/course_textbooks.json',
+            '/course_semester_2526S1.json', '/semesters_index.json',
+            '/programme_requirements.json', '/skillpath_nodes.json',
+            '/skillpath_graph.npz', '/CLAUDE.md', '/README.md',
+            '/requirements.txt', '/precompile.js',
+            '/Course%20List%20and%20Timetable_Semester%201%20of%20AY2026-27_20260709.xlsx',
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 404)
+
+    def test_static_guard_resists_path_normalization_tricks(self):
+        # A trailing slash / '/.' / doubled slash must not let the static handler
+        # serve a blocked file (regression: GET /maxcourse.db/ dumped the live DB).
+        for path in (
+            '/maxcourse.db/', '/app.py/', '/app.py/.', '/crawler.py/',
+            '/CLAUDE.md/', '/course_catalog.json/',
+            '/./app.py', '/.flask_secret_key/', '/sso_bridge.py/',
+        ):
+            with self.subTest(path=path):
+                r = self.client.get(path)
+                self.assertEqual(r.status_code, 404)
+                self.assertNotIn(b'SQLite format', r.data)
+
+    def test_legacy_paths_survive_static_blocklist(self):
+        # todolist.html still fetches this root JSON directly.
+        self.assertEqual(self.client.get('/todolist.json').status_code, 200)
+        # robots.txt must stay served (and steer polite crawlers off the API).
+        robots = self.client.get('/robots.txt')
+        self.assertEqual(robots.status_code, 200)
+        self.assertIn(b'Disallow: /api/', robots.data)
+        # Blocked campus_docs.json is still served through its API endpoint.
+        r = self.client.get('/api/campus-docs', headers={'User-Agent': self.BROWSER_UA})
+        self.assertEqual(r.status_code, 200)
+
+    def test_scraper_user_agents_are_rejected_on_api_only(self):
+        for ua in ('python-requests/2.31.0', 'Scrapy/2.11 (+https://scrapy.org)',
+                   'node-fetch/1.0', 'Go-http-client/2.0', ''):
+            with self.subTest(ua=ua):
+                r = self.client.get('/api/semesters', headers={'User-Agent': ua})
+                self.assertEqual(r.status_code, 403)
+        # Browsers pass.
+        ok = self.client.get('/api/semesters', headers={'User-Agent': self.BROWSER_UA})
+        self.assertEqual(ok.status_code, 200)
+        # Static pages stay open to any client (only the data API is guarded).
+        page = self.client.get('/', headers={'User-Agent': 'python-requests/2.31.0'})
+        self.assertEqual(page.status_code, 200)
+
+    def test_api_rate_limit_returns_429_with_retry_after(self):
+        app_module._rate_counters.clear()
+        try:
+            # Freeze time so all requests share one 60s window (no boundary flake).
+            with mock.patch('time.time', return_value=1_000_000.0), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_IP_PER_MIN', 3):
+                responses = [
+                    self.client.get('/api/semesters',
+                                    headers={'User-Agent': self.BROWSER_UA},
+                                    environ_overrides={'REMOTE_ADDR': '203.0.113.9'})
+                    for _ in range(5)
+                ]
+            codes = [r.status_code for r in responses]
+            self.assertEqual(codes[:3], [200, 200, 200])
+            self.assertEqual(codes[3], 429)
+            self.assertEqual(codes[4], 429)
+            limited = responses[4]
+            self.assertTrue(limited.headers.get('Retry-After'))
+            self.assertIn('error', limited.get_json())
+        finally:
+            app_module._rate_counters.clear()
+
+    def test_rate_limit_charges_ip_bucket_even_with_session_cookie(self):
+        # A scraper cannot dodge the per-IP ceiling by minting fresh visitor
+        # cookies: cookied requests are still charged to the IP bucket.
+        app_module._rate_counters.clear()
+        try:
+            with mock.patch('time.time', return_value=1_000_000.0), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_IP_PER_MIN', 2), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_VISITOR_PER_MIN', 100):
+                ovr = {'REMOTE_ADDR': '203.0.113.55'}
+                hdr = {'User-Agent': self.BROWSER_UA}
+                # 1: mints a session cookie (cookieless at throttle time) -> ip=1
+                r1 = self.client.post('/api/analytics/track', json={'view': 'home'},
+                                      headers=hdr, environ_overrides=ovr)
+                # 2: now carries the cookie -> charges ip(=2) AND visitor(=1)
+                r2 = self.client.get('/api/semesters', headers=hdr, environ_overrides=ovr)
+                # 3: ip bucket (=3) exceeds 2 despite an unexhausted visitor bucket
+                r3 = self.client.get('/api/semesters', headers=hdr, environ_overrides=ovr)
+            self.assertEqual((r1.status_code, r2.status_code), (200, 200))
+            self.assertEqual(r3.status_code, 429)
+        finally:
+            app_module._rate_counters.clear()
+
+    def test_notification_dispatch_is_exempt_from_scraper_filter(self):
+        # The cron heartbeat must never be UA-filtered or rate-limited; its own
+        # secret check is the gate (503 unconfigured / 401 bad secret, never 403/429).
+        r = self.client.post('/api/notifications/dispatch',
+                             headers={'User-Agent': 'python-requests/2.31.0'})
+        self.assertNotIn(r.status_code, (403, 429))
+
 
 if __name__ == '__main__':
     unittest.main()

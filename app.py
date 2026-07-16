@@ -3,11 +3,13 @@ import glob
 import gzip
 import io
 import json
+import posixpath
 import re
 import sqlite3
 import secrets
 import smtplib
 import ssl
+import threading
 import time
 import uuid
 from collections import Counter
@@ -109,20 +111,145 @@ SENSITIVE_STATIC_PREFIXES = (
 SENSITIVE_STATIC_SUFFIXES = (
     '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
     '.key', '.crt', '.log', '.bak', '.orig', '.swp',
+    # Data/build formats nothing in the frontend fetches directly (verified):
+    # blocking them stops one-GET bulk exfiltration of the curated datasets.
+    '.npz', '.jsonl', '.md', '.xlsx', '.xls',
 )
+
+# Root-level data files that back /api/* endpoints. The repo root is the web
+# root (static_folder='.'), so without this list a scraper can download every
+# curated dataset in a single GET instead of going through the API. Exact
+# paths, because /todolist.json (legacy page) and eatwhat CSVs must stay served.
+BLOCKED_STATIC_FILES = (
+    '/campus_docs.json', '/course_catalog.json', '/course_descriptions_extra.json',
+    '/course_enrichment.json', '/course_equivalences.json', '/course_textbooks.json',
+    '/programme_requirements.json', '/semesters_index.json',
+    '/requirements.txt', '/precompile.js',
+)
+BLOCKED_STATIC_FILE_PREFIXES = ('/course_semester_', '/skillpath_')
 
 
 @app.before_request
 def block_sensitive_project_files():
-    """Prevent Flask's root static handler from exposing source/data files."""
-    path = '/' + (request.path or '').lstrip('/')
-    path_lower = path.lower()
+    """Prevent Flask's root static handler from exposing source/data files.
+
+    Match on the *normalized* path. The static handler resolves the target via
+    posixpath.normpath, so a trailing slash, doubled slashes, a '/.' suffix, or
+    '..' segments would let e.g. GET /maxcourse.db/ slip past a raw-path check
+    and dump the file. Normalizing here the same way closes that whole class.
+    """
+    raw = '/' + (request.path or '').lstrip('/')
+    norm = posixpath.normpath(raw)
+    norm = re.sub(r'/{2,}', '/', norm)  # normpath keeps a leading '//'
+    path_lower = norm.lower()
     segments = [segment for segment in path_lower.split('/') if segment]
 
     if any(segment.startswith('.') and segment != '.well-known' for segment in segments):
         abort(404)
     if path_lower.startswith(SENSITIVE_STATIC_PREFIXES) or path_lower.endswith(SENSITIVE_STATIC_SUFFIXES):
         abort(404)
+    if path_lower in BLOCKED_STATIC_FILES or path_lower.startswith(BLOCKED_STATIC_FILE_PREFIXES):
+        abort(404)
+
+
+# ---------------------------------------------------------------------------
+# Anti-scraping for /api/*: a cheap HTTP-library UA filter plus a generous
+# per-client rate limit. Thresholds sit far above real human/SPA usage so a
+# whole campus NAT egress never trips them; only bulk enumeration does.
+# Static pages are untouched — this guards the data, not the site.
+# ---------------------------------------------------------------------------
+SCRAPER_UA_MARKERS = (
+    'python-requests', 'python-urllib', 'python/', 'aiohttp', 'httpx',
+    'scrapy', 'go-http-client', 'okhttp', 'apache-httpclient', 'libwww',
+    'node-fetch', 'axios', 'guzzlehttp', 'java/', 'phantomjs',
+)
+# Every /api request is charged to a per-IP bucket (the hard ceiling that bounds
+# any single egress IP, generous so a whole campus NAT never trips it) AND, for an
+# established session, a tighter per-visitor bucket. Charging the IP bucket even on
+# cookied requests is deliberate: it stops a scraper from minting endless fresh
+# visitor cookies to multiply its quota. A request is blocked if EITHER bucket is
+# over. 0 disables that bucket (emergency env knob, restart to apply).
+RATE_LIMIT_IP_PER_MIN = int(os.getenv('MAXCOURSE_RL_IP_PER_MIN', '2000'))
+RATE_LIMIT_VISITOR_PER_MIN = int(os.getenv('MAXCOURSE_RL_VISITOR_PER_MIN', '240'))
+RATE_LIMIT_EXEMPT_PATHS = ('/api/notifications/dispatch',)  # cron heartbeat
+_RATE_COUNTER_HARD_CAP = 20000  # fail open (stop tracking new keys) beyond this
+
+_rate_lock = threading.Lock()
+_rate_counters = {}  # bucket key -> [minute_window, request_count]
+antiscrape_stats = {"uaBlocked": 0, "rateLimited": 0}
+
+
+def _client_ip():
+    """Best available client identity for rate-limit bucketing.
+
+    Behind the nginx reverse proxy Flask always sees 127.0.0.1, so only then
+    trust X-Real-IP (set by nginx) or the last X-Forwarded-For hop. A direct
+    hit on :5000 keeps its socket address — its forwarded headers would be
+    attacker-controlled and could be spoofed to poison another IP's bucket.
+    """
+    addr = request.remote_addr or 'unknown'
+    if addr in ('127.0.0.1', '::1'):
+        real = (request.headers.get('X-Real-IP') or '').strip()
+        if real:
+            return real
+        forwarded = (request.headers.get('X-Forwarded-For') or '').strip()
+        if forwarded:
+            return forwarded.split(',')[-1].strip()
+    return addr
+
+
+@app.before_request
+def throttle_api_scrapers():
+    path = request.path or ''
+    if not path.startswith('/api/') or path in RATE_LIMIT_EXEMPT_PATHS:
+        return None
+
+    ua = (request.headers.get('User-Agent') or '').strip().lower()
+    if not ua or any(marker in ua for marker in SCRAPER_UA_MARKERS):
+        with _rate_lock:
+            antiscrape_stats['uaBlocked'] += 1
+        return jsonify({"error": "Automated clients are not allowed on this API"}), 403
+
+    # Always charge the IP bucket; add the per-visitor/user bucket when there is a
+    # session. Reject if either is exceeded.
+    buckets = [(f"ip:{_client_ip()}", RATE_LIMIT_IP_PER_MIN)]
+    if session.get('user_id'):
+        buckets.append((f"u:{session['user_id']}", RATE_LIMIT_VISITOR_PER_MIN))
+    elif session.get('analytics_visitor_id'):
+        buckets.append((f"v:{session['analytics_visitor_id']}", RATE_LIMIT_VISITOR_PER_MIN))
+
+    now = time.time()
+    window = int(now // 60)
+    over = False
+    with _rate_lock:
+        # Prune stale (previous-window) entries; if still oversized (a rotating-key
+        # flood inside one window), fail open rather than grow the dict unbounded.
+        if len(_rate_counters) > 10000:
+            for stale in [k for k, v in _rate_counters.items() if v[0] != window]:
+                _rate_counters.pop(stale, None)
+        at_capacity = len(_rate_counters) > _RATE_COUNTER_HARD_CAP
+        for key, limit in buckets:
+            if limit <= 0:
+                continue
+            entry = _rate_counters.get(key)
+            if entry is None or entry[0] != window:
+                if not at_capacity:
+                    _rate_counters[key] = [window, 1]
+            else:
+                entry[1] += 1
+                if entry[1] > limit:
+                    over = True
+        if over:
+            antiscrape_stats['rateLimited'] += 1
+
+    if not over:
+        return None
+    retry_after = max(1, 60 - int(now % 60))
+    response = jsonify({"error": "Too many requests, please slow down",
+                        "retry_after": retry_after})
+    response.status_code = 429
+    response.headers['Retry-After'] = str(retry_after)
+    return response
 
 
 @app.after_request
@@ -2754,6 +2881,8 @@ def get_analytics_summary():
         "devices": devices,
         "referrers": referrers,
         "internalReferrals": internal_hits,
+        # In-memory since last restart; enough to confirm the guards are firing.
+        "antiScrape": dict(antiscrape_stats),
     })
 
 
