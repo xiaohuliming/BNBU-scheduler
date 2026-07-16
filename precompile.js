@@ -65,16 +65,25 @@ stamped = stamped
 fs.writeFileSync('index.html', stamped);
 console.log('app.compiled.js written (' + out.length + ' bytes), stamp ' + stamp);
 
-// regenerate the static Tailwind sheet from the classes in index.html.
+// regenerate the static Tailwind sheets from the classes in the HTML pages.
 // Best-effort: npx caches the package after the first run; if it fails we
 // keep the previous sheet and WARN LOUDLY — new classes added since the last
 // successful build would silently render unstyled otherwise.
-try {
-  execSync('npx --yes tailwindcss@3.4.16 --content index.html -o tailwind.static.css --minify',
-           { stdio: ['ignore', 'ignore', 'pipe'] });
-  console.log('tailwind.static.css rebuilt (' +
-              fs.statSync('tailwind.static.css').size + ' bytes)');
-} catch (e) {
-  console.warn('WARNING: tailwind rebuild FAILED — tailwind.static.css is stale; ' +
-               'newly added classes will be unstyled until you rerun this with npx available.');
+//
+// The standalone media-dl/ tool page (no build step, no React) is Tailwind-
+// styled too and must ship its own static sheet — same mainland-reachability
+// reason the SPA does: cdn.tailwindcss.com is unreliable behind the GFW.
+const TAILWIND_SHEETS = [
+  { content: 'index.html', out: 'tailwind.static.css' },
+  { content: 'media-dl/index.html', out: 'media-dl/tailwind.static.css' },
+];
+for (const { content, out } of TAILWIND_SHEETS) {
+  try {
+    execSync('npx --yes tailwindcss@3.4.16 --content ' + content + ' -o ' + out + ' --minify',
+             { stdio: ['ignore', 'ignore', 'pipe'] });
+    console.log(out + ' rebuilt (' + fs.statSync(out).size + ' bytes)');
+  } catch (e) {
+    console.warn('WARNING: tailwind rebuild FAILED for ' + out + ' — sheet is stale; ' +
+                 'newly added classes will be unstyled until you rerun this with npx available.');
+  }
 }

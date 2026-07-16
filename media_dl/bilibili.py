@@ -19,15 +19,25 @@ from __future__ import annotations
 import json
 import logging
 import re
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
-from .ytdlp import _BROWSER_UA, _harvest_bili_cookies
+from .ytdlp import _BROWSER_UA, bili_cookie_dict
 
 log = logging.getLogger(__name__)
 
 _BVID_RE = re.compile(r"(BV[A-Za-z0-9]{10})")
 _AVID_RE = re.compile(r"/video/(?:av|AV)(\d+)")
+
+
+def _page_index(url: str) -> int:
+    """1-based ?p= page number for multi-part videos (defaults to 1)."""
+    try:
+        p = parse_qs(urlparse(url).query).get("p", ["1"])[0]
+        return max(1, int(p))
+    except (TypeError, ValueError):
+        return 1
 
 _API_VIEW = "https://api.bilibili.com/x/web-interface/view"
 _API_PLAYURL = "https://api.bilibili.com/x/player/playurl"
@@ -57,6 +67,34 @@ _HEADERS = {
 
 class BiliError(RuntimeError):
     pass
+
+
+class BiliUserError(BiliError):
+    """A user-facing condition (e.g. bad ?p=N) where the yt-dlp fallback can't
+    help either — the dispatcher surfaces it instead of silently falling back."""
+
+
+# Official bilibili CDN host suffixes — all already on the proxy allowlist.
+# The playurl API's primary `url`/`base_url` is usually a third-party PCDN edge
+# (e.g. *.edge.mountaintoys.cn, *.szbdyd.com) that rejects datacenter IPs and
+# isn't (safely) proxy-allowlistable; the `backup_url` list carries the official
+# upos-*.bilivideo.com mirror. Prefer the official host so the server-side proxy
+# both passes the allowlist and hits a CDN that serves our IP reliably.
+# NOTE: these suffixes must stay a subset of what routes.py `_host_allowed`
+# permits, or we'd prefer a URL the proxy then 403s. Bilibili's Akamai mirror is
+# always `*-mirrorakam.akamaized.net`, matched precisely there.
+_OFFICIAL_BILI_CDN = (".bilivideo.com", ".bilivideo.cn", ".hdslb.com", "mirrorakam.akamaized.net")
+
+
+def _prefer_official_url(primary: str | None, backups) -> str | None:
+    """Pick the first official-CDN URL among primary+backups, else the primary."""
+    candidates = [primary, *(backups or [])]
+    candidates = [c for c in candidates if c]
+    for url in candidates:
+        host = (urlparse(url).hostname or "").lower()
+        if any(host.endswith(sfx) for sfx in _OFFICIAL_BILI_CDN):
+            return url
+    return candidates[0] if candidates else None
 
 
 def _safe_filename(title: str, ext: str, suffix: str = "") -> str:
@@ -111,7 +149,7 @@ def _build_items_progressive(play_data: dict, title: str) -> list[dict]:
     items: list[dict] = []
     multi = len(durl) > 1
     for idx, seg in enumerate(durl, start=1):
-        url = seg.get("url") or (seg.get("backup_url") or [None])[0]
+        url = _prefer_official_url(seg.get("url"), seg.get("backup_url"))
         if not url:
             continue
         suffix = f"part{idx}" if multi else ""
@@ -151,15 +189,23 @@ def _build_items_dash(play_data: dict, title: str) -> list[dict]:
         items.append(
             {
                 "kind": "video",
-                "url": v.get("base_url") or v.get("baseUrl"),
-                "ext": "m4s",
+                # DASH segments are fragmented MP4 and play standalone under a
+                # .mp4/.m4a name (VLC/QuickTime); '.m4s' has no player
+                # association. The two files still need muxing for a combined
+                # A/V file — the UI flags that.
+                "url": _prefer_official_url(
+                    v.get("base_url") or v.get("baseUrl"),
+                    v.get("backup_url") or v.get("backupUrl"),
+                ),
+                "ext": "mp4",
                 "width": v.get("width"),
                 "height": v.get("height"),
                 "filesize": None,
                 "quality_label": f"{v.get('height') or '?'}p · DASH · 仅画面",
                 "needs_proxy": True,
                 "referer": "https://www.bilibili.com",
-                "filename": _safe_filename(title, "m4s", "video"),
+                "needs_merge": True,
+                "filename": _safe_filename(title, "mp4", "video"),
             }
         )
 
@@ -173,15 +219,19 @@ def _build_items_dash(play_data: dict, title: str) -> list[dict]:
         items.append(
             {
                 "kind": "audio",
-                "url": a.get("base_url") or a.get("baseUrl"),
-                "ext": "m4s",
+                "url": _prefer_official_url(
+                    a.get("base_url") or a.get("baseUrl"),
+                    a.get("backup_url") or a.get("backupUrl"),
+                ),
+                "ext": "m4a",
                 "width": None,
                 "height": None,
                 "filesize": None,
                 "quality_label": f"DASH · 仅音频 · {int((a.get('bandwidth') or 0) / 1000)}kbps",
                 "needs_proxy": True,
                 "referer": "https://www.bilibili.com",
-                "filename": _safe_filename(title, "m4s", "audio"),
+                "needs_merge": True,
+                "filename": _safe_filename(title, "m4a", "audio"),
             }
         )
 
@@ -198,10 +248,12 @@ _INITIAL_STATE_BILI_RE = re.compile(
 _HTML_TITLE_RE = re.compile(r"<title>([^<]+)</title>")
 
 
-def _extract_via_html(bvid: str | None, aid: int | None) -> dict:
+def _extract_via_html(bvid: str | None, aid: int | None, page: int = 1) -> dict:
     """Scrape the public video page using the Facebook crawler UA."""
     page_path = f"video/{bvid}/" if bvid else f"video/av{aid}/"
     page_url = f"https://www.bilibili.com/{page_path}"
+    if page > 1:
+        page_url += f"?p={page}"
     headers = {
         "User-Agent": _FB_UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -265,7 +317,8 @@ def extract(url: str) -> dict:
     if not bvid and not aid:
         raise BiliError("无法识别 B站 视频 ID（既不是 BV 号也不是 av 号）")
 
-    cookies = _harvest_bili_cookies()
+    page = _page_index(real_url)
+    cookies = bili_cookie_dict()
     if not cookies.get("buvid3"):
         log.warning("native bilibili extractor: no buvid3 — request may still be blocked")
 
@@ -279,25 +332,39 @@ def extract(url: str) -> dict:
         view = _api_get(_API_VIEW, view_params, cookies)
     except BiliError as exc:
         log.warning("bilibili API view failed (%s) — trying HTML fallback", exc)
-        return _extract_via_html(bvid, aid)
+        return _extract_via_html(bvid, aid, page)
 
     title = view.get("title") or "bilibili"
     pic = view.get("pic")
     owner = (view.get("owner") or {}).get("name")
     duration = view.get("duration")
-    cid = view.get("cid")
     bvid = view.get("bvid") or bvid
-    if not cid:
-        # Multi-page: pick the first part.
-        pages = view.get("pages") or []
-        if pages:
-            cid = pages[0].get("cid")
+
+    # Multi-part videos: select the requested ?p=N part (1-based). The top-level
+    # `cid`/`title` describe part 1, so for p>1 we override both from `pages`.
+    pages = view.get("pages") or []
+    cid = view.get("cid")
+    if pages:
+        if page > len(pages):
+            raise BiliUserError(f"该视频只有 {len(pages)} 个分P，但链接请求的是第 {page} P")
+        part = pages[page - 1]
+        cid = part.get("cid") or cid
+        part_title = part.get("part") or ""
+        if len(pages) > 1:
+            duration = part.get("duration") or duration
+            if part_title and part_title != title:
+                title = f"{title}_P{page}_{part_title}"
+            else:
+                title = f"{title}_P{page}"
     if not cid:
         raise BiliError("未获取到 cid，无法请求播放地址")
 
+    # qn is the *requested* quality ceiling; the playurl API silently downgrades
+    # anonymous requests to ~480p regardless. 1080p+ needs a login cookie —
+    # set BILIBILI_SESSDATA in the server env (merged into `cookies`) to unlock.
     play_params: dict = {
         "cid": cid,
-        "qn": 80,           # 1080p ceiling for unauthenticated access
+        "qn": 112 if cookies.get("SESSDATA") else 80,
         "fnval": 1,         # progressive MP4 first
         "fnver": 0,
         "fourk": 1,
@@ -317,15 +384,16 @@ def extract(url: str) -> dict:
             items = _build_items_dash(play_data, title)
     except BiliError as exc:
         log.warning("bilibili playurl API failed (%s) — trying HTML fallback", exc)
-        return _extract_via_html(bvid, aid)
+        return _extract_via_html(bvid, aid, page)
 
     if not items:
         log.warning("bilibili playurl returned no streams — trying HTML fallback")
-        return _extract_via_html(bvid, aid)
+        return _extract_via_html(bvid, aid, page)
 
-    canonical = (
+    base = (
         f"https://www.bilibili.com/video/{bvid}/" if bvid else f"https://www.bilibili.com/video/av{aid}/"
     )
+    canonical = f"{base}?p={page}" if page > 1 else base
 
     return {
         "platform": "bilibili",

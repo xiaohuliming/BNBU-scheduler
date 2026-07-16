@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>无水印下载 · MAXCOURSE 工具箱</title>
     <link rel="icon" href="/favicon.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- 本地字体，替代大陆不可达的 fonts.googleapis.com（复用主站 vendor） -->
+    <link href="/vendor/fonts.css" rel="stylesheet" />
+    <!-- 静态 Tailwind 表（precompile.js 生成）；404 时回退本地 play CDN 运行时，
+         二者皆本地资源，无需外网。绝不再引 cdn.tailwindcss.com。 -->
+    <link id="tw-css" rel="stylesheet" href="/media-dl/tailwind.static.css"
+          onerror="this.remove();var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);" />
     <style>
         :root {
             --ink: #101820;
@@ -19,10 +23,10 @@
             margin: 0;
             background: var(--paper);
             color: var(--ink);
-            font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+            font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
             -webkit-font-smoothing: antialiased;
         }
-        .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
         .panel {
             background: rgba(255,255,255,0.78);
             border: 1px solid rgba(16,24,32,0.10);
@@ -34,7 +38,7 @@
             display: inline-flex; align-items: center; gap: 0.4rem;
             border-radius: 9999px; border: 1px solid rgba(16,24,32,0.10);
             background: var(--paper); padding: 0.25rem 0.7rem;
-            font-family: "JetBrains Mono", monospace;
+            font-family: "IBM Plex Mono", monospace;
             font-size: 0.7rem; font-weight: 700;
             text-transform: uppercase; letter-spacing: 0.14em;
             color: rgba(16,24,32,0.6);
@@ -44,17 +48,17 @@
             padding: 0.7rem 1.2rem; border-radius: 9999px;
             background: var(--ink); color: white; font-weight: 700; font-size: 0.9rem;
             transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-            cursor: pointer; border: none;
+            cursor: pointer; border: none; text-decoration: none;
         }
         .btn-primary:hover:not(:disabled) { background: var(--lime); color: var(--ink); }
-        .btn-primary:disabled { opacity: 0.55; cursor: progress; }
+        .btn-primary:disabled, .btn-primary.busy { opacity: 0.55; cursor: progress; pointer-events: none; }
         .btn-ghost {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
             padding: 0.55rem 1rem; border-radius: 9999px;
             background: white; color: var(--ink);
             border: 1px solid rgba(16,24,32,0.18);
             font-weight: 600; font-size: 0.85rem;
-            cursor: pointer; transition: background 0.15s ease;
+            cursor: pointer; transition: background 0.15s ease; text-decoration: none;
         }
         .btn-ghost:hover { background: var(--paper); }
         .input {
@@ -63,7 +67,7 @@
             border-radius: 1.25rem;
             border: 1px solid rgba(16,24,32,0.18);
             background: white; font-size: 1rem;
-            font-family: "JetBrains Mono", monospace;
+            font-family: "IBM Plex Mono", monospace;
             transition: border 0.15s ease, box-shadow 0.15s ease;
         }
         .input:focus {
@@ -76,7 +80,7 @@
             background: var(--accent); border-radius: 9999px;
         }
         .kicker {
-            font-family: "JetBrains Mono", monospace;
+            font-family: "IBM Plex Mono", monospace;
             font-size: 0.72rem; font-weight: 700;
             text-transform: uppercase; letter-spacing: 0.22em;
             color: rgba(16,24,32,0.55);
@@ -100,9 +104,24 @@
             color: #b91c1c; border-radius: 1.25rem; padding: 1rem 1.25rem;
             font-size: 0.9rem;
         }
+        .note-card {
+            border: 1px solid rgba(255,122,31,0.35); background: rgba(255,247,237,0.9);
+            color: #9a3412; border-radius: 1rem; padding: 0.7rem 1rem;
+            font-size: 0.82rem; line-height: 1.5;
+        }
+        .wechat-banner {
+            background: #101820; color: #fff; padding: 0.9rem 1.1rem;
+            font-size: 0.9rem; line-height: 1.5; text-align: center;
+        }
+        .wechat-banner b { color: var(--lime); }
     </style>
 </head>
 <body>
+    <div id="wechat-banner" style="display:none" class="wechat-banner">
+        当前在微信/QQ 内置浏览器中，<b>无法直接保存文件</b>。请点击右上角
+        <b>「···」→ 在浏览器中打开</b> 后再下载。
+    </div>
+
     <header class="max-w-5xl mx-auto px-5 md:px-8 pt-8 md:pt-12 pb-2 flex items-center justify-between">
         <a href="/" class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/55 hover:text-black/85">← MAXCOURSE</a>
         <div class="mono text-xs font-bold uppercase tracking-[0.22em] text-black/45">Toolbox / Media Downloader</div>
@@ -114,17 +133,18 @@
             <div class="mt-3"><span class="accent-bar"></span></div>
             <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">无水印下载</h1>
             <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
-                粘贴 <span class="mono font-bold">YouTube / 哔哩哔哩 / 小红书 / 抖音 / X (Twitter)</span> 等链接，自动解析。
+                粘贴 <span class="mono font-bold">哔哩哔哩 / 小红书 / 抖音 / YouTube / X (Twitter)</span> 等链接或分享文案，自动解析。
             </p>
 
             <form id="form" class="mt-7 flex flex-col md:flex-row gap-3">
-                <input id="url" class="input flex-1" type="url" inputmode="url" autocomplete="off" placeholder="粘贴媒体链接，如 https://www.bilibili.com/video/BV..." required />
+                <input id="url" class="input flex-1" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                       placeholder="粘贴链接或整段分享文案，如「复制打开抖音… https://v.douyin.com/…」" required />
                 <button id="submit" class="btn-primary md:px-8" type="submit">解析</button>
             </form>
 
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-black/55">
                 <span class="pill">Tip</span>
-                <span>支持 1000+ 站点（基于 yt-dlp）。小红书图集会逐张返回，可批量下载。</span>
+                <span>支持 1000+ 站点。小红书图集逐张返回，可一键<b>下载全部</b>。</span>
             </div>
         </section>
 
@@ -151,6 +171,12 @@
             }).catch(() => {});
         }
 
+        // In-app webviews (WeChat/QQ) silently swallow downloads. Warn upfront.
+        if (/MicroMessenger|QQ\/|QQBrowser|WeiBo/i.test(navigator.userAgent)) {
+            const b = document.getElementById('wechat-banner');
+            if (b) b.style.display = 'block';
+        }
+
         const $form = document.getElementById('form');
         const $url = document.getElementById('url');
         const $submit = document.getElementById('submit');
@@ -158,12 +184,17 @@
         const $result = document.getElementById('result');
 
         const PLATFORM_LABEL = {
-            youtube: 'YouTube',
-            bilibili: '哔哩哔哩',
-            xiaohongshu: '小红书',
-            douyin: '抖音',
-            tiktok: 'TikTok',
-            twitter: 'X (Twitter)',
+            youtube: 'YouTube', bilibili: '哔哩哔哩', xiaohongshu: '小红书',
+            douyin: '抖音', tiktok: 'TikTok', twitter: 'X (Twitter)',
+            weibo: '微博', kuaishou: '快手', instagram: 'Instagram',
+        };
+
+        // Pull the first URL out of arbitrary share text (mirrors the backend's
+        // extractor so the type=text input accepts douyin/xhs share blurbs).
+        const extractUrl = (text) => {
+            const m = String(text || '').match(/https?:\/\/[^\s<>"'，。、）】]+/i);
+            if (m) return m[0].replace(/[.,;:!)\]}>]+$/, '');
+            return String(text || '').trim();
         };
 
         const fmtBytes = (n) => {
@@ -188,34 +219,49 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
 
-        const buildDownloadHref = (item) => {
+        // Same-origin proxy download URL for cross-origin / referer-gated media;
+        // for direct items, only pass through validated http(s) URLs.
+        const downloadHref = (item) => {
             if (item.needs_proxy) {
-                const params = new URLSearchParams({
-                    u: item.url,
-                    name: item.filename,
-                });
+                const params = new URLSearchParams({ u: item.url, name: item.filename });
                 if (item.referer) params.set('r', item.referer);
-                return `/api/media-dl/proxy?${params.toString()}`;
+                return { href: `/api/media-dl/proxy?${params.toString()}`, direct: false };
             }
-            return item.url;
+            try {
+                const u = new URL(item.url);
+                if (u.protocol === 'http:' || u.protocol === 'https:') {
+                    return { href: item.url, direct: true };
+                }
+            } catch (e) { /* fall through */ }
+            return { href: '#', direct: true };
         };
 
         const KIND_LABEL = { video: '视频', audio: '音频', image: '图片' };
 
+        let currentItems = [];
+
         const renderItems = (data) => {
+            currentItems = data.items || [];
             const platform = PLATFORM_LABEL[data.platform] || data.platform || 'Media';
             const meta = [
                 data.uploader && `作者：${escapeHtml(data.uploader)}`,
                 data.duration && `时长：${fmtDuration(data.duration)}`,
-                `耗时：${data.elapsed_ms} ms`,
+                data.elapsed_ms != null && `耗时：${data.elapsed_ms} ms`,
             ].filter(Boolean).join(' · ');
 
-            const itemsHtml = data.items.map((item, idx) => {
+            const hasMerge = currentItems.some((it) => it.needs_merge);
+            const multi = currentItems.length > 1;
+
+            const itemsHtml = currentItems.map((item, idx) => {
                 const dims = item.width && item.height ? `${item.width}×${item.height}` : '';
                 const size = fmtBytes(item.filesize);
-                const meta = [item.quality_label, dims, size].filter(Boolean).join(' · ');
-                const href = buildDownloadHref(item);
+                const line = [item.quality_label, dims, size].filter(Boolean).join(' · ');
+                const { href, direct } = downloadHref(item);
                 const showPreview = item.kind === 'image';
+                // Direct cross-origin links can't force a download (browser
+                // ignores <a download>), so open in a new tab and hint save.
+                const target = direct ? '_blank' : '_self';
+                const rel = direct ? 'noopener' : '';
 
                 return `
                     <div class="item-card">
@@ -227,15 +273,21 @@
                         ` : ''}
                         <div class="p-4 flex flex-col gap-3 flex-1">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="pill">${KIND_LABEL[item.kind] || item.kind}</span>
-                                ${item.needs_proxy ? '<span class="pill" style="color:#b45309">代理</span>' : '<span class="pill" style="color:#15803d">直链</span>'}
+                                <span class="pill">${escapeHtml(KIND_LABEL[item.kind] || item.kind)}</span>
+                                ${item.needs_merge ? '<span class="pill" style="color:#7c3aed">需合并</span>' : ''}
+                                ${item.needs_proxy
+                                    ? '<span class="pill" style="color:#b45309">代理</span>'
+                                    : '<span class="pill" style="color:#15803d">直链</span>'}
                             </div>
                             <div class="mono text-xs text-black/60 break-all">${escapeHtml(item.filename)}</div>
-                            <div class="mono text-[11px] text-black/45">${escapeHtml(meta || '原始品质')}</div>
+                            <div class="mono text-[11px] text-black/45">${escapeHtml(line || '原始品质')}</div>
                             <div class="mt-auto flex flex-wrap gap-2">
-                                <a class="btn-primary flex-1" href="${href}" download="${escapeHtml(item.filename)}" target="_self">下载</a>
+                                <a class="btn-primary flex-1 dl-btn" href="${escapeHtml(href)}"
+                                   data-proxy="${item.needs_proxy ? '1' : '0'}"
+                                   download="${escapeHtml(item.filename)}" target="${target}" ${rel ? `rel="${rel}"` : ''}>下载</a>
                                 <button class="btn-ghost" data-copy="${idx}" type="button">复制链接</button>
                             </div>
+                            ${direct ? '<div class="mono text-[10px] text-black/40">直链：若在新标签打开而非下载，请右键 / 长按「另存为」</div>' : ''}
                         </div>
                     </div>
                 `;
@@ -243,32 +295,96 @@
 
             $result.innerHTML = `
                 <div class="panel p-6 md:p-8">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div>
-                            <div class="kicker">${escapeHtml(platform)}</div>
-                            <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">${escapeHtml(data.title)}</h2>
-                            ${meta ? `<div class="mt-2 mono text-xs text-black/55">${meta}</div>` : ''}
+                    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div class="flex gap-4 min-w-0">
+                            ${data.thumbnail ? `
+                                <img src="${escapeHtml(data.thumbnail)}" alt="" referrerpolicy="no-referrer"
+                                     onerror="this.style.display='none'"
+                                     class="hidden sm:block w-28 h-20 object-cover rounded-xl border border-black/10 flex-shrink-0" />
+                            ` : ''}
+                            <div class="min-w-0">
+                                <div class="kicker">${escapeHtml(platform)}</div>
+                                <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em] break-words">${escapeHtml(data.title)}</h2>
+                                ${meta ? `<div class="mt-2 mono text-xs text-black/55">${meta}</div>` : ''}
+                            </div>
                         </div>
-                        <a class="btn-ghost" href="${escapeHtml(data.webpage_url)}" target="_blank" rel="noopener">查看原网页 ↗</a>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            ${multi ? '<button id="dl-all" class="btn-primary" type="button">下载全部</button>' : ''}
+                            <a class="btn-ghost" href="${escapeHtml(data.webpage_url || '#')}" target="_blank" rel="noopener">查看原网页 ↗</a>
+                        </div>
                     </div>
+                    ${hasMerge ? `
+                        <div class="note-card mt-5">
+                            ⚠️ 高清晰度为 <b>DASH 分离流</b>：画面与音频为两个文件。可分别播放，或用
+                            <span class="mono">ffmpeg -i 画面 -i 音频 -c copy out.mp4</span> 合并成带声音的视频；
+                            也可直接拖入 VLC 同时播放。
+                        </div>
+                    ` : ''}
                     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">${itemsHtml}</div>
                 </div>
             `;
 
+            // Copy: prefer the untranscoded original (xhs) so power users get the
+            // real source, else the direct media URL.
             $result.querySelectorAll('button[data-copy]').forEach((btn) => {
                 btn.addEventListener('click', async () => {
                     const idx = Number(btn.getAttribute('data-copy'));
-                    const item = data.items[idx];
+                    const item = currentItems[idx];
+                    const link = item.original_url || item.url;
                     try {
-                        await navigator.clipboard.writeText(item.url);
+                        await navigator.clipboard.writeText(link);
                         const original = btn.textContent;
                         btn.textContent = '已复制 ✓';
                         setTimeout(() => { btn.textContent = original; }, 1400);
                     } catch (err) {
-                        alert('复制失败，请手动复制：\n' + item.url);
+                        window.prompt('复制失败，请手动复制：', link);
                     }
                 });
             });
+
+            // Brief busy feedback on proxied downloads: the same-origin
+            // navigation-download doesn't unload the page, so the button would
+            // otherwise look dead during the server's first range fetch.
+            $result.querySelectorAll('a.dl-btn[data-proxy="1"]').forEach((a) => {
+                a.addEventListener('click', () => {
+                    a.classList.add('busy');
+                    const original = a.textContent;
+                    a.textContent = '已开始下载…';
+                    setTimeout(() => { a.classList.remove('busy'); a.textContent = original; }, 4000);
+                });
+            });
+
+            const $all = document.getElementById('dl-all');
+            if ($all) $all.addEventListener('click', () => downloadAll($all));
+        };
+
+        // Sequential download of every item. Staggered anchor clicks stream each
+        // file to disk via the proxy's Content-Disposition (no in-memory blobs,
+        // so large videos are fine). Chrome may ask once to allow multiple.
+        const downloadAll = (btn) => {
+            btn.classList.add('busy');
+            btn.textContent = '下载中…';
+            let i = 0;
+            const step = () => {
+                if (i >= currentItems.length) {
+                    btn.classList.remove('busy');
+                    btn.textContent = '下载全部';
+                    return;
+                }
+                const item = currentItems[i++];
+                const { href, direct } = downloadHref(item);
+                if (href !== '#') {
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.download = item.filename || '';
+                    if (direct) { a.target = '_blank'; a.rel = 'noopener'; }
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                }
+                setTimeout(step, 700);
+            };
+            step();
         };
 
         const showError = (message) => {
@@ -293,17 +409,30 @@
 
         $form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const url = $url.value.trim();
+            const url = extractUrl($url.value);
             if (!url) return;
             $submit.disabled = true;
             $submit.textContent = '解析中…';
             showLoading();
+
+            // Long yt-dlp resolves can run 60s+; cap with an abort so the user
+            // isn't stuck on the skeleton forever.
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 90000);
             try {
                 const res = await fetch('/api/media-dl/resolve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url }),
+                    signal: controller.signal,
                 });
+                // A gateway timeout / restart returns HTML, not JSON — guard so
+                // the user sees a real message, not "Unexpected token <".
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    showError(`服务暂时不可用（HTTP ${res.status}），请稍后重试。`);
+                    return;
+                }
                 const data = await res.json();
                 if (!res.ok) {
                     showError(data.error || `服务返回 HTTP ${res.status}`);
@@ -311,8 +440,13 @@
                 }
                 renderItems(data);
             } catch (err) {
-                showError(err.message || String(err));
+                if (err.name === 'AbortError') {
+                    showError('解析超时（90 秒）。该链接可能需要境外网络或源站过慢，请稍后重试或更换链接。');
+                } else {
+                    showError(err.message || String(err));
+                }
             } finally {
+                clearTimeout(timer);
                 $submit.disabled = false;
                 $submit.textContent = '解析';
             }
