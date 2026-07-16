@@ -92,6 +92,155 @@ class AppTestCase(unittest.TestCase):
         self.assertIn('filename="download.mp4"', disposition)
         self.assertIn("filename*=UTF-8''", disposition)
 
+    def test_extract_url_from_text_handles_share_blurbs_and_scheme_less(self):
+        from media_dl.extractor import extract_url_from_text
+
+        cases = {
+            '8.63 复制打开抖音，看看【xxx】 https://v.douyin.com/abc/ 快来看!':
+                'https://v.douyin.com/abc/',
+            'www.bilibili.com/video/BV1xx411c7mD':
+                'www.bilibili.com/video/BV1xx411c7mD',
+            '看这个 https://www.xiaohongshu.com/explore/abc123?xsec_token=AB，很好':
+                'https://www.xiaohongshu.com/explore/abc123?xsec_token=AB',
+            '   https://youtu.be/dQw4w9WgXcQ   ':
+                'https://youtu.be/dQw4w9WgXcQ',
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(extract_url_from_text(text), expected)
+
+    def test_media_proxy_rejects_non_allowlisted_and_pcdn_hosts(self):
+        for url in (
+            'https://evil.example.com/x.mp4',
+            'https://wfm.edge.mountaintoys.cn:4483/x.mp4',   # bili PCDN, not allowlisted
+            'https://evil.akamaized.net/x.mp4',              # unrelated Akamai customer
+        ):
+            with self.subTest(url=url):
+                resp = self.client.get('/api/media-dl/proxy?u=' + url)
+                self.assertEqual(resp.status_code, 403)
+
+    def test_media_proxy_allowlist_covers_new_platforms(self):
+        from media_dl.routes import _host_allowed
+
+        for url in (
+            'https://upos-hz-mirrorakam.akamaized.net/x.mp4',  # bili overseas mirror
+            'https://xy1.mcdn.bilivideo.cn/x.m4s',
+            'https://v16.tiktokcdn-us.com/x.mp4',
+            'https://www.douyin.com/aweme/v1/play/?video_id=1',
+            'https://aweme.iesdouyin.com/aweme/v1/play/',
+            'https://f.video.weibocdn.com/x.mp4',
+        ):
+            with self.subTest(url=url):
+                self.assertTrue(_host_allowed(url))
+        self.assertFalse(_host_allowed('https://other.akamaized.net/x'))
+
+    def test_media_proxy_ignores_client_range_and_disables_resume(self):
+        import media_dl.routes as media_routes
+
+        calls = []
+
+        class FakeUpstreamResponse:
+            status_code = 206
+            headers = {'Content-Range': 'bytes 0-2/3', 'Content-Type': 'video/mp4'}
+
+            def iter_content(self, chunk_size=65536):
+                yield b'abc'
+
+            def close(self):
+                pass
+
+        def fake_fetch(url, base_headers, start, end):
+            calls.append((start, end))
+            return FakeUpstreamResponse()
+
+        with mock.patch.object(media_routes, '_fetch_range', side_effect=fake_fetch):
+            response = self.client.get(
+                '/api/media-dl/proxy'
+                '?u=https://upos-sz-mirrorcosov.bilivideo.com/video.mp4'
+                '&name=v.mp4&r=https://www.bilibili.com',
+                headers={'Range': 'bytes=100-'},   # resuming client
+                buffered=False,
+            )
+            body = response.get_data()
+
+        # Full body from byte 0 despite the client asking for bytes=100-.
+        self.assertEqual(calls[0][0], 0)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('Accept-Ranges'), 'none')
+        self.assertEqual(body, b'abc')
+
+    def test_bilibili_prefers_official_cdn_over_pcdn_backup(self):
+        from media_dl.bilibili import _prefer_official_url
+
+        self.assertEqual(
+            _prefer_official_url(
+                'https://wfm.edge.mountaintoys.cn/a',
+                ['https://upos-sz-estgoss.bilivideo.com/a'],
+            ),
+            'https://upos-sz-estgoss.bilivideo.com/a',
+        )
+        # No official backup → keep the primary rather than dropping the item.
+        self.assertEqual(
+            _prefer_official_url('https://only.pcdn.example/a', []),
+            'https://only.pcdn.example/a',
+        )
+
+    def test_xhs_video_items_tolerate_empty_and_null_backup_urls(self):
+        from media_dl.xhs import _video_items
+
+        note = {
+            'video': {'media': {'stream': {'h264': [
+                {'masterUrl': '', 'backupUrls': []},            # would IndexError before
+                {'masterUrl': None, 'backupUrls': None},        # would TypeError before
+                {'masterUrl': 'https://sns-video.xhscdn.com/ok.mp4',
+                 'height': 1080, 'width': 1920},
+            ]}}}
+        }
+        items = _video_items(note, 'title')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['url'], 'https://sns-video.xhscdn.com/ok.mp4')
+
+    def test_xhs_undefined_substitution_preserves_quoted_prose(self):
+        from media_dl.xhs import _undefined_to_null
+
+        blob = '{"a":undefined,"title":"C++ undefined behavior","b":[undefined,1]}'
+        cleaned = _undefined_to_null(blob)
+        self.assertIn('"a":null', cleaned)
+        self.assertIn('[null,1]', cleaned)
+        self.assertIn('C++ undefined behavior', cleaned)  # untouched inside the string
+
+    def test_ytdlp_rejects_hls_and_fragmented_formats(self):
+        from media_dl.ytdlp import _is_directly_downloadable
+
+        self.assertTrue(_is_directly_downloadable(
+            {'url': 'https://cdn/v.mp4', 'protocol': 'https'}))
+        self.assertTrue(_is_directly_downloadable({'url': 'https://cdn/v.mp4'}))  # protocol absent
+        self.assertFalse(_is_directly_downloadable(
+            {'url': 'https://cdn/playlist.m3u8', 'protocol': 'm3u8_native'}))
+        self.assertFalse(_is_directly_downloadable(
+            {'url': 'https://cdn/seg', 'protocol': 'http_dash_segments'}))
+        self.assertFalse(_is_directly_downloadable(
+            {'url': 'https://cdn/v.mp4', 'fragments': [{'url': 'a'}]}))
+        self.assertFalse(_is_directly_downloadable({'url': ''}))
+
+    def test_bilibili_preferred_official_url_always_passes_proxy_allowlist(self):
+        # Regression guard: the CDN suffixes bilibili._prefer_official_url picks
+        # from must stay a subset of what routes._host_allowed permits.
+        from media_dl.bilibili import _prefer_official_url
+        from media_dl.routes import _host_allowed
+
+        pcdn = 'https://wfm.edge.mountaintoys.cn/a'
+        for official in (
+            'https://upos-sz-estgoss.bilivideo.com/a',
+            'https://x.mcdn.bilivideo.cn/a',
+            'https://x.hdslb.com/a',
+            'https://upos-hz-mirrorakam.akamaized.net/a',
+        ):
+            with self.subTest(official=official):
+                picked = _prefer_official_url(pcdn, [official])
+                self.assertEqual(picked, official)
+                self.assertTrue(_host_allowed(picked))
+
     def test_analytics_tracks_views_and_reports_summary(self):
         first = self.client.post('/api/analytics/track', json={'view': 'home', 'path': '/'})
         second = self.client.post('/api/analytics/track', json={'view': 'classrooms', 'path': '/#classrooms'})

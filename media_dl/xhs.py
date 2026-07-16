@@ -85,23 +85,35 @@ def _strip_image_processing(image_url: str) -> str:
     return f"https://sns-img-bd.xhscdn.com/{token}"
 
 
-def _jpeg_preview_url(image_url: str) -> str:
+def _jpeg_preview_url(image_url: str, quality: int | None = None) -> str:
     """Return a JPEG-transcoded URL safe for `<img>` preview in any browser.
 
     XHS now serves the `notes_uhdr/` path as HEIC/Ultra HDR — Safari renders it
     natively, Chrome shows a broken image because `<img>` requires a known
     raster format. `ci.xiaohongshu.com` accepts `?imageView2/format/jpg` and
     transcodes on the fly without sacrificing the source resolution.
+
+    `quality` maps to Qiniu's `/q/<n>`; without it the CDN defaults to ~q75, so
+    downloads pass quality=100 for a near-lossless grab while the preview keeps
+    the lighter default to save bandwidth.
     """
     token = _xhs_image_token(image_url)
     if not token:
         return image_url
-    return f"https://ci.xiaohongshu.com/{token}?imageView2/format/jpg"
+    suffix = f"/q/{quality}" if quality else ""
+    return f"https://ci.xiaohongshu.com/{token}?imageView2/format/jpg{suffix}"
 
 
 def _undefined_to_null(blob: str) -> str:
-    """Replace bare `undefined` tokens (xhs sometimes embeds them) with null."""
-    return re.sub(r"(?<![A-Za-z0-9_])undefined(?![A-Za-z0-9_])", "null", blob)
+    """Replace bare `undefined` value tokens (xhs embeds them) with null.
+
+    The INITIAL_STATE blob is minified, so a genuine `undefined` value always
+    sits immediately after `:`, `,` or `[` and before `,`, `}` or `]` with no
+    surrounding whitespace. Anchoring on those delimiters avoids rewriting the
+    word inside quoted strings (e.g. a note titled 'undefined behavior 踩坑'),
+    which the previous word-boundary regex corrupted.
+    """
+    return re.sub(r"(?<=[:,\[])undefined(?=[,}\]])", "null", blob)
 
 
 def _parse_initial_state(html: str) -> dict:
@@ -140,7 +152,10 @@ def _video_items(note: dict, title: str) -> list[dict]:
     candidates: list[dict] = []
     for codec_key in ("h264", "h265", "av1"):
         for s in streams.get(codec_key) or []:
-            url = s.get("masterUrl") or s.get("backupUrls", [None])[0]
+            # `.get(key, default)` only applies the default when the KEY is
+            # absent — a present-but-empty [] would raise IndexError, and null
+            # would raise TypeError. `(x or [None])[0]` handles both.
+            url = s.get("masterUrl") or (s.get("backupUrls") or [None])[0]
             if not url:
                 continue
             candidates.append(
@@ -185,13 +200,14 @@ def _image_items(note: dict, title: str) -> list[dict]:
         #   - JPEG keeps the original resolution, just swaps the codec.
         # Original/UHDR URL is kept on the item as `original_url` so power
         # users can copy it via the "复制链接" button.
-        download_url = _jpeg_preview_url(raw)
+        preview_url = _jpeg_preview_url(raw)
+        download_url = _jpeg_preview_url(raw, quality=100)
         original_url = _strip_image_processing(raw)
         items.append(
             {
                 "kind": "image",
                 "url": download_url,
-                "preview_url": download_url,
+                "preview_url": preview_url,
                 "original_url": original_url,
                 "ext": "jpg",
                 "width": img.get("width"),
@@ -236,7 +252,7 @@ def extract(url: str) -> dict:
         "title": title,
         "thumbnail": _jpeg_preview_url(raw_thumb) if raw_thumb else None,
         "uploader": user.get("nickname") or user.get("nickName"),
-        "duration": (note.get("video") or {}).get("capa", {}).get("duration"),
+        "duration": ((note.get("video") or {}).get("capa") or {}).get("duration"),
         "webpage_url": real_url,
         "items": items,
     }

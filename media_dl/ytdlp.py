@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
@@ -22,6 +23,25 @@ log = logging.getLogger(__name__)
 
 _BILI_HOST_RE = re.compile(r"bilibili\.com|b23\.tv")
 _DOUYIN_HOST_RE = re.compile(r"douyin\.com")
+# Overseas platforms: the server can only reach them through an outbound proxy,
+# and browsers ignore `<a download>` on cross-origin CDN URLs — so their items
+# must be routed through /api/media-dl/proxy (server-side fetch, same-origin
+# Content-Disposition) whenever we can reach them at all.
+_FOREIGN_HOST_RE = re.compile(
+    r"youtube\.com|youtu\.be|googlevideo\.com|"
+    r"twitter\.com|x\.com|twimg\.com|"
+    r"tiktok\.com|instagram\.com|facebook\.com|vimeo\.com"
+)
+_WEIBO_HOST_RE = re.compile(r"weibo\.com|weibocdn\.com|sinaimg\.cn")
+_KUAISHOU_HOST_RE = re.compile(r"kuaishou\.com|kwaicdn\.com|yximgs\.com")
+
+
+def _server_proxy() -> str | None:
+    return (
+        os.environ.get("MAXCOURSE_PROXY")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("https_proxy")
+    )
 
 _BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -31,7 +51,7 @@ _BROWSER_UA = (
 # Bilibili rejects requests without `buvid3` (and friends) with HTTP 412.
 # We bootstrap a Netscape-format cookie file once, then point yt-dlp at it.
 _BILI_COOKIE_TTL = 30 * 60
-_bili_cookie_cache: dict[str, Any] = {"path": "", "expires": 0.0}
+_bili_cookie_cache: dict[str, Any] = {"path": "", "expires": 0.0, "cookies": None}
 _bili_cookie_lock = threading.Lock()
 
 
@@ -92,42 +112,95 @@ def _harvest_bili_cookies() -> dict[str, str]:
     except requests.RequestException:
         pass
 
+    # Optional operator-provided login cookie. With a valid SESSDATA the playurl
+    # API stops downgrading anonymous requests, so qn=80/112 (1080p) becomes
+    # reachable. Mirrors the MAXCOURSE_PROXY opt-in knob — unset by default.
+    sessdata = os.environ.get("BILIBILI_SESSDATA")
+    if sessdata:
+        cookies["SESSDATA"] = sessdata
+
     return cookies
+
+
+def bili_cookie_dict() -> dict[str, str]:
+    """Return the cached harvested Bilibili cookie dict (TTL + lock guarded).
+
+    Shared by the native extractor (bilibili.py) and the yt-dlp cookie file so a
+    single resolve doesn't fire the 3-request harvest more than once per TTL.
+    """
+    now = time.time()
+    cached = _bili_cookie_cache.get("cookies")
+    if cached is not None and now < _bili_cookie_cache.get("expires", 0):
+        return cached
+    with _bili_cookie_lock:
+        now = time.time()
+        cached = _bili_cookie_cache.get("cookies")
+        if cached is not None and now < _bili_cookie_cache.get("expires", 0):
+            return cached
+        cookies = _harvest_bili_cookies()
+        if not cookies.get("buvid3"):
+            log.warning("bilibili cookie harvest produced no buvid3 — requests may still 412")
+        _bili_cookie_cache["cookies"] = cookies
+        _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
+        log.info("bilibili cookies refreshed (%d entries)", len(cookies))
+        return cookies
+
+
+def flush_bili_cookies() -> None:
+    """Invalidate the cached cookies + file so the next access re-harvests."""
+    with _bili_cookie_lock:
+        _bili_cookie_cache["cookies"] = None
+        _bili_cookie_cache["expires"] = 0.0
 
 
 def _bili_cookie_file() -> str:
     """Return the path to a Netscape cookies file with fresh Bilibili cookies."""
-    now = time.time()
+    cookies = bili_cookie_dict()
     cached_path = _bili_cookie_cache.get("path", "")
-    if cached_path and os.path.exists(cached_path) and now < _bili_cookie_cache.get("expires", 0):
+    # Freshness is keyed to the identity of the cookie dict, not the shared TTL:
+    # bili_cookie_dict() hands back a NEW dict object on each re-harvest, so we
+    # rewrite the file exactly when the cookies actually changed (and never let
+    # the on-disk jar silently lag a refreshed dict).
+    if (cached_path and os.path.exists(cached_path)
+            and _bili_cookie_cache.get("file_for") is cookies):
         return cached_path
-
-    with _bili_cookie_lock:
-        now = time.time()
-        cached_path = _bili_cookie_cache.get("path", "")
-        if cached_path and os.path.exists(cached_path) and now < _bili_cookie_cache.get("expires", 0):
-            return cached_path
-        try:
-            cookies = _harvest_bili_cookies()
-            if not cookies.get("buvid3"):
-                log.warning("bilibili cookie harvest produced no buvid3 — yt-dlp may still 412")
-                # Continue anyway; yt-dlp can still try.
-            tmpdir = tempfile.gettempdir()
-            path = os.path.join(tmpdir, "maxcourse_bili_cookies.txt")
-            _write_netscape_cookies(path, cookies)
+    try:
+        tmpdir = tempfile.gettempdir()
+        path = os.path.join(tmpdir, "maxcourse_bili_cookies.txt")
+        # Write to a temp file and atomically replace, so a concurrent yt-dlp
+        # read never sees a half-truncated cookie jar (→ spurious 412).
+        fd, tmp_path = tempfile.mkstemp(dir=tmpdir, prefix=".bili_cookies_", suffix=".txt")
+        os.close(fd)
+        _write_netscape_cookies(tmp_path, cookies)
+        os.replace(tmp_path, path)
+        with _bili_cookie_lock:
             _bili_cookie_cache["path"] = path
-            _bili_cookie_cache["expires"] = time.time() + _BILI_COOKIE_TTL
-            log.info("bilibili cookies refreshed → %s (%d entries)", path, len(cookies))
-            return path
-        except Exception as exc:  # noqa: BLE001
-            log.warning("bilibili cookie bootstrap failed: %s", exc)
-            return ""
+            _bili_cookie_cache["file_for"] = cookies
+        return path
+    except Exception as exc:  # noqa: BLE001
+        log.warning("bilibili cookie bootstrap failed: %s", exc)
+        return ""
 
 
 def _safe_filename(title: str, ext: str) -> str:
     cleaned = re.sub(r'[\\/:*?"<>|\r\n\t]+', "_", title or "video").strip()
     cleaned = cleaned[:80] or "video"
     return f"{cleaned}.{ext}"
+
+
+def _is_directly_downloadable(f: dict) -> bool:
+    """True only for a single-file http(s) URL the browser/proxy can GET as-is.
+
+    Excludes HLS/DASH manifest formats: yt-dlp reports them with ext='mp4' but a
+    `.m3u8`/`.mpd` playlist URL (protocol m3u8_native / http_dash_segments) or a
+    `fragments` list — handing one to the user yields a tiny unplayable text file.
+    """
+    if not f.get("url"):
+        return False
+    if f.get("fragments"):
+        return False
+    proto = (f.get("protocol") or "").lower()
+    return proto in ("https", "http", "")
 
 
 def _pick_best_combined(formats: list[dict]) -> dict | None:
@@ -138,7 +211,7 @@ def _pick_best_combined(formats: list[dict]) -> dict | None:
         if f.get("vcodec") not in (None, "none")
         and f.get("acodec") not in (None, "none")
         and (f.get("ext") in ("mp4", "webm"))
-        and f.get("url")
+        and _is_directly_downloadable(f)
     ]
     if not candidates:
         return None
@@ -158,7 +231,7 @@ def _pick_best_video_only(formats: list[dict]) -> dict | None:
         for f in formats
         if f.get("vcodec") not in (None, "none")
         and f.get("acodec") in (None, "none")
-        and f.get("url")
+        and _is_directly_downloadable(f)
     ]
     if not candidates:
         return None
@@ -171,7 +244,7 @@ def _pick_best_audio_only(formats: list[dict]) -> dict | None:
         for f in formats
         if f.get("acodec") not in (None, "none")
         and f.get("vcodec") in (None, "none")
-        and f.get("url")
+        and _is_directly_downloadable(f)
     ]
     if not candidates:
         return None
@@ -192,11 +265,28 @@ def _quality_label(fmt: dict) -> str:
 
 
 def _needs_proxy(url: str, host: str) -> tuple[bool, str | None]:
-    """Some hosts return 403 unless a Referer is set. Browser direct-download fails there."""
+    """Whether an item must be routed through /api/media-dl/proxy, and its Referer.
+
+    Two independent reasons to proxy: (1) the CDN needs a Referer the browser
+    can't send (bilibili/douyin/weibo hotlink checks); (2) the host is only
+    reachable from the server via an outbound proxy and/or the cross-origin
+    `<a download>` limitation would otherwise open the media in a tab instead of
+    saving it (all overseas platforms).
+    """
     if _BILI_HOST_RE.search(host):
         return True, "https://www.bilibili.com"
     if _DOUYIN_HOST_RE.search(host):
         return True, "https://www.douyin.com"
+    if _WEIBO_HOST_RE.search(host):
+        return True, "https://weibo.com"
+    if _KUAISHOU_HOST_RE.search(host):
+        return True, "https://www.kuaishou.com"
+    if _FOREIGN_HOST_RE.search(host):
+        # Only worth proxying if the server can actually reach the CDN — which,
+        # for these GFW-blocked hosts, means an outbound proxy is configured.
+        # (If it isn't, resolve itself would have failed, so this is moot; guard
+        # anyway so a directly-reachable deployment keeps the direct link.)
+        return bool(_server_proxy()), None
     return False, None
 
 
@@ -211,6 +301,12 @@ def _platform_of(host: str) -> str:
         return "tiktok"
     if "twitter.com" in host or "x.com" in host:
         return "twitter"
+    if "weibo" in host or "sinaimg" in host:
+        return "weibo"
+    if "kuaishou" in host or "kwai" in host or "yximgs" in host:
+        return "kuaishou"
+    if "instagram" in host:
+        return "instagram"
     return host.split(".")[0] or "unknown"
 
 
@@ -263,7 +359,7 @@ def extract(url: str) -> dict:
         msg = str(exc)
         if is_bili and "412" in msg:
             log.info("bilibili 412 — flushing cookie cache and retrying once")
-            _bili_cookie_cache["expires"] = 0.0
+            flush_bili_cookies()
             cookiefile = _bili_cookie_file() or None
             if cookiefile:
                 opts["cookiefile"] = cookiefile
@@ -277,102 +373,70 @@ def extract(url: str) -> dict:
     formats = info.get("formats") or []
     title = info.get("title") or "video"
     webpage_url = info.get("webpage_url") or url
-    host = (info.get("extractor") or "").lower() or webpage_url
     needs_proxy_flag, referer = _needs_proxy(webpage_url, webpage_url)
+
+    def _item(kind: str, fmt: dict, ext: str, label: str, name: str,
+              needs_merge: bool = False) -> dict:
+        return {
+            "kind": kind,
+            "url": fmt["url"],
+            "ext": ext,
+            "width": fmt.get("width"),
+            "height": fmt.get("height"),
+            "filesize": fmt.get("filesize") or fmt.get("filesize_approx"),
+            "quality_label": label,
+            "needs_proxy": needs_proxy_flag,
+            "referer": referer if needs_proxy_flag else None,
+            "needs_merge": needs_merge,
+            "filename": _safe_filename(name, ext),
+        }
 
     items: list[dict] = []
 
     combined = _pick_best_combined(formats)
-    if combined:
-        ext = combined.get("ext") or "mp4"
-        items.append(
-            {
-                "kind": "video",
-                "url": combined["url"],
-                "ext": ext,
-                "width": combined.get("width"),
-                "height": combined.get("height"),
-                "filesize": combined.get("filesize") or combined.get("filesize_approx"),
-                "quality_label": _quality_label(combined),
-                "needs_proxy": needs_proxy_flag,
-                "referer": referer if needs_proxy_flag else None,
-                "filename": _safe_filename(title, ext),
-            }
-        )
-
     video_only = _pick_best_video_only(formats)
     audio_only = _pick_best_audio_only(formats)
-    if video_only and audio_only and not combined:
+
+    # 1. Convenience: best progressive stream (audio+video in one file).
+    if combined:
+        ext = combined.get("ext") or "mp4"
+        items.append(_item("video", combined, ext, _quality_label(combined), title))
+
+    # 2. Higher-quality split streams (需自行合并). Offer when there is no
+    #    progressive at all, or when the best video-only is meaningfully
+    #    higher-res than the progressive — YouTube caps progressive at 360p but
+    #    exposes 1080p+ as video-only, so the convenience MP4 alone hides it.
+    combined_h = (combined or {}).get("height") or 0
+    vo_h = (video_only or {}).get("height") or 0
+    offer_split = bool(video_only and audio_only) and (not combined or vo_h > combined_h)
+
+    if offer_split:
         v_ext = video_only.get("ext") or "mp4"
         a_ext = audio_only.get("ext") or "m4a"
-        items.append(
-            {
-                "kind": "video",
-                "url": video_only["url"],
-                "ext": v_ext,
-                "width": video_only.get("width"),
-                "height": video_only.get("height"),
-                "filesize": video_only.get("filesize") or video_only.get("filesize_approx"),
-                "quality_label": _quality_label(video_only) + " · 仅画面",
-                "needs_proxy": needs_proxy_flag,
-                "referer": referer if needs_proxy_flag else None,
-                "filename": _safe_filename(title + "-video", v_ext),
-            }
-        )
-        items.append(
-            {
-                "kind": "audio",
-                "url": audio_only["url"],
-                "ext": a_ext,
-                "width": None,
-                "height": None,
-                "filesize": audio_only.get("filesize") or audio_only.get("filesize_approx"),
-                "quality_label": _quality_label(audio_only) + " · 仅音频",
-                "needs_proxy": needs_proxy_flag,
-                "referer": referer if needs_proxy_flag else None,
-                "filename": _safe_filename(title + "-audio", a_ext),
-            }
-        )
-
-    if audio_only and combined:
+        # Split A/V: mark needs_merge so the UI shows the ffmpeg/merge banner —
+        # otherwise a user grabs "1080p · 仅画面" and gets a silent video.
+        items.append(_item("video", video_only, v_ext,
+                           _quality_label(video_only) + " · 仅画面", title + "-video",
+                           needs_merge=True))
+        items.append(_item("audio", audio_only, a_ext,
+                           _quality_label(audio_only) + " · 仅音频", title + "-audio",
+                           needs_merge=True))
+    elif audio_only and combined:
+        # Progressive already covers video; still expose a standalone audio grab.
         a_ext = audio_only.get("ext") or "m4a"
-        items.append(
-            {
-                "kind": "audio",
-                "url": audio_only["url"],
-                "ext": a_ext,
-                "width": None,
-                "height": None,
-                "filesize": audio_only.get("filesize") or audio_only.get("filesize_approx"),
-                "quality_label": _quality_label(audio_only) + " · 仅音频",
-                "needs_proxy": needs_proxy_flag,
-                "referer": referer if needs_proxy_flag else None,
-                "filename": _safe_filename(title + "-audio", a_ext),
-            }
-        )
+        items.append(_item("audio", audio_only, a_ext,
+                           _quality_label(audio_only) + " · 仅音频", title + "-audio"))
 
-    if not items and info.get("url"):
+    if not items and info.get("url") and _is_directly_downloadable(info):
         ext = info.get("ext") or "mp4"
-        items.append(
-            {
-                "kind": "video",
-                "url": info["url"],
-                "ext": ext,
-                "width": info.get("width"),
-                "height": info.get("height"),
-                "filesize": info.get("filesize"),
-                "quality_label": _quality_label(info),
-                "needs_proxy": needs_proxy_flag,
-                "referer": referer if needs_proxy_flag else None,
-                "filename": _safe_filename(title, ext),
-            }
-        )
+        items.append(_item("video", info, ext, _quality_label(info), title))
 
     if not items:
         raise RuntimeError("未能从该链接提取到可下载的媒体流。")
 
+    webpage_host = (urlparse(webpage_url).hostname or "").lower()
     return {
-        "platform": _platform_of((info.get("extractor_key") or info.get("extractor") or "").lower()),
+        "platform": _platform_of(webpage_host or (info.get("extractor_key") or "").lower()),
         "title": title,
         "thumbnail": info.get("thumbnail"),
         "uploader": info.get("uploader") or info.get("channel"),

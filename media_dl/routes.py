@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import sqlite3
 import time
@@ -57,13 +58,16 @@ media_dl_bp = Blueprint("media_dl", __name__, url_prefix="/api/media-dl")
 # being used as an open relay.
 _ALLOWED_PROXY_HOSTS = (
     "bilivideo.com",
-    "akamaized.net",
     "bilibili.com",
     "bilivideo.cn",
     "hdslb.com",
+    "douyin.com",
+    "iesdouyin.com",
     "douyinvod.com",
     "douyincdn.com",
     "douyinpic.com",
+    "douyinstatic.com",
+    "zjcdn.com",
     "snssdk.com",
     "xhscdn.com",
     "xiaohongshu.com",
@@ -72,15 +76,55 @@ _ALLOWED_PROXY_HOSTS = (
     "ytimg.com",
     "twimg.com",
     "tiktokcdn.com",
+    "tiktokcdn-us.com",
+    "tiktokv.com",
+    "sinaimg.cn",
+    "weibocdn.com",
+    "yximgs.com",
+)
+
+# CDNs unreachable from a mainland server without an outbound proxy. When
+# MAXCOURSE_PROXY / HTTPS_PROXY is set (same vars ytdlp.py honours for
+# resolving), route /proxy fetches for these hosts through it too — otherwise
+# resolve succeeds via the proxy but the actual download then fails.
+_FOREIGN_CDN_HOSTS = (
+    "googlevideo.com",
+    "youtube.com",
+    "ytimg.com",
+    "twimg.com",
+    "tiktokcdn.com",
+    "tiktokcdn-us.com",
     "tiktokv.com",
 )
 
 
-def _host_allowed(url: str) -> bool:
+def _match_host(url: str, suffixes: tuple[str, ...]) -> bool:
     host = (urlparse(url).hostname or "").lower()
     if not host:
         return False
-    return any(host == h or host.endswith("." + h) for h in _ALLOWED_PROXY_HOSTS)
+    return any(host == h or host.endswith("." + h) for h in suffixes)
+
+
+def _host_allowed(url: str) -> bool:
+    if _match_host(url, _ALLOWED_PROXY_HOSTS):
+        return True
+    # Bilibili's overseas Akamai mirror is `upos-<region>-mirrorakam.akamaized.net`
+    # (note the `-`, not a `.`, before `mirrorakam`). Match just that suffix
+    # instead of allowlisting all of *.akamaized.net, which would turn /proxy
+    # into an open relay for every unrelated Akamai customer.
+    host = (urlparse(url).hostname or "").lower()
+    return host.endswith("mirrorakam.akamaized.net")
+
+
+def _outbound_proxies_for(url: str) -> dict[str, str] | None:
+    proxy = (
+        os.environ.get("MAXCOURSE_PROXY")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("https_proxy")
+    )
+    if not proxy or not _match_host(url, _FOREIGN_CDN_HOSTS):
+        return None
+    return {"http": proxy, "https": proxy}
 
 
 def _visitor_id() -> str | None:
@@ -141,9 +185,28 @@ def resolve():
 _PROXY_CHUNK = 8 * 1024 * 1024              # 8 MB per upstream request
 _PROXY_RETRIES_PER_CHUNK = 3                # transient errors → retry the same range
 _PROXY_TIMEOUT = (10, 60)                   # (connect, read) — read is between chunks
-_RANGE_RE = re.compile(r"bytes=(\d+)-(\d*)")
 _CONTENT_RANGE_RE = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECASE)
-_PROXY_PASSTHROUGH_HEADERS = ("Content-Type", "ETag", "Last-Modified")
+# Only forward Content-Type. ETag/Last-Modified are deliberately dropped: with
+# them a browser may attempt a byte-range resume, which we can't answer (see the
+# Range-handling note in proxy()).
+_PROXY_PASSTHROUGH_HEADERS = ("Content-Type",)
+_PROXY_MAX_FAILURES = 5                      # consecutive chunk failures before aborting
+
+
+class _RangeNotSatisfiable(Exception):
+    """Upstream answered 416 — the requested range is past EOF (stream done)."""
+
+
+class _UpstreamClientError(Exception):
+    """Upstream returned a permanent 4xx — retrying is pointless."""
+
+
+def _content_range_bounds(resp: requests.Response) -> tuple[int | None, int | None]:
+    """Parse (start, end) inclusive from a response's Content-Range, or (None, None)."""
+    m = _CONTENT_RANGE_RE.match(resp.headers.get("Content-Range", ""))
+    if not m:
+        return None, None
+    return int(m.group(1)), int(m.group(2))
 
 
 def _content_disposition_header(filename: str) -> str:
@@ -160,27 +223,43 @@ def _content_disposition_header(filename: str) -> str:
 
 
 def _fetch_range(url: str, base_headers: dict, start: int, end: int) -> requests.Response:
-    """GET a byte range with bounded retries. Returns an unread streaming Response."""
+    """GET a byte range with bounded retries. Returns an unread streaming Response.
+
+    Raises `_RangeNotSatisfiable` on a 416 (past EOF) and `_UpstreamClientError`
+    on a permanent 4xx (except 429), both without burning retries — those are
+    deterministic and should fail fast rather than sleeping through 3 attempts.
+    """
     last_exc: Exception | None = None
     last_status: int | None = None
     last_body: str = ""
     headers = {**base_headers, "Range": f"bytes={start}-{end}"}
+    proxies = _outbound_proxies_for(url)
     for attempt in range(_PROXY_RETRIES_PER_CHUNK):
         try:
-            r = requests.get(url, headers=headers, stream=True, timeout=_PROXY_TIMEOUT)
+            r = requests.get(
+                url, headers=headers, stream=True, timeout=_PROXY_TIMEOUT, proxies=proxies,
+            )
             if r.status_code in (200, 206):
                 return r
-            last_status = r.status_code
+            status = r.status_code
             try:
                 last_body = r.content[:512].decode("utf-8", "replace")
             except Exception:  # noqa: BLE001
                 last_body = ""
             r.close()
-            last_exc = RuntimeError(f"upstream HTTP {r.status_code}")
+            if status == 416:
+                raise _RangeNotSatisfiable(f"HTTP 416 at bytes={start}-{end}")
+            if 400 <= status < 500 and status != 429:
+                raise _UpstreamClientError(f"upstream HTTP {status}: {last_body[:200]}")
+            last_status = status
+            last_exc = RuntimeError(f"upstream HTTP {status}")
+        except (_RangeNotSatisfiable, _UpstreamClientError):
+            raise
         except requests.RequestException as exc:
             last_exc = exc
-        # Linear backoff: 0.4s, 0.8s.
-        time.sleep(0.4 * (attempt + 1))
+        # Linear backoff: 0.4s, 0.8s — but never after the final attempt.
+        if attempt < _PROXY_RETRIES_PER_CHUNK - 1:
+            time.sleep(0.4 * (attempt + 1))
     detail = f"HTTP {last_status}: {last_body[:200]}" if last_status else str(last_exc or "")
     raise RuntimeError(f"range fetch failed [{detail}]") from last_exc
 
@@ -212,20 +291,22 @@ def proxy():
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
         ),
+        # Pin identity so our per-chunk byte arithmetic operates on the raw
+        # stream. If an upstream ever gzipped, iter_content would yield decoded
+        # bytes while `cursor` indexes the encoded stream — desyncing the Range
+        # offsets and corrupting the reassembly.
+        "Accept-Encoding": "identity",
     }
     if referer:
         base_headers["Referer"] = referer
 
-    # Honour any Range the browser sent. Most browsers send `bytes=0-` for downloads.
-    user_range = request.headers.get("Range")
-    user_start = 0
-    user_end: int | None = None
-    if user_range:
-        m = _RANGE_RE.match(user_range)
-        if m:
-            user_start = int(m.group(1))
-            user_end = int(m.group(2)) if m.group(2) else None
-
+    # Deliberately ignore any Range the browser sent and always stream the
+    # full body with a 200. We can't answer a mid-file Range correctly: a 206
+    # needs an exact Content-Range, but our retry loop may deliver fewer bytes
+    # (see the Content-Length note below). Worse, the old behaviour answered
+    # `bytes=N-` with a 200 whose body *started at byte N* — a resuming
+    # browser treats a 200 as the whole file and saves a truncated download.
+    # `Accept-Ranges: none` below tells browsers not to try resuming at all.
     visitor = _visitor_id()
     user = _user_id()
 
@@ -241,11 +322,8 @@ def proxy():
     # First range fetch: needed to discover total size from Content-Range and
     # to surface upstream auth / 4xx errors as a real HTTP error to the client
     # instead of dying mid-stream.
-    first_end = user_start + _PROXY_CHUNK - 1
-    if user_end is not None:
-        first_end = min(first_end, user_end)
     try:
-        first = _fetch_range(target, base_headers, user_start, first_end)
+        first = _fetch_range(target, base_headers, 0, _PROXY_CHUNK - 1)
     except Exception as exc:  # noqa: BLE001
         _log(False, 0, f"first range failed: {exc}")
         # Return a downloadable .txt with the diagnosis so the user can see
@@ -270,18 +348,21 @@ def proxy():
             },
         )
 
+    first_start, first_end_incl = _content_range_bounds(first)
+    server_honors_ranges = first.status_code == 206 and first_start == 0
+
     total: int | None = None
-    cr_match = _CONTENT_RANGE_RE.match(first.headers.get("Content-Range", ""))
-    if cr_match and cr_match.group(3) != "*":
-        total = int(cr_match.group(3))
-    elif first.headers.get("Content-Length") and first.status_code == 200:
+    if first_end_incl is not None:
+        m = _CONTENT_RANGE_RE.match(first.headers.get("Content-Range", ""))
+        if m and m.group(3) != "*":
+            total = int(m.group(3))
+    if total is None and first.headers.get("Content-Length") and first.status_code == 200:
         # Server doesn't honour Range — treat the single response as the whole body.
         total = int(first.headers["Content-Length"])
 
-    effective_end = user_end if user_end is not None else (total - 1 if total else None)
-
     forwarded: dict[str, str] = {
         "Cache-Control": "no-store",
+        "Accept-Ranges": "none",
         "Content-Disposition": _content_disposition_header(filename),
     }
     for h in _PROXY_PASSTHROUGH_HEADERS:
@@ -292,78 +373,116 @@ def proxy():
     # may yield slightly fewer bytes than `total` if a chunk permanently fails
     # — Safari is lenient and saves whatever it got, but Chrome strictly
     # enforces Content-Length and shows "无法从网站上提取文件" on any mismatch.
-    # By skipping Content-Length, Flask falls back to chunked transfer-encoding
-    # and both browsers accept the response as-is.
-    status = 200
+    # By skipping Content-Length, Flask falls back to chunked transfer-encoding.
+    # A mid-stream failure re-raises out of the generator instead of returning
+    # cleanly, so the socket aborts and the browser flags the download as failed
+    # rather than saving a truncated file it believes is complete.
+
+    def _close(r: requests.Response | None) -> None:
+        if r is None:
+            return
+        try:
+            r.close()
+        except Exception:  # noqa: BLE001
+            pass
 
     def generate():
         sent = 0
-        cursor = user_start
+        cursor = 0
         cur: requests.Response | None = first
-        failures = 0
-        MAX_FAILURES = 5  # consecutive (refetch + iter_content) failures before giving up
-
-        def _close(r: requests.Response | None) -> None:
-            if r is None:
-                return
-            try:
-                r.close()
-            except Exception:  # noqa: BLE001
-                pass
-
         try:
-            while effective_end is None or cursor <= effective_end:
-                # 1. Make sure we hold an open response to drain.
+            # --- Upstream ignores Range: single full-body response, no resume. ---
+            if not server_honors_ranges:
+                for piece in first.iter_content(chunk_size=64 * 1024):
+                    if piece:
+                        sent += len(piece)
+                        yield piece
+                _close(cur)
+                cur = None
+                _log(True, sent, None)
+                return
+
+            # --- Range-capable upstream: fetch in chunks with per-chunk retry. ---
+            chunk_end = first_end_incl          # inclusive end of the held response
+            failures = 0
+            while total is None or cursor <= total - 1:
                 if cur is None:
-                    next_end = (
-                        min(cursor + _PROXY_CHUNK - 1, effective_end)
-                        if effective_end is not None
-                        else cursor + _PROXY_CHUNK - 1
-                    )
+                    next_end = cursor + _PROXY_CHUNK - 1
+                    if total is not None:
+                        next_end = min(next_end, total - 1)
                     try:
                         cur = _fetch_range(target, base_headers, cursor, next_end)
+                    except _RangeNotSatisfiable:
+                        break  # past EOF (unknown-total case) → clean end
+                    except _UpstreamClientError:
+                        raise  # permanent (e.g. expired signed URL) → abort
                     except Exception as exc:  # noqa: BLE001
                         failures += 1
-                        log.warning(
-                            "[proxy] refetch failed at byte %s (%d/%d): %s",
-                            cursor, failures, MAX_FAILURES, exc,
-                        )
-                        if failures >= MAX_FAILURES:
+                        log.warning("[proxy] refetch failed at byte %s (%d/%d): %s",
+                                    cursor, failures, _PROXY_MAX_FAILURES, exc)
+                        if failures >= _PROXY_MAX_FAILURES:
                             raise
                         time.sleep(0.5 * failures)
                         continue
+                    # A refetch (cursor>0) MUST resume exactly at cursor. If the
+                    # upstream ignored Range and returned a full 200, appending it
+                    # would duplicate bytes 0..cursor — abort instead.
+                    r_start, r_end = _content_range_bounds(cur)
+                    r_status = cur.status_code
+                    if r_status != 206 or r_start != cursor:
+                        _close(cur)
+                        cur = None
+                        failures += 1
+                        log.warning("[proxy] refetch did not resume at %s (status=%s start=%s)",
+                                    cursor, r_status, r_start)
+                        if failures >= _PROXY_MAX_FAILURES:
+                            raise RuntimeError("upstream stopped honouring Range on refetch")
+                        time.sleep(0.5 * failures)
+                        continue
+                    chunk_end = r_end
 
-                # 2. Drain the response. If iter_content blows up mid-chunk,
-                #    keep `cursor` accurate and refetch from where we are.
+                chunk_start = cursor
                 try:
                     for piece in cur.iter_content(chunk_size=64 * 1024):
                         if piece:
-                            sent += len(piece)
-                            cursor += len(piece)
+                            n = len(piece)
+                            sent += n
+                            cursor += n
                             yield piece
                     _close(cur)
                     cur = None
-                    failures = 0  # full chunk drained
+                    failures = 0
                 except Exception as exc:  # noqa: BLE001
                     _close(cur)
                     cur = None
                     failures += 1
-                    log.warning(
-                        "[proxy] stream broke at byte %s (%d/%d): %s — refetching from cursor",
-                        cursor, failures, MAX_FAILURES, exc,
-                    )
-                    if failures >= MAX_FAILURES:
+                    log.warning("[proxy] stream broke at byte %s (%d/%d): %s — refetching",
+                                cursor, failures, _PROXY_MAX_FAILURES, exc)
+                    if failures >= _PROXY_MAX_FAILURES:
                         raise
-                    # Next loop iteration will refetch starting at `cursor`.
+                    continue
+
+                # Unknown total: a chunk shorter than requested means EOF.
+                if total is None:
+                    got = cursor - chunk_start
+                    want = (chunk_end - chunk_start + 1) if chunk_end is not None else None
+                    if want is None or got < want:
+                        break
 
             _log(True, sent, None)
+        except GeneratorExit:
+            # Browser cancelled the download. Log the partial transfer (the bytes
+            # were genuinely served) so /stats doesn't undercount, then re-raise.
+            _log(False, sent, "client disconnected")
+            raise
         except Exception as exc:  # noqa: BLE001
-            log.warning("chunked proxy interrupted at byte %s/%s: %s", cursor, effective_end, exc)
-            _log(False, sent, f"interrupted at byte {cursor}: {exc}")
+            log.warning("chunked proxy aborted at byte %s (total=%s): %s", cursor, total, exc)
+            _log(False, sent, f"aborted at byte {cursor}: {exc}")
+            raise  # abort the socket so the browser marks the download failed
         finally:
             _close(cur)
 
-    return Response(stream_with_context(generate()), status=status, headers=forwarded)
+    return Response(stream_with_context(generate()), status=200, headers=forwarded)
 
 
 @media_dl_bp.get("/stats")

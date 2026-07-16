@@ -48,6 +48,25 @@ class UnsupportedURLError(ValueError):
     pass
 
 
+# Share blurbs (douyin/xhs "复制打开" text) wrap the URL in CJK prose and
+# full-width punctuation. Pull out the first http(s) URL, stopping at
+# whitespace, CJK characters, or full-width punctuation.
+_URL_IN_TEXT_RE = re.compile(
+    r"https?://[^\s<>\"'　-〿一-鿿＀-￯]+",
+    re.IGNORECASE,
+)
+
+
+def extract_url_from_text(text: str) -> str:
+    """Return the first URL embedded in arbitrary share text, else the input."""
+    text = (text or "").strip()
+    match = _URL_IN_TEXT_RE.search(text)
+    if not match:
+        return text
+    # Trailing ASCII punctuation that share text tends to glue onto the URL.
+    return match.group(0).rstrip(".,;:!)]}>")
+
+
 def _host_of(url: str) -> str:
     parsed = urlparse(url.strip())
     host = (parsed.hostname or "").lower()
@@ -59,7 +78,7 @@ def _host_of(url: str) -> str:
 
 
 def resolve(url: str) -> dict:
-    url = (url or "").strip()
+    url = extract_url_from_text(url)
     if not url:
         raise UnsupportedURLError("URL 为空")
 
@@ -78,6 +97,10 @@ def resolve(url: str) -> dict:
         # on cloud server IPs. Fall back to yt-dlp only if the API fails.
         try:
             return bilibili.extract(url)
+        except bilibili.BiliUserError as exc:
+            # A user-input problem (e.g. ?p=N out of range) — yt-dlp would fail
+            # the same way with a worse message, so surface ours directly.
+            raise UnsupportedURLError(str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             log.warning("native bilibili extractor failed, falling back to yt-dlp: %s", exc)
             return ytdlp.extract(url)
