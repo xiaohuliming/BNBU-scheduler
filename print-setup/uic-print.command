@@ -44,9 +44,16 @@ echo ""
 for OLD in "${PRINTER_NAME}" "UIC_图书馆打印" "UIC_Library_Print"; do
     if lpstat -p "${OLD}" >/dev/null 2>&1; then
         echo "检测到已存在的 ${OLD}, 先移除..."
+        # 顺手把队列里 stuck 的任务取消掉, 避免 CUPS 留状态导致下次不弹账号框
+        cancel -a "${OLD}" 2>/dev/null || true
         lpadmin -x "${OLD}" 2>/dev/null || true
     fi
 done
+
+# 清掉钥匙串里 172.16.244.66 的旧条目 (如果之前输错账号被记住了, 会让 macOS
+# 死活不再弹认证框). 没条目就静默, 有就清掉, 下次打印才会重新弹框.
+security delete-internet-password -s 172.16.244.66 >/dev/null 2>&1 || true
+security delete-internet-password -l 172.16.244.66 >/dev/null 2>&1 || true
 
 # 3. 添加打印机
 echo "[2/2] 正在添加打印机..."

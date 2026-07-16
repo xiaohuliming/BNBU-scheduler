@@ -796,6 +796,18 @@
 
             <div class="mt-6">
                 <div class="trouble-row">
+                    <div class="trouble-symptom">macOS 第一次打印账号填错了（比如忘改 Mac 用户名），现在死活不弹账号框，刷新按钮也按不出，删了重装也没用</div>
+                    <div class="text-black/75">
+                        CUPS 把"已尝试认证"的状态卡住了，普通的删除重装清不掉。按这个顺序救：<br>
+                        1. 终端跑 <code>cancel -a</code> 清掉所有 stuck 任务；<br>
+                        2. 打开<strong>钥匙串访问</strong>搜 <code>172.16.244.66</code>，删掉所有条目（或终端 <code>security delete-internet-password -s 172.16.244.66</code>）；<br>
+                        3. <code>lpadmin -x UICPrinter</code> 删队列；<br>
+                        4. 还不行就开<strong>核选项</strong>：系统设置 → 打印机与扫描仪 → 按住 Control 单击左侧列表 → 选"<strong>重置打印系统...</strong>"，所有打印机和队列一锅端清空；<br>
+                        5. 重新跑安装命令，这次账号框里<strong>记得改成学号</strong>（不是默认填的 Mac 用户名）。<br>
+                        新版脚本已经把第 1、2、3 步做成自动了，重跑安装即可。
+                    </div>
+                </div>
+                <div class="trouble-row">
                     <div class="trouble-symptom">macOS 提交打印后没弹账号框</div>
                     <div class="text-black/75">
                         新版脚本用 <code>negotiate</code> 认证，提交即弹（跟手动添加一样）。如果你装的是旧版脚本（任务静默失败、或停在"保留以进行认证"不弹框），<strong>重新跑一遍命令行 / 脚本</strong>即可。手动补：<code>lpadmin -p UICPrinter -o auth-info-required=negotiate</code>。任务停在"保留以进行认证"时也可以直接点任务右边圆圈刷新按钮触发账号框。记得把"名称"从 Mac 用户名改成学号。
