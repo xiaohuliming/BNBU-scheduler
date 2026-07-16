@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="4005452560-313664+12027406">
+<html lang="en" data-compiled-sum="1309425899-313881+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=4005452560-313664+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1309425899-313881+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=4005452560-313664+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1309425899-313881+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -660,9 +660,9 @@
             };
 
             return (
-                <div className={`transition-all duration-500 ${hasActiveSearch ? 'space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
-                    <div className={`bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full scale-110'}`}>
-                        <h2 className="text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
+                <div className={`transition-all duration-500 ${hasActiveSearch ? 'space-y-6 md:space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
+                    <div className={`bg-white border-4 border-black p-4 md:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full md:scale-110'}`}>
+                        <h2 className="text-2xl md:text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
                             FIND YOUR <span className="text-[#ec4899]">TARGET</span>
                         </h2>
                         <div className="mb-4 flex gap-2">
@@ -672,9 +672,9 @@
                                     placeholder="搜索 Code / 课程名 / 老师 / 教室 ..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-gray-100 border-2 border-black p-4 pl-14 font-bold text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
+                                    className="w-full bg-gray-100 border-2 border-black p-3 pl-11 md:p-4 md:pl-14 font-bold text-base md:text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
                                 />
-                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
+                                <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
                             </div>
                             <div className="relative shrink-0" ref={scopeRef}>
                                 <button
@@ -710,35 +710,35 @@
                                 )}
                             </div>
                         </div>
-                        <div className="flex overflow-x-auto pb-1 -mx-1 px-1 md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold md:overflow-visible">
-                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold">
+                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Offering Unit</option>
                                 {uniqueOptions.units.map(u => <option key={u} value={u}>{u}</option>)}
                              </select>
-                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Programme</option>
                                 {uniqueOptions.programmes.map(p => <option key={p} value={p}>{p}</option>)}
                              </select>
-                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Type</option>
                                 {uniqueOptions.types.map(t => <option key={t} value={t}>{t}</option>)}
                              </select>
-                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Day</option>
                                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <option key={d} value={d}>{d}</option>)}
                              </select>
-                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Hours</option>
                                 {uniqueOptions.hours.map(h => <option key={h} value={h}>{h}</option>)}
                              </select>
-                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="shrink-0 md:shrink border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                 <option value="">Session</option>
                                 {uniqueOptions.sessions.map(s => <option key={s} value={s}>{s}</option>)}
                              </select>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold">
                              <select value={progFilter} onChange={e => { setProgFilter(e.target.value); setProgRole(''); }}
-                                className={`border-2 border-black p-2 focus:outline-none max-w-[16rem] ${progFilter ? 'bg-[#d6ff62]' : 'bg-white focus:bg-[#d6ff62]'}`}>
+                                className={`w-full md:w-auto border-2 border-black p-2 focus:outline-none md:max-w-[16rem] ${progFilter ? 'bg-[#d6ff62]' : 'bg-white focus:bg-[#d6ff62]'}`}>
                                 <option value="">培养方案（全部专业）</option>
                                 {Object.keys(progGrouped).map(fac => (
                                     <optgroup key={fac} label={FACULTY_LABEL[fac] || fac}>
@@ -992,7 +992,7 @@
             return (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4">
                     <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
-                    <div className="relative bg-[#f4efe6] w-full max-w-5xl max-h-[94vh] flex flex-col border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="relative bg-[#f4efe6] w-full max-w-5xl max-h-[94vh] flex flex-col border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
                         {/* Header */}
                         <div className="bg-black text-white p-4 md:p-5 shrink-0">
                             <div className="flex justify-between items-start gap-3">
@@ -1007,7 +1007,7 @@
                                             ? <span className="bg-[#d6ff62] text-black px-2 py-0.5 font-bold text-xs">本学期开设</span>
                                             : <span className="bg-white/10 text-white/70 px-2 py-0.5 font-bold text-xs border border-white/30">本学期未开设</span>)}
                                     </div>
-                                    <h2 className="text-xl md:text-2xl font-black leading-tight truncate">{data ? data.title : '加载中…'}</h2>
+                                    <h2 className="text-lg md:text-2xl font-black leading-tight line-clamp-2 md:line-clamp-none">{data ? data.title : '加载中…'}</h2>
                                     {e && e.tagline && <p className="text-[#d6ff62] font-bold mt-1 text-sm md:text-base">{e.tagline}</p>}
                                 </div>
                                 <button onClick={onClose} className="shrink-0 bg-white text-black p-1.5 hover:bg-red-400 transition-colors border-2 border-white"><X className="w-5 h-5" /></button>
@@ -1253,13 +1253,13 @@
                                     <button
                                         onClick={() => onRemoveCourse && onRemoveCourse(data.code)}
                                         title="已在选课购物车，点击移除"
-                                        className="bg-[#d6ff62] text-black font-black py-2.5 px-5 border-2 border-black active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                        className="w-full md:w-auto bg-[#d6ff62] text-black font-black py-2.5 px-5 border-2 border-black active:translate-y-0.5 transition-colors flex items-center justify-center md:justify-start gap-2">
                                         <Check className="w-5 h-5" /> 已在购物车 · 点击移除
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => onAddCourse && onAddCourse({ code: data.code, name: data.title }, '')}
-                                        className="bg-black text-white font-black py-2.5 px-5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center gap-2">
+                                        className="w-full md:w-auto bg-black text-white font-black py-2.5 px-5 border-2 border-black hover:bg-[#ec4899] active:translate-y-0.5 transition-colors flex items-center justify-center md:justify-start gap-2">
                                         <ShoppingCart className="w-5 h-5" /> 加入选课购物车
                                     </button>
                                 )}
