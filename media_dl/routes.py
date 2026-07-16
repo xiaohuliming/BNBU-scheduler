@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import sqlite3
+import subprocess
+import tempfile
 import time
 from urllib.parse import quote, urlparse
 
@@ -168,6 +171,10 @@ def resolve():
 
     elapsed = int((time.monotonic() - started) * 1000)
     result["elapsed_ms"] = elapsed
+    # Tell the UI whether the server can mux DASH split streams (画面+音频) into
+    # one file — only true when ffmpeg is installed; otherwise it shows the
+    # manual merge hint instead.
+    result["can_merge"] = bool(_ffmpeg_path())
     log_event(
         visitor_id=_visitor_id(), user_id=_user_id(),
         action="resolve",
@@ -481,6 +488,206 @@ def proxy():
             raise  # abort the socket so the browser marks the download failed
         finally:
             _close(cur)
+
+    return Response(stream_with_context(generate()), status=200, headers=forwarded)
+
+
+_ffmpeg_cached: str | None = None
+
+
+def _ffmpeg_path() -> str:
+    """Path to ffmpeg, or '' if not installed. Cached (install state is fixed
+    for the process lifetime)."""
+    global _ffmpeg_cached
+    if _ffmpeg_cached is None:
+        _ffmpeg_cached = shutil.which("ffmpeg") or ""
+    return _ffmpeg_cached
+
+
+_MERGE_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+)
+_MERGE_READ = 256 * 1024
+_MERGE_IO_TIMEOUT_US = 20 * 1_000_000       # ffmpeg -rw_timeout: abort a read stalled >20s
+
+
+@media_dl_bp.get("/merge")
+def merge():
+    """Remux a separate video + audio stream into one MP4 via `ffmpeg -c copy`.
+
+    For Bilibili/YouTube high-quality DASH, the video and audio come as two
+    files; this streams a single muxed MP4 back so the user gets one playable
+    file with sound. `-c copy` means no re-encode (cheap CPU), and
+    `frag_keyframe+empty_moov` makes the output streamable without seeking.
+    Both source hosts must pass the same allowlist as /proxy.
+    """
+    video = request.args.get("v", "").strip()
+    audio = request.args.get("a", "").strip()
+    referer = request.args.get("r", "").strip() or None
+    filename = request.args.get("name", "").strip() or "merged.mp4"
+
+    # Strip CR/LF: referer is injected into ffmpeg's `-headers` value, where a
+    # newline would let a crafted `r` param append extra outbound HTTP headers.
+    if referer:
+        referer = re.sub(r"[\r\n]+", "", referer)
+
+    if not video or not audio:
+        return jsonify({"error": "缺少 v 或 a 参数"}), 400
+    for u in (video, audio):
+        if not u.startswith(("http://", "https://")):
+            return jsonify({"error": "仅允许 http/https 链接"}), 400
+        if not _host_allowed(u):
+            return jsonify({"error": "目标域名不在允许列表中"}), 403
+
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg:
+        return jsonify({
+            "error": "服务器未安装 ffmpeg，无法在线合并。请分别下载画面与音频后在本地合并。"
+        }), 501
+
+    hdr = f"Referer: {referer}\r\n" if referer else ""
+
+    def _input_args(url: str) -> list[str]:
+        args = ["-user_agent", _MERGE_UA]
+        if hdr:
+            args += ["-headers", hdr]
+        # -rw_timeout (microseconds) aborts ffmpeg if a network read stalls, so a
+        # black-holed CDN connection can't hang the streaming read indefinitely
+        # (and leak the thread + process). Reconnect covers transient drops.
+        args += ["-rw_timeout", str(_MERGE_IO_TIMEOUT_US),
+                 "-reconnect", "1", "-reconnect_streamed", "1",
+                 "-reconnect_delay_max", "5", "-i", url]
+        return args
+
+    cmd = [
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin",
+        *_input_args(video),
+        *_input_args(audio),
+        "-map", "0:v:0", "-map", "1:a:0", "-c", "copy",
+        "-movflags", "frag_keyframe+empty_moov", "-f", "mp4", "pipe:1",
+    ]
+
+    # Route ffmpeg's own fetches through MAXCOURSE_PROXY for foreign CDNs; make
+    # sure a domestic (bilibili) merge is NOT dragged through a global proxy.
+    env = dict(os.environ)
+    proxies = _outbound_proxies_for(video)
+    if proxies:
+        env["http_proxy"] = env["https_proxy"] = proxies["https"]
+    else:
+        for k in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
+            env.pop(k, None)
+
+    target_host = host_of(video)
+    target_platform = platform_of_host(target_host)
+    started = time.monotonic()
+    visitor = _visitor_id()
+    user = _user_id()
+
+    def _log(success: bool, sent: int, error: str | None) -> None:
+        log_event(
+            visitor_id=visitor, user_id=user,
+            action="merge", platform=target_platform, host=target_host,
+            success=success, bytes_count=sent,
+            elapsed_ms=int((time.monotonic() - started) * 1000), error=error,
+        )
+
+    # stderr goes to a temp file, NOT a PIPE: ffmpeg can emit many error-level
+    # lines during a glitchy remux, and an unread PIPE would fill its OS buffer
+    # and deadlock ffmpeg (it blocks writing stderr → stops writing stdout → our
+    # read blocks forever). A file never blocks the writer; we read it on demand.
+    stderr_file = tempfile.TemporaryFile()
+
+    def _read_stderr(limit: int) -> str:
+        try:
+            stderr_file.seek(0)
+            return (stderr_file.read() or b"")[:limit].decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def _reap() -> None:
+        try:
+            proc.stdout.close()
+        except Exception:  # noqa: BLE001
+            pass
+        if proc.poll() is None:
+            proc.kill()
+        try:
+            proc.wait(timeout=5)      # reap the zombie
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            stderr_file.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_file, env=env)
+    except Exception as exc:  # noqa: BLE001
+        try:
+            stderr_file.close()
+        except Exception:  # noqa: BLE001
+            pass
+        _log(False, 0, f"spawn failed: {exc}")
+        return jsonify({"error": f"启动 ffmpeg 失败: {exc}"}), 500
+
+    # Prime the first chunk before committing to a 200: if ffmpeg can't fetch a
+    # stream or the map fails, surface a readable diagnosis instead of a 0-byte
+    # "mp4". `frag_keyframe+empty_moov` emits the header fragment promptly, so a
+    # healthy merge returns bytes within a second or two; a stalled fetch is
+    # bounded by -rw_timeout above, so this read can't block forever.
+    first = proc.stdout.read(_MERGE_READ)
+    if not first:
+        err = _read_stderr(800)
+        _reap()
+        _log(False, 0, f"ffmpeg produced no output: {err[:200]}")
+        body = (
+            "合并未能开始。\n\n"
+            f"画面: {video}\n音频: {audio}\n"
+            f"ffmpeg 错误: {err or '(无输出)'}\n\n"
+            "可能原因：签名 URL 已过期（回到工具页重新解析）/ 源站风控 / 需登录内容。\n"
+        ).encode("utf-8")
+        return Response(body, status=200, headers={
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": _content_disposition_header("merge_error.txt"),
+            "Cache-Control": "no-store",
+        })
+
+    forwarded = {
+        "Cache-Control": "no-store",
+        "Accept-Ranges": "none",
+        "Content-Type": "video/mp4",
+        "Content-Disposition": _content_disposition_header(filename),
+    }
+
+    def generate():
+        sent = len(first)
+        try:
+            yield first
+            while True:
+                chunk = proc.stdout.read(_MERGE_READ)
+                if not chunk:
+                    break
+                sent += len(chunk)
+                yield chunk
+            proc.wait(timeout=10)
+            if proc.returncode not in (0, None):
+                err = _read_stderr(300)
+                log.warning("[merge] ffmpeg exit %s after %s bytes: %s",
+                            proc.returncode, sent, err)
+                # Bytes already streamed; abort so the browser flags it failed.
+                _log(False, sent, f"ffmpeg exit {proc.returncode}: {err[:150]}")
+                raise RuntimeError(f"ffmpeg exit {proc.returncode}")
+            _log(True, sent, None)
+        except GeneratorExit:
+            _log(False, sent, "client disconnected")
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if not isinstance(exc, RuntimeError):
+                _log(False, sent, f"merge aborted: {exc}")
+            raise
+        finally:
+            _reap()
 
     return Response(stream_with_context(generate()), status=200, headers=forwarded)
 
