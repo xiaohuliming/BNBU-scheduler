@@ -723,8 +723,18 @@ def serialize_room_event(event):
     }
 
 
+# Memoized per DataFrame identity: df_cache is stable for the process
+# lifetime in production, so this is a build-once cache; keying on the df
+# object keeps it correct if the timetable is ever swapped (e.g. in tests).
+_classroom_index_cache = None  # (df, rooms, room_entries)
+
+
 def build_classroom_index():
+    global _classroom_index_cache
     df = get_df()
+    if _classroom_index_cache is not None and _classroom_index_cache[0] is df:
+        return _classroom_index_cache[1], _classroom_index_cache[2]
+
     room_index = {}
     room_entries = {}
 
@@ -762,6 +772,7 @@ def build_classroom_index():
         )
         if extract_building(key) not in EXCLUDED_FREE_CLASSROOM_BUILDINGS
     ]
+    _classroom_index_cache = (df, rooms, room_entries)
     return rooms, room_entries
 
 # --- Course catalog + AI enrichment (static JSON, regenerated per semester) ---
