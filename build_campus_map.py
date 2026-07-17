@@ -104,6 +104,8 @@ N = {
     'mr5': [750, 2200], 'mr6': [720, 2420], 'mr7': [760, 2680],
     'wj': [920, 2950], 'wj2': [1650, 2960],
     'w1': [1650, 2450],
+    # small paths confirmed by locals: east of Huitong Village + sports park
+    'w2': [1250, 1800], 'sp2': [2260, 1420], 'sp3': [2380, 1650],
     # sports park spur off 浸会大学路 + IAS ring
     'pk': [1250, 880], 'sp': [2080, 1010],
     'i1': [845, 600], 'i2': [1130, 770], 'i3': [1170, 1120], 'i4': [840, 1280],
@@ -135,6 +137,11 @@ E = [
     ['e2', 's7'], ['l2', 'br1'], ['br1', 'l5'], ['br1', 'l6'],
     # 明德路 west entrance (inside campus)
     ['w1', 'r1'], ['w1', 'wj2', 120], ['wj2', 's1', 120],
+    # small paths (confirmed to exist): east of the village + park -> dorms.
+    # 4th element tags them as 'path' so the route card can flag 小路段.
+    ['r2', 'w2', 820, 'path'], ['w2', 'w1', 340, 'path'],
+    ['sp', 'sp2', 600, 'path'], ['sp2', 'sp3'], ['nl4', 'sp2'],
+    ['sp3', 'r1', 210], ['sp3', 'd7', 200],
     # sports park spur + IAS ring (real meters; drawing is compressed here)
     ['sp', 'pk', 330], ['pk', 'r2', 370],
     ['i1', 'i2', 95], ['i2', 'i3', 95], ['i3', 'i4', 95], ['i4', 'i5', 95],
@@ -159,8 +166,8 @@ ENTR = {
     'T6': ['bd3'], 'T7': ['bd4'], 'T8': ['bd5'], 'T29': ['bd6', 'm1'],
     'LRC': ['l1', 'm5', 'ls'],
     'V15': ['nl2', 'vc1'], 'V16': ['ec1'], 'V17': ['nl3'], 'V18': ['vc1', 'bd3'],
-    'V19': ['nl4'], 'V20': ['bd4'], 'V21': ['nl4', 'd7'], 'V22': ['bd5'],
-    'V23': ['d7'], 'V24': ['r1'], 'V25': ['hx3', 'd7'], 'V26': ['hx3'],
+    'V19': ['nl4'], 'V20': ['bd4'], 'V21': ['sp3', 'nl4'], 'V22': ['bd5'],
+    'V23': ['sp3', 'd7'], 'V24': ['r1'], 'V25': ['hx3', 'd7'], 'V26': ['hx3'],
     'V27': ['hx2'], 'V28': ['s3'], 'V29': ['hx1'],
     'HALL': ['x1'], 'ADMIN': ['e2', 's7'], 'THEA': ['tn', 'l6'], 'GYM': ['s5', 'x1'],
     'CCC': ['br1', 'l5', 'l6'], 'ARTS': ['d1'], 'PARK': ['sp'], 'IAS': ['i3'],

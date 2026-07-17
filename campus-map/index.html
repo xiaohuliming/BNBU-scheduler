@@ -1016,11 +1016,13 @@
         // ------------------------------------------------------------------
         // routing: graph + dijkstra
         // ------------------------------------------------------------------
+        let pathTagged = null; // Set of "a|b" pairs tagged as small footpaths
         function buildAdjacency() {
             adjacency = {};
+            pathTagged = new Set();
             const nodes = DATA.nodes || {};
             for (const id of Object.keys(nodes)) adjacency[id] = [];
-            for (const [a, b, meters] of (DATA.edges || [])) {
+            for (const [a, b, meters, tag] of (DATA.edges || [])) {
                 if (!nodes[a] || !nodes[b]) continue;
                 // Weight in px. A hand-drawn map is not uniformly to scale
                 // (outlying zones are drawn compressed), so an edge may carry an
@@ -1032,6 +1034,10 @@
                 }
                 adjacency[a].push({ to: b, w });
                 adjacency[b].push({ to: a, w });
+                if (tag === 'path') {
+                    pathTagged.add(a + '|' + b);
+                    pathTagged.add(b + '|' + a);
+                }
             }
         }
         // Entrance nodes for a building: explicit b.nodes, else nearest graph node.
@@ -1096,7 +1102,7 @@
             }
             const A = byId[startId], B = byId[endId];
             const hasGraph = DATA.nodes && Object.keys(DATA.nodes).length > 0 && (DATA.edges || []).length > 0;
-            let points = null, totalPx = null, approximate = false;
+            let points = null, totalPx = null, approximate = false, usesSmallPath = false;
             if (hasGraph) {
                 const src = entranceNodes(A).map((n) => ({
                     node: n, extra: Math.hypot(DATA.nodes[n][0] - A.x, DATA.nodes[n][1] - A.y),
@@ -1108,6 +1114,8 @@
                 if (r) {
                     points = [[A.x, A.y], ...r.nodePath.map((n) => DATA.nodes[n]), [B.x, B.y]];
                     totalPx = r.totalPx;
+                    usesSmallPath = r.nodePath.some((n, i) =>
+                        i > 0 && pathTagged.has(r.nodePath[i - 1] + '|' + n));
                 }
             }
             if (!points) {
@@ -1140,6 +1148,12 @@
                 }
             } else {
                 resEl.append(approximate ? '已按直线示意（路径数据整理中）' : '路线已在图上高亮');
+            }
+            if (usesSmallPath) {
+                const note = document.createElement('span');
+                note.className = 'note';
+                note.textContent = '包含小路段，夜间或雨天可改走大路';
+                resEl.appendChild(note);
             }
             // hand the same start/end to Amap / Baidu for turn-by-turn walking
             const llA = buildingLatLng(A), llB = buildingLatLng(B);
