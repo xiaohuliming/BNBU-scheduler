@@ -45,7 +45,9 @@ Consumed by `campus-map/index.html` (no build step). `.md` files are blocked by
   // Optional 3rd element = explicit real-world meters, needed where the
   // hand-drawn map is not to scale (IAS / sports-park zone is drawn ~2.5x
   // compressed vs the core campus, so px distances there lie).
-  "edges": [ ["n1", "n2"], ["n2", "n9", 600] ]
+  // Optional 4th element 'path' tags a small footpath — routes crossing one
+  // show a 包含小路段 note in the result card.
+  "edges": [ ["n1", "n2"], ["n2", "n9", 600], ["n9", "n7", 340, "path"] ]
 }
 ```
 

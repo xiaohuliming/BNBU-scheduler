@@ -75,15 +75,18 @@ class AppTestCase(unittest.TestCase):
         building_ids = [b['id'] for b in (data.get('buildings') or [])]
         self.assertEqual(len(building_ids), len(set(building_ids)), 'duplicate building ids')
         for edge in (data.get('edges') or []):
-            # [a, b] or [a, b, meters] (real-world override for zones the
-            # hand-drawn map does not draw to scale)
-            self.assertIn(len(edge), (2, 3), f'malformed edge {edge}')
+            # [a, b], [a, b, meters], or [a, b, meters, 'path'] (meters is a
+            # real-world override for zones the hand-drawn map does not draw
+            # to scale; the 'path' tag marks small footpaths for the route UI)
+            self.assertIn(len(edge), (2, 3, 4), f'malformed edge {edge}')
             a, b = edge[0], edge[1]
             self.assertIn(a, node_ids)
             self.assertIn(b, node_ids)
-            if len(edge) == 3:
+            if len(edge) >= 3:
                 self.assertIsInstance(edge[2], (int, float))
                 self.assertGreater(edge[2], 0)
+            if len(edge) == 4:
+                self.assertEqual(edge[3], 'path')
         for bld in (data.get('buildings') or []):
             for node_id in (bld.get('nodes') or []):
                 self.assertIn(node_id, node_ids,
