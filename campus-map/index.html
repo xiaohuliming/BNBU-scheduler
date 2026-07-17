@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>校园手绘地图 · MAXCOURSE</title>
+    <link rel="icon" href="/favicon.png" />
+    <!-- 本地字体，替代大陆不可达的 fonts.googleapis.com（复用主站 vendor） -->
+    <link href="/vendor/fonts.css" rel="stylesheet" />
+    <style>
+        :root {
+            --ink: #101820;
+            --paper: #f4efe6;
+            --accent: #ff7a1f;
+            --lime: #d6ff62;
+            --green: #10b981;
+            --card-border: rgba(16, 24, 32, 0.12);
+            --hard-shadow: 3px 3px 0px rgba(16, 24, 32, 1);
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Space Grotesk", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior: none;
+        }
+        .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+        /* ---------- stage / world ---------- */
+        #stage {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            touch-action: none;
+            background:
+                radial-gradient(rgba(16,24,32,0.055) 1px, transparent 1px) 0 0 / 22px 22px,
+                var(--paper);
+            cursor: grab;
+        }
+        #stage.dragging { cursor: grabbing; }
+        #world {
+            position: absolute;
+            top: 0; left: 0;
+            transform-origin: 0 0;
+            --inv: 1; /* 1/scale, keeps markers & route width constant on screen */
+        }
+        #map-img {
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
+        #route-layer {
+            position: absolute;
+            top: 0; left: 0;
+            overflow: visible;
+            pointer-events: none;
+        }
+        #route-layer .route-casing {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: calc(13px * var(--inv));
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+        }
+        #route-layer .route-line {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: calc(7px * var(--inv));
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: calc(16px * var(--inv)) calc(12px * var(--inv));
+            animation: route-flow 1.2s linear infinite;
+        }
+        @keyframes route-flow {
+            to { stroke-dashoffset: calc(-28px * var(--inv)); }
+        }
+        #route-layer .route-end {
+            stroke: #fff;
+            stroke-width: calc(3px * var(--inv));
+        }
+
+        /* ---------- markers ---------- */
+        .marker {
+            position: absolute;
+            transform: translate(-50%, -50%) scale(var(--inv));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            user-select: none;
+            z-index: 2;
+        }
+        .marker .dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 2.5px solid #fff;
+            box-shadow: 0 1px 4px rgba(16,24,32,0.45);
+        }
+        .marker .lbl {
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.1;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid var(--card-border);
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(16,24,32,0.18);
+            display: none; /* map has printed labels; show ours on zoom/selection */
+        }
+        #world.show-labels .marker .lbl,
+        .marker.selected .lbl,
+        .marker.pin-start .lbl,
+        .marker.pin-end .lbl { display: block; }
+        .marker.selected .dot { outline: 3px solid var(--lime); }
+        .marker.selected .lbl { background: var(--ink); color: #fff; }
+        .marker.pin-start .dot { background: var(--green) !important; }
+        .marker.pin-end .dot { background: var(--accent) !important; }
+        .marker.pin-start .lbl::before { content: "起 · "; color: var(--green); }
+        .marker.pin-end .lbl::before { content: "终 · "; color: var(--accent); }
+
+        #user-dot {
+            position: absolute;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: #2563eb;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.25);
+            transform: translate(-50%, -50%) scale(var(--inv));
+            z-index: 3;
+            animation: user-pulse 2s ease-out infinite;
+        }
+        @keyframes user-pulse {
+            0%   { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35); }
+            70%  { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
+            100% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
+        }
+
+        /* ---------- floating UI ---------- */
+        .panel {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            box-shadow: 0 14px 36px rgba(16,24,32,0.12);
+        }
+        .topbar {
+            position: absolute;
+            top: calc(12px + env(safe-area-inset-top));
+            left: 12px;
+            right: 12px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .topbar > * { pointer-events: auto; }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+        }
+        .brand a {
+            color: rgba(16,24,32,0.55);
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .brand a:hover { color: var(--ink); }
+        .brand .sep { color: rgba(16,24,32,0.25); }
+        .brand .name { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+
+        .searchbox {
+            position: absolute;
+            top: calc(64px + env(safe-area-inset-top));
+            left: 12px;
+            width: min(340px, calc(100vw - 24px));
+            z-index: 21;
+        }
+        .searchbox .row { display: flex; align-items: center; padding: 4px 6px 4px 14px; }
+        .searchbox input {
+            flex: 1;
+            border: 0;
+            outline: none;
+            background: transparent;
+            font: inherit;
+            font-size: 14px;
+            padding: 9px 0;
+            color: var(--ink);
+        }
+        .searchbox input::placeholder { color: rgba(16,24,32,0.35); }
+        .searchbox .clear-btn {
+            border: 0;
+            background: transparent;
+            font-size: 15px;
+            color: rgba(16,24,32,0.4);
+            cursor: pointer;
+            padding: 6px 8px;
+            display: none;
+        }
+        .search-results {
+            margin-top: 6px;
+            max-height: 46vh;
+            overflow: auto;
+            display: none;
+        }
+        .search-results button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: 0;
+            background: transparent;
+            padding: 10px 14px;
+            font: inherit;
+            font-size: 14px;
+            text-align: left;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(16,24,32,0.06);
+        }
+        .search-results button:last-child { border-bottom: 0; }
+        .search-results button:hover { background: rgba(214,255,98,0.35); }
+        .search-results .cat-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+        .search-results .sub { margin-left: auto; font-size: 11px; color: rgba(16,24,32,0.4); }
+        .search-results .empty { padding: 12px 14px; font-size: 13px; color: rgba(16,24,32,0.45); }
+
+        /* ---------- bottom stack: building card + route planner ---------- */
+        .bottom-stack {
+            position: absolute;
+            left: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            width: min(340px, calc(100vw - 24px));
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 20;
+        }
+        .bcard { padding: 14px 16px; display: none; }
+        .bcard .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .bcard h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+        .bcard .badge {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            border-radius: 999px;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .bcard .close-x {
+            border: 0; background: transparent; cursor: pointer;
+            font-size: 16px; color: rgba(16,24,32,0.4); padding: 2px 4px;
+        }
+        .bcard .desc { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: rgba(16,24,32,0.6); }
+        .bcard .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .btn {
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 8px 14px;
+            cursor: pointer;
+            border: 1.5px solid var(--ink);
+            background: #fff;
+            color: var(--ink);
+            box-shadow: var(--hard-shadow);
+            transition: transform 0.08s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+        .btn.primary { background: var(--ink); color: #fff; }
+        .btn.lime { background: var(--lime); }
+        .btn[disabled] { opacity: 0.4; pointer-events: none; }
+
+        .route-card { padding: 12px 14px; }
+        .route-card .title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(16,24,32,0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .route-card .title button {
+            border: 0; background: transparent; cursor: pointer;
+            font: inherit; font-size: 11px; color: rgba(16,24,32,0.45);
+        }
+        .route-card .title button:hover { color: var(--ink); }
+        .route-rows { display: flex; gap: 8px; margin-top: 8px; align-items: stretch; }
+        .route-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .route-field {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1.5px solid rgba(16,24,32,0.15);
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            background: #fff;
+            width: 100%;
+            font-family: inherit;
+            text-align: left;
+            overflow: hidden;
+        }
+        .route-field .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .route-field.armed { border-color: var(--ink); background: rgba(214,255,98,0.3); }
+        .route-field .k { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+        .route-field .k.s { background: var(--green); }
+        .route-field .k.e { background: var(--accent); }
+        .route-field .placeholder { color: rgba(16,24,32,0.35); }
+        .swap-btn {
+            align-self: center;
+            border: 1.5px solid rgba(16,24,32,0.2);
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            padding: 6px 8px;
+            font-size: 13px;
+            line-height: 1;
+        }
+        .swap-btn:hover { border-color: var(--ink); }
+        .route-result {
+            display: none;
+            margin-top: 10px;
+            padding: 9px 12px;
+            border-radius: 12px;
+            background: var(--ink);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .route-result .note { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.65); }
+        .route-result .ext {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .route-result .ext a {
+            flex: none;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ink);
+            background: #fff;
+            border-radius: 999px;
+            padding: 4px 10px;
+            text-decoration: none;
+        }
+        .route-result .ext a:hover { background: var(--lime); }
+
+        /* ---------- zoom / locate controls ---------- */
+        .ctrls {
+            position: absolute;
+            right: 12px;
+            bottom: calc(34px + env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 20;
+        }
+        .ctrls button {
+            width: 42px; height: 42px;
+            border-radius: 14px;
+            border: 1.5px solid var(--ink);
+            background: rgba(255,255,255,0.92);
+            box-shadow: var(--hard-shadow);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--ink);
+            display: grid;
+            place-items: center;
+        }
+        .ctrls button:active { transform: translate(2px,2px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+
+        .credit {
+            position: absolute;
+            right: 12px;
+            bottom: calc(8px + env(safe-area-inset-bottom));
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            color: rgba(16,24,32,0.38);
+            z-index: 19;
+            text-align: right;
+            pointer-events: none;
+        }
+
+        /* ---------- placeholder / toast ---------- */
+        #placeholder {
+            position: absolute;
+            inset: 0;
+            display: none;
+            place-items: center;
+            z-index: 30;
+            padding: 20px;
+        }
+        #placeholder .inner {
+            max-width: 400px;
+            text-align: center;
+            padding: 34px 30px;
+        }
+        #placeholder .art { font-size: 44px; }
+        #placeholder h1 { margin: 12px 0 0; font-size: 24px; letter-spacing: -0.03em; }
+        #placeholder p { margin: 10px 0 0; font-size: 13px; line-height: 1.7; color: rgba(16,24,32,0.55); }
+
+        #toast {
+            position: absolute;
+            left: 50%;
+            top: calc(70px + env(safe-area-inset-top));
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 16px;
+            border-radius: 999px;
+            box-shadow: 0 10px 26px rgba(16,24,32,0.3);
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            max-width: calc(100vw - 40px);
+            text-align: center;
+        }
+        #toast.show { opacity: 1; }
+
+        @media (max-width: 640px) {
+            .searchbox { width: calc(100vw - 24px); top: calc(58px + env(safe-area-inset-top)); }
+            .bottom-stack { width: calc(100vw - 84px); }
+            .brand .name { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="stage">
+        <div id="world">
+            <img id="map-img" alt="校园手绘地图" draggable="false" />
+            <svg id="route-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div id="markers"></div>
+            <div id="user-dot" hidden></div>
+        </div>
+
+        <header class="topbar">
+            <div class="panel brand">
+                <a href="/">← MAXCOURSE</a>
+                <span class="sep">/</span>
+                <span class="name">校园手绘地图</span>
+            </div>
+        </header>
+
+        <div class="searchbox">
+            <div class="panel row-wrap">
+                <div class="row">
+                    <input id="search-input" type="text" placeholder="搜索建筑，如 T29 / 图书馆 / 食堂" autocomplete="off" />
+                    <button id="search-clear" class="clear-btn" aria-label="清空">✕</button>
+                </div>
+            </div>
+            <div id="search-results" class="panel search-results"></div>
+        </div>
+
+        <div class="bottom-stack">
+            <div id="building-card" class="panel bcard">
+                <div class="head">
+                    <div>
+                        <h2 id="bc-name"></h2>
+                    </div>
+                    <span id="bc-badge" class="badge"></span>
+                    <button id="bc-close" class="close-x" aria-label="关闭">✕</button>
+                </div>
+                <p id="bc-desc" class="desc"></p>
+                <div class="btns">
+                    <button id="bc-start" class="btn lime">设为起点</button>
+                    <button id="bc-end" class="btn primary">设为终点</button>
+                    <a id="bc-amap" class="btn" target="_blank" rel="noopener noreferrer">高德</a>
+                    <a id="bc-baidu" class="btn" target="_blank" rel="noopener noreferrer">百度</a>
+                </div>
+            </div>
+
+            <div class="panel route-card">
+                <div class="title">
+                    <span>校内步行导航</span>
+                    <button id="route-clear" type="button">清除</button>
+                </div>
+                <div class="route-rows">
+                    <div class="route-fields">
+                        <button id="field-start" class="route-field" type="button">
+                            <span class="k s"></span>
+                            <span class="txt placeholder">选择起点…</span>
+                        </button>
+                        <button id="field-end" class="route-field" type="button">
+                            <span class="k e"></span>
+                            <span class="txt placeholder">选择终点…</span>
+                        </button>
+                    </div>
+                    <button id="route-swap" class="swap-btn" type="button" aria-label="交换起终点">⇅</button>
+                </div>
+                <div id="route-result" class="route-result"></div>
+            </div>
+        </div>
+
+        <div class="ctrls">
+            <button id="zoom-in" aria-label="放大">＋</button>
+            <button id="zoom-out" aria-label="缩小">－</button>
+            <button id="zoom-fit" aria-label="复位" style="font-size:14px">⤢</button>
+            <button id="locate" aria-label="定位我" style="font-size:15px" hidden>◎</button>
+        </div>
+
+        <div class="credit mono" id="credit">手绘地图 © BNBU/UIC · 路径为人工标注，仅供参考</div>
+
+        <div id="placeholder">
+            <div class="panel inner">
+                <div class="art">🗺️</div>
+                <h1>地图筹备中</h1>
+                <p>校园手绘地图素材正在整理上传，很快就能在这里缩放浏览校园、搜索建筑，并查询楼与楼之间的步行路线。敬请期待！</p>
+                <p><a href="/" style="color:var(--ink);font-weight:700">← 返回 MAXCOURSE 主页</a></p>
+            </div>
+        </div>
+
+        <div id="toast" role="status"></div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // Mirror the page-view tracking the main React app does, so this tool
+        // shows up in /api/analytics/summary alongside the other views.
+        if (window.location.protocol !== 'file:') {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    view: 'campus-map',
+                    path: window.location.pathname + window.location.hash,
+                    referrer: document.referrer,
+                }),
+            }).catch(() => {});
+        }
+
+        // ------------------------------------------------------------------
+        // constants / DOM
+        // ------------------------------------------------------------------
+        const CATEGORIES = {
+            teaching:  { label: '教学',   color: '#3b82f6' },
+            admin:     { label: '行政',   color: '#6366f1' },
+            dorm:      { label: '宿舍',   color: '#10b981' },
+            dining:    { label: '餐饮',   color: '#ff7a1f' },
+            sports:    { label: '运动',   color: '#ef4444' },
+            library:   { label: '图书馆', color: '#8b5cf6' },
+            gate:      { label: '校门',   color: '#101820' },
+            service:   { label: '服务',   color: '#0ea5e9' },
+            landmark:  { label: '地标',   color: '#d97706' },
+        };
+        const WALK_M_PER_MIN = 72; // ~4.3 km/h campus walking pace
+
+        const stage = document.getElementById('stage');
+        const world = document.getElementById('world');
+        const mapImg = document.getElementById('map-img');
+        const routeLayer = document.getElementById('route-layer');
+        const markersEl = document.getElementById('markers');
+        const userDot = document.getElementById('user-dot');
+        const toastEl = document.getElementById('toast');
+
+        // ------------------------------------------------------------------
+        // state
+        // ------------------------------------------------------------------
+        let DATA = null;          // map_data.json content
+        let W = 0, H = 0;         // map image natural size (world coordinates)
+        let scale = 1, tx = 0, ty = 0, minScale = 0.05, maxScale = 8;
+        let metersPerPixel = null;
+        let affine = null;        // {la, lb, lc, na, nb, nc}: x,y -> lat / lng
+        let selectedId = null;
+        let startId = null, endId = null;
+        let pickMode = null;      // 'start' | 'end' | null
+        let adjacency = null;     // node id -> [{to, w}]
+
+        const $ = (id) => document.getElementById(id);
+        const byId = {};          // building id -> building
+        const markerById = {};    // building id -> marker element
+
+        let toastTimer = null;
+        function toast(msg, ms = 2200) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+        }
+
+        // ------------------------------------------------------------------
+        // geo helpers: WGS-84 -> GCJ-02, haversine, affine calibration
+        // ------------------------------------------------------------------
+        function outOfChina(lat, lng) {
+            return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
+        }
+        function _tLat(x, y) {
+            let r = -100 + 2*x + 3*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+            r += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2/3;
+            r += (20*Math.sin(y*Math.PI) + 40*Math.sin(y/3*Math.PI)) * 2/3;
+            r += (160*Math.sin(y/12*Math.PI) + 320*Math.sin(y*Math.PI/30)) * 2/3;
+            return r;
+        }
+        function _tLng(x, y) {
+            let r = 300 + x + 2*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+            r += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2/3;
+            r += (20*Math.sin(x*Math.PI) + 40*Math.sin(x/3*Math.PI)) * 2/3;
+            r += (150*Math.sin(x/12*Math.PI) + 300*Math.sin(x/30*Math.PI)) * 2/3;
+            return r;
+        }
+        function wgs84ToGcj02(lat, lng) {
+            if (outOfChina(lat, lng)) return [lat, lng];
+            const a = 6378245.0, ee = 0.00669342162296594323;
+            let dLat = _tLat(lng - 105.0, lat - 35.0);
+            let dLng = _tLng(lng - 105.0, lat - 35.0);
+            const radLat = lat / 180.0 * Math.PI;
+            let magic = Math.sin(radLat);
+            magic = 1 - ee * magic * magic;
+            const sqrtMagic = Math.sqrt(magic);
+            dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+            dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+            return [lat + dLat, lng + dLng];
+        }
+        function haversineMeters(lat1, lng1, lat2, lng2) {
+            const R = 6371000, rad = Math.PI / 180;
+            const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+            const s = Math.sin(dLat/2)**2 +
+                Math.cos(lat1*rad) * Math.cos(lat2*rad) * Math.sin(dLng/2)**2;
+            return 2 * R * Math.asin(Math.sqrt(s));
+        }
+        // Least-squares affine fit from >=3 calibration points {x, y, lat, lng}.
+        function fitAffine(points) {
+            if (!points || points.length < 3) return null;
+            // Normal equations for [a,b,c] with basis [x, y, 1]
+            let sxx=0, sxy=0, sx=0, syy=0, sy=0, n=points.length;
+            let rl=[0,0,0], rn=[0,0,0];
+            for (const p of points) {
+                sxx += p.x*p.x; sxy += p.x*p.y; sx += p.x; syy += p.y*p.y; sy += p.y;
+                rl[0] += p.x*p.lat; rl[1] += p.y*p.lat; rl[2] += p.lat;
+                rn[0] += p.x*p.lng; rn[1] += p.y*p.lng; rn[2] += p.lng;
+            }
+            const M = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]];
+            const solve = (rhs) => {
+                // 3x3 Gaussian elimination with partial pivoting
+                const A = M.map((row, i) => [...row, rhs[i]]);
+                for (let c = 0; c < 3; c++) {
+                    let piv = c;
+                    for (let r = c + 1; r < 3; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+                    if (Math.abs(A[piv][c]) < 1e-12) return null;
+                    [A[c], A[piv]] = [A[piv], A[c]];
+                    for (let r = 0; r < 3; r++) {
+                        if (r === c) continue;
+                        const f = A[r][c] / A[c][c];
+                        for (let k = c; k < 4; k++) A[r][k] -= f * A[c][k];
+                    }
+                }
+                return [A[0][3]/A[0][0], A[1][3]/A[1][1], A[2][3]/A[2][2]];
+            };
+            const L = solve(rl), N = solve(rn);
+            if (!L || !N) return null;
+            return { la: L[0], lb: L[1], lc: L[2], na: N[0], nb: N[1], nc: N[2] };
+        }
+        function xyToLatLng(x, y) {
+            if (!affine) return null;
+            return [affine.la*x + affine.lb*y + affine.lc, affine.na*x + affine.nb*y + affine.nc];
+        }
+        function latLngToXy(lat, lng) {
+            if (!affine) return null;
+            const det = affine.la * affine.nb - affine.lb * affine.na;
+            if (Math.abs(det) < 1e-18) return null;
+            const u = lat - affine.lc, v = lng - affine.nc;
+            return [(u*affine.nb - affine.lb*v) / det, (affine.la*v - u*affine.na) / det];
+        }
+        function buildingLatLng(b) {
+            if (typeof b.lat === 'number' && typeof b.lng === 'number') return [b.lat, b.lng];
+            return xyToLatLng(b.x, b.y);
+        }
+
+        // ------------------------------------------------------------------
+        // viewport transform
+        // ------------------------------------------------------------------
+        function applyTransform() {
+            world.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+            world.style.setProperty('--inv', String(1 / scale));
+            // The hand-drawn map has its own printed labels; ours only add value
+            // once zoomed in (or when a marker is selected / used as an endpoint).
+            world.classList.toggle('show-labels', scale > minScale * 1.55);
+        }
+        function clampView() {
+            const sw = stage.clientWidth, sh = stage.clientHeight;
+            const w = W * scale, h = H * scale;
+            if (w <= sw) tx = (sw - w) / 2;
+            else tx = Math.min(0, Math.max(sw - w, tx));
+            if (h <= sh) ty = (sh - h) / 2;
+            else ty = Math.min(0, Math.max(sh - h, ty));
+        }
+        function setScaleAt(newScale, px, py) {
+            newScale = Math.min(maxScale, Math.max(minScale, newScale));
+            const wx = (px - tx) / scale, wy = (py - ty) / scale;
+            scale = newScale;
+            tx = px - wx * scale;
+            ty = py - wy * scale;
+            clampView();
+            applyTransform();
+        }
+        function fitView() {
+            const sw = stage.clientWidth, sh = stage.clientHeight;
+            // A hidden/zero-sized pane (background tab at load) yields 0 here,
+            // which would bake scale(0) in forever — report failure instead.
+            if (!W || !H || !sw || !sh) return false;
+            const fit = Math.min(sw / W, sh / H);
+            minScale = fit;
+            maxScale = Math.max(2.5, Math.min(8, fit * 14));
+            scale = fit;
+            tx = (sw - W * fit) / 2;
+            ty = (sh - H * fit) / 2;
+            applyTransform();
+            return true;
+        }
+        function fitWhenVisible() {
+            // rAF does not fire while the tab is hidden, so this retries
+            // exactly once per frame once the page becomes visible.
+            return new Promise((resolve) => {
+                const attempt = () => { if (fitView()) resolve(); else requestAnimationFrame(attempt); };
+                attempt();
+            });
+        }
+        let flyRaf = null;
+        function flyTo(wx, wy, targetScale) {
+            const sw = stage.clientWidth, sh = stage.clientHeight;
+            const s1 = Math.min(maxScale, Math.max(minScale, targetScale));
+            const tx1raw = sw / 2 - wx * s1, ty1raw = sh / 2 - wy * s1;
+            const s0 = scale, tx0 = tx, ty0 = ty;
+            // pre-clamp the destination so the animation doesn't end with a snap
+            const savedS = scale, savedTx = tx, savedTy = ty;
+            scale = s1; tx = tx1raw; ty = ty1raw; clampView();
+            const s1c = scale, tx1 = tx, ty1 = ty;
+            scale = savedS; tx = savedTx; ty = savedTy;
+            const t0 = performance.now(), dur = 380;
+            cancelAnimationFrame(flyRaf);
+            const step = (now) => {
+                const t = Math.min(1, (now - t0) / dur);
+                const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                scale = s0 + (s1c - s0) * e;
+                tx = tx0 + (tx1 - tx0) * e;
+                ty = ty0 + (ty1 - ty0) * e;
+                applyTransform();
+                if (t < 1) flyRaf = requestAnimationFrame(step);
+            };
+            flyRaf = requestAnimationFrame(step);
+        }
+
+        // ------------------------------------------------------------------
+        // pointer interactions: drag / pinch / wheel / tap
+        // ------------------------------------------------------------------
+        const pointers = new Map(); // pointerId -> {x, y}
+        let gesture = null;         // {mode:'drag'|'pinch', ...}
+        let tapCandidate = null;    // {x, y, t, id}
+        let lastTap = null;         // {x, y, t} for double-tap zoom
+
+        stage.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.panel, .ctrls, .topbar, .searchbox, .bottom-stack')) return;
+            stage.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            cancelAnimationFrame(flyRaf);
+            if (pointers.size === 1) {
+                gesture = { mode: 'drag', x0: e.clientX, y0: e.clientY, tx0: tx, ty0: ty, moved: 0 };
+                tapCandidate = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+                stage.classList.add('dragging');
+            } else if (pointers.size === 2) {
+                const [p1, p2] = [...pointers.values()];
+                const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+                gesture = {
+                    mode: 'pinch',
+                    d0: Math.hypot(p1.x - p2.x, p1.y - p2.y),
+                    s0: scale,
+                    wx: (midX - tx) / scale,
+                    wy: (midY - ty) / scale,
+                };
+                tapCandidate = null;
+            }
+        });
+        stage.addEventListener('pointermove', (e) => {
+            if (!pointers.has(e.pointerId)) return;
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (!gesture) return;
+            if (gesture.mode === 'drag' && pointers.size === 1) {
+                const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+                gesture.moved = Math.max(gesture.moved, Math.hypot(dx, dy));
+                if (gesture.moved > 6) tapCandidate = null;
+                tx = gesture.tx0 + dx;
+                ty = gesture.ty0 + dy;
+                clampView();
+                applyTransform();
+            } else if (gesture.mode === 'pinch' && pointers.size >= 2) {
+                const [p1, p2] = [...pointers.values()];
+                const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+                const ns = Math.min(maxScale, Math.max(minScale, gesture.s0 * (d / Math.max(1, gesture.d0))));
+                scale = ns;
+                tx = midX - gesture.wx * ns;
+                ty = midY - gesture.wy * ns;
+                clampView();
+                applyTransform();
+            }
+        });
+        function endPointer(e) {
+            if (!pointers.has(e.pointerId)) return;
+            pointers.delete(e.pointerId);
+            if (pointers.size === 0) {
+                stage.classList.remove('dragging');
+                // tap?
+                if (tapCandidate && tapCandidate.id === e.pointerId &&
+                    performance.now() - tapCandidate.t < 500) {
+                    handleTap(e.clientX, e.clientY, e.pointerType);
+                }
+                tapCandidate = null;
+                gesture = null;
+            } else if (pointers.size === 1) {
+                // pinch -> drag with remaining finger
+                const [p] = [...pointers.values()];
+                gesture = { mode: 'drag', x0: p.x, y0: p.y, tx0: tx, ty0: ty, moved: 99 };
+            }
+        }
+        stage.addEventListener('pointerup', endPointer);
+        stage.addEventListener('pointercancel', endPointer);
+
+        function handleTap(x, y, pointerType) {
+            // double-tap zoom (touch)
+            if (pointerType === 'touch' && lastTap &&
+                performance.now() - lastTap.t < 320 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40) {
+                lastTap = null;
+                setScaleAt(scale * 1.9, x, y);
+                return;
+            }
+            lastTap = { x, y, t: performance.now() };
+            const el = document.elementFromPoint(x, y);
+            const marker = el && el.closest('.marker');
+            if (marker) {
+                selectBuilding(marker.dataset.id, { fly: false });
+            } else {
+                // tap on empty map: close building card
+                setSelected(null);
+            }
+        }
+        stage.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.panel, .ctrls, .topbar, .searchbox, .bottom-stack')) return;
+            setScaleAt(scale * 1.9, e.clientX, e.clientY);
+        });
+        stage.addEventListener('wheel', (e) => {
+            if (e.target.closest('.search-results, .bcard')) return;
+            e.preventDefault();
+            const k = e.deltaMode === 1 ? 0.045 : 0.0016;
+            setScaleAt(scale * Math.exp(-e.deltaY * k), e.clientX, e.clientY);
+        }, { passive: false });
+        window.addEventListener('resize', () => {
+            const fitBefore = minScale;
+            const sw = stage.clientWidth, sh = stage.clientHeight;
+            minScale = Math.min(sw / W, sh / H) || minScale;
+            if (scale < minScale || Math.abs(scale - fitBefore) < 1e-9) scale = minScale;
+            clampView();
+            applyTransform();
+        });
+
+        // ------------------------------------------------------------------
+        // markers / selection
+        // ------------------------------------------------------------------
+        function renderMarkers() {
+            markersEl.innerHTML = '';
+            for (const b of DATA.buildings) {
+                const cat = CATEGORIES[b.category] || { label: '地点', color: '#64748b' };
+                const el = document.createElement('div');
+                el.className = 'marker';
+                el.dataset.id = b.id;
+                el.style.left = b.x + 'px';
+                el.style.top = b.y + 'px';
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                dot.style.background = cat.color;
+                const lbl = document.createElement('span');
+                lbl.className = 'lbl';
+                lbl.textContent = b.name;
+                el.appendChild(dot);
+                el.appendChild(lbl);
+                markersEl.appendChild(el);
+                markerById[b.id] = el;
+            }
+        }
+        function refreshMarkerFlags() {
+            for (const [id, el] of Object.entries(markerById)) {
+                el.classList.toggle('selected', id === selectedId);
+                el.classList.toggle('pin-start', id === startId);
+                el.classList.toggle('pin-end', id === endId);
+            }
+        }
+        function setSelected(id) {
+            selectedId = id;
+            refreshMarkerFlags();
+            const card = $('building-card');
+            if (!id) { card.style.display = 'none'; return; }
+            const b = byId[id];
+            const cat = CATEGORIES[b.category] || { label: '地点', color: '#64748b' };
+            $('bc-name').textContent = b.name;
+            const badge = $('bc-badge');
+            badge.textContent = cat.label;
+            badge.style.background = cat.color;
+            $('bc-desc').textContent = b.desc || (b.aliases && b.aliases.length ? '别名：' + b.aliases.join(' / ') : '');
+            const ll = buildingLatLng(b);
+            const amap = $('bc-amap'), baidu = $('bc-baidu');
+            if (ll) {
+                const [glat, glng] = wgs84ToGcj02(ll[0], ll[1]);
+                amap.href = 'https://uri.amap.com/navigation?to=' +
+                    glng.toFixed(6) + ',' + glat.toFixed(6) + ',' + encodeURIComponent(b.name) +
+                    '&mode=walk&src=maxcourse&coordinate=gaode&callnative=1';
+                baidu.href = 'https://api.map.baidu.com/direction?destination=latlng:' +
+                    ll[0].toFixed(6) + ',' + ll[1].toFixed(6) + '|name:' + encodeURIComponent(b.name) +
+                    '&mode=walking&region=' + encodeURIComponent('珠海') +
+                    '&coord_type=wgs84&output=html&src=webapp.maxcourse';
+                amap.removeAttribute('disabled'); baidu.removeAttribute('disabled');
+                amap.style.display = ''; baidu.style.display = '';
+            } else {
+                amap.style.display = 'none'; baidu.style.display = 'none';
+            }
+            card.style.display = 'block';
+        }
+        function selectBuilding(id, { fly = true } = {}) {
+            const b = byId[id];
+            if (!b) return;
+            if (pickMode) {
+                assignRouteEndpoint(pickMode, id);
+                pickMode = null;
+                refreshPickUi();
+                // with both endpoints set, computeRoute() already framed the
+                // whole route — don't zoom back onto the single building
+                if (startId && endId) return;
+            } else {
+                setSelected(id);
+            }
+            if (fly) flyTo(b.x, b.y, Math.max(scale, Math.min(maxScale, minScale * 4)));
+        }
+
+        // ------------------------------------------------------------------
+        // search
+        // ------------------------------------------------------------------
+        const searchInput = $('search-input');
+        const searchResults = $('search-results');
+        const searchClear = $('search-clear');
+        function norm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ''); }
+        function doSearch(q) {
+            q = norm(q);
+            searchResults.innerHTML = '';
+            if (!q) { searchResults.style.display = 'none'; return; }
+            const hits = DATA.buildings.filter((b) => {
+                if (norm(b.id).includes(q) || norm(b.name).includes(q)) return true;
+                return (b.aliases || []).some((a) => norm(a).includes(q));
+            }).slice(0, 8);
+            if (!hits.length) {
+                const d = document.createElement('div');
+                d.className = 'empty';
+                d.textContent = DATA.buildings.length ? '没有匹配的建筑' : '暂无建筑数据';
+                searchResults.appendChild(d);
+            }
+            for (const b of hits) {
+                const cat = CATEGORIES[b.category] || { label: '地点', color: '#64748b' };
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const dot = document.createElement('span');
+                dot.className = 'cat-dot';
+                dot.style.background = cat.color;
+                const name = document.createElement('span');
+                name.textContent = b.name;
+                const sub = document.createElement('span');
+                sub.className = 'sub';
+                sub.textContent = cat.label;
+                btn.append(dot, name, sub);
+                btn.addEventListener('click', () => {
+                    searchResults.style.display = 'none';
+                    searchInput.value = '';
+                    searchClear.style.display = 'none';
+                    selectBuilding(b.id);
+                });
+                searchResults.appendChild(btn);
+            }
+            searchResults.style.display = 'block';
+        }
+        searchInput.addEventListener('input', () => {
+            searchClear.style.display = searchInput.value ? 'block' : 'none';
+            doSearch(searchInput.value);
+        });
+        searchInput.addEventListener('focus', () => doSearch(searchInput.value));
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            searchClear.style.display = 'none';
+            searchResults.style.display = 'none';
+            searchInput.focus();
+        });
+        document.addEventListener('pointerdown', (e) => {
+            if (!e.target.closest('.searchbox')) searchResults.style.display = 'none';
+        }, true);
+
+        // ------------------------------------------------------------------
+        // routing: graph + dijkstra
+        // ------------------------------------------------------------------
+        function buildAdjacency() {
+            adjacency = {};
+            const nodes = DATA.nodes || {};
+            for (const id of Object.keys(nodes)) adjacency[id] = [];
+            for (const [a, b, meters] of (DATA.edges || [])) {
+                if (!nodes[a] || !nodes[b]) continue;
+                // Weight in px. A hand-drawn map is not uniformly to scale
+                // (outlying zones are drawn compressed), so an edge may carry an
+                // explicit real-world length in meters; convert it back to
+                // "calibrated px" so all weights stay comparable.
+                let w = Math.hypot(nodes[a][0] - nodes[b][0], nodes[a][1] - nodes[b][1]);
+                if (typeof meters === 'number' && meters > 0 && metersPerPixel) {
+                    w = meters / metersPerPixel;
+                }
+                adjacency[a].push({ to: b, w });
+                adjacency[b].push({ to: a, w });
+            }
+        }
+        // Entrance nodes for a building: explicit b.nodes, else nearest graph node.
+        function entranceNodes(b) {
+            if (b.nodes && b.nodes.length) return b.nodes.filter((n) => DATA.nodes[n]);
+            let best = null, bestD = Infinity;
+            for (const [id, [x, y]] of Object.entries(DATA.nodes || {})) {
+                const d = Math.hypot(x - b.x, y - b.y);
+                if (d < bestD) { bestD = d; best = id; }
+            }
+            return best ? [best] : [];
+        }
+        function dijkstra(sources, targets) {
+            // sources/targets: [{node, extra}] where extra = px cost from building to entrance
+            const dist = {}, prev = {};
+            const targetSet = new Map(targets.map((t) => [t.node, t.extra]));
+            const pq = []; // simple array-based PQ, graphs here are tiny (<1k nodes)
+            for (const s of sources) {
+                if (dist[s.node] === undefined || s.extra < dist[s.node]) {
+                    dist[s.node] = s.extra;
+                    prev[s.node] = null;
+                    pq.push(s.node);
+                }
+            }
+            const done = new Set();
+            let bestTarget = null, bestTotal = Infinity;
+            while (pq.length) {
+                let bi = 0;
+                for (let i = 1; i < pq.length; i++) if (dist[pq[i]] < dist[pq[bi]]) bi = i;
+                const u = pq.splice(bi, 1)[0];
+                if (done.has(u)) continue;
+                done.add(u);
+                if (targetSet.has(u)) {
+                    const total = dist[u] + targetSet.get(u);
+                    if (total < bestTotal) { bestTotal = total; bestTarget = u; }
+                }
+                for (const { to, w } of (adjacency[u] || [])) {
+                    const nd = dist[u] + w;
+                    if (dist[to] === undefined || nd < dist[to]) {
+                        dist[to] = nd;
+                        prev[to] = u;
+                        pq.push(to);
+                    }
+                }
+            }
+            if (!bestTarget) return null;
+            const nodePath = [];
+            for (let u = bestTarget; u; u = prev[u]) {
+                nodePath.unshift(u);
+                if (prev[u] === null) break;
+            }
+            return { nodePath, totalPx: bestTotal };
+        }
+        function computeRoute() {
+            const resEl = $('route-result');
+            clearRouteLayer();
+            if (!startId || !endId) { resEl.style.display = 'none'; return; }
+            if (startId === endId) {
+                resEl.style.display = 'block';
+                resEl.textContent = '起点和终点相同';
+                return;
+            }
+            const A = byId[startId], B = byId[endId];
+            const hasGraph = DATA.nodes && Object.keys(DATA.nodes).length > 0 && (DATA.edges || []).length > 0;
+            let points = null, totalPx = null, approximate = false;
+            if (hasGraph) {
+                const src = entranceNodes(A).map((n) => ({
+                    node: n, extra: Math.hypot(DATA.nodes[n][0] - A.x, DATA.nodes[n][1] - A.y),
+                }));
+                const dst = entranceNodes(B).map((n) => ({
+                    node: n, extra: Math.hypot(DATA.nodes[n][0] - B.x, DATA.nodes[n][1] - B.y),
+                }));
+                const r = (src.length && dst.length) ? dijkstra(src, dst) : null;
+                if (r) {
+                    points = [[A.x, A.y], ...r.nodePath.map((n) => DATA.nodes[n]), [B.x, B.y]];
+                    totalPx = r.totalPx;
+                }
+            }
+            if (!points) {
+                // no graph or disconnected: straight dashed line as a hint
+                points = [[A.x, A.y], [B.x, B.y]];
+                totalPx = Math.hypot(A.x - B.x, A.y - B.y);
+                approximate = true;
+            }
+            drawRoute(points);
+            // fit route into view
+            const xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+            const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+            const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+            const spanX = Math.max(...xs) - Math.min(...xs) + 200;
+            const spanY = Math.max(...ys) - Math.min(...ys) + 200;
+            const fitS = Math.min(stage.clientWidth / spanX, stage.clientHeight / spanY);
+            flyTo(cx, cy, Math.min(fitS, maxScale));
+
+            resEl.style.display = 'block';
+            resEl.innerHTML = '';
+            if (metersPerPixel) {
+                const meters = Math.round(totalPx * metersPerPixel / 10) * 10;
+                const mins = Math.max(1, Math.round(meters / WALK_M_PER_MIN));
+                resEl.append(`约 ${meters} 米 · 步行 ${mins} 分钟`);
+                if (approximate) {
+                    const note = document.createElement('span');
+                    note.className = 'note';
+                    note.textContent = '未收录该区域步行路径，按直线估算';
+                    resEl.appendChild(note);
+                }
+            } else {
+                resEl.append(approximate ? '已按直线示意（路径数据整理中）' : '路线已在图上高亮');
+            }
+            // hand the same start/end to Amap / Baidu for turn-by-turn walking
+            const llA = buildingLatLng(A), llB = buildingLatLng(B);
+            if (llA && llB) {
+                const ext = document.createElement('div');
+                ext.className = 'ext';
+                const [gaLat, gaLng] = wgs84ToGcj02(llA[0], llA[1]);
+                const [gbLat, gbLng] = wgs84ToGcj02(llB[0], llB[1]);
+                const amap = document.createElement('a');
+                amap.href = 'https://uri.amap.com/navigation?from=' +
+                    gaLng.toFixed(6) + ',' + gaLat.toFixed(6) + ',' + encodeURIComponent(A.name) +
+                    '&to=' + gbLng.toFixed(6) + ',' + gbLat.toFixed(6) + ',' + encodeURIComponent(B.name) +
+                    '&mode=walk&src=maxcourse&coordinate=gaode&callnative=1';
+                amap.textContent = '高德接续导航';
+                const baidu = document.createElement('a');
+                baidu.href = 'https://api.map.baidu.com/direction?origin=latlng:' +
+                    llA[0].toFixed(6) + ',' + llA[1].toFixed(6) + '|name:' + encodeURIComponent(A.name) +
+                    '&destination=latlng:' + llB[0].toFixed(6) + ',' + llB[1].toFixed(6) + '|name:' + encodeURIComponent(B.name) +
+                    '&mode=walking&region=' + encodeURIComponent('珠海') +
+                    '&coord_type=wgs84&output=html&src=webapp.maxcourse';
+                baidu.textContent = '百度';
+                for (const a of [amap, baidu]) {
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    ext.appendChild(a);
+                }
+                resEl.appendChild(ext);
+            }
+        }
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        function clearRouteLayer() { routeLayer.innerHTML = ''; }
+        function drawRoute(points) {
+            clearRouteLayer();
+            const d = points.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+            const casing = document.createElementNS(SVG_NS, 'path');
+            casing.setAttribute('d', d);
+            casing.setAttribute('class', 'route-casing');
+            const line = document.createElementNS(SVG_NS, 'path');
+            line.setAttribute('d', d);
+            line.setAttribute('class', 'route-line');
+            routeLayer.append(casing, line);
+            const mkEnd = (p, color) => {
+                const c = document.createElementNS(SVG_NS, 'circle');
+                c.setAttribute('cx', p[0]);
+                c.setAttribute('cy', p[1]);
+                c.setAttribute('r', 8);
+                c.setAttribute('fill', color);
+                c.setAttribute('class', 'route-end');
+                c.style.r = 'calc(8px * var(--inv))';
+                routeLayer.appendChild(c);
+            };
+            mkEnd(points[0], 'var(--green)');
+            mkEnd(points[points.length - 1], 'var(--accent)');
+        }
+
+        // ------------------------------------------------------------------
+        // route planner UI
+        // ------------------------------------------------------------------
+        function fieldEl(kind) { return kind === 'start' ? $('field-start') : $('field-end'); }
+        function refreshRouteFields() {
+            for (const kind of ['start', 'end']) {
+                const id = kind === 'start' ? startId : endId;
+                const txt = fieldEl(kind).querySelector('.txt');
+                if (id) {
+                    txt.textContent = byId[id].name;
+                    txt.classList.remove('placeholder');
+                } else {
+                    txt.textContent = kind === 'start' ? '选择起点…' : '选择终点…';
+                    txt.classList.add('placeholder');
+                }
+            }
+            refreshMarkerFlags();
+        }
+        function refreshPickUi() {
+            $('field-start').classList.toggle('armed', pickMode === 'start');
+            $('field-end').classList.toggle('armed', pickMode === 'end');
+        }
+        function assignRouteEndpoint(kind, id) {
+            if (kind === 'start') startId = id; else endId = id;
+            refreshRouteFields();
+            computeRoute();
+        }
+        for (const kind of ['start', 'end']) {
+            fieldEl(kind).addEventListener('click', () => {
+                pickMode = pickMode === kind ? null : kind;
+                refreshPickUi();
+                if (pickMode) toast(kind === 'start' ? '点击地图上的建筑设为起点，或用搜索选择' : '点击地图上的建筑设为终点，或用搜索选择');
+            });
+        }
+        $('route-swap').addEventListener('click', () => {
+            [startId, endId] = [endId, startId];
+            refreshRouteFields();
+            computeRoute();
+        });
+        $('route-clear').addEventListener('click', () => {
+            startId = endId = null;
+            pickMode = null;
+            refreshPickUi();
+            refreshRouteFields();
+            clearRouteLayer();
+            $('route-result').style.display = 'none';
+        });
+        $('bc-start').addEventListener('click', () => { if (selectedId) assignRouteEndpoint('start', selectedId); });
+        $('bc-end').addEventListener('click', () => { if (selectedId) assignRouteEndpoint('end', selectedId); });
+        $('bc-close').addEventListener('click', () => setSelected(null));
+
+        // ------------------------------------------------------------------
+        // zoom controls / locate
+        // ------------------------------------------------------------------
+        $('zoom-in').addEventListener('click', () => setScaleAt(scale * 1.5, stage.clientWidth / 2, stage.clientHeight / 2));
+        $('zoom-out').addEventListener('click', () => setScaleAt(scale / 1.5, stage.clientWidth / 2, stage.clientHeight / 2));
+        $('zoom-fit').addEventListener('click', fitView);
+        $('locate').addEventListener('click', () => {
+            if (!navigator.geolocation) { toast('当前浏览器不支持定位'); return; }
+            toast('正在定位…');
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const xy = latLngToXy(pos.coords.latitude, pos.coords.longitude);
+                if (!xy) { toast('地图尚未标定坐标'); return; }
+                const [x, y] = xy;
+                if (x < -W * 0.1 || x > W * 1.1 || y < -H * 0.1 || y > H * 1.1) {
+                    userDot.hidden = true;
+                    toast('你似乎不在校园范围内');
+                    return;
+                }
+                userDot.style.left = x + 'px';
+                userDot.style.top = y + 'px';
+                userDot.hidden = false;
+                flyTo(x, y, Math.max(scale, minScale * 3));
+            }, () => toast('定位失败，请检查定位权限'), { enableHighAccuracy: true, timeout: 8000 });
+        });
+
+        // ------------------------------------------------------------------
+        // boot
+        // ------------------------------------------------------------------
+        function showPlaceholder() {
+            document.getElementById('placeholder').style.display = 'grid';
+            document.querySelector('.searchbox').style.display = 'none';
+            document.querySelector('.bottom-stack').style.display = 'none';
+            document.querySelector('.ctrls').style.display = 'none';
+        }
+        async function boot() {
+            let data;
+            try {
+                const r = await fetch('map_data.json', { cache: 'no-cache' });
+                if (!r.ok) throw new Error('http ' + r.status);
+                data = await r.json();
+            } catch (err) {
+                showPlaceholder();
+                return;
+            }
+            DATA = data;
+            DATA.buildings = DATA.buildings || [];
+            DATA.nodes = DATA.nodes || {};
+            DATA.edges = DATA.edges || [];
+            for (const b of DATA.buildings) byId[b.id] = b;
+
+            if (!data.image || !data.image.src) { showPlaceholder(); return; }
+            await new Promise((resolve) => {
+                mapImg.onload = resolve;
+                mapImg.onerror = () => { showPlaceholder(); };
+                mapImg.src = data.image.src;
+            });
+            W = mapImg.naturalWidth || data.image.width;
+            H = mapImg.naturalHeight || data.image.height;
+            if (!W || !H) { showPlaceholder(); return; }
+            routeLayer.setAttribute('width', W);
+            routeLayer.setAttribute('height', H);
+            routeLayer.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+            // calibration
+            const cal = data.calibration || {};
+            const gps = (cal.gps || []).filter((p) =>
+                typeof p.x === 'number' && typeof p.lat === 'number');
+            affine = fitAffine(gps);
+            if (typeof cal.metersPerPixel === 'number' && cal.metersPerPixel > 0) {
+                metersPerPixel = cal.metersPerPixel;
+            } else if (gps.length >= 2) {
+                // average ground-meters-per-image-pixel over all calibration pairs
+                let sum = 0, cnt = 0;
+                for (let i = 0; i < gps.length; i++) {
+                    for (let j = i + 1; j < gps.length; j++) {
+                        const px = Math.hypot(gps[i].x - gps[j].x, gps[i].y - gps[j].y);
+                        if (px < 10) continue;
+                        sum += haversineMeters(gps[i].lat, gps[i].lng, gps[j].lat, gps[j].lng) / px;
+                        cnt++;
+                    }
+                }
+                if (cnt) metersPerPixel = sum / cnt;
+            }
+            if (affine && window.isSecureContext) $('locate').hidden = false;
+            if (data.credit) $('credit').textContent = data.credit;
+
+            buildAdjacency();
+            renderMarkers();
+            await fitWhenVisible();
+
+            // deep link: #b=T29 selects a building (also on later hash changes)
+            const applyHash = () => {
+                const m = /[#&]b=([\w-]+)/.exec(location.hash || '');
+                if (m && byId[m[1]]) selectBuilding(m[1]);
+            };
+            window.addEventListener('hashchange', applyHash);
+            applyHash();
+        }
+        boot();
+    </script>
+</body>
+</html>

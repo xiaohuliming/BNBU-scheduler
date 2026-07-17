@@ -103,7 +103,8 @@ app.config.update(
 
 GZIP_MIN_BYTES = 1024
 GZIP_MIME_PREFIXES = ('text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml')
-LONG_CACHE_PREFIXES = ('/vendor/', '/app.compiled.js', '/tailwind.static.css')
+LONG_CACHE_PREFIXES = ('/vendor/', '/app.compiled.js', '/tailwind.static.css',
+                       '/campus-map/map.webp')  # cache-busted via ?v= in map_data.json
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
     '/tests', '/venv', '/.venv', '/logs',
@@ -3219,4 +3220,4 @@ def optimize():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', '5000')))

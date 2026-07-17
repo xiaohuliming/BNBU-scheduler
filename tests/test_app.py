@@ -62,6 +62,36 @@ class AppTestCase(unittest.TestCase):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 404)
 
+    def test_campus_map_page_and_data_are_served(self):
+        page = self.client.get('/campus-map/index.html')
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('校园手绘地图'.encode('utf-8'), page.data)
+
+        data_resp = self.client.get('/campus-map/map_data.json')
+        self.assertEqual(data_resp.status_code, 200)
+        data = data_resp.get_json()
+
+        node_ids = set((data.get('nodes') or {}).keys())
+        building_ids = [b['id'] for b in (data.get('buildings') or [])]
+        self.assertEqual(len(building_ids), len(set(building_ids)), 'duplicate building ids')
+        for edge in (data.get('edges') or []):
+            # [a, b] or [a, b, meters] (real-world override for zones the
+            # hand-drawn map does not draw to scale)
+            self.assertIn(len(edge), (2, 3), f'malformed edge {edge}')
+            a, b = edge[0], edge[1]
+            self.assertIn(a, node_ids)
+            self.assertIn(b, node_ids)
+            if len(edge) == 3:
+                self.assertIsInstance(edge[2], (int, float))
+                self.assertGreater(edge[2], 0)
+        for bld in (data.get('buildings') or []):
+            for node_id in (bld.get('nodes') or []):
+                self.assertIn(node_id, node_ids,
+                              f"building {bld['id']} references unknown node {node_id}")
+
+        # DATA_FORMAT.md is repo-only documentation, never public (.md is blocked)
+        self.assertEqual(self.client.get('/campus-map/DATA_FORMAT.md').status_code, 404)
+
     def test_media_proxy_content_disposition_is_ascii_safe_for_unicode_filename(self):
         import media_dl.routes as media_routes
 
