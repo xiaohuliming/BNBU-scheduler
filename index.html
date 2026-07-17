@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="354054107-314581+12027406">
+<html lang="en" data-compiled-sum="2953680058-314363+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=354054107-314581+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2953680058-314363+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=354054107-314581+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2953680058-314363+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -4115,7 +4115,7 @@
 
         // Shown once per NOTICE_VERSION on the user's first visit after an update;
         // bump the version string whenever a new announcement should appear.
-        const NOTICE_VERSION = '2026S1c';
+        const NOTICE_VERSION = '2026S1b';
         const UpdateNotice = () => {
             const [seen, setSeen] = useState(() => {
                 try { return localStorage.getItem('maxcourse_notice_seen') === NOTICE_VERSION; } catch (e) { return true; }
@@ -4132,13 +4132,12 @@
                         {/* 收起态一行:整体居中,别让内容全挤在左边显得不对称 */}
                         <div className="flex items-center justify-center gap-3">
                             <span className="bg-black text-[#d6ff62] text-[10px] font-black px-1.5 py-0.5 shrink-0 uppercase tracking-wider">Update</span>
-                            <p className="font-bold text-sm min-w-0 truncate">🗺️ 新工具：校园手绘地图 + 校内步行导航 · 🎁 OmniChat 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span></p>
+                            <p className="font-bold text-sm min-w-0 truncate">新学期已就绪：26-27 学年课表与课程数据全面更新 · 🎁 OmniChat 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span></p>
                             <button onClick={() => setOpen(v => !v)} className="shrink-0 text-xs font-black underline hover:text-blue-700">{open ? '收起' : '更新内容'}</button>
                             <button onClick={dismiss} className="shrink-0 hover:text-red-600" title="知道了，不再显示"><X className="w-4 h-4" /></button>
                         </div>
                         {open && (
                             <div className="max-w-4xl mx-auto pb-2.5 pt-1.5 text-sm font-bold space-y-1.5 border-t border-black/20 mt-2">
-                                <p>· 🗺️ 工具箱新增 <a href="/campus-map/index.html" className="underline hover:text-blue-700">校园手绘地图</a>：官方 2025 版手绘地图高清缩放浏览，搜索教学楼 / 宿舍 / 食堂，选起终点直接在图上规划步行路线（距离与时间基于真实坐标标定），也可一键跳高德 / 百度接续导航</p>
                                 <p>· 课表切换至 <span className="bg-black text-[#d6ff62] px-1">26-27 学年第一学期</span>：582 门课 / 2490 个班次，排课优化、空教室查询、老师目录均已按新课表计算</p>
                                 <p>· 课程数据全量更新：最新官方课程介绍（2026-07 版）、WPEC / 语言中心补充介绍、本学期教材清单、全部 1393 门课的 AI 介绍与就业升学分析</p>
                                 <p>· 上学期（25-26 第二学期）已归档，课程搜索的学期范围里可随时回看；专业地图与「按专业预选」已自动前滚到新学期</p>
