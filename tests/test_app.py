@@ -1,3 +1,4 @@
+import io
 import os
 import sqlite3
 import tempfile
@@ -49,6 +50,41 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json()['error'], 'Invalid credentials')
 
+    def test_registration_rejects_oversized_credentials(self):
+        response = self.client.post(
+            '/api/register',
+            json={'username': 'u' * 121, 'password': 'valid-password'},
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('too long', response.get_json()['error'].lower())
+
+    def test_login_rejects_oversized_credentials(self):
+        response = self.client.post(
+            '/api/login',
+            json={'username': 'u' * 121, 'password': 'guess'},
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('too long', response.get_json()['error'].lower())
+
+    def test_ispace_login_rejects_oversized_credentials_before_remote_auth(self):
+        with mock.patch.object(
+            app_module,
+            'fetch_timeline',
+            return_value={'error': 'remote auth should not run'},
+        ):
+            response = self.client.post(
+                '/api/login/ispace',
+                json={'username': '2' * 121, 'password': 'guess'},
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('too long', response.get_json()['error'].lower())
+
     def test_unknown_api_route_returns_json_error(self):
         response = self.client.get('/api/not-a-real-endpoint')
 
@@ -61,6 +97,27 @@ class AppTestCase(unittest.TestCase):
             with self.subTest(path=path):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 404)
+
+    def test_oversized_api_request_is_rejected_before_handler_work(self):
+        response = self.client.post(
+            '/api/parse-transcript',
+            data={'file': (io.BytesIO(b'x' * (17 * 1024 * 1024)), 'large.pdf')},
+            headers={'User-Agent': self.BROWSER_UA},
+            content_type='multipart/form-data',
+        )
+
+        self.assertEqual(response.status_code, 413)
+        self.assertTrue(response.is_json)
+
+    def test_optimize_rejects_unreasonable_course_count(self):
+        response = self.client.post(
+            '/api/optimize',
+            json={'codes': [f'ZZ{i:04d}' for i in range(101)]},
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('too many', response.get_json()['error'].lower())
 
     def test_campus_map_page_and_data_are_served(self):
         page = self.client.get('/campus-map/index.html')
@@ -1054,6 +1111,7 @@ class AppTestCase(unittest.TestCase):
             '/programme_requirements.json', '/skillpath_nodes.json',
             '/skillpath_graph.npz', '/CLAUDE.md', '/README.md',
             '/requirements.txt', '/precompile.js',
+            '/deploy/nginx/maxcourse-antibot-zones.conf',
             '/Course%20List%20and%20Timetable_Semester%201%20of%20AY2026-27_20260709.xlsx',
         ):
             with self.subTest(path=path):
@@ -1082,6 +1140,25 @@ class AppTestCase(unittest.TestCase):
         # Blocked campus_docs.json is still served through its API endpoint.
         r = self.client.get('/api/campus-docs', headers={'User-Agent': self.BROWSER_UA})
         self.assertEqual(r.status_code, 200)
+
+    def test_public_read_api_supports_private_browser_revalidation(self):
+        first = self.client.get(
+            '/api/semesters',
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+        etag = first.headers.get('ETag')
+
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(etag)
+        self.assertIn('private', first.headers.get('Cache-Control', ''))
+        self.assertIn('max-age=', first.headers.get('Cache-Control', ''))
+
+        second = self.client.get(
+            '/api/semesters',
+            headers={'User-Agent': self.BROWSER_UA, 'If-None-Match': etag},
+        )
+        self.assertEqual(second.status_code, 304)
+        self.assertEqual(second.data, b'')
 
     def test_scraper_user_agents_are_rejected_on_api_only(self):
         for ua in ('python-requests/2.31.0', 'Scrapy/2.11 (+https://scrapy.org)',
@@ -1115,6 +1192,53 @@ class AppTestCase(unittest.TestCase):
             limited = responses[4]
             self.assertTrue(limited.headers.get('Retry-After'))
             self.assertIn('error', limited.get_json())
+        finally:
+            app_module._rate_counters.clear()
+
+    def test_first_browser_api_request_is_covered_by_visitor_limit(self):
+        """A bot cannot skip /analytics/track to escape the visitor bucket."""
+        app_module._rate_counters.clear()
+        try:
+            now = 1_800_000_000.0
+            with mock.patch('time.time', return_value=now), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_IP_PER_MIN', 100), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_VISITOR_PER_MIN', 2):
+                client = app_module.app.test_client()
+                kwargs = {
+                    'headers': {'User-Agent': self.BROWSER_UA},
+                    'environ_overrides': {'REMOTE_ADDR': '203.0.113.56'},
+                }
+                responses = [
+                    client.get('/api/semesters', **kwargs)
+                    for _ in range(3)
+                ]
+
+            self.assertEqual([r.status_code for r in responses], [200, 200, 429])
+            self.assertIn('session=', responses[0].headers.get('Set-Cookie', ''))
+        finally:
+            app_module._rate_counters.clear()
+
+    def test_rate_limit_does_not_reset_at_minute_boundary(self):
+        """Crossing :00 must not grant a second full burst immediately."""
+        app_module._rate_counters.clear()
+        try:
+            now = 1_800_000_000.0
+            minute = int(now // 60) * 60
+            client = app_module.app.test_client()
+            kwargs = {
+                'headers': {'User-Agent': self.BROWSER_UA},
+                'environ_overrides': {'REMOTE_ADDR': '203.0.113.57'},
+            }
+            with mock.patch.object(app_module, 'RATE_LIMIT_IP_PER_MIN', 100), \
+                 mock.patch.object(app_module, 'RATE_LIMIT_VISITOR_PER_MIN', 2):
+                with mock.patch('time.time', return_value=minute + 59.9):
+                    first = client.get('/api/semesters', **kwargs)
+                    second = client.get('/api/semesters', **kwargs)
+                with mock.patch('time.time', return_value=minute + 60.1):
+                    third = client.get('/api/semesters', **kwargs)
+
+            self.assertEqual((first.status_code, second.status_code), (200, 200))
+            self.assertEqual(third.status_code, 429)
         finally:
             app_module._rate_counters.clear()
 

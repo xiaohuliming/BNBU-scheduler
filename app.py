@@ -3,6 +3,7 @@ import glob
 import gzip
 import io
 import json
+import math
 import posixpath
 import re
 import sqlite3
@@ -98,6 +99,9 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_REFRESH_EACH_REQUEST=True,
+    # The largest legitimate upload is a 12 MB transcript PDF. Reject larger
+    # bodies before Flask parses multipart data or expensive handlers run.
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,
 )
 
 
@@ -105,13 +109,27 @@ GZIP_MIN_BYTES = 1024
 GZIP_MIME_PREFIXES = ('text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml')
 LONG_CACHE_PREFIXES = ('/vendor/', '/app.compiled.js', '/tailwind.static.css',
                        '/campus-map/map.webp')  # cache-busted via ?v= in map_data.json
+API_BROWSER_CACHE_EXACT = {
+    '/api/courses': 300,
+    '/api/semesters': 3600,
+    '/api/careers': 3600,
+    '/api/programmes': 3600,
+    '/api/programme-courses': 3600,
+    '/api/campus-docs': 300,
+    '/api/teachers': 60,
+    '/api/free-classrooms': 30,
+}
+API_BROWSER_CACHE_PREFIXES = (
+    ('/api/course/', 300),
+    ('/api/classroom/', 300),
+)
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
-    '/tests', '/venv', '/.venv', '/logs',
+    '/tests', '/venv', '/.venv', '/logs', '/deploy',
 )
 SENSITIVE_STATIC_SUFFIXES = (
     '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
-    '.key', '.crt', '.log', '.bak', '.orig', '.swp',
+    '.key', '.crt', '.conf', '.service', '.sh', '.log', '.bak', '.orig', '.swp',
     # Data/build formats nothing in the frontend fetches directly (verified):
     # blocking them stops one-GET bulk exfiltration of the curated datasets.
     '.npz', '.jsonl', '.md', '.xlsx', '.xls',
@@ -176,7 +194,7 @@ RATE_LIMIT_EXEMPT_PATHS = ('/api/notifications/dispatch',)  # cron heartbeat
 _RATE_COUNTER_HARD_CAP = 20000  # fail open (stop tracking new keys) beyond this
 
 _rate_lock = threading.Lock()
-_rate_counters = {}  # bucket key -> [minute_window, request_count]
+_rate_counters = {}  # bucket key -> [remaining_tokens, last_refill_timestamp]
 antiscrape_stats = {"uaBlocked": 0, "rateLimited": 0}
 
 
@@ -211,6 +229,13 @@ def throttle_api_scrapers():
             antiscrape_stats['uaBlocked'] += 1
         return jsonify({"error": "Automated clients are not allowed on this API"}), 403
 
+    # Give every browser API client a signed, durable visitor identity on its
+    # first request. Previously only /api/analytics/track minted this value, so
+    # a scraper could skip that endpoint and receive the much looser IP-only
+    # allowance indefinitely.
+    if 'user_id' not in session and 'analytics_visitor_id' not in session:
+        get_analytics_visitor_id()
+
     # Always charge the IP bucket; add the per-visitor/user bucket when there is a
     # session. Reject if either is exceeded.
     buckets = [(f"ip:{_client_ip()}", RATE_LIMIT_IP_PER_MIN)]
@@ -220,32 +245,42 @@ def throttle_api_scrapers():
         buckets.append((f"v:{session['analytics_visitor_id']}", RATE_LIMIT_VISITOR_PER_MIN))
 
     now = time.time()
-    window = int(now // 60)
     over = False
+    retry_after = 1
     with _rate_lock:
-        # Prune stale (previous-window) entries; if still oversized (a rotating-key
-        # flood inside one window), fail open rather than grow the dict unbounded.
+        # Prune fully-refilled idle buckets. If a rotating-key flood still fills
+        # the table, fail open for new keys rather than grow memory without bound.
         if len(_rate_counters) > 10000:
-            for stale in [k for k, v in _rate_counters.items() if v[0] != window]:
+            for stale in [k for k, v in _rate_counters.items() if now - v[1] > 180]:
                 _rate_counters.pop(stale, None)
-        at_capacity = len(_rate_counters) > _RATE_COUNTER_HARD_CAP
+        at_capacity = len(_rate_counters) >= _RATE_COUNTER_HARD_CAP
         for key, limit in buckets:
             if limit <= 0:
                 continue
             entry = _rate_counters.get(key)
-            if entry is None or entry[0] != window:
+            if entry is None:
                 if not at_capacity:
-                    _rate_counters[key] = [window, 1]
+                    _rate_counters[key] = [max(0.0, float(limit) - 1.0), now]
+                continue
+
+            elapsed = max(0.0, now - entry[1])
+            refill_per_second = float(limit) / 60.0
+            tokens = min(float(limit), entry[0] + elapsed * refill_per_second)
+            if tokens >= 1.0:
+                tokens -= 1.0
             else:
-                entry[1] += 1
-                if entry[1] > limit:
-                    over = True
+                over = True
+                retry_after = max(
+                    retry_after,
+                    math.ceil((1.0 - tokens) / refill_per_second),
+                )
+            entry[0] = tokens
+            entry[1] = now
         if over:
             antiscrape_stats['rateLimited'] += 1
 
     if not over:
         return None
-    retry_after = max(1, 60 - int(now % 60))
     response = jsonify({"error": "Too many requests, please slow down",
                         "retry_after": retry_after})
     response.status_code = 429
@@ -256,11 +291,31 @@ def throttle_api_scrapers():
 @app.after_request
 def apply_response_optimizations(response):
     path = request.path or ''
+    api_cache_seconds = None
+    if request.method in ('GET', 'HEAD'):
+        api_cache_seconds = API_BROWSER_CACHE_EXACT.get(path)
+        if api_cache_seconds is None:
+            for prefix, seconds in API_BROWSER_CACHE_PREFIXES:
+                if path.startswith(prefix):
+                    api_cache_seconds = seconds
+                    break
 
     if path.startswith(LONG_CACHE_PREFIXES) and response.status_code == 200:
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     elif path == '/' or path.endswith('.html'):
         response.headers['Cache-Control'] = 'no-cache'
+    elif api_cache_seconds and response.status_code == 200:
+        # These endpoints are user-independent, but keep the response private
+        # because Flask may refresh a signed session cookie on the same response.
+        # ETag revalidation avoids repeatedly transferring the 1.2 MB course list.
+        response.headers['Cache-Control'] = (
+            f'private, max-age={api_cache_seconds}, '
+            f'stale-while-revalidate={max(300, api_cache_seconds)}'
+        )
+        if not response.direct_passthrough:
+            if 'ETag' not in response.headers:
+                response.add_etag()
+            response.make_conditional(request)
     elif path.startswith('/api/'):
         response.headers['Cache-Control'] = 'no-store'
 
@@ -1743,14 +1798,24 @@ def get_analytics_visitor_id():
 
 # --- Auth Endpoints ---
 
-@app.route('/api/register', methods=['POST'])
-def register():
-    data = request.json
+def _validated_credentials():
+    data = request.get_json(silent=True) or {}
     username = data.get('username')
     password = data.get('password')
-    
     if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+        return None, None, "Username and password required"
+    if not isinstance(username, str) or not isinstance(password, str):
+        return None, None, "Username and password must be strings"
+    if len(username) > 120 or len(password) > 512:
+        return None, None, "Username or password is too long"
+    return username, password, None
+
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    username, password, error = _validated_credentials()
+    if error:
+        return jsonify({"error": error}), 400
         
     conn = get_db()
     try:
@@ -1766,9 +1831,9 @@ def register():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    username, password, error = _validated_credentials()
+    if error:
+        return jsonify({"error": error}), 400
     
     conn = get_db()
     c = conn.cursor()
@@ -1789,9 +1854,9 @@ def login():
 
 @app.route('/api/login/ispace', methods=['POST'])
 def login_ispace():
-    data = request.json
-    username = data.get('username') # Student ID
-    password = data.get('password')
+    username, password, error = _validated_credentials()
+    if error:
+        return jsonify({"error": error}), 400
     
     # 1. Verify with iSpace
     result = fetch_timeline(username, password)
@@ -3120,8 +3185,12 @@ def get_courses():
 @app.route('/api/optimize', methods=['POST'])
 def optimize():
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         target_codes = data.get('codes', [])
+        if not isinstance(target_codes, list):
+            return jsonify({"error": "Course codes must be a list"}), 400
+        if len(target_codes) > 100:
+            return jsonify({"error": "Too many course codes (maximum 100)"}), 400
         start_time_str = data.get('startTime')
         end_time_str = data.get('endTime')
         
@@ -3220,4 +3289,9 @@ def optimize():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', '5000')))
+    # Nginx runs on the same host and proxies to loopback. Binding publicly
+    # would expose Werkzeug directly and bypass every edge/WAF rule.
+    app.run(
+        host=os.getenv('MAXCOURSE_BIND_HOST', '127.0.0.1'),
+        port=int(os.getenv('PORT', '5000')),
+    )
