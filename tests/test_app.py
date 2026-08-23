@@ -30,7 +30,7 @@ class AppTestCase(unittest.TestCase):
 
     def insert_user(self, username, password_hash=None, display_name=None, ispace_username=None):
         with sqlite3.connect(app_module.DB_PATH) as conn:
-            conn.execute(
+            cursor = conn.execute(
                 '''
                 INSERT INTO users (username, password_hash, display_name, ispace_username)
                 VALUES (?, ?, ?, ?)
@@ -38,6 +38,7 @@ class AppTestCase(unittest.TestCase):
                 (username, password_hash, display_name, ispace_username),
             )
             conn.commit()
+            return cursor.lastrowid
 
     def test_password_login_returns_401_for_ispace_only_account(self):
         self.insert_user('shadow-user', password_hash=None)
@@ -963,6 +964,221 @@ class AppTestCase(unittest.TestCase):
         self.assertNotIn('UC', [item['building'] for item in data['buildings']])
         self.assertNotIn('SP', [item['building'] for item in data['buildings']])
         self.assertNotIn('V22', [item['building'] for item in data['buildings']])
+
+    def test_classroom_intent_requires_login(self):
+        response = self.client.post(
+            '/api/classroom-intents',
+            json={
+                'room': 'T4-101',
+                'date': '2026-08-24',
+                'start': '10:00',
+                'end': '10:50',
+                'purpose': 'study',
+                'party_size': 1,
+            },
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_classroom_intent_ui_uses_concise_non_authoritative_copy(self):
+        source = self.client.get('/').get_data(as_text=True)
+
+        self.assertIn('const ClassroomIntentModal', source)
+        self.assertIn('仅作协调，不代表预约。', source)
+        self.assertIn("NOTICE_VERSION = '2026S1b'", source)
+        self.assertNotIn('预约成功', source)
+
+    def test_classroom_intent_is_aggregated_without_exposing_identity(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3001',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Mon 15:00-15:50',
+                'Classroom': 'T4-101',
+            },
+        ])
+        fixed_now = app_module.datetime(2026, 8, 24, 9, 0, tzinfo=app_module.BEIJING_TZ)
+        user_id = self.insert_user('intent-owner', display_name='Private Name')
+        second_user_id = self.insert_user('second-owner', display_name='Second Private Name')
+        with self.client.session_transaction() as login_session:
+            login_session['user_id'] = user_id
+        second_client = app_module.app.test_client()
+        with second_client.session_transaction() as login_session:
+            login_session['user_id'] = second_user_id
+
+        payload = {
+            'room': 'T4-101',
+            'date': '2026-08-24',
+            'start': '10:00',
+            'end': '11:50',
+            'purpose': 'discussion',
+            'party_size': 3,
+        }
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=fixed_now):
+            created = self.client.post(
+                '/api/classroom-intents',
+                json=payload,
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            second_created = second_client.post(
+                '/api/classroom-intents',
+                json={**payload, 'purpose': 'study', 'party_size': 2},
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            owner_view = self.client.get(
+                '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=11:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            public_view = app_module.app.test_client().get(
+                '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=11:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(second_created.status_code, 201)
+        created_intent = created.get_json()['intent']
+        self.assertEqual(created_intent['status'], 'planned')
+
+        owner_room = owner_view.get_json()['rooms'][0]
+        self.assertEqual(owner_room['intent']['records'], 2)
+        self.assertEqual(owner_room['intent']['planned_people'], 5)
+        self.assertEqual(owner_room['intent']['checked_in_people'], 0)
+        self.assertEqual(owner_room['intent']['my']['id'], created_intent['id'])
+        self.assertEqual(owner_view.headers.get('Cache-Control'), 'no-store')
+
+        public_intent = public_view.get_json()['rooms'][0]['intent']
+        self.assertEqual(public_intent['people'], 5)
+        self.assertIsNone(public_intent['my'])
+        self.assertNotIn('Private Name', public_view.get_data(as_text=True))
+        self.assertNotIn('intent-owner', public_view.get_data(as_text=True))
+        self.assertNotIn('Second Private Name', public_view.get_data(as_text=True))
+        self.assertNotIn('second-owner', public_view.get_data(as_text=True))
+
+    def test_classroom_intent_rejects_timetable_conflict(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3002',
+                'Course Title & Session': 'Scheduled Class (1001)',
+                'Teachers': 'Dr. Busy',
+                'Class Schedule': 'Mon 10:00-10:50',
+                'Classroom': 'T4-101',
+            },
+        ])
+        fixed_now = app_module.datetime(2026, 8, 24, 9, 0, tzinfo=app_module.BEIJING_TZ)
+        user_id = self.insert_user('conflict-user')
+        with self.client.session_transaction() as login_session:
+            login_session['user_id'] = user_id
+
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=fixed_now):
+            response = self.client.post(
+                '/api/classroom-intents',
+                json={
+                    'room': 'T4-101',
+                    'date': '2026-08-24',
+                    'start': '10:00',
+                    'end': '10:50',
+                    'purpose': 'study',
+                    'party_size': 1,
+                },
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('scheduled class', response.get_json()['error'].lower())
+
+    def test_classroom_intent_check_in_and_end_flow(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3003',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Mon 15:00-15:50',
+                'Classroom': 'T4-101',
+            },
+        ])
+        user_id = self.insert_user('check-in-user')
+        with self.client.session_transaction() as login_session:
+            login_session['user_id'] = user_id
+
+        create_now = app_module.datetime(2026, 8, 24, 9, 0, tzinfo=app_module.BEIJING_TZ)
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=create_now):
+            created = self.client.post(
+                '/api/classroom-intents',
+                json={
+                    'room': 'T4-101',
+                    'date': '2026-08-24',
+                    'start': '10:00',
+                    'end': '10:50',
+                    'purpose': 'practice',
+                    'party_size': 2,
+                },
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+        intent_id = created.get_json()['intent']['id']
+
+        arrival_now = app_module.datetime(2026, 8, 24, 9, 55, tzinfo=app_module.BEIJING_TZ)
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=arrival_now):
+            checked_in = self.client.post(
+                f'/api/classroom-intents/{intent_id}/check-in',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            occupied = self.client.get(
+                '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=10:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            ended = self.client.delete(
+                f'/api/classroom-intents/{intent_id}',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            cleared = self.client.get(
+                '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=10:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(checked_in.status_code, 200)
+        self.assertEqual(checked_in.get_json()['intent']['status'], 'checked_in')
+        self.assertEqual(occupied.get_json()['rooms'][0]['intent']['checked_in_people'], 2)
+        self.assertEqual(ended.status_code, 200)
+        self.assertEqual(ended.get_json()['status'], 'ended')
+        self.assertEqual(cleared.get_json()['rooms'][0]['intent']['people'], 0)
+
+    def test_unconfirmed_classroom_intent_expires_after_grace_period(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3004',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Mon 15:00-15:50',
+                'Classroom': 'T4-101',
+            },
+        ])
+        user_id = self.insert_user('no-show-user')
+        with sqlite3.connect(app_module.DB_PATH) as conn:
+            conn.execute(
+                '''
+                INSERT INTO classroom_intents
+                    (user_id, room, use_date, start_min, end_min, purpose, party_size)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (user_id, 'T4-101', '2026-08-24', 600, 650, 'study', 1),
+            )
+            conn.commit()
+
+        late_now = app_module.datetime(2026, 8, 24, 10, 16, tzinfo=app_module.BEIJING_TZ)
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=late_now):
+            response = self.client.get(
+                '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=10:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(response.get_json()['rooms'][0]['intent']['people'], 0)
 
     # ------------------------------------------------------------------
     # Analytics summary (/api/analytics/summary)
