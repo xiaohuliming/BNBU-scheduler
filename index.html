@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2953680058-314363+12027406">
+<html lang="en" data-compiled-sum="2268093349-330529+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2953680058-314363+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2268093349-330529+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2953680058-314363+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2268093349-330529+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -388,6 +388,12 @@
             { slot: 'P11', start: '19:00', end: '19:50' },
             { slot: 'P12', start: '20:00', end: '20:50' },
             { slot: 'P13', start: '21:00', end: '21:50' }
+        ];
+        const CLASSROOM_INTENT_PURPOSES = [
+            { value: 'study', label: '自习' },
+            { value: 'discussion', label: '讨论' },
+            { value: 'practice', label: '练习' },
+            { value: 'other', label: '其他' }
         ];
         const PRIORITY_BUILDINGS = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29'];
 
@@ -2288,7 +2294,188 @@
             );
         };
 
-        const FreeClassroomView = ({ onSelectRoom }) => {
+        const ClassroomIntentModal = ({ room, query, onClose, onChanged }) => {
+            const existing = room.intent?.my || null;
+            const [purpose, setPurpose] = useState('study');
+            const [partySize, setPartySize] = useState(1);
+            const [saving, setSaving] = useState(false);
+            const [error, setError] = useState('');
+
+            useEffect(() => {
+                const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+                window.addEventListener('keydown', onKey);
+                const previousOverflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+                return () => {
+                    window.removeEventListener('keydown', onKey);
+                    document.body.style.overflow = previousOverflow;
+                };
+            }, [onClose]);
+
+            const runAction = async (action) => {
+                setSaving(true);
+                setError('');
+                try {
+                    if (action === 'create') {
+                        await fetchJson('/api/classroom-intents', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                room: room.room,
+                                date: query.date,
+                                start: query.start,
+                                end: query.end,
+                                purpose,
+                                party_size: Number(partySize),
+                            }),
+                        });
+                    } else if (action === 'check-in') {
+                        await fetchJson(`/api/classroom-intents/${existing.id}/check-in`, {
+                            method: 'POST',
+                        });
+                    } else {
+                        await fetchJson(`/api/classroom-intents/${existing.id}`, {
+                            method: 'DELETE',
+                        });
+                    }
+                    onChanged();
+                    onClose();
+                } catch (err) {
+                    setError(err.message || '操作失败');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            const purposeLabel = existing
+                ? CLASSROOM_INTENT_PURPOSES.find(item => item.value === existing.purpose)?.label || '其他'
+                : null;
+
+            return (
+                <div className="fixed inset-0 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-6">
+                    <button
+                        type="button"
+                        className="absolute inset-0 bg-[#1a140d]/45 backdrop-blur-sm cursor-default"
+                        onClick={onClose}
+                        aria-label="关闭"
+                    />
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="classroom-intent-title"
+                        className="relative w-full sm:max-w-md max-h-[100dvh] overflow-y-auto bg-[#fbf7ef] border-t sm:border border-[#1a140d]/20 shadow-[0_24px_70px_rgba(26,20,13,0.28)] px-5 sm:px-7 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <div className="mono-ui text-[10px] uppercase tracking-[0.22em] text-[#8a7666]">
+                                    {existing ? 'My Intent' : 'Use Intent'}
+                                </div>
+                                <h2 id="classroom-intent-title" className="book-serif text-3xl text-[#1a140d] mt-1">
+                                    {existing ? '我的意向' : '使用意向'}
+                                </h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="w-11 h-11 flex items-center justify-center text-[#7a6a5d] hover:text-[#1a140d] focus:outline-none focus:ring-2 focus:ring-[#1a140d]"
+                                aria-label="关闭"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 border-y border-[#1a140d]/15 py-4">
+                            <div className="book-serif text-2xl text-[#1a140d]">{room.room}</div>
+                            <div className="mono-ui text-xs text-[#7a6a5d] mt-1 tabular-nums">
+                                {query.date} · {query.start}–{query.end}
+                            </div>
+                        </div>
+
+                        {existing ? (
+                            <div className="mt-6">
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className={`mono-ui text-xs uppercase tracking-[0.12em] px-2.5 py-1 border ${
+                                        existing.status === 'checked_in'
+                                            ? 'bg-[#1a140d] border-[#1a140d] text-white'
+                                            : 'border-[#a04a18] text-[#8a3d16]'
+                                    }`}>
+                                        {existing.status === 'checked_in' ? '已到场' : '已登记'}
+                                    </span>
+                                    <span className="book-serif text-sm text-[#7a6a5d]">
+                                        {purposeLabel} · {existing.party_size}人
+                                    </span>
+                                </div>
+
+                                <div className="mt-8 flex flex-col-reverse sm:flex-row gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={saving}
+                                        onClick={() => runAction('end')}
+                                        className="min-h-11 flex-1 border border-[#1a140d]/30 text-[#6f2f1c] book-serif text-base hover:border-[#6f2f1c] disabled:opacity-50 transition-colors"
+                                    >
+                                        {existing.status === 'checked_in' ? '结束使用' : '取消意向'}
+                                    </button>
+                                    {existing.can_check_in && (
+                                        <button
+                                            type="button"
+                                            disabled={saving}
+                                            onClick={() => runAction('check-in')}
+                                            className="min-h-11 flex-1 bg-[#1a140d] text-white book-serif text-base hover:bg-[#3d3025] disabled:opacity-50 transition-colors"
+                                        >
+                                            {saving ? '处理中…' : '确认到场'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mt-6">
+                                <div className="grid grid-cols-2 gap-5">
+                                    <label className="block">
+                                        <span className="book-serif text-sm text-[#7a6a5d]">用途</span>
+                                        <select
+                                            value={purpose}
+                                            onChange={event => setPurpose(event.target.value)}
+                                            className="room-select mt-2 w-full min-h-11 bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base text-[#1a140d]"
+                                        >
+                                            {CLASSROOM_INTENT_PURPOSES.map(item => (
+                                                <option key={item.value} value={item.value}>{item.label}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="block">
+                                        <span className="book-serif text-sm text-[#7a6a5d]">人数</span>
+                                        <input
+                                            type="number"
+                                            inputMode="numeric"
+                                            min="1"
+                                            max="50"
+                                            value={partySize}
+                                            onChange={event => setPartySize(event.target.value)}
+                                            className="mt-2 w-full min-h-11 bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base text-[#1a140d]"
+                                        />
+                                    </label>
+                                </div>
+                                <p className="book-serif text-sm text-[#7a6a5d] mt-5">仅作协调，不代表预约。</p>
+                                <button
+                                    type="button"
+                                    disabled={saving || Number(partySize) < 1 || Number(partySize) > 50}
+                                    onClick={() => runAction('create')}
+                                    className="mt-6 w-full min-h-12 bg-[#1a140d] text-white book-serif text-lg hover:bg-[#3d3025] disabled:opacity-50 transition-colors"
+                                >
+                                    {saving ? '登记中…' : '登记'}
+                                </button>
+                            </div>
+                        )}
+
+                        {error && (
+                            <p role="alert" className="book-serif text-sm text-[#9b2c20] mt-4">{error}</p>
+                        )}
+                    </section>
+                </div>
+            );
+        };
+
+        const FreeClassroomView = ({ user, onLoginRequest, onSelectRoom }) => {
             const initialQuery = useMemo(() => {
                 const DAY_VALUES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const now = new Date();
@@ -2310,6 +2497,8 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [result, setResult] = useState(null);
+            const [intentRoom, setIntentRoom] = useState(null);
+            const [intentRefresh, setIntentRefresh] = useState(0);
 
             const endOptions = useMemo(() => {
                 return SCHOOL_PERIODS.filter(period => timeToMinutes(period.end) > timeToMinutes(startTime));
@@ -2344,7 +2533,15 @@
                 return () => {
                     ignore = true;
                 };
-            }, [selectedDay, startTime, endTime]);
+            }, [selectedDay, startTime, endTime, intentRefresh]);
+
+            const openIntent = (room) => {
+                if (!user) {
+                    onLoginRequest();
+                    return;
+                }
+                setIntentRoom(room);
+            };
 
             const buildingOptions = useMemo(() => {
                 if (!result) return [];
@@ -2411,7 +2608,7 @@
             const summaryOccupied = result ? result.summary.occupied_rooms : '--';
             const summaryTotal = result ? result.summary.total_rooms : '--';
             const queryLabel = result
-                ? `${result.query.day_label} · ${result.query.start} – ${result.query.end}`
+                ? `${result.query.date.slice(5).replace('-', '/')} · ${result.query.day_label} · ${result.query.start} – ${result.query.end}`
                 : 'Loading...';
 
             const headlineNumber = loading ? '–' : error ? '!' : filteredRooms.length;
@@ -2599,32 +2796,75 @@
                                                         — {floorGroup.floorLabel} <span className="text-[#a08c7d]/70">· {floorGroup.rooms.length} 间</span>
                                                     </div>
                                                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                                                        {floorGroup.rooms.map((room) => (
-                                                            <button
-                                                                key={room.room}
-                                                                type="button"
-                                                                onClick={() => onSelectRoom && onSelectRoom(room.room)}
-                                                                className="text-left border-t border-[#1a140d]/15 pt-3 transition-colors hover:bg-[#1a140d]/[0.025] focus:outline-none focus:bg-[#1a140d]/[0.04] -mx-2 px-2 -mt-1 pb-1 cursor-pointer"
-                                                            >
-                                                                <div className="book-serif text-2xl md:text-[1.65rem] text-[#1a140d] tracking-[0.01em] leading-tight">
-                                                                    {room.room}
-                                                                </div>
-                                                                <div className="book-serif mt-2 text-lg md:text-xl text-[#1a140d]">
-                                                                    <span className="italic text-[#7a6a5d] text-base">空闲至 </span>
-                                                                    <span className="text-[#a04a18]">{room.free_until}</span>
-                                                                </div>
-                                                                <div className="book-serif text-xs text-[#7a6a5d] mt-2 leading-relaxed">
-                                                                    {room.next_busy ? (
-                                                                        <React.Fragment>
-                                                                            <span className="italic">下一节 {room.next_busy.start}–{room.next_busy.end}</span>
-                                                                            <span className="block mt-0.5 text-[#3d3025]">{room.next_busy.course_code} · {room.next_busy.title}</span>
-                                                                        </React.Fragment>
-                                                                    ) : (
-                                                                        <span className="italic">今天后续没有排课</span>
+                                                        {floorGroup.rooms.map((room) => {
+                                                            const intent = room.intent || {};
+                                                            const hasIntent = (intent.people || 0) > 0;
+                                                            const purposeText = intent.purposes?.length === 1
+                                                                ? CLASSROOM_INTENT_PURPOSES.find(item => item.value === intent.purposes[0])?.label || ''
+                                                                : intent.purposes?.length > 1 ? '多用途' : '';
+                                                            const presenceText = intent.checked_in_people > 0
+                                                                ? `已到场 ${intent.checked_in_people}人${intent.planned_people > 0 ? ` · 计划 ${intent.planned_people}人` : ''}`
+                                                                : intent.planned_people > 0
+                                                                    ? `计划 ${intent.planned_people}人`
+                                                                    : '';
+                                                            const statusText = presenceText && purposeText
+                                                                ? `${presenceText} · ${purposeText}`
+                                                                : presenceText;
+                                                            const canOpenIntent = Boolean(intent.my) || Boolean(result?.query?.registration_open);
+
+                                                            return (
+                                                                <div
+                                                                    key={room.room}
+                                                                    className="relative border-t border-[#1a140d]/15 pt-3 -mx-2 px-2 -mt-1 pb-3"
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onSelectRoom && onSelectRoom(room.room)}
+                                                                        className="w-full pr-24 sm:pr-28 text-left transition-colors hover:bg-[#1a140d]/[0.025] focus:outline-none focus:ring-2 focus:ring-[#1a140d]/50 cursor-pointer"
+                                                                        aria-label={`查看 ${room.room} 课表`}
+                                                                    >
+                                                                        <div className="book-serif text-2xl md:text-[1.65rem] text-[#1a140d] tracking-[0.01em] leading-tight">
+                                                                            {room.room}
+                                                                        </div>
+                                                                        <div className="book-serif mt-2 text-lg md:text-xl text-[#1a140d]">
+                                                                            <span className="italic text-[#7a6a5d] text-base">空闲至 </span>
+                                                                            <span className="text-[#a04a18]">{room.free_until}</span>
+                                                                        </div>
+                                                                        <div className="book-serif text-xs text-[#7a6a5d] mt-2 leading-relaxed">
+                                                                            {room.next_busy ? (
+                                                                                <React.Fragment>
+                                                                                    <span className="italic">下一节 {room.next_busy.start}–{room.next_busy.end}</span>
+                                                                                    <span className="block mt-0.5 text-[#3d3025]">{room.next_busy.course_code} · {room.next_busy.title}</span>
+                                                                                </React.Fragment>
+                                                                            ) : (
+                                                                                <span className="italic">今天后续没有排课</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={!canOpenIntent}
+                                                                        onClick={() => openIntent(room)}
+                                                                        className={`group/intent absolute top-1 right-1 min-h-11 px-1 inline-flex items-center gap-1 book-serif italic text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#1a140d]/60 focus:ring-offset-2 focus:ring-offset-[#fbf7ef] ${
+                                                                            intent.my || hasIntent
+                                                                                ? 'text-[#8a3d16] hover:text-[#5f260f]'
+                                                                                : 'text-[#7a6a5d] hover:text-[#1a140d]'
+                                                                        } disabled:opacity-35 disabled:cursor-not-allowed`}
+                                                                    >
+                                                                        <span>{intent.my ? '我的意向' : result?.query?.registration_open ? '登记意向' : '已结束'}</span>
+                                                                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/intent:translate-x-0.5" aria-hidden="true" />
+                                                                    </button>
+
+                                                                    {statusText && (
+                                                                        <div className="mt-3 flex items-center gap-2 book-serif italic text-sm text-[#8a3d16]">
+                                                                            <span className="w-5 h-px bg-[#a04a18]/60 shrink-0" aria-hidden="true" />
+                                                                            <span>{statusText}</span>
+                                                                        </div>
                                                                     )}
                                                                 </div>
-                                                            </button>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             ))}
@@ -2641,6 +2881,14 @@
                             </div>
                         </footer>
                     </section>
+                    {intentRoom && result?.query && (
+                        <ClassroomIntentModal
+                            room={intentRoom}
+                            query={result.query}
+                            onClose={() => setIntentRoom(null)}
+                            onChanged={() => setIntentRefresh(value => value + 1)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -4681,7 +4929,11 @@
                     ) : currentView === 'teachers' ? (
                         <TeacherListView onViewTeacher={(name) => setViewingTeacher(name)} />
                     ) : currentView === 'classrooms' ? (
-                        <FreeClassroomView onSelectRoom={(room) => setViewingRoom(room)} />
+                        <FreeClassroomView
+                            user={user}
+                            onLoginRequest={() => setShowAuthModal(true)}
+                            onSelectRoom={(room) => setViewingRoom(room)}
+                        />
                     ) : currentView === 'ddl' ? (
                         <DDLView user={user} onLoginRequest={() => setShowAuthModal(true)} />
                     ) : currentView === 'toolbox' ? (

@@ -50,6 +50,12 @@ DAY_LABELS = {
 SCHOOL_DAY_END_MINUTES = 21 * 60 + 50
 EXCLUDED_FREE_CLASSROOM_BUILDINGS = {'V22', 'V20', 'UC', 'SP'}
 PRIORITY_BUILDING_ORDER = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29']
+CLASSROOM_INTENT_PURPOSES = ('study', 'discussion', 'practice', 'other')
+CLASSROOM_INTENT_GRACE_MINUTES = 15
+CLASSROOM_INTENT_MAX_DAYS_AHEAD = 14
+CLASSROOM_INTENT_MAX_DURATION_MINUTES = 4 * 60
+CLASSROOM_INTENT_MAX_ACTIVE_PER_USER = 3
+CLASSROOM_INTENT_MAX_PARTY_SIZE = 50
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 EMAIL_REMINDER_CHOICES = [72, 24, 3, 1]
 DEFAULT_EMAIL_REMINDER_HOURS = [24, 3]
@@ -117,7 +123,6 @@ API_BROWSER_CACHE_EXACT = {
     '/api/programme-courses': 3600,
     '/api/campus-docs': 300,
     '/api/teachers': 60,
-    '/api/free-classrooms': 30,
 }
 API_BROWSER_CACHE_PREFIXES = (
     ('/api/course/', 300),
@@ -534,6 +539,28 @@ def init_db():
             )
         ''')
 
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS classroom_intents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                room TEXT NOT NULL,
+                use_date TEXT NOT NULL,
+                start_min INTEGER NOT NULL,
+                end_min INTEGER NOT NULL,
+                purpose TEXT NOT NULL DEFAULT 'study',
+                party_size INTEGER NOT NULL DEFAULT 1,
+                status TEXT NOT NULL DEFAULT 'planned',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                checked_in_at TIMESTAMP,
+                ended_at TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                CHECK (end_min > start_min),
+                CHECK (party_size BETWEEN 1 AND 50),
+                CHECK (purpose IN ('study', 'discussion', 'practice', 'other')),
+                CHECK (status IN ('planned', 'checked_in', 'cancelled', 'ended', 'expired'))
+            )
+        ''')
+
         c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unsubscribe_token ON users (unsubscribe_token) WHERE unsubscribe_token IS NOT NULL')
         c.execute('CREATE INDEX IF NOT EXISTS idx_todos_user_ispace_lookup ON todos (user_id, ispace_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at)')
@@ -543,6 +570,8 @@ def init_db():
         c.execute('CREATE INDEX IF NOT EXISTS idx_media_dl_events_action_platform ON media_dl_events (action, platform)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_email_notification_due_lookup ON email_notification_deliveries (user_id, todo_id, reminder_hours)')
         c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_email_notification_unique_success ON email_notification_deliveries (user_id, todo_id, reminder_hours) WHERE success = 1')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_classroom_intents_room_time ON classroom_intents (use_date, room, status, start_min, end_min)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_classroom_intents_user_active ON classroom_intents (user_id, status, use_date)')
         try:
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_user_ispace_unique ON todos (user_id, ispace_id) WHERE ispace_id IS NOT NULL')
         except sqlite3.IntegrityError:
@@ -911,6 +940,150 @@ def time_to_minutes(value):
 
 def minutes_to_time(value):
     return f"{value // 60:02d}:{value % 60:02d}"
+
+
+def _classroom_now():
+    return datetime.now(BEIJING_TZ)
+
+
+def _parse_classroom_clock(value):
+    raw = str(value or '').strip()
+    if not re.fullmatch(r'\d{2}:\d{2}', raw):
+        raise ValueError('Invalid time')
+    hours, minutes = (int(part) for part in raw.split(':'))
+    if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+        raise ValueError('Invalid time')
+    return hours * 60 + minutes
+
+
+def _parse_classroom_date(value):
+    raw = str(value or '').strip()
+    try:
+        parsed = datetime.strptime(raw, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        raise ValueError('Invalid date')
+    if parsed.isoformat() != raw:
+        raise ValueError('Invalid date')
+    return parsed
+
+
+def _next_classroom_date(day, today=None):
+    if day not in DAY_MAP:
+        raise ValueError('Invalid day')
+    today = today or _classroom_now().date()
+    return today + timedelta(days=(DAY_MAP[day] - today.weekday()) % 7)
+
+
+def _close_stale_classroom_intents(conn, now=None):
+    now = now or _classroom_now()
+    today = now.date().isoformat()
+    now_min = now.hour * 60 + now.minute
+    conn.execute(
+        '''
+        UPDATE classroom_intents
+        SET status = 'expired', ended_at = CURRENT_TIMESTAMP
+        WHERE status = 'planned'
+          AND (use_date < ? OR (use_date = ? AND start_min + ? < ?))
+        ''',
+        (today, today, CLASSROOM_INTENT_GRACE_MINUTES, now_min),
+    )
+    conn.execute(
+        '''
+        UPDATE classroom_intents
+        SET status = 'ended', ended_at = CURRENT_TIMESTAMP
+        WHERE status = 'checked_in'
+          AND (use_date < ? OR (use_date = ? AND end_min <= ?))
+        ''',
+        (today, today, now_min),
+    )
+
+
+def _serialize_classroom_intent(row, now=None):
+    now = now or _classroom_now()
+    now_min = now.hour * 60 + now.minute
+    can_check_in = (
+        row['status'] == 'planned'
+        and row['use_date'] == now.date().isoformat()
+        and row['start_min'] - CLASSROOM_INTENT_GRACE_MINUTES <= now_min
+        and now_min <= row['start_min'] + CLASSROOM_INTENT_GRACE_MINUTES
+    )
+    return {
+        'id': row['id'],
+        'room': row['room'],
+        'date': row['use_date'],
+        'start': minutes_to_time(row['start_min']),
+        'end': minutes_to_time(row['end_min']),
+        'purpose': row['purpose'],
+        'party_size': row['party_size'],
+        'status': row['status'],
+        'can_check_in': can_check_in,
+    }
+
+
+def _empty_classroom_intent_summary():
+    return {
+        'records': 0,
+        'people': 0,
+        'planned_people': 0,
+        'checked_in_people': 0,
+        'purposes': [],
+        'my': None,
+    }
+
+
+def _classroom_intent_summaries(use_date, start_min, end_min, user_id=None, now=None):
+    now = now or _classroom_now()
+    today = now.date().isoformat()
+    now_min = now.hour * 60 + now.minute
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            '''
+            SELECT id, user_id, room, use_date, start_min, end_min,
+                   purpose, party_size, status
+            FROM classroom_intents
+            WHERE use_date = ?
+              AND status IN ('planned', 'checked_in')
+              AND start_min < ? AND end_min > ?
+              AND (
+                    use_date > ?
+                    OR (
+                        use_date = ?
+                        AND (
+                            (status = 'planned' AND start_min + ? >= ?)
+                            OR (status = 'checked_in' AND end_min > ?)
+                        )
+                    )
+              )
+            ORDER BY start_min, id
+            ''',
+            (
+                use_date, end_min, start_min, today, today,
+                CLASSROOM_INTENT_GRACE_MINUTES, now_min, now_min,
+            ),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    summaries = {}
+    for row in rows:
+        summary = summaries.setdefault(row['room'], _empty_classroom_intent_summary())
+        summary['records'] += 1
+        summary['people'] += row['party_size']
+        if row['status'] == 'checked_in':
+            summary['checked_in_people'] += row['party_size']
+        else:
+            summary['planned_people'] += row['party_size']
+        if row['purpose'] not in summary['purposes']:
+            summary['purposes'].append(row['purpose'])
+        if user_id is not None and row['user_id'] == user_id:
+            summary['my'] = _serialize_classroom_intent(row, now)
+
+    for summary in summaries.values():
+        summary['purposes'].sort(
+            key=lambda purpose: CLASSROOM_INTENT_PURPOSES.index(purpose)
+        )
+    return summaries
 
 
 def extract_building(room):
@@ -2278,6 +2451,9 @@ def delete_user_data():
     try:
         # 1. Delete all todos
         c.execute('DELETE FROM todos WHERE user_id = ?', (user_id,))
+
+        # Classroom intents are coordination records, not public history.
+        c.execute('DELETE FROM classroom_intents WHERE user_id = ?', (user_id,))
         
         # 2. Unlink teacher ratings (set user_id to NULL to preserve rating but remove link)
         # Note: We need to check if schema allows NULL.
@@ -2952,8 +3128,212 @@ def get_analytics_summary():
     })
 
 
+@app.route('/api/classroom-intents', methods=['POST'])
+def create_classroom_intent():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    room = str(data.get('room') or '').strip().upper()
+    purpose = str(data.get('purpose') or '').strip()
+    party_size = data.get('party_size')
+    now = _classroom_now()
+
+    try:
+        use_date = _parse_classroom_date(data.get('date'))
+        start_min = _parse_classroom_clock(data.get('start'))
+        end_min = _parse_classroom_clock(data.get('end'))
+    except ValueError:
+        return jsonify({"error": "Invalid date or time"}), 400
+
+    if not room or len(room) > 40:
+        return jsonify({"error": "Invalid room"}), 400
+    if purpose not in CLASSROOM_INTENT_PURPOSES:
+        return jsonify({"error": "Invalid purpose"}), 400
+    if isinstance(party_size, bool) or not isinstance(party_size, int):
+        return jsonify({"error": "Invalid party size"}), 400
+    if not 1 <= party_size <= CLASSROOM_INTENT_MAX_PARTY_SIZE:
+        return jsonify({"error": "Invalid party size"}), 400
+    if end_min <= start_min:
+        return jsonify({"error": "End time must be later than start time"}), 400
+    if end_min - start_min > CLASSROOM_INTENT_MAX_DURATION_MINUTES:
+        return jsonify({"error": "Intent duration cannot exceed 4 hours"}), 400
+    if use_date < now.date() or use_date > now.date() + timedelta(days=CLASSROOM_INTENT_MAX_DAYS_AHEAD):
+        return jsonify({"error": "Date is outside the available range"}), 400
+    now_min = now.hour * 60 + now.minute
+    if use_date == now.date() and start_min + CLASSROOM_INTENT_GRACE_MINUTES < now_min:
+        return jsonify({"error": "This time slot has already started"}), 400
+
+    rooms, room_entries = build_classroom_index()
+    valid_rooms = {item['room'] for item in rooms}
+    if room not in valid_rooms:
+        return jsonify({"error": "Room not found"}), 404
+
+    day_index = use_date.weekday()
+    has_scheduled_class = any(
+        entry['day_index'] == day_index
+        and start_min < entry['end_min']
+        and entry['start_min'] < end_min
+        for entry in room_entries.get(room, [])
+    )
+    if has_scheduled_class:
+        return jsonify({"error": "Room has a scheduled class"}), 409
+
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        _close_stale_classroom_intents(conn, now)
+        active_count = conn.execute(
+            '''
+            SELECT COUNT(*) FROM classroom_intents
+            WHERE user_id = ? AND status IN ('planned', 'checked_in')
+            ''',
+            (session['user_id'],),
+        ).fetchone()[0]
+        if active_count >= CLASSROOM_INTENT_MAX_ACTIVE_PER_USER:
+            conn.rollback()
+            return jsonify({"error": "Too many active classroom intents"}), 409
+
+        overlap = conn.execute(
+            '''
+            SELECT 1 FROM classroom_intents
+            WHERE user_id = ? AND use_date = ?
+              AND status IN ('planned', 'checked_in')
+              AND start_min < ? AND end_min > ?
+            LIMIT 1
+            ''',
+            (session['user_id'], use_date.isoformat(), end_min, start_min),
+        ).fetchone()
+        if overlap:
+            conn.rollback()
+            return jsonify({"error": "You already have an overlapping classroom intent"}), 409
+
+        cursor = conn.execute(
+            '''
+            INSERT INTO classroom_intents
+                (user_id, room, use_date, start_min, end_min, purpose, party_size)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                session['user_id'], room, use_date.isoformat(), start_min,
+                end_min, purpose, party_size,
+            ),
+        )
+        row = conn.execute(
+            '''
+            SELECT id, room, use_date, start_min, end_min, purpose, party_size, status
+            FROM classroom_intents WHERE id = ?
+            ''',
+            (cursor.lastrowid,),
+        ).fetchone()
+        conn.commit()
+        return jsonify({"intent": _serialize_classroom_intent(row, now)}), 201
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.route('/api/classroom-intents/<int:intent_id>/check-in', methods=['POST'])
+def check_in_classroom_intent(intent_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    now = _classroom_now()
+    now_min = now.hour * 60 + now.minute
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        _close_stale_classroom_intents(conn, now)
+        row = conn.execute(
+            '''
+            SELECT id, room, use_date, start_min, end_min, purpose, party_size, status
+            FROM classroom_intents WHERE id = ? AND user_id = ?
+            ''',
+            (intent_id, session['user_id']),
+        ).fetchone()
+        if row is None:
+            conn.rollback()
+            return jsonify({"error": "Intent not found"}), 404
+        if row['status'] != 'planned':
+            conn.rollback()
+            return jsonify({"error": "Intent cannot be checked in"}), 409
+        if (
+            row['use_date'] != now.date().isoformat()
+            or now_min < row['start_min'] - CLASSROOM_INTENT_GRACE_MINUTES
+            or now_min > row['start_min'] + CLASSROOM_INTENT_GRACE_MINUTES
+        ):
+            conn.rollback()
+            return jsonify({"error": "Check-in is not available yet"}), 409
+
+        conn.execute(
+            '''
+            UPDATE classroom_intents
+            SET status = 'checked_in', checked_in_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            ''',
+            (intent_id,),
+        )
+        row = conn.execute(
+            '''
+            SELECT id, room, use_date, start_min, end_min, purpose, party_size, status
+            FROM classroom_intents WHERE id = ?
+            ''',
+            (intent_id,),
+        ).fetchone()
+        conn.commit()
+        return jsonify({"intent": _serialize_classroom_intent(row, now)})
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.route('/api/classroom-intents/<int:intent_id>', methods=['DELETE'])
+def end_classroom_intent(intent_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    now = _classroom_now()
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        _close_stale_classroom_intents(conn, now)
+        row = conn.execute(
+            '''
+            SELECT status FROM classroom_intents WHERE id = ? AND user_id = ?
+            ''',
+            (intent_id, session['user_id']),
+        ).fetchone()
+        if row is None:
+            conn.rollback()
+            return jsonify({"error": "Intent not found"}), 404
+        if row['status'] not in ('planned', 'checked_in'):
+            conn.rollback()
+            return jsonify({"error": "Intent is no longer active"}), 409
+
+        final_status = 'ended' if row['status'] == 'checked_in' else 'cancelled'
+        conn.execute(
+            '''
+            UPDATE classroom_intents SET status = ?, ended_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            ''',
+            (final_status, intent_id),
+        )
+        conn.commit()
+        return jsonify({"success": True, "status": final_status})
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 @app.route('/api/free-classrooms', methods=['GET'])
 def get_free_classrooms():
+    now = _classroom_now()
     day = str(request.args.get('day', 'Mon')).strip()
     start = str(request.args.get('start', '08:00')).strip()
     end = str(request.args.get('end', '08:50')).strip()
@@ -2962,16 +3342,40 @@ def get_free_classrooms():
         return jsonify({"error": "Invalid day"}), 400
 
     try:
-        start_min = time_to_minutes(start)
-        end_min = time_to_minutes(end)
-    except Exception:
+        start_min = _parse_classroom_clock(start)
+        end_min = _parse_classroom_clock(end)
+    except ValueError:
         return jsonify({"error": "Invalid time format, expected HH:MM"}), 400
+    try:
+        date_arg = request.args.get('date')
+        use_date = _parse_classroom_date(date_arg) if date_arg else _next_classroom_date(day, now.date())
+    except ValueError:
+        return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
 
     if end_min <= start_min:
         return jsonify({"error": "End time must be later than start time"}), 400
+    if use_date.weekday() != DAY_MAP[day]:
+        return jsonify({"error": "Date does not match day"}), 400
+    if use_date < now.date() or use_date > now.date() + timedelta(days=CLASSROOM_INTENT_MAX_DAYS_AHEAD):
+        return jsonify({"error": "Date is outside the available range"}), 400
 
     rooms, room_entries = build_classroom_index()
     day_index = DAY_MAP[day]
+    intent_summaries = _classroom_intent_summaries(
+        use_date.isoformat(),
+        start_min,
+        end_min,
+        user_id=session.get('user_id'),
+        now=now,
+    )
+    now_min = now.hour * 60 + now.minute
+    registration_open = (
+        end_min - start_min <= CLASSROOM_INTENT_MAX_DURATION_MINUTES
+        and (
+            use_date > now.date()
+            or start_min + CLASSROOM_INTENT_GRACE_MINUTES >= now_min
+        )
+    )
 
     free_rooms = []
     building_totals = Counter()
@@ -3005,6 +3409,7 @@ def get_free_classrooms():
             "free_until": minutes_to_time(next_busy["start_min"]) if next_busy else minutes_to_time(SCHOOL_DAY_END_MINUTES),
             "previous_busy": serialize_room_event(previous_busy) if previous_busy else None,
             "next_busy": serialize_room_event(next_busy) if next_busy else None,
+            "intent": intent_summaries.get(room, _empty_classroom_intent_summary()),
         })
 
     free_rooms.sort(key=lambda item: (building_sort_key(item["building"]), item["room"]))
@@ -3025,8 +3430,10 @@ def get_free_classrooms():
         "query": {
             "day": day,
             "day_label": DAY_LABELS.get(day, day),
+            "date": use_date.isoformat(),
             "start": minutes_to_time(start_min),
             "end": minutes_to_time(end_min),
+            "registration_open": registration_open,
         },
         "summary": {
             "total_rooms": total_rooms,
