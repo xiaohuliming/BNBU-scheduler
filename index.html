@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2268093349-330529+12027406">
+<html lang="en" data-compiled-sum="2473988795-331118+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2268093349-330529+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2473988795-331118+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2268093349-330529+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2473988795-331118+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -2435,7 +2435,7 @@
                                         <select
                                             value={purpose}
                                             onChange={event => setPurpose(event.target.value)}
-                                            className="room-select mt-2 w-full min-h-11 bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base text-[#1a140d]"
+                                            className="room-select mt-2 w-full h-[50px] bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base leading-5 text-[#1a140d]"
                                         >
                                             {CLASSROOM_INTENT_PURPOSES.map(item => (
                                                 <option key={item.value} value={item.value}>{item.label}</option>
@@ -2451,7 +2451,7 @@
                                             max="50"
                                             value={partySize}
                                             onChange={event => setPartySize(event.target.value)}
-                                            className="mt-2 w-full min-h-11 bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base text-[#1a140d]"
+                                            className="mt-2 w-full h-[50px] bg-transparent border-b border-[#1a140d]/30 focus:outline-none focus:border-[#1a140d] book-serif text-base leading-5 text-[#1a140d]"
                                         />
                                     </label>
                                 </div>
@@ -2810,7 +2810,12 @@
                                                             const statusText = presenceText && purposeText
                                                                 ? `${presenceText} · ${purposeText}`
                                                                 : presenceText;
-                                                            const canOpenIntent = Boolean(intent.my) || Boolean(result?.query?.registration_open);
+                                                            const registrationState = result?.query?.registration_state
+                                                                || (result?.query?.registration_open ? 'open' : 'past');
+                                                            const registrationOpen = registrationState === 'open'
+                                                                || result?.query?.registration_open === true;
+                                                            const canOpenIntent = Boolean(intent.my) || registrationOpen;
+                                                            const registrationLabel = registrationState === 'past' ? '时段已过' : '已开始';
 
                                                             return (
                                                                 <div
@@ -2852,7 +2857,7 @@
                                                                                 : 'text-[#7a6a5d] hover:text-[#1a140d]'
                                                                         } disabled:opacity-35 disabled:cursor-not-allowed`}
                                                                     >
-                                                                        <span>{intent.my ? '我的意向' : result?.query?.registration_open ? '登记意向' : '已结束'}</span>
+                                                                        <span>{intent.my ? '我的意向' : registrationOpen ? '登记意向' : registrationLabel}</span>
                                                                         <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/intent:translate-x-0.5" aria-hidden="true" />
                                                                     </button>
 
