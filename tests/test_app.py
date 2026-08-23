@@ -986,8 +986,96 @@ class AppTestCase(unittest.TestCase):
 
         self.assertIn('const ClassroomIntentModal', source)
         self.assertIn('仅作协调，不代表预约。', source)
+        self.assertIn("'时段已过'", source)
+        self.assertIn("'已开始'", source)
+        self.assertNotIn("'已结束'", source)
         self.assertIn("NOTICE_VERSION = '2026S1b'", source)
         self.assertNotIn('预约成功', source)
+
+    def test_future_long_classroom_window_can_accept_an_intent(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3010',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Tue 15:00-15:50',
+                'Classroom': 'T8-307',
+            },
+        ])
+        fixed_now = app_module.datetime(2026, 8, 24, 9, 0, tzinfo=app_module.BEIJING_TZ)
+        user_id = self.insert_user('long-window-user')
+        with self.client.session_transaction() as login_session:
+            login_session['user_id'] = user_id
+
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=fixed_now):
+            query = self.client.get(
+                '/api/free-classrooms?day=Tue&date=2026-08-25&start=08:00&end=13:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+            created = self.client.post(
+                '/api/classroom-intents',
+                json={
+                    'room': 'T8-307',
+                    'date': '2026-08-25',
+                    'start': '08:00',
+                    'end': '13:50',
+                    'purpose': 'study',
+                    'party_size': 1,
+                },
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        self.assertEqual(query.status_code, 200)
+        self.assertTrue(query.get_json()['query']['registration_open'])
+        self.assertEqual(query.get_json()['query']['registration_state'], 'open')
+        self.assertEqual(created.status_code, 201)
+
+    def test_only_past_classroom_window_is_marked_past(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3011',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Tue 15:00-15:50',
+                'Classroom': 'T8-307',
+            },
+        ])
+        fixed_now = app_module.datetime(2026, 8, 25, 14, 0, tzinfo=app_module.BEIJING_TZ)
+
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=fixed_now):
+            response = self.client.get(
+                '/api/free-classrooms?day=Tue&date=2026-08-25&start=08:00&end=13:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        query = response.get_json()['query']
+        self.assertFalse(query['registration_open'])
+        self.assertEqual(query['registration_state'], 'past')
+
+    def test_ongoing_classroom_window_is_started_not_past(self):
+        sample_df = app_module.pd.DataFrame([
+            {
+                'Course Code': 'COMP3012',
+                'Course Title & Session': 'Later Class (1001)',
+                'Teachers': 'Dr. Later',
+                'Class Schedule': 'Tue 15:00-15:50',
+                'Classroom': 'T8-307',
+            },
+        ])
+        fixed_now = app_module.datetime(2026, 8, 25, 9, 0, tzinfo=app_module.BEIJING_TZ)
+
+        with mock.patch.object(app_module, 'get_df', return_value=sample_df), \
+             mock.patch.object(app_module, '_classroom_now', return_value=fixed_now):
+            response = self.client.get(
+                '/api/free-classrooms?day=Tue&date=2026-08-25&start=08:00&end=13:50',
+                headers={'User-Agent': self.BROWSER_UA},
+            )
+
+        query = response.get_json()['query']
+        self.assertFalse(query['registration_open'])
+        self.assertEqual(query['registration_state'], 'started')
 
     def test_classroom_intent_is_aggregated_without_exposing_identity(self):
         sample_df = app_module.pd.DataFrame([

@@ -53,7 +53,6 @@ PRIORITY_BUILDING_ORDER = ['T8', 'T7', 'T6', 'T5', 'T4', 'T29']
 CLASSROOM_INTENT_PURPOSES = ('study', 'discussion', 'practice', 'other')
 CLASSROOM_INTENT_GRACE_MINUTES = 15
 CLASSROOM_INTENT_MAX_DAYS_AHEAD = 14
-CLASSROOM_INTENT_MAX_DURATION_MINUTES = 4 * 60
 CLASSROOM_INTENT_MAX_ACTIVE_PER_USER = 3
 CLASSROOM_INTENT_MAX_PARTY_SIZE = 50
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -3156,8 +3155,6 @@ def create_classroom_intent():
         return jsonify({"error": "Invalid party size"}), 400
     if end_min <= start_min:
         return jsonify({"error": "End time must be later than start time"}), 400
-    if end_min - start_min > CLASSROOM_INTENT_MAX_DURATION_MINUTES:
-        return jsonify({"error": "Intent duration cannot exceed 4 hours"}), 400
     if use_date < now.date() or use_date > now.date() + timedelta(days=CLASSROOM_INTENT_MAX_DAYS_AHEAD):
         return jsonify({"error": "Date is outside the available range"}), 400
     now_min = now.hour * 60 + now.minute
@@ -3369,13 +3366,13 @@ def get_free_classrooms():
         now=now,
     )
     now_min = now.hour * 60 + now.minute
-    registration_open = (
-        end_min - start_min <= CLASSROOM_INTENT_MAX_DURATION_MINUTES
-        and (
-            use_date > now.date()
-            or start_min + CLASSROOM_INTENT_GRACE_MINUTES >= now_min
-        )
-    )
+    if use_date > now.date() or start_min + CLASSROOM_INTENT_GRACE_MINUTES >= now_min:
+        registration_state = "open"
+    elif end_min > now_min:
+        registration_state = "started"
+    else:
+        registration_state = "past"
+    registration_open = registration_state == "open"
 
     free_rooms = []
     building_totals = Counter()
@@ -3434,6 +3431,7 @@ def get_free_classrooms():
             "start": minutes_to_time(start_min),
             "end": minutes_to_time(end_min),
             "registration_open": registration_open,
+            "registration_state": registration_state,
         },
         "summary": {
             "total_rooms": total_rooms,
