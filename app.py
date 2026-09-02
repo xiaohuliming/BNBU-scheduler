@@ -766,52 +766,24 @@ def notification_settings_payload(user_row):
 
 
 def build_todo_reminder_email(user_row, todo_row, reminder_hours, unsubscribe_url=None):
+    from email_reminders import render_todo_reminder_email
+
     due_time = format_due_time(todo_row['due_date'])
     display_name = user_row['display_name'] or user_row['ispace_username'] or user_row['username']
     title = todo_row['title']
-    course = todo_row['course'] or 'Personal Task'
+    course = todo_row['course'] or '个人任务'
     task_url = todo_row['url'] or f"{get_public_base_url()}/"
     site_url = get_public_base_url()
-    subject = f"DDL reminder: {title}"
-
-    text_body = (
-        f"Hi {display_name},\n\n"
-        f"This is your {reminder_hours}h reminder for:\n"
-        f"{title}\n\n"
-        f"Course: {course}\n"
-        f"Due: {due_time} (Beijing Time)\n"
-        f"Task link: {task_url}\n\n"
-        f"Open MAXCOURSE: {site_url}\n"
+    return render_todo_reminder_email(
+        display_name=display_name,
+        title=title,
+        course=course,
+        due_time=due_time,
+        task_url=task_url,
+        site_url=site_url,
+        reminder_hours=reminder_hours,
+        unsubscribe_url=unsubscribe_url,
     )
-    if unsubscribe_url:
-        text_body += f"\nUnsubscribe from these reminders: {unsubscribe_url}\n"
-
-    unsubscribe_html = ''
-    if unsubscribe_url:
-        unsubscribe_html = (
-            f'<p style="margin-top: 24px; font-size: 12px; color: #6b7280;">'
-            f'Don\'t want these reminders? '
-            f'<a href="{escape(unsubscribe_url, quote=True)}" style="color: #6b7280; text-decoration: underline;">Unsubscribe with one click</a>.'
-            f'</p>'
-        )
-
-    html_body = f"""
-        <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #101820; line-height: 1.55;">
-            <p>Hi {escape(str(display_name))},</p>
-            <p>This is your <strong>{reminder_hours}h reminder</strong> for:</p>
-            <div style="border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; background: #fbf7ef;">
-                <h2 style="margin: 0 0 8px; font-size: 20px;">{escape(str(title))}</h2>
-                <p style="margin: 0 0 6px;"><strong>Course:</strong> {escape(str(course))}</p>
-                <p style="margin: 0;"><strong>Due:</strong> {escape(due_time)} <span style="color: #6b7280; font-weight: normal;">(Beijing Time)</span></p>
-            </div>
-            <p style="margin-top: 18px;">
-                <a href="{escape(str(task_url), quote=True)}" style="display: inline-block; padding: 10px 14px; background: #101820; color: #ffffff; border-radius: 999px; text-decoration: none; font-weight: 700;">Open task</a>
-                <a href="{escape(site_url, quote=True)}" style="display: inline-block; margin-left: 8px; padding: 10px 14px; background: #d6ff62; color: #101820; border-radius: 999px; text-decoration: none; font-weight: 700;">Open MAXCOURSE</a>
-            </p>
-            {unsubscribe_html}
-        </div>
-    """
-    return subject, text_body, html_body
 
 
 def set_authenticated_session(user_id, username, display_name):
