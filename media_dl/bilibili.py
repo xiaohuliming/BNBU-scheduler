@@ -6,10 +6,11 @@ Strategy:
      for the play-url API).
   3. GET /x/player/playurl with progressive fnval=1 first; fall back to DASH
      fnval=16 when the user needs >480p.
-  4. If the API path 412s (cloud IPs sometimes get blocked), fall back to
-     scraping the HTML page with the `facebookexternalhit/1.1` User-Agent —
-     borrowed from imputnet/cobalt; B站 whitelists FB's link-preview crawler
-     so this dodges anti-bot entirely.
+  4. If an API request 412s on a cloud IP, retry that same API call with the
+     `facebookexternalhit/1.1` User-Agent. B站 currently allows its link-preview
+     crawler through the anti-bot layer even when browser UAs are blocked.
+     Keep the legacy HTML scraper as a last resort for pages that still embed
+     `window.__playinfo__`.
   5. Return the same normalised shape as the yt-dlp wrapper. needs_proxy=True
      because Bilibili CDN nodes require Referer.
 """
@@ -63,6 +64,8 @@ _HEADERS = {
     "Referer": "https://www.bilibili.com",
     "Origin": "https://www.bilibili.com",
 }
+_FB_UA = "facebookexternalhit/1.1"
+_FB_API_HEADERS = {**_HEADERS, "User-Agent": _FB_UA}
 
 
 class BiliError(RuntimeError):
@@ -129,6 +132,15 @@ def _identify(url: str) -> tuple[str | None, int | None]:
 
 def _api_get(endpoint: str, params: dict, cookies: dict[str, str]) -> dict:
     resp = requests.get(endpoint, params=params, headers=_HEADERS, cookies=cookies, timeout=12)
+    if resp.status_code == 412:
+        log.info("bilibili API 412 — retrying with Facebook crawler UA")
+        resp = requests.get(
+            endpoint,
+            params=params,
+            headers=_FB_API_HEADERS,
+            cookies=cookies,
+            timeout=12,
+        )
     if resp.status_code != 200:
         snippet = resp.text[:200]
         raise BiliError(f"B站 API HTTP {resp.status_code}: {snippet}")
@@ -240,7 +252,6 @@ def _build_items_dash(play_data: dict, title: str) -> list[dict]:
 
 # Cobalt-style fallback: B站 whitelists the Facebook link-preview crawler UA,
 # so this path skips WBI signing and most IP-level anti-bot checks.
-_FB_UA = "facebookexternalhit/1.1"
 _PLAYINFO_RE = re.compile(r"window\.__playinfo__\s*=\s*(\{.+?\})\s*</script>", re.DOTALL)
 _INITIAL_STATE_BILI_RE = re.compile(
     r"window\.__INITIAL_STATE__\s*=\s*(\{.+?\});\(function", re.DOTALL
@@ -311,6 +322,21 @@ def _extract_via_html(bvid: str | None, aid: int | None, page: int = 1) -> dict:
     }
 
 
+def _extract_via_html_after_api_failure(
+    bvid: str | None,
+    aid: int | None,
+    page: int,
+    api_error: BiliError,
+) -> dict:
+    """Try the legacy page fallback without discarding the API diagnosis."""
+    try:
+        return _extract_via_html(bvid, aid, page)
+    except BiliError as html_error:
+        raise BiliError(
+            f"{api_error}; HTML 兜底失败: {html_error}"
+        ) from html_error
+
+
 def extract(url: str) -> dict:
     real_url = _resolve_short(url)
     bvid, aid = _identify(real_url)
@@ -332,7 +358,7 @@ def extract(url: str) -> dict:
         view = _api_get(_API_VIEW, view_params, cookies)
     except BiliError as exc:
         log.warning("bilibili API view failed (%s) — trying HTML fallback", exc)
-        return _extract_via_html(bvid, aid, page)
+        return _extract_via_html_after_api_failure(bvid, aid, page, exc)
 
     title = view.get("title") or "bilibili"
     pic = view.get("pic")
@@ -384,7 +410,7 @@ def extract(url: str) -> dict:
             items = _build_items_dash(play_data, title)
     except BiliError as exc:
         log.warning("bilibili playurl API failed (%s) — trying HTML fallback", exc)
-        return _extract_via_html(bvid, aid, page)
+        return _extract_via_html_after_api_failure(bvid, aid, page, exc)
 
     if not items:
         log.warning("bilibili playurl returned no streams — trying HTML fallback")

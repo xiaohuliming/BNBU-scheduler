@@ -276,6 +276,116 @@ class AppTestCase(unittest.TestCase):
             'https://only.pcdn.example/a',
         )
 
+    def test_bilibili_retries_api_412_with_facebook_crawler_ua(self):
+        from media_dl import bilibili, extractor
+
+        def api_response(status, payload=None, text=''):
+            response = mock.Mock()
+            response.status_code = status
+            response.text = text
+            response.json.return_value = payload
+            return response
+
+        responses = [
+            api_response(412, text='<html><title>\u51fa\u9519\u5566!</title></html>'),
+            api_response(200, {
+                'code': 0,
+                'data': {
+                    'bvid': 'BV1RYtV6NEwU',
+                    'cid': 41498248330,
+                    'title': '\u6d4b\u8bd5\u89c6\u9891',
+                    'pages': [],
+                },
+            }),
+            api_response(412, text='<html><title>\u51fa\u9519\u5566!</title></html>'),
+            api_response(200, {
+                'code': 0,
+                'data': {
+                    'quality': 64,
+                    'durl': [{
+                        'url': 'https://upos-sz-estgoss.bilivideo.com/video.mp4',
+                        'backup_url': [],
+                        'size': 123456,
+                    }],
+                },
+            }),
+        ]
+
+        with mock.patch.object(bilibili, 'bili_cookie_dict', return_value={}), \
+                mock.patch.object(
+                    bilibili.requests,
+                    'get',
+                    side_effect=responses,
+                ) as request_get, \
+                mock.patch.object(
+                    extractor.ytdlp,
+                    'extract',
+                    side_effect=AssertionError('Bilibili must not fall back to yt-dlp after API 412'),
+                ) as ytdlp_extract:
+            result = extractor.resolve(
+                'https://www.bilibili.com/video/BV1RYtV6NEwU'
+            )
+
+        self.assertEqual(result['platform'], 'bilibili')
+        self.assertEqual(result['title'], '\u6d4b\u8bd5\u89c6\u9891')
+        self.assertEqual(result['items'][0]['quality_label'], '720p \u00b7 MP4')
+        self.assertEqual(request_get.call_count, 4)
+        self.assertEqual(
+            [call.kwargs['headers']['User-Agent'] for call in request_get.call_args_list],
+            [
+                bilibili._BROWSER_UA,
+                bilibili._FB_UA,
+                bilibili._BROWSER_UA,
+                bilibili._FB_UA,
+            ],
+        )
+        ytdlp_extract.assert_not_called()
+
+    def test_bilibili_preserves_native_error_when_ytdlp_fallback_fails(self):
+        from media_dl import bilibili, extractor
+
+        native_error = bilibili.BiliError(
+            'B站 API HTTP 412; HTML 兜底失败: 未找到 __playinfo__'
+        )
+        with mock.patch.object(
+            bilibili,
+            'extract',
+            side_effect=native_error,
+        ), mock.patch.object(
+            extractor.ytdlp,
+            'extract',
+            side_effect=RuntimeError('yt-dlp HTTP 412'),
+        ):
+            with self.assertRaises(bilibili.BiliError) as raised:
+                extractor.resolve('https://www.bilibili.com/video/BV1RYtV6NEwU')
+
+        self.assertIs(raised.exception, native_error)
+
+    def test_bilibili_combines_api_and_html_fallback_failures(self):
+        from media_dl import bilibili
+
+        blocked = mock.Mock(status_code=412, text='<html>blocked</html>')
+        html_without_playinfo = mock.Mock(
+            status_code=200,
+            text='<html><title>\u6d4b\u8bd5\u89c6\u9891</title></html>',
+        )
+
+        with mock.patch.object(bilibili, 'bili_cookie_dict', return_value={}), \
+                mock.patch.object(
+                    bilibili.requests,
+                    'get',
+                    side_effect=[blocked, blocked, html_without_playinfo],
+                ):
+            with self.assertRaises(bilibili.BiliError) as raised:
+                bilibili.extract(
+                    'https://www.bilibili.com/video/BV1RYtV6NEwU'
+                )
+
+        message = str(raised.exception)
+        self.assertIn('B站 API HTTP 412', message)
+        self.assertIn('HTML 兜底失败', message)
+        self.assertIn('__playinfo__', message)
+
     def test_xhs_video_items_tolerate_empty_and_null_backup_urls(self):
         from media_dl.xhs import _video_items
 

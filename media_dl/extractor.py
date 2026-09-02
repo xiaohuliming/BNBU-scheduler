@@ -101,9 +101,21 @@ def resolve(url: str) -> dict:
             # A user-input problem (e.g. ?p=N out of range) — yt-dlp would fail
             # the same way with a worse message, so surface ours directly.
             raise UnsupportedURLError(str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
-            log.warning("native bilibili extractor failed, falling back to yt-dlp: %s", exc)
-            return ytdlp.extract(url)
+        except Exception as native_exc:  # noqa: BLE001
+            log.warning(
+                "native bilibili extractor failed, falling back to yt-dlp: %s",
+                native_exc,
+            )
+            try:
+                return ytdlp.extract(url)
+            except Exception as fallback_exc:  # noqa: BLE001
+                # The native error usually carries the actionable API/HTML
+                # diagnosis. Do not replace it with yt-dlp's secondary failure.
+                log.warning(
+                    "yt-dlp bilibili fallback also failed; preserving native error: %s",
+                    fallback_exc,
+                )
+                raise native_exc from fallback_exc
 
     if _YTDLP_HOST_RE.search(host):
         return ytdlp.extract(url)
