@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="3333953697-332939+12027406">
+<html lang="en" data-compiled-sum="2716555517-354620+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=3333953697-332939+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2716555517-354620+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=3333953697-332939+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2716555517-354620+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -1587,6 +1587,7 @@
             const [error, setError] = useState(null);
             const [selectedTodo, setSelectedTodo] = useState(null);
             const [showNotifOptions, setShowNotifOptions] = useState(false);
+            const [showAutoSyncOptions, setShowAutoSyncOptions] = useState(false);
             const [notificationDraft, setNotificationDraft] = useState({
                 email: '',
                 enabled: false,
@@ -1598,6 +1599,19 @@
             const [notificationSaving, setNotificationSaving] = useState(false);
             const [notificationTesting, setNotificationTesting] = useState(false);
             const [notificationMessage, setNotificationMessage] = useState(null);
+            const [autoSyncDraft, setAutoSyncDraft] = useState({
+                enabled: false,
+                credential_saved: false,
+                service_configured: false,
+                last_run_at: null,
+                last_status: null,
+                last_error: null,
+                password: ''
+            });
+            const [autoSyncSaving, setAutoSyncSaving] = useState(false);
+            const [autoSyncMessage, setAutoSyncMessage] = useState(null);
+            const [ispaceBindDraft, setIspaceBindDraft] = useState({ username: '', password: '' });
+            const [ispaceBinding, setIspaceBinding] = useState(false);
             
             // Filters & Views
             const [viewMode, setViewMode] = useState('active'); // 'active' | 'completed'
@@ -1612,6 +1626,7 @@
                 if (user) {
                     fetchTodos();
                     fetchNotificationSettings();
+                    fetchAutoSyncSettings();
                 }
             }, [user]);
 
@@ -1643,6 +1658,129 @@
                 } catch (e) {
                     setNotificationMessage({ type: 'error', text: e.message });
                 }
+            };
+
+            const fetchAutoSyncSettings = async () => {
+                try {
+                    const res = await fetch('/api/user/ispace-auto-sync');
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '无法读取自动同步设置');
+                    setAutoSyncDraft(prev => ({
+                        ...prev,
+                        enabled: Boolean(data.enabled),
+                        credential_saved: Boolean(data.credential_saved),
+                        service_configured: Boolean(data.service_configured),
+                        last_run_at: data.last_run_at || null,
+                        last_status: data.last_status || null,
+                        last_error: data.last_error || null,
+                        password: ''
+                    }));
+                } catch (e) {
+                    setAutoSyncMessage({ type: 'error', text: e.message });
+                }
+            };
+
+            const applyAutoSyncSettings = (settings) => {
+                setAutoSyncDraft(prev => ({
+                    ...prev,
+                    enabled: Boolean(settings.enabled),
+                    credential_saved: Boolean(settings.credential_saved),
+                    service_configured: Boolean(settings.service_configured),
+                    last_run_at: settings.last_run_at || null,
+                    last_status: settings.last_status || null,
+                    last_error: settings.last_error || null,
+                    password: ''
+                }));
+            };
+
+            const enableAutoSync = async (e) => {
+                e.preventDefault();
+                if (!autoSyncDraft.credential_saved && !autoSyncDraft.password) {
+                    setAutoSyncMessage({ type: 'error', text: '请输入 iSpace 密码' });
+                    return;
+                }
+                setAutoSyncSaving(true);
+                setAutoSyncMessage(null);
+                try {
+                    const res = await fetch('/api/user/ispace-auto-sync', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            enabled: true,
+                            password: autoSyncDraft.password
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '自动同步设置失败');
+                    applyAutoSyncSettings(data.settings);
+                    if (data.sync) await fetchTodos();
+                    setAutoSyncMessage({
+                        type: 'success',
+                        text: data.sync ? '密码验证成功，已同步并开启每日自动同步' : '每日自动同步已开启'
+                    });
+                } catch (e) {
+                    setAutoSyncMessage({ type: 'error', text: e.message });
+                }
+                setAutoSyncSaving(false);
+            };
+
+            const disableAutoSync = async () => {
+                if (!confirm('关闭每日自动同步并删除服务器中保存的 iSpace 密码？')) return;
+                setAutoSyncSaving(true);
+                setAutoSyncMessage(null);
+                try {
+                    const res = await fetch('/api/user/ispace-auto-sync', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: false, clear_credential: true })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '关闭自动同步失败');
+                    applyAutoSyncSettings(data.settings);
+                    setAutoSyncMessage({ type: 'success', text: '自动同步已关闭，保存的密码已删除' });
+                } catch (e) {
+                    setAutoSyncMessage({ type: 'error', text: e.message });
+                }
+                setAutoSyncSaving(false);
+            };
+
+            const formatAutoSyncTime = (timestamp) => {
+                if (!timestamp) return '';
+                return new Date(Number(timestamp) * 1000).toLocaleString('zh-CN', {
+                    timeZone: 'Asia/Shanghai',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const bindISpaceFromDDL = async (e) => {
+                e.preventDefault();
+                if (!ispaceBindDraft.username.trim() || !ispaceBindDraft.password) {
+                    setAutoSyncMessage({ type: 'error', text: '请输入学号和 iSpace 密码' });
+                    return;
+                }
+                setIspaceBinding(true);
+                setAutoSyncMessage(null);
+                try {
+                    const res = await fetch('/api/user/bind/ispace', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: ispaceBindDraft.username.trim(),
+                            password: ispaceBindDraft.password
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '绑定 iSpace 失败');
+                    setIspaceBindDraft({ username: '', password: '' });
+                    setAutoSyncMessage({ type: 'success', text: '绑定成功，DDL 已同步。正在刷新账号状态...' });
+                    setTimeout(() => window.location.reload(), 700);
+                } catch (e) {
+                    setAutoSyncMessage({ type: 'error', text: e.message });
+                }
+                setIspaceBinding(false);
             };
 
             const toggleReminderHour = (hour) => {
@@ -1703,10 +1841,12 @@
 
             const handleSync = async () => {
                 if (!user.ispace_username) {
-                    alert("Please login with iSpace account first or link your account.");
+                    setShowAutoSyncOptions(true);
+                    setShowNotifOptions(false);
+                    setAutoSyncMessage({ type: 'error', text: '请先绑定 iSpace 账号，再选择手动或每日自动同步' });
                     return;
                 }
-                const password = prompt("Please confirm your iSpace password to sync:");
+                const password = prompt("手动同步只使用一次密码，不会保存。请输入 iSpace 密码：");
                 if (!password) return;
 
                 setSyncing(true);
@@ -1718,7 +1858,7 @@
                     });
                     const data = await res.json();
                     if (data.success) {
-                        alert(`Synced ${data.added} new tasks.`);
+                        alert(`同步完成：新增 ${data.added} 项，更新 ${data.updated} 项。`);
                         fetchTodos();
                     } else if (res.status === 403) {
                         alert("当前登录用户绑定的 iSpace 账号与同步账号不一致。请退出后使用正确的 iSpace 账号重新登录，再同步 DDL。");
@@ -1843,12 +1983,183 @@
                                 </button>
                                 <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 font-bold hover:text-[#3b82f6] bg-white border-2 border-black px-4 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">
                                     <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} /> 
-                                    {syncing ? 'Syncing...' : 'Sync iSpace'}
+                                    {syncing ? '同步中...' : '手动同步'}
                                 </button>
                                 <div className="relative">
                                     <button
                                         onClick={() => {
+                                            setShowAutoSyncOptions(!showAutoSyncOptions);
+                                            setShowNotifOptions(false);
+                                            setAutoSyncMessage(null);
+                                        }}
+                                        aria-label="iSpace 每日自动同步设置"
+                                        aria-expanded={showAutoSyncOptions}
+                                        className={`min-h-11 flex items-center gap-2 font-bold border-2 border-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all ${
+                                            autoSyncDraft.enabled
+                                                ? 'bg-[#1e3a5f] text-white hover:bg-[#294f7d]'
+                                                : 'bg-white hover:bg-[#d6ff62]'
+                                        }`}
+                                    >
+                                        <Lock className="w-5 h-5" />
+                                        <span className="hidden sm:inline">自动同步</span>
+                                    </button>
+                                    {showAutoSyncOptions && (
+                                        <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] z-50">
+                                            <form onSubmit={user.ispace_username ? enableAutoSync : bindISpaceFromDDL} className="p-4 space-y-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="font-black text-lg">{user.ispace_username ? '每日自动同步' : '绑定 iSpace 账号'}</div>
+                                                        <div className="mt-1 text-xs font-bold text-gray-600 leading-5">
+                                                            {user.ispace_username
+                                                                ? '服务器每天自动登录 iSpace 并拉取新的 DDL'
+                                                                : '本地 MAXCOURSE 账号绑定后即可同步 DDL'}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black uppercase px-2 py-1 border-2 border-black ${
+                                                        !user.ispace_username
+                                                            ? 'bg-yellow-100 text-black'
+                                                            : autoSyncDraft.enabled
+                                                            ? 'bg-[#d6ff62] text-black'
+                                                            : autoSyncDraft.service_configured
+                                                                ? 'bg-white text-black'
+                                                                : 'bg-yellow-100 text-black'
+                                                    }`}>
+                                                        {!user.ispace_username
+                                                            ? '待绑定'
+                                                            : autoSyncDraft.enabled
+                                                                ? '已开启'
+                                                                : autoSyncDraft.service_configured
+                                                                    ? '未开启'
+                                                                    : '服务器未配置'}
+                                                    </span>
+                                                </div>
+
+                                                {!user.ispace_username ? (
+                                                    <React.Fragment>
+                                                        <div className="border-2 border-yellow-700 bg-yellow-50 p-3 text-xs font-bold leading-5 text-yellow-900">
+                                                            绑定时只验证一次，不会保存密码。绑定成功后会立即同步 DDL，你可以再单独选择是否开启每日自动同步。
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <label className="block text-xs font-black uppercase mb-1" htmlFor="ispace-bind-username">iSpace 学号</label>
+                                                                <input
+                                                                    id="ispace-bind-username"
+                                                                    type="text"
+                                                                    value={ispaceBindDraft.username}
+                                                                    onChange={e => setIspaceBindDraft({ ...ispaceBindDraft, username: e.target.value })}
+                                                                    autoComplete="username"
+                                                                    placeholder="例如 s123456789"
+                                                                    className="min-h-11 w-full border-2 border-black px-3 py-2 font-bold focus:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-700"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-black uppercase mb-1" htmlFor="ispace-bind-password">iSpace 密码</label>
+                                                                <input
+                                                                    id="ispace-bind-password"
+                                                                    type="password"
+                                                                    value={ispaceBindDraft.password}
+                                                                    onChange={e => setIspaceBindDraft({ ...ispaceBindDraft, password: e.target.value })}
+                                                                    autoComplete="current-password"
+                                                                    placeholder="仅用于本次验证"
+                                                                    className="min-h-11 w-full border-2 border-black px-3 py-2 font-bold focus:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-700"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </React.Fragment>
+                                                ) : (
+                                                    <React.Fragment>
+                                                        <div className="border-2 border-[#1e3a5f] bg-[#eef5ff] p-3 text-xs font-bold leading-5 text-[#1e3a5f]">
+                                                            <div className="flex items-start gap-2">
+                                                                <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                                                                <p>
+                                                                    密码会使用服务器密钥加密保存，只在自动同步时解密。关闭自动同步后会立即删除。为完成自动登录，服务器必须具备解密能力。
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {autoSyncDraft.last_run_at && (
+                                                            <div className={`border-2 px-3 py-2 text-xs font-bold leading-5 ${
+                                                                autoSyncDraft.last_status === 'success'
+                                                                    ? 'border-green-700 bg-green-50 text-green-800'
+                                                                    : autoSyncDraft.last_status === 'error'
+                                                                        ? 'border-red-700 bg-red-50 text-red-800'
+                                                                        : 'border-gray-500 bg-gray-50 text-gray-700'
+                                                            }`}>
+                                                                最近运行：{formatAutoSyncTime(autoSyncDraft.last_run_at)}
+                                                                {autoSyncDraft.last_status === 'success' && '，同步成功'}
+                                                                {autoSyncDraft.last_error && `，${autoSyncDraft.last_error}`}
+                                                            </div>
+                                                        )}
+
+                                                        <div>
+                                                            <label className="block text-xs font-black uppercase mb-1" htmlFor="ispace-auto-sync-password">
+                                                                {autoSyncDraft.credential_saved ? '更新 iSpace 密码' : 'iSpace 密码'}
+                                                            </label>
+                                                            <input
+                                                                id="ispace-auto-sync-password"
+                                                                type="password"
+                                                                value={autoSyncDraft.password}
+                                                                onChange={e => setAutoSyncDraft({ ...autoSyncDraft, password: e.target.value })}
+                                                                autoComplete="current-password"
+                                                                placeholder={autoSyncDraft.credential_saved ? '留空则继续使用已保存密码' : '输入密码后先验证再保存'}
+                                                                className="min-h-11 w-full border-2 border-black px-3 py-2 font-bold focus:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                                                            />
+                                                            <p className="mt-1.5 text-[11px] font-bold leading-4 text-gray-500">
+                                                                手动同步仍可随时使用，每次输入的密码不会保存。
+                                                            </p>
+                                                        </div>
+                                                    </React.Fragment>
+                                                )}
+
+                                                {autoSyncMessage && (
+                                                    <div role="status" className={`border-2 px-3 py-2 text-xs font-bold leading-5 ${
+                                                        autoSyncMessage.type === 'success'
+                                                            ? 'border-green-700 bg-green-50 text-green-800'
+                                                            : 'border-red-700 bg-red-50 text-red-800'
+                                                    }`}>
+                                                        {autoSyncMessage.text}
+                                                    </div>
+                                                )}
+
+                                                <button
+                                                    type="submit"
+                                                    disabled={user.ispace_username
+                                                        ? autoSyncSaving || !autoSyncDraft.service_configured
+                                                        : ispaceBinding}
+                                                    className={`min-h-11 w-full text-white font-black py-2.5 border-2 border-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                        user.ispace_username
+                                                            ? 'bg-[#1e3a5f] hover:bg-[#d6ff62] hover:text-black'
+                                                            : 'bg-[#3b82f6] hover:bg-black'
+                                                    }`}
+                                                >
+                                                    {!user.ispace_username
+                                                        ? ispaceBinding ? '绑定中...' : '验证并绑定 iSpace'
+                                                        : autoSyncSaving
+                                                            ? '处理中...'
+                                                            : autoSyncDraft.credential_saved
+                                                                ? '保存并保持每日同步'
+                                                                : '验证密码并开启每日同步'}
+                                                </button>
+
+                                                {user.ispace_username && autoSyncDraft.credential_saved && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={disableAutoSync}
+                                                        disabled={autoSyncSaving}
+                                                        className="min-h-11 w-full bg-white text-red-700 font-black py-2.5 border-2 border-red-700 hover:bg-red-700 hover:text-white transition-colors disabled:opacity-50"
+                                                    >
+                                                        关闭自动同步并删除密码
+                                                    </button>
+                                                )}
+                                            </form>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => {
                                             setShowNotifOptions(!showNotifOptions);
+                                            setShowAutoSyncOptions(false);
                                             setNotificationMessage(null);
                                         }}
                                         aria-label="Email notification settings"
@@ -4403,7 +4714,7 @@
 
         // Shown once per NOTICE_VERSION on the user's first visit after an update;
         // bump the version string whenever a new announcement should appear.
-        const NOTICE_VERSION = '2026S1b';
+        const NOTICE_VERSION = '2026S1c';
         const UpdateNotice = () => {
             const [seen, setSeen] = useState(() => {
                 try { return localStorage.getItem('maxcourse_notice_seen') === NOTICE_VERSION; } catch (e) { return true; }
@@ -4415,21 +4726,32 @@
                 setSeen(true);
             };
             return (
-                <div className="border-b-2 border-black bg-[#d6ff62]">
-                    <div className="max-w-6xl mx-auto px-4 md:px-8 py-2.5">
-                        {/* 收起态一行:整体居中,别让内容全挤在左边显得不对称 */}
-                        <div className="flex items-center justify-center gap-3">
-                            <span className="bg-black text-[#d6ff62] text-[10px] font-black px-1.5 py-0.5 shrink-0 uppercase tracking-wider">Update</span>
-                            <p className="font-bold text-sm min-w-0 truncate">新学期已就绪：26-27 学年课表与课程数据全面更新 · 🎁 OmniChat 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span></p>
-                            <button onClick={() => setOpen(v => !v)} className="shrink-0 text-xs font-black underline hover:text-blue-700">{open ? '收起' : '更新内容'}</button>
-                            <button onClick={dismiss} className="shrink-0 hover:text-red-600" title="知道了，不再显示"><X className="w-4 h-4" /></button>
+                <div className="border-b-2 border-black bg-[#ff4fd8] text-black">
+                    <div className="max-w-6xl mx-auto px-3 md:px-8 py-2">
+                        <div className="flex items-center justify-center gap-2 sm:gap-3">
+                            <span className="hidden sm:inline-flex bg-black text-[#ff4fd8] text-[10px] font-black px-2 py-1 shrink-0 uppercase tracking-wider">Update</span>
+                            <p className="font-black text-xs sm:text-sm min-w-0 text-center leading-5">iSpace 已迁移至 BNBU 新域名 · DDL 邮箱提醒现已启用</p>
+                            <button
+                                onClick={() => setOpen(v => !v)}
+                                aria-expanded={open}
+                                className="shrink-0 min-h-11 px-2 text-xs font-black underline decoration-2 underline-offset-2 hover:text-white focus:outline-none focus:ring-2 focus:ring-black transition-colors"
+                            >
+                                {open ? '收起' : '查看详情'}
+                            </button>
+                            <button
+                                onClick={dismiss}
+                                aria-label="关闭更新公告"
+                                className="shrink-0 min-w-11 min-h-11 inline-flex items-center justify-center hover:bg-black hover:text-[#ff4fd8] focus:outline-none focus:ring-2 focus:ring-black transition-colors"
+                                title="知道了，不再显示"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
                         {open && (
-                            <div className="max-w-4xl mx-auto pb-2.5 pt-1.5 text-sm font-bold space-y-1.5 border-t border-black/20 mt-2">
-                                <p>· 课表切换至 <span className="bg-black text-[#d6ff62] px-1">26-27 学年第一学期</span>：582 门课 / 2490 个班次，排课优化、空教室查询、老师目录均已按新课表计算</p>
-                                <p>· 课程数据全量更新：最新官方课程介绍（2026-07 版）、WPEC / 语言中心补充介绍、本学期教材清单、全部 1393 门课的 AI 介绍与就业升学分析</p>
-                                <p>· 上学期（25-26 第二学期）已归档，课程搜索的学期范围里可随时回看；专业地图与「按专业预选」已自动前滚到新学期</p>
-                                <p>· 🎁 新学期福利：<a href="https://chat.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">OmniChat</a> 兑换码 <span className="bg-black text-[#d6ff62] px-1.5 font-mono">BNBU2026</span>，登录后点右上角积分输入即可 +2000 积分，前 200 名先到先得；也欢迎用 <a href="https://ppt.bnbscheduler.top/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">SlideCraft</a> 一句话生成 PPT</p>
+                            <div className="max-w-4xl mx-auto pb-3 pt-2 text-xs sm:text-sm font-bold leading-6 space-y-1.5 border-t-2 border-black/30">
+                                <p>· iSpace 登录与 DDL 同步已适配 <a href="https://ispace.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer" className="bg-black text-[#ff4fd8] px-1.5 py-0.5 underline decoration-1 underline-offset-2 hover:text-white">ispace.bnbu.edu.cn</a></p>
+                                <p>· DDL 邮箱提醒正式上线，可选择提前 72、24、3 或 1 小时提醒，不同时间会使用不同紧急程度和提示内容</p>
+                                <p>· 登录后进入 DDL 页面，点击右上角铃铛即可填写邮箱、开启提醒并发送测试邮件</p>
                             </div>
                         )}
                     </div>

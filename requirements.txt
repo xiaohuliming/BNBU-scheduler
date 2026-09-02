@@ -6,6 +6,7 @@ pandas>=2.0
 openpyxl>=3.1
 requests>=2.30
 beautifulsoup4>=4.12
+cryptography>=42.0  # authenticated encryption for opt-in iSpace auto-sync credentials
 numpy>=1.26
 scipy>=1.11          # SkillPath PPR career recommender (/api/recommend)
 pypdf>=4.0           # transcript parsing (/api/parse-transcript) + course-catalog build

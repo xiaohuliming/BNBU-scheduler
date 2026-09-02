@@ -24,6 +24,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
 from crawler import fetch_timeline
+from ispace_credentials import (
+    ISpaceCredentialError,
+    decrypt_ispace_password,
+    encrypt_ispace_password,
+    is_ispace_credential_encryption_configured,
+)
 from media_dl import media_dl_bp
 
 # Database setup
@@ -62,6 +68,8 @@ DEFAULT_EMAIL_REMINDER_VALUE = ','.join(str(hour) for hour in DEFAULT_EMAIL_REMI
 DEFAULT_PUBLIC_BASE_URL = 'https://www.bnbscheduler.top'
 BEIJING_TZ = timezone(timedelta(hours=8))
 EMAIL_MAX_DELIVERY_ATTEMPTS = 3
+ISPACE_PASSWORD_MAX_CHARS = 512
+ISPACE_AUTO_SYNC_MAX_AUTH_FAILURES = 3
 
 
 def load_or_create_secret_key():
@@ -194,7 +202,10 @@ SCRAPER_UA_MARKERS = (
 # over. 0 disables that bucket (emergency env knob, restart to apply).
 RATE_LIMIT_IP_PER_MIN = int(os.getenv('MAXCOURSE_RL_IP_PER_MIN', '2000'))
 RATE_LIMIT_VISITOR_PER_MIN = int(os.getenv('MAXCOURSE_RL_VISITOR_PER_MIN', '240'))
-RATE_LIMIT_EXEMPT_PATHS = ('/api/notifications/dispatch',)  # cron heartbeat
+RATE_LIMIT_EXEMPT_PATHS = (
+    '/api/notifications/dispatch',
+    '/api/todos/auto-sync/dispatch',
+)  # protected cron heartbeats
 _RATE_COUNTER_HARD_CAP = 20000  # fail open (stop tracking new keys) beyond this
 
 _rate_lock = threading.Lock()
@@ -499,6 +510,30 @@ def init_db():
             pass
         try:
             c.execute('ALTER TABLE users ADD COLUMN email_unsubscribed_at TIMESTAMP')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_password_encrypted TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_auto_sync_enabled BOOLEAN DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_auto_sync_last_at INTEGER')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_auto_sync_last_status TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_auto_sync_last_error TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_auto_sync_failure_count INTEGER DEFAULT 0')
         except sqlite3.OperationalError:
             pass
 
@@ -2094,6 +2129,8 @@ def bind_ispace():
     password = data.get('password')
     if not sid or not password:
         return jsonify({"error": "\u5b66\u53f7\u548c iSpace \u5bc6\u7801\u90fd\u9700\u8981\u586b\u5199"}), 400
+    if len(sid) > 120 or not isinstance(password, str) or len(password) > ISPACE_PASSWORD_MAX_CHARS:
+        return jsonify({"error": "iSpace account or password is too long"}), 400
 
     # 1. Verify with iSpace (same check as /api/login/ispace)
     result = fetch_timeline(sid, password)
@@ -2150,6 +2187,172 @@ def get_current_user():
     session['display_name'] = display_name # Sync session
     
     return jsonify({"user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": display_name}})
+
+
+def ispace_auto_sync_settings_payload(user_row):
+    keys = user_row.keys()
+    encrypted = user_row['ispace_password_encrypted'] if 'ispace_password_encrypted' in keys else None
+    enabled = bool(user_row['ispace_auto_sync_enabled']) if 'ispace_auto_sync_enabled' in keys else False
+    return {
+        'enabled': enabled,
+        'credential_saved': bool(encrypted),
+        'service_configured': is_ispace_credential_encryption_configured(),
+        'last_run_at': user_row['ispace_auto_sync_last_at'] if 'ispace_auto_sync_last_at' in keys else None,
+        'last_status': user_row['ispace_auto_sync_last_status'] if 'ispace_auto_sync_last_status' in keys else None,
+        'last_error': user_row['ispace_auto_sync_last_error'] if 'ispace_auto_sync_last_error' in keys else None,
+    }
+
+
+def get_ispace_auto_sync_user(conn, user_id):
+    return conn.execute(
+        '''
+        SELECT
+            id,
+            ispace_username,
+            ispace_password_encrypted,
+            COALESCE(ispace_auto_sync_enabled, 0) AS ispace_auto_sync_enabled,
+            ispace_auto_sync_last_at,
+            ispace_auto_sync_last_status,
+            ispace_auto_sync_last_error,
+            COALESCE(ispace_auto_sync_failure_count, 0) AS ispace_auto_sync_failure_count
+        FROM users
+        WHERE id = ?
+        ''',
+        (user_id,),
+    ).fetchone()
+
+
+@app.route('/api/user/ispace-auto-sync', methods=['GET'])
+def get_ispace_auto_sync_settings():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    try:
+        user = get_ispace_auto_sync_user(conn, session['user_id'])
+    finally:
+        conn.close()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify(ispace_auto_sync_settings_payload(user))
+
+
+@app.route('/api/user/ispace-auto-sync', methods=['PUT'])
+def update_ispace_auto_sync_settings():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get('enabled'))
+    password = data.get('password', '')
+    if not isinstance(password, str):
+        return jsonify({'error': 'Password must be a string'}), 400
+    if len(password) > ISPACE_PASSWORD_MAX_CHARS:
+        return jsonify({'error': 'Password is too long'}), 400
+
+    conn = get_db()
+    try:
+        user = get_ispace_auto_sync_user(conn, session['user_id'])
+    finally:
+        conn.close()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not enabled:
+        conn = get_db()
+        try:
+            conn.execute(
+                '''
+                UPDATE users
+                SET ispace_password_encrypted = NULL,
+                    ispace_auto_sync_enabled = 0,
+                    ispace_auto_sync_last_status = 'disabled',
+                    ispace_auto_sync_last_error = NULL,
+                    ispace_auto_sync_failure_count = 0
+                WHERE id = ?
+                ''',
+                (session['user_id'],),
+            )
+            conn.commit()
+            updated_user = get_ispace_auto_sync_user(conn, session['user_id'])
+        finally:
+            conn.close()
+        return jsonify({
+            'success': True,
+            'settings': ispace_auto_sync_settings_payload(updated_user),
+        })
+
+    if not user['ispace_username']:
+        return jsonify({'error': 'Link an iSpace account before enabling auto-sync'}), 400
+    if not is_ispace_credential_encryption_configured():
+        return jsonify({'error': 'iSpace credential encryption is not configured on the server'}), 503
+
+    sync_stats = None
+    encrypted_password = user['ispace_password_encrypted']
+    if password:
+        result = fetch_timeline(user['ispace_username'], password)
+        if isinstance(result, dict) and result.get('error'):
+            return jsonify({'error': f"iSpace verification failed: {result['error']}"}), 400
+        if not isinstance(result, list):
+            return jsonify({'error': 'iSpace verification returned an invalid result'}), 502
+        try:
+            encrypted_password = encrypt_ispace_password(password)
+        except ISpaceCredentialError as error:
+            return jsonify({'error': str(error)}), 503
+
+        conn = get_db()
+        try:
+            sync_stats = sync_ispace_todos_for_user(conn, session['user_id'], result)
+            conn.execute(
+                '''
+                UPDATE users
+                SET ispace_password_encrypted = ?,
+                    ispace_auto_sync_enabled = 1,
+                    ispace_auto_sync_last_at = ?,
+                    ispace_auto_sync_last_status = 'success',
+                    ispace_auto_sync_last_error = NULL,
+                    ispace_auto_sync_failure_count = 0
+                WHERE id = ?
+                ''',
+                (encrypted_password, int(time.time()), session['user_id']),
+            )
+            conn.commit()
+            updated_user = get_ispace_auto_sync_user(conn, session['user_id'])
+        finally:
+            conn.close()
+    else:
+        if not encrypted_password:
+            return jsonify({'error': 'Enter your iSpace password to enable auto-sync'}), 400
+        try:
+            decrypt_ispace_password(encrypted_password)
+        except ISpaceCredentialError:
+            return jsonify({'error': 'Saved iSpace password is unavailable; enter it again'}), 409
+
+        conn = get_db()
+        try:
+            conn.execute(
+                '''
+                UPDATE users
+                SET ispace_auto_sync_enabled = 1,
+                    ispace_auto_sync_last_status = 'ready',
+                    ispace_auto_sync_last_error = NULL,
+                    ispace_auto_sync_failure_count = 0
+                WHERE id = ?
+                ''',
+                (session['user_id'],),
+            )
+            conn.commit()
+            updated_user = get_ispace_auto_sync_user(conn, session['user_id'])
+        finally:
+            conn.close()
+
+    response = {
+        'success': True,
+        'settings': ispace_auto_sync_settings_payload(updated_user),
+    }
+    if sync_stats is not None:
+        response['sync'] = sync_stats
+    return jsonify(response)
 
 @app.route('/api/user/profile', methods=['PUT'])
 def update_profile():
@@ -2709,6 +2912,155 @@ def delete_todo(todo_id):
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+def public_ispace_auto_sync_error(error_message):
+    message = str(error_message or '')
+    if 'Login failed' in message:
+        return 'iSpace 密码验证失败，请重新设置自动同步'
+    if 'session key' in message.lower():
+        return 'iSpace 会话初始化失败，将在下次自动重试'
+    return 'iSpace 暂时无法同步，将在下次自动重试'
+
+
+@app.route('/api/todos/auto-sync/dispatch', methods=['POST'])
+def dispatch_ispace_auto_sync():
+    expected_secret = os.getenv('MAXCOURSE_ISPACE_SYNC_SECRET', '').strip()
+    if not expected_secret:
+        return jsonify({'error': 'iSpace auto-sync secret is not configured'}), 503
+
+    supplied_secret = request.headers.get('X-Auto-Sync-Secret', '').strip()
+    if not supplied_secret or not secrets.compare_digest(supplied_secret, expected_secret):
+        return jsonify({'error': 'Unauthorized'}), 401
+    if not is_ispace_credential_encryption_configured():
+        return jsonify({'error': 'iSpace credential encryption is not configured'}), 503
+
+    conn = get_db()
+    try:
+        candidates = conn.execute(
+            '''
+            SELECT
+                id,
+                ispace_username,
+                ispace_password_encrypted,
+                COALESCE(ispace_auto_sync_failure_count, 0) AS failure_count
+            FROM users
+            WHERE COALESCE(ispace_auto_sync_enabled, 0) = 1
+              AND ispace_username IS NOT NULL
+              AND ispace_username != ''
+              AND ispace_password_encrypted IS NOT NULL
+              AND ispace_password_encrypted != ''
+            ORDER BY id ASC
+            '''
+        ).fetchall()
+    finally:
+        conn.close()
+
+    synced = 0
+    failed = 0
+    disabled = 0
+    errors = []
+    for row in candidates:
+        now_ts = int(time.time())
+        try:
+            password = decrypt_ispace_password(row['ispace_password_encrypted'])
+        except ISpaceCredentialError:
+            message = '已保存的 iSpace 密码无法解密，自动同步已关闭'
+            conn = get_db()
+            try:
+                conn.execute(
+                    '''
+                    UPDATE users
+                    SET ispace_password_encrypted = NULL,
+                        ispace_auto_sync_enabled = 0,
+                        ispace_auto_sync_last_at = ?,
+                        ispace_auto_sync_last_status = 'error',
+                        ispace_auto_sync_last_error = ?,
+                        ispace_auto_sync_failure_count = ispace_auto_sync_failure_count + 1
+                    WHERE id = ?
+                    ''',
+                    (now_ts, message, row['id']),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            failed += 1
+            disabled += 1
+            errors.append({'user_id': row['id'], 'error': message})
+            continue
+
+        try:
+            result = fetch_timeline(row['ispace_username'], password)
+        except Exception:
+            app.logger.exception('Unexpected iSpace auto-sync failure for user_id=%s', row['id'])
+            result = {'error': 'Unexpected sync failure'}
+        finally:
+            password = None
+
+        if isinstance(result, list):
+            conn = get_db()
+            try:
+                sync_ispace_todos_for_user(conn, row['id'], result)
+                conn.execute(
+                    '''
+                    UPDATE users
+                    SET ispace_auto_sync_last_at = ?,
+                        ispace_auto_sync_last_status = 'success',
+                        ispace_auto_sync_last_error = NULL,
+                        ispace_auto_sync_failure_count = 0
+                    WHERE id = ?
+                    ''',
+                    (now_ts, row['id']),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            synced += 1
+            continue
+
+        raw_error = result.get('error') if isinstance(result, dict) else 'Invalid sync result'
+        message = public_ispace_auto_sync_error(raw_error)
+        failure_count = int(row['failure_count'] or 0) + 1
+        auth_failure = 'Login failed' in str(raw_error or '')
+        should_disable = auth_failure and failure_count >= ISPACE_AUTO_SYNC_MAX_AUTH_FAILURES
+        conn = get_db()
+        try:
+            conn.execute(
+                '''
+                UPDATE users
+                SET ispace_password_encrypted = CASE WHEN ? THEN NULL ELSE ispace_password_encrypted END,
+                    ispace_auto_sync_enabled = CASE WHEN ? THEN 0 ELSE ispace_auto_sync_enabled END,
+                    ispace_auto_sync_last_at = ?,
+                    ispace_auto_sync_last_status = 'error',
+                    ispace_auto_sync_last_error = ?,
+                    ispace_auto_sync_failure_count = ?
+                WHERE id = ?
+                ''',
+                (
+                    1 if should_disable else 0,
+                    1 if should_disable else 0,
+                    now_ts,
+                    message,
+                    failure_count,
+                    row['id'],
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        failed += 1
+        if should_disable:
+            disabled += 1
+        errors.append({'user_id': row['id'], 'error': message})
+
+    return jsonify({
+        'success': failed == 0,
+        'candidates': len(candidates),
+        'synced': synced,
+        'failed': failed,
+        'disabled': disabled,
+        'errors': errors[:10],
+    })
 
 
 @app.route('/api/notifications/dispatch', methods=['POST'])
