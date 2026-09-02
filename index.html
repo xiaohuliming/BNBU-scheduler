@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2485082105-331523+12027406">
+<html lang="en" data-compiled-sum="3333953697-332939+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2485082105-331523+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=3333953697-332939+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2485082105-331523+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=3333953697-332939+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -3517,26 +3517,45 @@
             const categories = (data && data.categories) || [];
             const filtered = useMemo(() => {
                 if (!q) return categories;
+                const codeQuery = /^[a-z0-9]{1,4}$/.test(q);
+                const matchesQuery = (value) => {
+                    const normalized = String(value || '').toLowerCase();
+                    return codeQuery
+                        ? normalized.split(/[^a-z0-9]+/).includes(q)
+                        : normalized.includes(q);
+                };
                 return categories
-                    .map(cat => ({
-                        ...cat,
-                        docs: (cat.docs || []).filter(doc =>
-                            (doc.title || '').toLowerCase().includes(q) ||
-                            (doc.desc || '').toLowerCase().includes(q) ||
-                            (doc.meta || '').toLowerCase().includes(q))
-                    }))
+                    .map(cat => {
+                        const docs = cat.docs || [];
+                        const categoryMatches =
+                            matchesQuery(cat.title) || matchesQuery(cat.desc);
+                        return {
+                            ...cat,
+                            docs: categoryMatches ? docs : docs.filter(doc =>
+                                matchesQuery(doc.title) ||
+                                matchesQuery(doc.desc) ||
+                                matchesQuery(doc.meta) ||
+                                (doc.keywords || []).some(matchesQuery))
+                        };
+                    })
                     .filter(cat => cat.docs.length > 0);
             }, [categories, q]);
 
             const totalDocs = categories.reduce((n, c) => n + (c.docs ? c.docs.length : 0), 0);
 
             const DocCard = ({ doc }) => {
-                const kind = doc.type === 'pdf' ? 'pdf' : doc.type === 'download' ? 'download' : 'link';
-                const iconBg = kind === 'link' ? 'bg-[#3b82f6]' : kind === 'download' ? 'bg-[#0ea5e9]' : 'bg-[#101820]';
-                const KindIcon = kind === 'link' ? Globe : kind === 'download' ? Download : FileText;
-                const badge = kind === 'pdf' ? 'PDF' : kind === 'download' ? (doc.badge || '安装包') : '外链';
-                const ctaText = kind === 'download' ? '下载' : kind === 'pdf' ? '查看 / 下载' : '打开';
-                const CtaIcon = kind === 'link' ? ExternalLink : Download;
+                const kind = doc.type === 'pdf'
+                    ? 'pdf'
+                    : doc.type === 'download'
+                        ? 'download'
+                        : doc.type === 'location' ? 'location' : 'link';
+                const iconBg = kind === 'location'
+                    ? 'bg-[#f97316]'
+                    : kind === 'link' ? 'bg-[#3b82f6]' : kind === 'download' ? 'bg-[#0ea5e9]' : 'bg-[#101820]';
+                const KindIcon = kind === 'location' ? MapPin : kind === 'link' ? Globe : kind === 'download' ? Download : FileText;
+                const badge = kind === 'location' ? '位置' : kind === 'pdf' ? 'PDF' : kind === 'download' ? (doc.badge || '安装包') : '外链';
+                const ctaText = doc.cta || (kind === 'download' ? '下载' : kind === 'pdf' ? '查看 / 下载' : kind === 'location' ? '查看来源' : '打开');
+                const CtaIcon = kind === 'link' || kind === 'location' ? ExternalLink : Download;
                 return (
                     <a
                         href={doc.href}
@@ -3555,8 +3574,13 @@
                         </div>
                         <h3 className="mt-4 text-lg font-black tracking-[-0.03em] text-[#101820]">{doc.title}</h3>
                         {doc.desc && <p className="mt-1.5 flex-1 text-sm leading-6 text-black/58">{doc.desc}</p>}
-                        <div className="mt-4 flex items-center justify-between gap-2">
-                            {doc.meta && <span className="mono-ui text-[11px] uppercase tracking-[0.1em] text-black/40">{doc.meta}</span>}
+                        {kind === 'location' && doc.meta && (
+                            <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-[#f4efe6] px-3 py-1.5 mono-ui text-xs font-bold text-[#101820]">
+                                <MapPin className="w-3.5 h-3.5" /> {doc.meta}
+                            </div>
+                        )}
+                        <div className={`mt-4 flex items-center gap-2 ${kind === 'location' ? 'justify-end' : 'justify-between'}`}>
+                            {doc.meta && kind !== 'location' && <span className="mono-ui text-[11px] uppercase tracking-[0.1em] text-black/40">{doc.meta}</span>}
                             <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#101820] group-hover:text-[#ff7a1f] transition-colors">
                                 {ctaText}
                                 <CtaIcon className="w-4 h-4" />
@@ -3586,7 +3610,7 @@
                                 )}
                             </div>
                             <div className="rounded-3xl border border-black/10 bg-white/70 px-4 py-3 mono-ui text-xs uppercase tracking-[0.16em] text-black/45 whitespace-nowrap">
-                                {totalDocs} files
+                                {totalDocs} items
                             </div>
                         </div>
                         <div className="relative mt-6 max-w-md">
@@ -3595,7 +3619,7 @@
                                 type="text"
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
-                                placeholder="搜索文件，如“选课”“转专业”“REPLACE”"
+                                placeholder="搜索文件、专业或办公室，如“AI”“转专业”"
                                 className="w-full rounded-full border border-black/15 bg-white/80 py-3 pl-11 pr-4 text-sm font-medium text-[#101820] placeholder-black/35 focus:border-black focus:outline-none transition-colors"
                             />
                         </div>

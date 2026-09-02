@@ -1555,6 +1555,45 @@ class AppTestCase(unittest.TestCase):
         r = self.client.get('/api/campus-docs', headers={'User-Agent': self.BROWSER_UA})
         self.assertEqual(r.status_code, 200)
 
+    def test_campus_docs_include_searchable_office_directory(self):
+        response = self.client.get(
+            '/api/campus-docs',
+            headers={'User-Agent': self.BROWSER_UA},
+        )
+        data = response.get_json()
+        office_category = next(
+            category for category in data['categories']
+            if category['key'] == 'offices'
+        )
+        docs = office_category['docs']
+        searchable_codes = {
+            code
+            for doc in docs
+            for code in doc.get('keywords', [])
+            if code.isupper() and code not in {'FBM', 'FHSS', 'FST', 'SCC'}
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(all(doc['type'] == 'location' for doc in docs))
+        self.assertTrue({
+            'ACCT', 'AE', 'BUSA', 'FIN', 'DMM', 'EPIN', 'MHR', 'MKT', 'EBIS',
+            'ATS', 'ELLS', 'DGS', 'GAD', 'CCGC', 'MCOM', 'PRA',
+            'AM', 'FM', 'DS', 'STAT', 'AI', 'CST', 'APSY', 'ENVS', 'FS',
+            'AIM', 'CTV', 'GD', 'CCM', 'MAD', 'THEM', 'MUS',
+        }.issubset(searchable_codes))
+        directory_text = ' '.join(
+            str(doc.get(field, ''))
+            for doc in docs
+            for field in ('title', 'desc', 'meta')
+        )
+        for location in (
+            'T1-602', 'T2-602-R16/R18', 'T3-601-R7/R10',
+            'T3-602-R11', 'T3-602-R13', 'T3-602-R12', 'T8-401-R17',
+            'CC502-R7/R8', 'CC401-H20', 'CC401-H14', 'CC401-H18',
+            'CC401-H12', 'CC401-H4', 'CC401-H16', 'CC503-R9',
+        ):
+            self.assertIn(location, directory_text)
+
     def test_public_read_api_supports_private_browser_revalidation(self):
         first = self.client.get(
             '/api/semesters',

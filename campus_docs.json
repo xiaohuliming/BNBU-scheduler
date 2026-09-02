@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07",
+  "updated": "2026-09",
   "intro": "常用校园文件一处搞定：教务处等官方指引已收录，可直接在线查看或下载。更多校内文件请到学校官方文件站（需登录）。",
   "station": {
     "title": "学校官方文件站",
@@ -8,6 +8,114 @@
     "sso": true
   },
   "categories": [
+    {
+      "key": "offices",
+      "title": "学院与专业办公室",
+      "icon": "MapPin",
+      "accent": "bg-[#f97316]",
+      "desc": "按专业查办事地点",
+      "docs": [
+        {
+          "title": "工商管理学院 FBM",
+          "desc": "ACCT · AE · BUSA · FIN · DMM · EPIN · MHR · MKT · EBIS",
+          "href": "https://fbm.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T1-602",
+          "cta": "官网",
+          "keywords": ["FBM", "ACCT", "AE", "BUSA", "FIN", "DMM", "EPIN", "MHR", "MKT", "EBIS", "办公室", "office"]
+        },
+        {
+          "title": "人文社科学院 FHSS",
+          "desc": "ATS · ELLS · DGS · GAD · CCGC · MCOM · PRA",
+          "href": "https://fhss.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T2-602-R16/R18",
+          "cta": "官网",
+          "keywords": ["FHSS", "ATS", "ELLS", "DGS", "GAD", "CCGC", "MCOM", "PRA", "办公室", "office"]
+        },
+        {
+          "title": "理工科技学院 FST",
+          "desc": "学院办公室",
+          "href": "https://fst.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T3-601-R7/R10",
+          "cta": "官网",
+          "keywords": ["FST", "学院办公室", "office"]
+        },
+        {
+          "title": "数学科学系 DMS",
+          "desc": "AM · FM",
+          "href": "https://fst.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T3-602-R11",
+          "cta": "官网",
+          "keywords": ["FST", "DMS", "AM", "FM", "办公室", "office"]
+        },
+        {
+          "title": "统计与数据科学系 DSDS",
+          "desc": "DS · STAT",
+          "href": "https://fst.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T3-602-R13",
+          "cta": "官网",
+          "keywords": ["FST", "DSDS", "DS", "STAT", "办公室", "office"]
+        },
+        {
+          "title": "计算机科学系 DCS",
+          "desc": "AI · CST",
+          "href": "https://fst.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T3-602-R12",
+          "cta": "官网",
+          "keywords": ["FST", "DCS", "AI", "CST", "办公室", "office"]
+        },
+        {
+          "title": "生命科学系 DLS",
+          "desc": "APSY · ENVS · FS",
+          "href": "https://fst.bnbu.edu.cn/en/about_us/contact_us.htm",
+          "type": "location",
+          "meta": "T8-401-R17",
+          "cta": "官网",
+          "keywords": ["FST", "DLS", "APSY", "ENVS", "FS", "办公室", "office"]
+        },
+        {
+          "title": "文化与创意学院 SCC",
+          "desc": "学院办公室",
+          "href": "https://scc.bnbu.edu.cn/en/about/contact_us.htm",
+          "type": "location",
+          "meta": "CC502-R7/R8",
+          "cta": "官网",
+          "keywords": ["SCC", "学院办公室", "office"]
+        },
+        {
+          "title": "影视与新媒体系 DFTNM",
+          "desc": "AIM CC401-H20 · CTV CC401-H14 · GD CC401-H18",
+          "href": "/docs/programme-transfer/programme-transfer-announcement.pdf#page=25",
+          "type": "location",
+          "meta": "SCC · 专业联系点",
+          "cta": "来源",
+          "keywords": ["SCC", "DFTNM", "AIM", "CTV", "GD", "CC401-H20", "CC401-H14", "CC401-H18", "办公室", "office"]
+        },
+        {
+          "title": "文化创意与设计系 DCCD",
+          "desc": "CCM CC401-H12 · MAD CC401-H4 · THEM CC401-H16",
+          "href": "/docs/programme-transfer/programme-transfer-announcement.pdf#page=25",
+          "type": "location",
+          "meta": "SCC · 专业联系点",
+          "cta": "来源",
+          "keywords": ["SCC", "DCCD", "CCM", "MAD", "THEM", "CC401-H12", "CC401-H4", "CC401-H16", "办公室", "office"]
+        },
+        {
+          "title": "音乐系 DMUS",
+          "desc": "MUS · 音乐艺术",
+          "href": "https://scc.bnbu.edu.cn/mus_en/about/contact_us.htm",
+          "type": "location",
+          "meta": "CC503-R9",
+          "cta": "官网",
+          "keywords": ["SCC", "DMUS", "MUS", "音乐艺术", "音乐表演", "CC503-R9", "办公室", "office"]
+        }
+      ]
+    },
     {
       "key": "course-selection",
       "title": "选课",
