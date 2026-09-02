@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="MIS 选课助手安装与使用指南">
-    <title>MIS 选课助手使用指南 · MAXCOURSE</title>
+    <meta name="description" content="抢课脚本安装与使用指南">
+    <title>抢课脚本使用指南 · MAXCOURSE</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="/vendor/fonts.css">
     <style>
@@ -656,7 +656,7 @@
         <section class="hero" aria-labelledby="page-title">
             <div>
                 <span class="kicker">Chrome Extension · v2.4.2</span>
-                <h1 id="page-title">MIS<br>选课助手</h1>
+                <h1 id="page-title">抢课<br>脚本</h1>
                 <p class="lede">在设定的时间窗口内监测目标课程，自动提交并确认选课。先用几分钟完成安装和配置，再让插件按你的优先级执行。</p>
                 <div class="hero-actions">
                     <a class="button" href="/bnbu-mis-course-helper-extension.zip" download>
@@ -672,9 +672,9 @@
 
             <aside class="product-card" aria-label="插件特点">
                 <div class="product-head">
-                    <img src="/mis-helper/assets/plugin-icon.png" width="128" height="128" alt="MIS 选课助手图标">
+                    <img src="/mis-helper/assets/plugin-icon.png" width="128" height="128" alt="抢课脚本图标">
                     <div>
-                        <strong>MIS 选课助手</strong>
+                        <strong>抢课脚本</strong>
                         <span class="mono">COURSE OPS CONSOLE</span>
                     </div>
                 </div>
@@ -700,7 +700,7 @@
                     <div class="console-frame">
                         <div class="console-toolbar" aria-hidden="true"><i></i><i></i><i></i></div>
                         <div class="console-viewport">
-                            <img src="/mis-helper/assets/plugin-console.jpeg" width="1333" height="768" alt="MIS 选课助手控制台，包含目标课程、抢课时间、检查与重试、自动化选项及当前状态">
+                            <img src="/mis-helper/assets/plugin-console.jpeg" width="1332" height="768" alt="抢课脚本控制台，包含目标课程、抢课时间、检查与重试、自动化选项及当前状态">
                         </div>
                     </div>
                     <figcaption>插件弹窗分成四个配置区。第一次使用时按从上到下的顺序填写即可。</figcaption>
@@ -749,7 +749,7 @@
                             <span class="step-number">05</span>
                             <div>
                                 <h3>固定到工具栏</h3>
-                                <p>点击 Chrome 右上角的扩展程序按钮，将“MIS 选课助手”固定到工具栏，之后就能随时打开控制台。</p>
+                                <p>点击 Chrome 右上角的扩展程序按钮，将“抢课脚本”固定到工具栏，之后就能随时打开控制台。</p>
                             </div>
                         </article>
                     </div>
@@ -778,7 +778,7 @@
                             <span class="step-number">03</span>
                             <div>
                                 <h3>设置检查与重试</h3>
-                                <p>最短间隔和最长间隔控制检查频率，单位为秒。服务器拥堵时，提交等待建议设置为 60 至 90 秒。</p>
+                                <p>最短间隔和最长间隔控制检查频率，建议都设为 0.5 秒。提交超时保留 10 秒即可，它不是固定等待，服务器正常返回时会立即继续，只有请求卡住才会在超时后刷新重试。</p>
                             </div>
                         </article>
                     </div>
@@ -843,7 +843,7 @@
             </details>
             <details>
                 <summary>为什么服务器拥堵时还是会等待？</summary>
-                <p>插件负责自动检查和提交，但无法提高学校服务器的处理速度。高峰期建议适当延长提交等待时间，并以 MIS 最终结果为准。</p>
+                <p>插件负责自动检查和提交，但无法提高学校服务器的处理速度。检查间隔可以设为 0.5 秒；提交超时建议保留 10 秒，正常响应会立即继续，只有请求卡住时才会等到超时后刷新重试。</p>
             </details>
             <details>
                 <summary>可以和油猴版本同时使用吗？</summary>
@@ -858,7 +858,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path>
                 </svg>
-                下载 MIS 选课助手
+                下载抢课脚本
             </a>
         </section>
     </main>
