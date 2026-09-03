@@ -314,6 +314,32 @@
             .trouble-row { grid-template-columns: 1fr; gap: 0.4rem; }
         }
         .hidden-panel { display: none; }
+        .outage-banner {
+            margin-top: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 1.25rem;
+            border: 2px solid var(--rose);
+            background: #fef2f2;
+            color: #7f1d1d;
+        }
+        .outage-title {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #b91c1c;
+        }
+        .outage-title svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            flex: 0 0 auto;
+        }
+        .outage-banner p {
+            margin: 0.5rem 0 0;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
     </style>
 </head>
 <body>
@@ -332,6 +358,20 @@
             <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
                 自动把 UIC 图书馆的共享打印机 (<span class="mono">172.16.244.66 / DP</span>, Toshiba e-STUDIO 457) 加进你的电脑。
             </p>
+        </section>
+
+        <!-- Outage notice: 2026-09 campus network rebuild blocked Wi-Fi → print server -->
+        <section class="outage-banner" role="alert">
+            <div class="outage-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z" />
+                    <path d="M12 9v4" />
+                    <path d="M12 17h.01" />
+                </svg>
+                <span>本功能暂时无法使用</span>
+            </div>
+            <p>由于学校网络升级，校园 Wi-Fi 到打印服务器的端口尚未被防火墙放行，一键配置目前无法使用（装好了也打不出来）。</p>
+            <p><strong>如何打印</strong>：① 去图书馆用公用电脑直接打；② 或给自己的电脑插网线（有线网络不受影响）。学校放行后本页会恢复更新。</p>
         </section>
 
         <!-- Method picker: three mutually-exclusive install methods -->
