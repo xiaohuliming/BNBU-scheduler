@@ -283,11 +283,12 @@ class ISpaceAutoSyncTestCase(unittest.TestCase):
         self.assertEqual(row[1], 0)
         self.assertEqual(row[2], 3)
 
-    def test_ddl_page_exposes_manual_and_daily_auto_sync_choices(self):
+    def test_ddl_page_exposes_manual_and_half_hourly_auto_sync_choices(self):
         source = self.client.get('/').get_data(as_text=True)
         self.assertIn('/api/user/ispace-auto-sync', source)
         self.assertIn('手动同步', source)
-        self.assertIn('每日自动同步', source)
+        self.assertIn('服务器每 30 分钟自动登录 iSpace 并拉取新的 DDL', source)
+        self.assertNotIn('每日自动同步', source)
         self.assertIn('密码会使用服务器密钥加密保存', source)
         self.assertIn('绑定 iSpace 账号', source)
         self.assertIn('绑定时只验证一次，不会保存密码', source)
