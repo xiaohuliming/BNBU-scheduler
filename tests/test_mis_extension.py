@@ -20,8 +20,12 @@ const cases = [
   ['https://mis.bnbu.edu.cn/mis/student/es/eleDetail.do?course=TEST#tab', true],
   ['https://mis.uic.edu.cn/mis/student/es/index.do', true],
   ['https://mis.uic.edu.cn/mis/student/es/elective.do', true],
-  ['https://mis.bnbu.edu.cn/mis/student/as/home.do', false, '加减课页面'],
-  ['https://mis.uic.edu.cn/mis/student/as/home.do?menu=1', false, '加减课页面'],
+  ['https://mis.bnbu.edu.cn/mis/student/as/home.do', true],
+  ['https://mis.uic.edu.cn/mis/student/as/home.do?menu=1', true],
+  ['https://mis.bnbu.edu.cn/mis/student/as/addSubject.do', true],
+  ['https://mis.bnbu.edu.cn/mis/student/as/dropSubject.do', false],
+  ['https://mis.bnbu.edu.cn/mis/student/as/replaceList.do', false],
+  ['https://mis.bnbu.edu.cn/mis/student/as/home.do.evil', false],
   ['https://mis.bnbu.edu.cn/mis/login.jsp', false],
   ['https://mis.bnbu.edu.cn/mis/student/as/grades.do', false],
   ['https://mis.bnbu.edu.cn.evil.example/mis/student/es/index.do', false],
@@ -69,16 +73,23 @@ const cases = [
 
 
 class MisExtensionTestCase(unittest.TestCase):
-    def test_manifest_allows_only_new_and_legacy_selection_pages(self):
-        expected = {
+    def test_manifest_scopes_selection_and_add_without_drop(self):
+        selection = {
             'https://mis.bnbu.edu.cn/mis/student/es/*',
             'https://mis.uic.edu.cn/mis/student/es/*',
         }
+        add = {f'https://{host}/mis/student/as/{path}.do*'
+               for host in ('mis.bnbu.edu.cn', 'mis.uic.edu.cn')
+               for path in ('home', 'addSubject')}
         with ZipFile(ARCHIVE) as archive:
             manifest = json.loads(archive.read(PREFIX + 'manifest.json'))
-        self.assertEqual(set(manifest['host_permissions']), expected)
+        self.assertEqual(set(manifest['host_permissions']), selection | add)
+        self.assertEqual(len(manifest['content_scripts']), 3)
         for script in manifest['content_scripts']:
-            self.assertEqual(set(script['matches']), expected)
+            self.assertEqual(set(script['matches']), add if 'adddrop.js' in script['js'] else selection)
+            if 'adddrop.js' in script['js']:
+                self.assertEqual(script['world'], 'ISOLATED')
+                self.assertNotIn('page-bridge.js', script['js'])
 
     @unittest.skipUnless(shutil.which('node'), 'Node.js is needed for the popup JS harness')
     def test_popup_domain_and_homepage_detection(self):

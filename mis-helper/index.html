@@ -655,9 +655,9 @@
     <main id="main">
         <section class="hero" aria-labelledby="page-title">
             <div>
-                <span class="kicker">Chrome Extension · v2.4.4</span>
+                <span class="kicker">Chrome Extension · v2.5.0</span>
                 <h1 id="page-title">抢课<br>脚本</h1>
-                <p class="lede">在设定的时间窗口内监测目标课程，自动提交并确认选课。先用几分钟完成安装和配置，再让插件按你的优先级执行。</p>
+                <p class="lede">提前填好课程代码和班号，加减课阶段自动搜索并加课，普通选课也可继续使用。不自动退课，不强行跳过学校限制。</p>
                 <div class="hero-actions">
                     <a class="button" href="/bnbu-mis-course-helper-extension.zip" download>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -667,7 +667,7 @@
                     </a>
                     <a class="button secondary" href="#install">查看安装步骤</a>
                 </div>
-                <p class="hero-note">支持 Chrome 111 及以上版本。v2.4.4 已兼容学校新 MIS 域名，保留弹窗宽度修复。旧版用户请先停止监测，下载解压后替换原扩展文件夹内容，在 chrome://extensions/ 点击重新加载，再刷新 MIS 页面。</p>
+                <p class="hero-note">支持 Chrome 111 及以上版本。v2.5.0 新增自动搜索加课。旧版用户请先停止监测，下载解压后替换原扩展文件夹内容，在 chrome://extensions/ 点击重新加载，再刷新 MIS 页面。</p>
             </div>
 
             <aside class="product-card" aria-label="插件特点">
@@ -679,16 +679,16 @@
                     </div>
                 </div>
                 <ul class="feature-list">
-                    <li>目标课程可按优先级排列</li>
+                    <li>填好课程，自动搜索加课</li>
                     <li>支持设置开始与结束时间</li>
-                    <li>成功、轮候成功或到时自动停止</li>
+                    <li>加课目标全部完成或到时停止</li>
                 </ul>
             </aside>
         </section>
 
         <section class="quick-facts" aria-label="使用前须知">
             <div class="fact"><span>01 / SESSION</span><strong>使用浏览器中已有的 MIS 登录状态，不需要在插件内填写密码。</strong></div>
-            <div class="fact"><span>02 / SCOPE</span><strong>插件只在 BNBU MIS 选课页面运行。</strong></div>
+            <div class="fact"><span>02 / SCOPE</span><strong>支持普通选课和加减课首页，只加课，不自动退课或换班。</strong></div>
             <div class="fact"><span>03 / KEEP OPEN</span><strong>运行期间必须保持 MIS 页面打开、登录有效且电脑不休眠。</strong></div>
         </section>
 
@@ -703,7 +703,7 @@
                             <img src="/mis-helper/assets/plugin-console.jpeg" width="1332" height="768" alt="抢课脚本控制台，包含目标课程、抢课时间、检查与重试、自动化选项及当前状态">
                         </div>
                     </div>
-                    <figcaption>插件弹窗分成四个配置区。第一次使用时按从上到下的顺序填写即可。</figcaption>
+                    <figcaption>插件弹窗分成四个配置区。图为控制台示意，最新版会在加减课页面额外显示加课模式说明。</figcaption>
                 </figure>
             </aside>
 
@@ -742,7 +742,7 @@
                             <span class="step-number">04</span>
                             <div>
                                 <h3>打开 MIS 并刷新</h3>
-                                <p>打开并登录 <a href="https://mis.bnbu.edu.cn/mis/student/es/index.do" target="_blank" rel="noopener noreferrer"><strong>BNBU MIS 普通选课页面</strong></a>。新域名 mis.bnbu.edu.cn 与旧域名 mis.uic.edu.cn 均支持，首次安装或更新后请刷新页面。加减课模块 /mis/student/as/ 暂未适配。</p>
+                                <p>加减课阶段打开 <a href="https://mis.bnbu.edu.cn/mis/student/as/home.do" target="_blank" rel="noopener noreferrer"><strong>BNBU MIS 加减课首页</strong></a>，无需先手动搜课。普通选课使用 <a href="https://mis.bnbu.edu.cn/mis/student/es/index.do" target="_blank" rel="noopener noreferrer"><strong>普通选课入口</strong></a>。新旧 MIS 域名均支持，更新插件后请刷新页面。</p>
                             </div>
                         </article>
                         <article class="step">
@@ -764,7 +764,7 @@
                             <span class="step-number">01</span>
                             <div>
                                 <h3>输入目标课程</h3>
-                                <p>每行填写一门课，顺序就是优先级。只写 <code>ENG3143</code> 可匹配课程，写成 <code>ENG3143 | 1001</code> 可精确到班号。</p>
+                                <p>每行填写课程代码，例如 <code>ENG3143</code>，或用 <code>ENG3143 | 1001</code> 指定班号。加课模式会自动逐门搜索；同一课程填写多个班号时视为按顺序选择的备选，只加其中一班。</p>
                             </div>
                         </article>
                         <article class="step">
@@ -778,15 +778,15 @@
                             <span class="step-number">03</span>
                             <div>
                                 <h3>设置检查与重试</h3>
-                                <p>最短间隔和最长间隔控制检查频率，建议都设为 0.5 秒。提交超时保留 10 秒即可，它不是固定等待，服务器正常返回时会立即继续，只有请求卡住才会在超时后刷新重试。</p>
+                                <p>检查间隔默认 0.5 秒，指一次请求完成后再发起下一次，不会叠加并发请求。提交超时保留 10 秒；加课结果不明确时只查询已注册课程，仍无法确认则暂停，不盲目重复提交。</p>
                             </div>
                         </article>
                     </div>
 
                     <div class="option-grid" aria-label="自动化选项说明">
-                        <div class="option-card"><strong>允许加入轮候</strong><span>课程满额但开放轮候时，允许提交轮候申请。</span></div>
-                        <div class="option-card"><strong>自动确认选课</strong><span>遇到 MIS 原生确认提示时自动确认。</span></div>
-                        <div class="option-card"><strong>接口直提并确认</strong><span>捕获真实选课表单并通过同源接口提交。</span></div>
+                        <div class="option-card"><strong>允许加入轮候</strong><span>仅普通选课模式使用。加课模式不会申请轮候或执行退课。</span></div>
+                        <div class="option-card"><strong>自动确认选课</strong><span>自动加课时保持开启；关闭后只搜索名额，不提交。</span></div>
+                        <div class="option-card"><strong>接口直提并确认</strong><span>自动加课时保持开启，使用学校同源表单并核对已注册课程。</span></div>
                         <div class="option-card"><strong>桌面通知</strong><span>成功、停止或需要注意时显示 Chrome 通知。</span></div>
                     </div>
                 </section>
@@ -794,7 +794,7 @@
                 <section class="guide-section" id="run" aria-labelledby="run-title">
                     <span class="section-label">Run</span>
                     <h2 id="run-title">开始运行</h2>
-                    <p class="section-intro">确认 MIS 页面已经登录并保持打开，然后在弹窗中启动监测。</p>
+                    <p class="section-intro">确认 MIS 已登录并保持页面打开。加课模式只在一个标签页运行，准备好课程代码即可开始，不需要手动搜索。</p>
                     <div class="steps">
                         <article class="step">
                             <span class="step-number">01</span>
@@ -807,14 +807,14 @@
                             <span class="step-number">02</span>
                             <div>
                                 <h3>观察当前状态</h3>
-                                <p>控制台和 MIS 页面右下角都会显示运行状态。手动刷新 MIS 页面后，插件会恢复之前的运行状态。</p>
+                                <p>控制台和 MIS 页面右下角会显示正在搜索的课程。满额或冲突时继续检查其他目标，不会点击禁用按钮。手动刷新后会恢复配置，并先核对上一笔未确认的加课。</p>
                             </div>
                         </article>
                         <article class="step">
                             <span class="step-number">03</span>
                             <div>
                                 <h3>核对最终结果</h3>
-                                <p>成功、轮候成功或达到结束时间后插件会自动停止。请回到 MIS 选课结果中确认课程状态。</p>
+                                <p>加课模式在全部目标出现在“已注册课程”中或到达结束时间后停止。已注册其他班号的课程需要手动处理，脚本不会退课换班。普通选课仍按原逻辑在首次成功或轮候成功后停止。</p>
                             </div>
                         </article>
                     </div>
@@ -835,7 +835,7 @@
             <h2 id="faq-title">常见问题</h2>
             <details>
                 <summary>一直显示“正在连接 MIS 页面”怎么办？</summary>
-                <p>请使用 v2.4.4 或更新版本，并打开新域名或旧域名下的普通选课模块 /mis/student/es/。安装或更新后需要刷新页面；登录过期时请重新登录。/mis/student/as/home.do 是加减课页面，搜索与 Add 流程尚未适配，本版不会在该页面加课或退课。</p>
+                <p>请使用 v2.5.0 或更新版本，登录后打开普通选课模块 /mis/student/es/ 或加减课首页 /mis/student/as/home.do。安装或更新后需要刷新页面；登录过期时请重新登录。</p>
             </details>
             <details>
                 <summary>可以关闭 MIS 页面或让电脑休眠吗？</summary>
@@ -843,7 +843,15 @@
             </details>
             <details>
                 <summary>为什么服务器拥堵时还是会等待？</summary>
-                <p>插件负责自动检查和提交，但无法提高学校服务器的处理速度。检查间隔可以设为 0.5 秒；提交超时建议保留 10 秒，正常响应会立即继续，只有请求卡住时才会等到超时后刷新重试。</p>
+                <p>0.5 秒是请求完成后的检查间隔，服务器处理请求仍需要时间。加课提交结果不明确时，插件会先查询已注册课程；仍无法确认会暂停，避免重复提交。</p>
+            </details>
+            <details>
+                <summary>为什么出现 Add 也可能不会提交？</summary>
+                <p>脚本只处理目标课程和班号的可用 Add。按钮被学校禁用、存在 Full 或 Clash、已注册其他班号、需要确认类别学分提醒或页面结构变化时，都不会强行提交。</p>
+            </details>
+            <details>
+                <summary>提示加课结果未确认，怎样恢复？</summary>
+                <p>先停止监测并到 MIS 核对已注册课程。停止不能撤回已经发出的请求。确认结果后点击插件中的“已核对结果，解除暂停”，再重新开始；已加上的课程会自动跳过。</p>
             </details>
             <details>
                 <summary>可以和油猴版本同时使用吗？</summary>
