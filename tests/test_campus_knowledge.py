@@ -199,7 +199,9 @@ class CampusKnowledgeTest(unittest.TestCase):
         response = self.mcp(headers, 'initialize', {'protocolVersion': '2025-11-25', 'clientInfo': {'name': 'test', 'version': '1'}, 'capabilities': {}})
         self.assertEqual(response.get_json()['result']['protocolVersion'], '2025-11-25')
         response = self.mcp(headers, 'tools/list')
-        self.assertEqual(len(response.get_json()['result']['tools']), 3)
+        self.assertEqual({tool['name'] for tool in response.get_json()['result']['tools']},
+                         {'search_campus', 'read_document', 'list_campus_documents',
+                          'find_free_classrooms', 'get_classroom_schedule'})
         response = self.mcp(headers, 'tools/call', {'name': 'search_campus', 'arguments': {'query': 'AI3013'}})
         self.assertFalse(response.get_json()['result']['isError'])
         self.assertTrue(response.get_json()['result']['structuredContent']['results'])
@@ -220,8 +222,9 @@ class CampusKnowledgeTest(unittest.TestCase):
     def test_openapi_contract_and_static_source_protection(self):
         response = self.client.get('/api/knowledge/openapi.json')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.get_json()['paths']), 3)
-        for path in ('/campus_knowledge.sqlite', '/campus_knowledge.building.sqlite', '/campus_agent.py', '/build_campus_knowledge.py'):
+        self.assertEqual(len(response.get_json()['paths']), 5)
+        for path in ('/campus_knowledge.sqlite', '/campus_knowledge.building.sqlite', '/campus_agent.py',
+                     '/campus_classrooms.py', '/build_campus_knowledge.py'):
             self.assertEqual(self.client.get(path).status_code, 404)
 
 

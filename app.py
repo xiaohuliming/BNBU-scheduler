@@ -32,6 +32,7 @@ from ispace_credentials import (
 )
 from media_dl import media_dl_bp
 from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
+from campus_classrooms import ClassroomTools
 
 # Database setup
 DB_PATH = 'maxcourse.db'
@@ -3686,13 +3687,22 @@ def get_free_classrooms():
     if use_date < now.date() or use_date > now.date() + timedelta(days=CLASSROOM_INTENT_MAX_DAYS_AHEAD):
         return jsonify({"error": "Date is outside the available range"}), 400
 
+    return jsonify(_free_classrooms_data(
+        use_date, start_min, end_min, user_id=session.get('user_id'), now=now,
+    ))
+
+
+def _free_classrooms_data(use_date, start_min, end_min, user_id=None, now=None):
+    """Shared timetable and live intent lookup; never changes classroom records."""
+    now = now or _classroom_now()
+    day = DAY_SEQUENCE[use_date.weekday()]
     rooms, room_entries = build_classroom_index()
     day_index = DAY_MAP[day]
     intent_summaries = _classroom_intent_summaries(
         use_date.isoformat(),
         start_min,
         end_min,
-        user_id=session.get('user_id'),
+        user_id=user_id,
         now=now,
     )
     now_min = now.hour * 60 + now.minute
@@ -3753,7 +3763,7 @@ def get_free_classrooms():
             "occupied_rooms": total - free,
         })
 
-    return jsonify({
+    return {
         "query": {
             "day": day,
             "day_label": DAY_LABELS.get(day, day),
@@ -3770,20 +3780,29 @@ def get_free_classrooms():
         },
         "buildings": building_summary,
         "rooms": free_rooms,
-    })
+    }
 
 
 @app.route('/api/classroom/<path:room>/schedule', methods=['GET'])
 def get_classroom_schedule(room):
+    try:
+        return jsonify(_classroom_schedule_data(room))
+    except ValueError:
+        return jsonify({"error": "Invalid room"}), 400
+    except KeyError:
+        return jsonify({"error": "Room not found"}), 404
+
+
+def _classroom_schedule_data(room):
     room_clean = (room or '').strip()
     if not room_clean:
-        return jsonify({"error": "Invalid room"}), 400
+        raise ValueError('Invalid room')
 
     rooms, room_entries = build_classroom_index()
     if room_clean not in room_entries:
         room_meta = next((r for r in rooms if r["room"] == room_clean), None)
         if room_meta is None:
-            return jsonify({"error": "Room not found"}), 404
+            raise KeyError('Room not found')
         building = room_meta["building"]
     else:
         room_meta = next((r for r in rooms if r["room"] == room_clean), None)
@@ -3811,12 +3830,12 @@ def get_classroom_schedule(room):
             "events": day_events,
         })
 
-    return jsonify({
+    return {
         "room": room_clean,
         "building": building,
         "total_events": len(entries),
         "days": days,
-    })
+    }
 
 # Historical semester offerings baked by build_semesters.py; the current
 # semester always comes live from the timetable xlsx (get_df).
@@ -4023,7 +4042,21 @@ def optimize():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-register_campus_agent(app, get_db, _client_ip, get_public_base_url)
+_agent_classrooms = ClassroomTools(
+    now=lambda: _classroom_now(),
+    free_rooms=_free_classrooms_data,
+    schedule=_classroom_schedule_data,
+    max_days_ahead=CLASSROOM_INTENT_MAX_DAYS_AHEAD,
+    source=lambda: {
+        'semester': f'{CURRENT_SEMESTER_AY_START % 100:02d}{(CURRENT_SEMESTER_AY_START + 1) % 100:02d}S{CURRENT_SEMESTER_NO}',
+        'label': CURRENT_SEMESTER_LABEL,
+        'source_url': get_public_base_url() + '/',
+    },
+)
+register_campus_agent(app, get_db, _client_ip, get_public_base_url, classroom_tools={
+    'find_free_classrooms': _agent_classrooms.find_free_classrooms,
+    'get_classroom_schedule': _agent_classrooms.get_classroom_schedule,
+})
 
 if __name__ == '__main__':
     # Nginx runs on the same host and proxies to loopback. Binding publicly
