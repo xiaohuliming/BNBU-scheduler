@@ -29,7 +29,10 @@ async def main():
                 async with ClientSession(read, write) as session:
                     initialized = await session.initialize()
                     tools = await session.list_tools()
-                    assert len(tools.tools) == 3
+                    assert {tool.name for tool in tools.tools} == {
+                        'search_campus', 'read_document', 'list_campus_documents',
+                        'find_free_classrooms', 'get_classroom_schedule',
+                    }
                     found = await session.call_tool('search_campus', {'query': 'AI专业办公室在哪里', 'kind': 'office'})
                     assert not found.isError
                     results = json.loads(found.content[0].text)['results']
@@ -44,7 +47,18 @@ async def main():
                     courses = await session.call_tool('list_campus_documents', {'kind': 'course', 'limit': 50})
                     data = json.loads(courses.content[0].text)
                     assert data['total'] == info.json()['counts']['course'] and data['next_offset'] == 50
-                    print('Official MCP SDK: initialize, tools/list, search, handbook page citations, course pagination passed.')
+                    live = await session.call_tool('find_free_classrooms', {})
+                    assert not live.isError
+                    live_data = json.loads(live.content[0].text)
+                    assert live_data['as_of'] and live_data['timezone'] == 'Asia/Shanghai'
+                    assert live_data['physical_occupancy'] == 'unknown'
+                    late = await session.call_tool('find_free_classrooms', {'start': '23:59', 'end': '24:00', 'limit': 1})
+                    assert not late.isError
+                    room = json.loads(late.content[0].text)['rooms'][0]
+                    assert set(room['intent']) == {'records', 'people', 'planned_people', 'checked_in_people'}
+                    schedule = await session.call_tool('get_classroom_schedule', {'room': room['room']})
+                    assert not schedule.isError and len(json.loads(schedule.content[0].text)['days']) == 7
+                    print('Official MCP SDK: initialize, five tools, knowledge citations, course pagination, live classrooms and weekly schedules passed.')
                     print('Negotiated protocol:', initialized.protocolVersion)
         finally:
             removed = await browser.delete('/api/knowledge/tokens/' + key['id'])
