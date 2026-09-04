@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2716555517-354620+12027406">
+<html lang="en" data-compiled-sum="95342329-354637+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2716555517-354620+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=95342329-354637+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2716555517-354620+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=95342329-354637+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -1716,7 +1716,7 @@
                     if (data.sync) await fetchTodos();
                     setAutoSyncMessage({
                         type: 'success',
-                        text: data.sync ? '密码验证成功，已同步并开启每日自动同步' : '每日自动同步已开启'
+                        text: data.sync ? '密码验证成功，已同步并开启每 30 分钟自动更新' : '自动同步已开启，每 30 分钟更新一次'
                     });
                 } catch (e) {
                     setAutoSyncMessage({ type: 'error', text: e.message });
@@ -1725,7 +1725,7 @@
             };
 
             const disableAutoSync = async () => {
-                if (!confirm('关闭每日自动同步并删除服务器中保存的 iSpace 密码？')) return;
+                if (!confirm('关闭自动同步并删除服务器中保存的 iSpace 密码？')) return;
                 setAutoSyncSaving(true);
                 setAutoSyncMessage(null);
                 try {
@@ -1843,7 +1843,7 @@
                 if (!user.ispace_username) {
                     setShowAutoSyncOptions(true);
                     setShowNotifOptions(false);
-                    setAutoSyncMessage({ type: 'error', text: '请先绑定 iSpace 账号，再选择手动或每日自动同步' });
+                    setAutoSyncMessage({ type: 'error', text: '请先绑定 iSpace 账号，再选择手动或自动同步' });
                     return;
                 }
                 const password = prompt("手动同步只使用一次密码，不会保存。请输入 iSpace 密码：");
@@ -1992,7 +1992,7 @@
                                             setShowNotifOptions(false);
                                             setAutoSyncMessage(null);
                                         }}
-                                        aria-label="iSpace 每日自动同步设置"
+                                        aria-label="iSpace 自动同步设置"
                                         aria-expanded={showAutoSyncOptions}
                                         className={`min-h-11 flex items-center gap-2 font-bold border-2 border-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all ${
                                             autoSyncDraft.enabled
@@ -2008,10 +2008,10 @@
                                             <form onSubmit={user.ispace_username ? enableAutoSync : bindISpaceFromDDL} className="p-4 space-y-4">
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div>
-                                                        <div className="font-black text-lg">{user.ispace_username ? '每日自动同步' : '绑定 iSpace 账号'}</div>
+                                                        <div className="font-black text-lg">{user.ispace_username ? '自动同步' : '绑定 iSpace 账号'}</div>
                                                         <div className="mt-1 text-xs font-bold text-gray-600 leading-5">
                                                             {user.ispace_username
-                                                                ? '服务器每天自动登录 iSpace 并拉取新的 DDL'
+                                                                ? '服务器每 30 分钟自动登录 iSpace 并拉取新的 DDL'
                                                                 : '本地 MAXCOURSE 账号绑定后即可同步 DDL'}
                                                         </div>
                                                     </div>
@@ -2037,7 +2037,7 @@
                                                 {!user.ispace_username ? (
                                                     <React.Fragment>
                                                         <div className="border-2 border-yellow-700 bg-yellow-50 p-3 text-xs font-bold leading-5 text-yellow-900">
-                                                            绑定时只验证一次，不会保存密码。绑定成功后会立即同步 DDL，你可以再单独选择是否开启每日自动同步。
+                                                            绑定时只验证一次，不会保存密码。绑定成功后会立即同步 DDL，你可以再单独选择是否开启每 30 分钟自动同步。
                                                         </div>
                                                         <div className="space-y-3">
                                                             <div>
@@ -2137,8 +2137,8 @@
                                                         : autoSyncSaving
                                                             ? '处理中...'
                                                             : autoSyncDraft.credential_saved
-                                                                ? '保存并保持每日同步'
-                                                                : '验证密码并开启每日同步'}
+                                                                ? '保存并保持自动同步'
+                                                                : '验证密码并开启自动同步'}
                                                 </button>
 
                                                 {user.ispace_username && autoSyncDraft.credential_saved && (
