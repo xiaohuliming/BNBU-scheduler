@@ -14,8 +14,8 @@ async (page) => {
   const item = (code = 'TEST1013', section = '1001', label = 'Add', disabled = false) => ({ code, section, label, disabled, id: `${code}-${section}`, type: 'ME' });
   let s;
   const render = (results = []) => {
-    const registered = s.registered.map(record => `<tr><td>ME</td><td>${escape(record.code)}</td><td id="reg-${escape(record.id)}">Fixture (${escape(record.section)})</td><td>Fixture</td><td>3</td><td>Mon</td><td></td><td><input type="button" value="Drop" onclick="dropSubject('never')"></td></tr>`).join('');
-    const rows = results.map(record => `<tr><td>${escape(record.type)}</td><td>${escape(record.code)}</td><td id="${escape(record.id)}">Fixture (${escape(record.section)})<input type="hidden" id="${escape(record.id)}_type" value="${escape(record.type)}"></td><td>Fixture</td><td>3</td><td>Mon</td><td></td><td><input type="button" value="${escape(record.label)}" onclick="${escape(record.handler || `addSubject('${record.id}')`)}" ${record.disabled ? 'disabled' : ''}></td></tr>`).join('');
+    const registered = s.registered.map(record => `<tr><td>ME</td><td>${escape(record.code)}</td><td id="reg-${escape(record.id)}">${escape(record.title || 'Fixture')} (${escape(record.section)})</td><td>Fixture</td><td>3</td><td>Mon</td><td></td><td><input type="button" value="Drop" onclick="dropSubject('never')"></td></tr>`).join('');
+    const rows = results.map(record => `<tr><td>${escape(record.type)}</td><td>${escape(record.code)}</td><td id="${escape(record.id)}">${escape(record.title || 'Fixture')} (${escape(record.section)})<input type="hidden" id="${escape(record.id)}_type" value="${escape(record.type)}"></td><td>Fixture</td><td>3</td><td>Mon</td><td></td><td><input type="button" value="${escape(record.label)}" onclick="${escape(record.handler || `addSubject('${record.id}')`)}" ${record.disabled ? 'disabled' : ''}></td></tr>`).join('');
     return `<!doctype html><meta charset="utf-8"><title>Offline Add Course Fixture</title><body class="as">
       <input type="hidden" id="FEGE" value="${s.creditLimit || 0}"><input type="hidden" id="FEOW" value="0"><input type="hidden" id="FEOT" value="0">
       <table class="tablestyle-2"><thead><tr><th colspan="8">List of Courses Registered</th></tr></thead>${registered}</table>
@@ -39,13 +39,13 @@ async (page) => {
     const body = { get: name => fields[name] };
     assert(body.get('csrf') === 'fixture-only', 'School hidden fields were not preserved');
     if (path === home) {
-      s.searches.push({ code: body.get('keyWord'), page: Number(body.get('pageIndex')) });
-      assert(body.get('keyWordType') === '7' && body.get('allowType') === '1' && body.get('pageSize') === '50', 'Search by code / paging fields are incorrect');
+      s.searches.push({ code: body.get('keyWord'), page: Number(body.get('pageIndex')), type: body.get('keyWordType') });
+      assert(['1', '7'].includes(body.get('keyWordType')) && body.get('allowType') === '1' && body.get('pageSize') === '50', 'Search mode / paging fields are incorrect');
       if (s.slowSearch) await page.waitForTimeout(1000);
       if (s.busyOnce && s.searches.length === 1) { await route.fulfill({ status: 503, body: 'Fixture busy' }); return; }
       if (s.login) { await route.fulfill({ contentType: 'text/html', body: '<input type="password">' }); return; }
       if (s.malformed) { await route.fulfill({ contentType: 'text/html', body: '<p>Unknown page</p>' }); return; }
-      const rows = s.results(body.get('keyWord'), Number(body.get('pageIndex')));
+      const rows = s.results(body.get('keyWord'), Number(body.get('pageIndex')), body.get('keyWordType'));
       s.offered = rows;
       await route.fulfill({ contentType: 'text/html', body: render(rows) });
       return;
@@ -92,6 +92,56 @@ async (page) => {
   await prepare('automatic code search and single add');
   await start(); await stoppedWith('所有目标课程');
   assert(s.adds.length === 1 && s.searches[0].code === 'TEST1013', 'Search or add failed'); saveResult();
+
+  await prepare('code without section accepts any eligible class', { results: () => [item('TEST1013', '1001', 'Clash', true), item('TEST1013', '1002')] });
+  await start({ targets: 'TEST1013' }); await stoppedWith('所有目标课程');
+  assert(s.adds.join() === 'TEST1013-1002' && s.searches.every(x => x.type === '7'), 'Any-section code failed'); saveResult();
+
+  await prepare('explicit unlimited section syntax', { results: () => [item('TEST1013', '1002')] });
+  await start({ targets: 'TEST1013 | 不限' }); await stoppedWith('所有目标课程');
+  assert(s.adds.join() === 'TEST1013-1002', 'Unlimited section syntax failed'); saveResult();
+
+  const named = (title = 'Computer Vision', section = '1001', code = 'TEST1013') => ({ ...item(code, section), title });
+  for (const [name, target, rows, expected] of [
+    ['English course name any section', 'Computer Vision', [{ ...named('Computer Vision'), label: 'Full', disabled: true }, named('Computer Vision', '1002')], 'TEST1013-1002'],
+    ['Chinese course name', '计算机视觉', [named('计算机视觉', '1002')], 'TEST1013-1002'],
+    ['name with fixed section', 'Computer Vision | 1001', [named('Computer Vision', '1002'), named()], 'TEST1013-1001'],
+    ['name case and whitespace normalized', '  computer    vision  ', [named()], 'TEST1013-1001'],
+    ['course name containing comma', 'Art, Science and Society', [named('Art, Science and Society')], 'TEST1013-1001'],
+    ['name explicit any section', 'Computer Vision | *', [named('Computer Vision', '1002')], 'TEST1013-1002'],
+    ['exact name does not select similar course', 'Computer Vision', [named('Advanced Computer Vision', '1001', 'TEST1023'), named()], 'TEST1013-1001']
+  ]) {
+    await prepare(name, { results: () => rows });
+    await start({ targets: target }); await stoppedWith('所有目标课程');
+    assert(s.adds.join() === expected, 'Wrong name or section selected');
+    assert(s.searches[0].type === '1' && s.searches.at(-1).type === '7', 'Name was not resolved before exact-code add'); saveResult();
+  }
+
+  await prepare('ambiguous same-name courses pause', { results: () => [named(), named('Computer Vision', '1002', 'TEST1023')] });
+  await start({ targets: 'Computer Vision' }); await stoppedWith('同名课程');
+  assert(s.adds.length === 0, 'Ambiguous course was added'); saveResult();
+
+  await prepare('name ambiguity on later page is checked before add', { total: 51, results: (_query, p) => [p === 1 ? named() : named('Computer Vision', '1002', 'TEST1023')] });
+  await start({ targets: 'Computer Vision' }); await stoppedWith('同名课程');
+  assert(s.adds.length === 0 && s.searches.length === 2, 'Later-page ambiguity missed'); saveResult();
+
+  await prepare('partial name never guessed', { results: () => [named()] });
+  await start({ targets: 'Computer' }); await stoppedWith('完整匹配');
+  assert(s.adds.length === 0, 'Partial name was guessed'); saveResult();
+
+  await prepare('name not offered yet does not starve code target', { results: (query, _p, type) => type === '1'
+    ? s.searches.filter(x => x.type === '1').length === 1 ? [] : [named()]
+    : [query === 'TEST1023' ? named('Other Course', '1001', 'TEST1023') : named()] });
+  await start({ targets: 'Computer Vision\nTEST1023' }); await stoppedWith('所有目标课程');
+  assert(s.adds.join() === 'TEST1023-1001,TEST1013-1001', 'Missing name blocked other targets'); saveResult();
+
+  await prepare('already registered name skipped', { registered: [named()], results: () => [] });
+  await start({ targets: 'Computer Vision' }); await stoppedWith('所有目标课程');
+  assert(s.adds.length === 0 && s.searches.length === 1, 'Registered name not skipped'); saveResult();
+
+  await prepare('name and code alias combine section alternatives', { results: () => [{ ...named('Computer Vision', '1002'), label: 'Full', disabled: true }, named()] });
+  await start({ targets: 'Computer Vision | 1002\nTEST1013 | 1001' }); await stoppedWith('所有目标课程');
+  assert(s.adds.join() === 'TEST1013-1001', 'Alias caused duplicate or conflicting add'); saveResult();
 
   await prepare('multiple courses and already registered skip', { registered: [item('TEST1003')], results: code => [item(code)] });
   await start({ targets: 'TEST1003 | 1001\nTEST1013 | 1001\nTEST1023 | 1001' }); await stoppedWith('所有目标课程');
