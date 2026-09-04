@@ -28,7 +28,7 @@ async (page) => {
     results.push({ host, connected: state.ok, stopped: !state.config.enabled });
   }
   for (const url of [
-    'https://mis.bnbu.edu.cn/mis/student/as/home.do',
+    'https://mis.bnbu.edu.cn/mis/student/as/dropSubject.do',
     'https://mis.bnbu.edu.cn.evil.example/mis/student/es/index.do'
   ]) {
     await page.goto(url);
