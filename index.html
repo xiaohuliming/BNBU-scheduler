@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="95342329-354637+12027406">
+<html lang="en" data-compiled-sum="3564964704-366707+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=95342329-354637+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=3564964704-366707+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=95342329-354637+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=3564964704-366707+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -3808,12 +3808,153 @@
             );
         };
 
+        const AgentAccessModal = ({ user, onClose, onLoginRequest }) => {
+            const [info, setInfo] = useState(null);
+            const [keys, setKeys] = useState([]);
+            const [name, setName] = useState('我的 Agent');
+            const [fresh, setFresh] = useState(null);
+            const [busy, setBusy] = useState(false);
+            const [error, setError] = useState('');
+            const [copied, setCopied] = useState('');
+            const dialogRef = useRef(null);
+            const copyTimer = useRef(null);
+            useEffect(() => {
+                const previous = document.activeElement;
+                const overflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+                dialogRef.current?.focus();
+                const onKey = (event) => {
+                    if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+                    if (event.key !== 'Tab') return;
+                    const elements = [...dialogRef.current.querySelectorAll('button, input, textarea, a[href], summary')]
+                        .filter(el => !el.disabled && el.getClientRects().length);
+                    const first = elements[0], last = elements[elements.length - 1];
+                    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+                        event.preventDefault(); last?.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault(); first?.focus();
+                    }
+                };
+                document.addEventListener('keydown', onKey);
+                return () => {
+                    document.body.style.overflow = overflow;
+                    document.removeEventListener('keydown', onKey);
+                    clearTimeout(copyTimer.current);
+                    previous?.focus();
+                };
+            }, [onClose]);
+            useEffect(() => {
+                const controller = new AbortController();
+                fetch('/api/knowledge/info', { signal: controller.signal })
+                    .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; })
+                    .then(setInfo).catch(err => { if (err.name !== 'AbortError') setError(err.message || '知识库暂不可用'); });
+                if (user) {
+                    fetch('/api/knowledge/tokens', { signal: controller.signal, cache: 'no-store' })
+                        .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; })
+                        .then(data => setKeys(data.tokens || [])).catch(err => { if (err.name !== 'AbortError') setError(err.message || '令牌加载失败'); });
+                }
+                return () => controller.abort();
+            }, [user]);
+            const copy = async (text, key) => {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    setCopied(key); clearTimeout(copyTimer.current);
+                    copyTimer.current = setTimeout(() => setCopied(''), 1800);
+                } catch { setError('复制失败，请手动复制'); }
+            };
+            const createKey = async (event) => {
+                event.preventDefault(); setBusy(true); setError('');
+                try {
+                    const response = await fetch('/api/knowledge/tokens', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || '创建失败');
+                    setFresh(data);
+                    setKeys(previous => [{ id: data.id, name: data.name, expires_at: data.expires_at, prefix: data.token.slice(0, 14) }, ...previous]);
+                } catch (err) { setError(err.message); }
+                finally { setBusy(false); }
+            };
+            const revoke = async (key) => {
+                if (!window.confirm('撤销后，对应 Agent 将无法访问。继续？')) return;
+                setBusy(true); setError('');
+                try {
+                    const response = await fetch(`/api/knowledge/tokens/${encodeURIComponent(key.id)}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error('撤销失败');
+                    setKeys(previous => previous.filter(item => item.id !== key.id));
+                    if (fresh?.id === key.id) setFresh(null);
+                } catch (err) { setError(err.message); }
+                finally { setBusy(false); }
+            };
+            const config = JSON.stringify({ mcpServers: { maxcourse: {
+                url: info?.mcp_url || '', headers: { Authorization: `Bearer ${fresh?.token || 'YOUR_TOKEN'}` }
+            } } }, null, 2);
+            const buttonClass = 'min-h-[44px] px-4 py-2 text-sm border border-[#1a140d]/25 hover:bg-[#1a140d]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed';
+            return ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[110] bg-[#1a140d]/45 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+                    <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="agent-access-title" tabIndex={-1}
+                        className="w-full max-w-xl max-h-[90dvh] overflow-y-auto bg-[#faf7f0] text-[#1a140d] border border-[#1a140d]/20 shadow-2xl p-5 md:p-8 focus:outline-none">
+                        <div className="flex items-start justify-between gap-4 border-b border-[#1a140d]/20 pb-5">
+                            <div><div className="mono-ui text-xs tracking-[0.2em] text-[#766454]">CAMPUS KNOWLEDGE</div>
+                                <h2 id="agent-access-title" className="book-serif mt-2 text-3xl">接入 Agent</h2></div>
+                            <button type="button" aria-label="关闭接入面板" onClick={onClose} className="min-w-[44px] min-h-[44px] grid place-items-center hover:bg-black/5 focus-visible:outline"><X className="w-5 h-5" /></button>
+                        </div>
+                        <p className="mt-4 text-sm leading-6 text-[#766454]">校园文件 · 专业培养手册 · 本学期课程。仅限读取。</p>
+                        {error && <p role="alert" className="mt-3 text-sm text-red-800">{error}</p>}
+                        {!info && !error && <p role="status" className="py-6 text-sm">加载中…</p>}
+                        {info && <>
+                            <div className="mt-5">
+                                <label htmlFor="agent-mcp-url" className="block text-sm mb-2">MCP 地址</label>
+                                <div className="flex gap-2">
+                                    <input id="agent-mcp-url" readOnly value={info.mcp_url} onFocus={event => event.target.select()} className="min-w-0 flex-1 border border-[#1a140d]/25 bg-transparent px-3 py-3 text-sm font-mono" />
+                                    <button type="button" className={buttonClass} onClick={() => copy(info.mcp_url, 'url')}>{copied === 'url' ? '已复制' : '复制'}</button>
+                                </div>
+                                <p className="mt-2 text-xs leading-5 text-[#766454]">Streamable HTTP · Authorization: Bearer 令牌</p>
+                            </div>
+                            {user ? <>
+                                <form onSubmit={createKey} className="mt-5">
+                                    <label htmlFor="agent-key-name" className="block text-sm mb-2">令牌名称</label>
+                                    <div className="flex gap-2">
+                                        <input id="agent-key-name" required maxLength={40} value={name} onChange={event => setName(event.target.value)} className="min-w-0 flex-1 border border-[#1a140d]/25 bg-transparent px-3 py-3 text-base" />
+                                        <button disabled={busy || keys.length >= 3} className={buttonClass}>{busy ? '处理中…' : '创建令牌'}</button>
+                                    </div>
+                                </form>
+                                {fresh && <div className="mt-4 border border-[#1a140d]/20 p-3">
+                                    <label htmlFor="agent-fresh-token" className="block text-sm mb-2">新令牌，仅显示一次</label>
+                                    <div className="flex gap-2"><input id="agent-fresh-token" type="password" readOnly value={fresh.token} onFocus={event => event.target.select()} className="min-w-0 flex-1 bg-transparent font-mono text-sm" />
+                                        <button type="button" className={buttonClass} onClick={() => copy(fresh.token, 'token')}>{copied === 'token' ? '已复制' : '复制令牌'}</button></div>
+                                </div>}
+                            </> : <button type="button" onClick={() => { onClose(); onLoginRequest(); }} className={`${buttonClass} mt-5 w-full`}>登录后创建令牌</button>}
+                            <details className="mt-5 border-y border-[#1a140d]/20 py-3">
+                                <summary className="cursor-pointer py-2 text-sm">MCP 配置</summary>
+                                <p className="mt-2 text-xs leading-5 text-[#766454]">用于支持远程 MCP 和自定义请求头的客户端。{fresh ? '配置含令牌，请勿分享。' : '将 YOUR_TOKEN 替换为你的令牌。'}</p>
+                                <textarea aria-label="MCP 配置 JSON" readOnly value={config} rows={9} spellCheck={false} className="mt-3 w-full min-w-0 border border-[#1a140d]/20 bg-white/40 p-3 text-xs font-mono" onFocus={event => event.target.select()} />
+                                <button type="button" onClick={() => copy(config, 'config')} className={`${buttonClass} mt-2`}>{copied === 'config' ? '已复制' : '复制配置'}</button>
+                            </details>
+                            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#766454]">
+                                <span>每分钟 {info.limits.per_minute} 次 · 每天 {info.limits.per_day} 次 · 有效期 90 天</span>
+                                <a href={`${info.api_url}/openapi.json`} target="_blank" rel="noopener noreferrer" className="underline min-h-[44px] inline-flex items-center">HTTP API</a>
+                            </div>
+                            {keys.length > 0 && <div className="mt-4 border-t border-[#1a140d]/20">
+                                {keys.map(key => <div key={key.id} className="flex items-center justify-between gap-3 py-3 border-b border-[#1a140d]/10">
+                                    <div className="min-w-0"><div className="text-sm break-words">{key.name}</div><div className="mt-1 text-xs text-[#766454]">{key.prefix}… · {new Date(key.expires_at * 1000).toLocaleDateString('zh-CN')} 到期</div></div>
+                                    <button type="button" disabled={busy} className={buttonClass} onClick={() => revoke(key)}>撤销</button>
+                                </div>)}
+                            </div>}
+                        </>}
+                        <span role="status" aria-live="polite" className="sr-only">{copied ? '已复制' : ''}</span>
+                    </section>
+                </div>, document.body
+            );
+        };
+
         // --- Campus File Center (工具箱 > 校园文件中心) ---
-        const FilesView = ({ onOpenView }) => {
+        const FilesView = ({ onOpenView, user, onLoginRequest }) => {
             const [data, setData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
             const [query, setQuery] = useState('');
+            const [showAgentAccess, setShowAgentAccess] = useState(false);
 
             useEffect(() => {
                 let alive = true;
@@ -3920,8 +4061,11 @@
                                     <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">{data.intro}</p>
                                 )}
                             </div>
-                            <div className="rounded-3xl border border-black/10 bg-white/70 px-4 py-3 mono-ui text-xs uppercase tracking-[0.16em] text-black/45 whitespace-nowrap">
-                                {totalDocs} items
+                            <div className="flex items-center gap-3">
+                                <span className="mono-ui text-xs text-black/50 whitespace-nowrap">{totalDocs} items</span>
+                                <button type="button" onClick={() => setShowAgentAccess(true)} className="min-h-[44px] inline-flex items-center gap-2 border border-[#1a140d]/25 bg-white/50 px-4 py-3 text-sm text-[#1a140d] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                                    <Icon name="Plug" className="w-4 h-4" /> 接入 Agent
+                                </button>
                             </div>
                         </div>
                         <div className="relative mt-6 max-w-md">
@@ -3936,6 +4080,7 @@
                         </div>
                     </section>
 
+                    {showAgentAccess && <AgentAccessModal user={user} onClose={() => setShowAgentAccess(false)} onLoginRequest={onLoginRequest} />}
                     {loading && (
                         <div className="flex items-center gap-2 text-black/45 py-16 justify-center">
                             <Loader2 className="w-5 h-5 animate-spin" /> 正在加载文件列表…
@@ -5301,7 +5446,7 @@
                     ) : currentView === 'toolbox' ? (
                         <ToolboxView onOpenView={goToView} />
                     ) : currentView === 'files' ? (
-                        <FilesView onOpenView={goToView} />
+                        <FilesView onOpenView={goToView} user={user} onLoginRequest={() => setShowAuthModal(true)} />
                     ) : currentView === 'settings' ? (
                         <SettingsView user={user} onLogout={() => { setUser(null); goToView('home'); }} />
                     ) : (

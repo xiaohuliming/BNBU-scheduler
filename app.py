@@ -31,6 +31,7 @@ from ispace_credentials import (
     is_ispace_credential_encryption_configured,
 )
 from media_dl import media_dl_bp
+from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
 
 # Database setup
 DB_PATH = 'maxcourse.db'
@@ -235,6 +236,10 @@ def _client_ip():
 @app.before_request
 def throttle_api_scrapers():
     path = request.path or ''
+    # Only the scoped knowledge blueprint may authenticate automated readers.
+    # These exact routes retain their own token, account, IP and concurrency limits.
+    if path in AGENT_PATHS:
+        return None
     if not path.startswith('/api/') or path in RATE_LIMIT_EXEMPT_PATHS:
         return None
 
@@ -624,6 +629,7 @@ def init_db():
             )
         ''')
 
+        init_agent_tables(c)
         conn.commit()
 
         # One-time backfill: if the rollup is empty but raw views exist, compute
@@ -4016,6 +4022,8 @@ def optimize():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+register_campus_agent(app, get_db, _client_ip, get_public_base_url)
 
 if __name__ == '__main__':
     # Nginx runs on the same host and proxies to loopback. Binding publicly
