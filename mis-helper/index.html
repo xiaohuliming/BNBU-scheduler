@@ -573,6 +573,18 @@
             box-shadow: var(--shadow);
         }
 
+        .release-notes {
+            margin-top: 3rem;
+            padding: 1.4rem;
+            border: 1px solid var(--line);
+            border-radius: 1.25rem;
+            background: rgba(255, 255, 255, 0.7);
+        }
+        .release-notes h2 { margin: 0 0 1rem; font-size: 1.5rem; }
+        .release-notes ul { margin: 0; padding: 0; list-style: none; }
+        .release-notes li { display: grid; grid-template-columns: 78px 1fr; gap: 0.6rem; padding: 0.45rem 0; font-size: 0.9rem; line-height: 1.65; }
+        .release-notes strong { color: var(--blue); }
+
         .final-cta h2 {
             margin: 0;
             font-size: clamp(2rem, 5vw, 3.6rem);
@@ -655,9 +667,9 @@
     <main id="main">
         <section class="hero" aria-labelledby="page-title">
             <div>
-                <span class="kicker">Chrome Extension · v2.5.0</span>
+                <span class="kicker">Chrome Extension · v2.6.0</span>
                 <h1 id="page-title">抢课<br>脚本</h1>
-                <p class="lede">提前填好课程代码和班号，加减课阶段自动搜索并加课，普通选课也可继续使用。不自动退课，不强行跳过学校限制。</p>
+                <p class="lede">加减课阶段填课程代码或完整名称，即可自动搜索加课。不写班号就不限班，有可用名额就尝试；普通选课也可继续使用。不自动退课。</p>
                 <div class="hero-actions">
                     <a class="button" href="/bnbu-mis-course-helper-extension.zip" download>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -667,7 +679,7 @@
                     </a>
                     <a class="button secondary" href="#install">查看安装步骤</a>
                 </div>
-                <p class="hero-note">支持 Chrome 111 及以上版本。v2.5.0 新增自动搜索加课。旧版用户请先停止监测，下载解压后替换原扩展文件夹内容，在 chrome://extensions/ 点击重新加载，再刷新 MIS 页面。</p>
+                <p class="hero-note">支持 Chrome 111 及以上版本。v2.6.0 新增完整课程名称搜课。更新时先停止监测，替换原插件文件夹内容，在 chrome://extensions/ 重新加载，再刷新 MIS。<a href="#updates">查看更新日志</a></p>
             </div>
 
             <aside class="product-card" aria-label="插件特点">
@@ -763,8 +775,10 @@
                         <article class="step">
                             <span class="step-number">01</span>
                             <div>
-                                <h3>输入目标课程</h3>
-                                <p>每行填写课程代码，例如 <code>ENG3143</code>，或用 <code>ENG3143 | 1001</code> 指定班号。加课模式会自动逐门搜索；同一课程填写多个班号时视为按顺序选择的备选，只加其中一班。</p>
+                                <h3>输入代码或完整名称</h3>
+                                <p>每行一门课。加课模式支持 MIS 显示的完整名称，不区分大小写；名称匹配多门课程时会要求改填代码。</p>
+                                <p><strong>不限班号：</strong><code>ENG3143</code> 或 <code>Computer Vision</code>，尝试同一课程的任意可选班。</p>
+                                <p><strong>指定班号：</strong><code>ENG3143 | 1001</code> 或 <code>Computer Vision | 1001</code>。同课程多班号视为备选，只加其中一班。</p>
                             </div>
                         </article>
                         <article class="step">
@@ -794,7 +808,7 @@
                 <section class="guide-section" id="run" aria-labelledby="run-title">
                     <span class="section-label">Run</span>
                     <h2 id="run-title">开始运行</h2>
-                    <p class="section-intro">确认 MIS 已登录并保持页面打开。加课模式只在一个标签页运行，准备好课程代码即可开始，不需要手动搜索。</p>
+                    <p class="section-intro">确认 MIS 已登录并保持页面打开。加课模式只在一个标签页运行，准备好代码或完整课程名称即可开始，不需要手动搜索。</p>
                     <div class="steps">
                         <article class="step">
                             <span class="step-number">01</span>
@@ -835,7 +849,7 @@
             <h2 id="faq-title">常见问题</h2>
             <details>
                 <summary>一直显示“正在连接 MIS 页面”怎么办？</summary>
-                <p>请使用 v2.5.0 或更新版本，登录后打开普通选课模块 /mis/student/es/ 或加减课首页 /mis/student/as/home.do。安装或更新后需要刷新页面；登录过期时请重新登录。</p>
+                <p>请更新到 v2.6.0，登录后打开普通选课模块 /mis/student/es/ 或加减课首页 /mis/student/as/home.do。安装或更新后需要刷新页面；登录过期时请重新登录。</p>
             </details>
             <details>
                 <summary>可以关闭 MIS 页面或让电脑休眠吗？</summary>
@@ -844,6 +858,10 @@
             <details>
                 <summary>为什么服务器拥堵时还是会等待？</summary>
                 <p>0.5 秒是请求完成后的检查间隔，服务器处理请求仍需要时间。加课提交结果不明确时，插件会先查询已注册课程；仍无法确认会暂停，避免重复提交。</p>
+            </details>
+            <details>
+                <summary>哪个班都可以，应该怎么填？</summary>
+                <p>只填课程代码或完整名称，不加竖线和班号即可，例如 Computer Vision。也可以写“Computer Vision | 不限”。不限班只针对这门课，不会选择其他课程，也不会跳过 Full、Clash 或禁用限制。</p>
             </details>
             <details>
                 <summary>为什么出现 Add 也可能不会提交？</summary>
@@ -857,6 +875,16 @@
                 <summary>可以和油猴版本同时使用吗？</summary>
                 <p>不建议。两个工具可能同时执行并造成重复操作，请只保留一个版本运行。</p>
             </details>
+        </section>
+
+        <section class="release-notes" id="updates" aria-labelledby="updates-title">
+            <h2 id="updates-title">更新日志</h2>
+            <ul role="list">
+                <li><strong class="mono">v2.6.0</strong><span>支持完整课程名称搜课，补充不限班号填写示例。</span></li>
+                <li><strong class="mono">v2.5.0</strong><span>新增加减课自动搜索、加课确认和防重复提交。</span></li>
+                <li><strong class="mono">v2.4.4</strong><span>兼容学校新 MIS 域名，保留旧域名支持。</span></li>
+                <li><strong class="mono">v2.4.3</strong><span>修复插件弹窗过窄、文字挤压的问题。</span></li>
+            </ul>
         </section>
 
         <section class="final-cta" aria-labelledby="download-title">
