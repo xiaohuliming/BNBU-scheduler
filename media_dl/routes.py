@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 import re
 import shutil
 import sqlite3
-import subprocess
-import tempfile
 import time
 from urllib.parse import quote, urlparse
 
-import requests
+from . import http as requests
+from .http import UnsafeURLError, validate_url
+from .transport import MediaDownloadError, headers_for
 from flask import Blueprint, Response, jsonify, request, session, stream_with_context
 
 from . import extractor
+from .douyin import DouyinError
 from .analytics import DB_PATH, host_of, log_event, platform_of_host
 
 
@@ -36,6 +38,14 @@ def _friendly_error(exc: Exception) -> str:
     """Translate cryptic network errors into actionable Chinese messages."""
     msg = str(exc)
     lowered = msg.lower()
+    if isinstance(exc, (UnsafeURLError, DouyinError, MediaDownloadError)):
+        return msg
+    if 'fresh cookies' in lowered and 'douyin' in lowered:
+        return '抖音暂时无法获取该视频，请重新复制完整分享链接后重试。若持续失败，需要更新服务器的抖音访问凭据。'
+    if 'sign in' in lowered or 'login required' in lowered or 'not a bot' in lowered:
+        return '源站要求登录或验证，当前无法下载该内容，请尝试其他公开视频。'
+    if '403' in lowered or '410' in lowered:
+        return '源站拒绝了下载请求，链接可能已失效。请重新解析后重试。'
     if "errno 101" in lowered or "network is unreachable" in lowered:
         for needle, label in _BLOCKED_HOST_HINTS.items():
             if needle in lowered:
@@ -50,7 +60,11 @@ def _friendly_error(exc: Exception) -> str:
         return "上游请求超时，请稍后再试。"
     if "ssl" in lowered and "verify" in lowered:
         return "上游 SSL 证书校验失败，可能是代理拦截或证书过期。"
-    return f"解析失败: {exc}"
+    if '404' in lowered:
+        return '媒体已删除或链接失效，请重新解析后重试。'
+    if 'unsupported url' in lowered or 'no suitable extractor' in lowered:
+        return '暂不支持该链接，请粘贴视频或图文详情页的完整分享链接。'
+    return '暂时无法获取媒体，请检查分享链接或稍后重试。'
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +98,10 @@ _ALLOWED_PROXY_HOSTS = (
     "sinaimg.cn",
     "weibocdn.com",
     "yximgs.com",
+    "kwaicdn.com",
+    "cdninstagram.com",
+    "fbcdn.net",
+    "vimeocdn.com",
 )
 
 # CDNs unreachable from a mainland server without an outbound proxy. When
@@ -98,6 +116,9 @@ _FOREIGN_CDN_HOSTS = (
     "tiktokcdn.com",
     "tiktokcdn-us.com",
     "tiktokv.com",
+    "cdninstagram.com",
+    "fbcdn.net",
+    "vimeocdn.com",
 )
 
 
@@ -109,6 +130,10 @@ def _match_host(url: str, suffixes: tuple[str, ...]) -> bool:
 
 
 def _host_allowed(url: str) -> bool:
+    try:
+        validate_url(url)
+    except UnsafeURLError:
+        return False
     if _match_host(url, _ALLOWED_PROXY_HOSTS):
         return True
     # Bilibili's overseas Akamai mirror is `upos-<region>-mirrorakam.akamaized.net`
@@ -116,7 +141,7 @@ def _host_allowed(url: str) -> bool:
     # instead of allowlisting all of *.akamaized.net, which would turn /proxy
     # into an open relay for every unrelated Akamai customer.
     host = (urlparse(url).hostname or "").lower()
-    return host.endswith("mirrorakam.akamaized.net")
+    return bool(re.fullmatch(r'upos-[a-z0-9-]+-mirrorakam\.akamaized\.net', host))
 
 
 def _outbound_proxies_for(url: str) -> dict[str, str] | None:
@@ -140,11 +165,22 @@ def _user_id() -> int | None:
 
 @media_dl_bp.post("/resolve")
 def resolve():
-    payload = request.get_json(silent=True) or {}
-    url = (payload.get("url") or "").strip()
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or not isinstance(payload.get('url', ''), str):
+        return jsonify({'error': '请提供字符串类型的 url 参数。'}), 400
+    url = payload.get('url', '').strip()
     if not url:
         return jsonify({"error": "缺少 url 参数"}), 400
+    if len(url) > 16384:
+        return jsonify({'error': '分享链接或文案过长。'}), 400
 
+    url = extractor.extract_url_from_text(url)
+    if '://' not in url:
+        url = 'https://' + url
+    try:
+        validate_url(url)
+    except UnsafeURLError as exc:
+        return jsonify({'error': str(exc)}), 400
     host = host_of(url)
     platform = platform_of_host(host)
 
@@ -160,7 +196,7 @@ def resolve():
         )
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:  # noqa: BLE001
-        log.exception("media-dl resolve failed for %s", url)
+        log.warning("media-dl resolve failed for host=%s: %s", host, type(exc).__name__)
         log_event(
             visitor_id=_visitor_id(), user_id=_user_id(),
             action="resolve", platform=platform, host=host,
@@ -183,6 +219,21 @@ def resolve():
         success=True, elapsed_ms=elapsed,
     )
     return jsonify(result)
+
+
+def _download_error(message: str, status: int = 502):
+    """Let a hidden download frame report failures without leaving the tool."""
+    feedback = request.args.get('feedback', '')
+    if re.fullmatch(r'[a-zA-Z0-9-]{16,80}', feedback):
+        data = json.dumps({'type': 'media-dl-error', 'id': feedback, 'error': message}, ensure_ascii=True)
+        data = data.replace('<', '\\u003c')
+        html = '<!doctype html><meta charset="utf-8"><script>parent.postMessage(' + data + ',location.origin);</script>'
+        return Response(html, status=status, headers={
+            'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+            'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; frame-ancestors 'self'",
+            'X-Content-Type-Options': 'nosniff',
+        })
+    return jsonify({'error': message}), status
 
 
 # Cobalt-style chunked proxy: instead of holding one giant streaming GET open
@@ -250,7 +301,7 @@ def _fetch_range(url: str, base_headers: dict, start: int, end: int) -> requests
                 return r
             status = r.status_code
             try:
-                last_body = r.content[:512].decode("utf-8", "replace")
+                last_body = next(r.iter_content(512), b'').decode("utf-8", "replace")
             except Exception:  # noqa: BLE001
                 last_body = ""
             r.close()
@@ -283,11 +334,11 @@ def proxy():
     filename = request.args.get("name", "").strip() or "download.bin"
 
     if not target:
-        return jsonify({"error": "缺少 u 参数"}), 400
+        return _download_error('缺少 u 参数', 400)
     if not target.startswith(("http://", "https://")):
-        return jsonify({"error": "仅允许 http/https 链接"}), 400
+        return _download_error('仅允许 http/https 链接', 400)
     if not _host_allowed(target):
-        return jsonify({"error": "目标域名不在允许列表中"}), 403
+        return _download_error('目标域名不在允许列表中', 403)
 
     target_host = host_of(target)
     target_platform = platform_of_host(target_host)
@@ -306,6 +357,8 @@ def proxy():
     }
     if referer:
         base_headers["Referer"] = referer
+    base_headers.update(headers_for(target))
+    base_headers['Accept-Encoding'] = 'identity'
 
     # Deliberately ignore any Range the browser sent and always stream the
     # full body with a 200. We can't answer a mid-file Range correctly: a 206
@@ -333,29 +386,13 @@ def proxy():
         first = _fetch_range(target, base_headers, 0, _PROXY_CHUNK - 1)
     except Exception as exc:  # noqa: BLE001
         _log(False, 0, f"first range failed: {exc}")
-        # Return a downloadable .txt with the diagnosis so the user can see
-        # *why* the download failed instead of just Chrome's generic error.
-        body = (
-            "下载未能开始。\n\n"
-            f"目标 URL: {target}\n"
-            f"Referer:  {referer or '(未设置)'}\n"
-            f"上游错误: {exc}\n\n"
-            "可能原因：\n"
-            "  1. 解析结果已超过 2 小时（B站签名 URL 失效）→ 请回到工具页重新解析\n"
-            "  2. 服务器 IP 被 CDN 风控 → 短时间内多次失败可换时段重试\n"
-            "  3. 链接本身需要登录态（如付费内容）→ 当前仅支持公开视频\n"
-        ).encode("utf-8")
-        return Response(
-            body,
-            status=200,
-            headers={
-                "Content-Type": "text/plain; charset=utf-8",
-                "Content-Disposition": _content_disposition_header("download_error.txt"),
-                "Cache-Control": "no-store",
-            },
-        )
+        return _download_error(_friendly_error(exc), 400 if isinstance(exc, UnsafeURLError) else 502)
 
     first_start, first_end_incl = _content_range_bounds(first)
+    if first.status_code == 206 and (first_start != 0 or first_end_incl is None):
+        first.close()
+        _log(False, 0, 'invalid initial content range')
+        return _download_error('源站返回的文件范围不完整，请重新解析后重试。')
     server_honors_ranges = first.status_code == 206 and first_start == 0
 
     total: int | None = None
@@ -420,6 +457,8 @@ def proxy():
                     try:
                         cur = _fetch_range(target, base_headers, cursor, next_end)
                     except _RangeNotSatisfiable:
+                        if total is not None and cursor < total:
+                            raise RuntimeError('upstream ended before the declared file size')
                         break  # past EOF (unknown-total case) → clean end
                     except _UpstreamClientError:
                         raise  # permanent (e.g. expired signed URL) → abort
@@ -458,6 +497,8 @@ def proxy():
                             yield piece
                     _close(cur)
                     cur = None
+                    if cursor == chunk_start:
+                        raise RuntimeError('upstream returned an empty range before EOF')
                     failures = 0
                 except Exception as exc:  # noqa: BLE001
                     _close(cur)
@@ -469,12 +510,9 @@ def proxy():
                         raise
                     continue
 
-                # Unknown total: a chunk shorter than requested means EOF.
-                if total is None:
-                    got = cursor - chunk_start
-                    want = (chunk_end - chunk_start + 1) if chunk_end is not None else None
-                    if want is None or got < want:
-                        break
+                # Unknown totals finish only when the next range returns 416.
+                # A body shorter than Content-Range promised must be resumed,
+                # never treated as a successfully completed file.
 
             _log(True, sent, None)
         except GeneratorExit:
@@ -489,7 +527,9 @@ def proxy():
         finally:
             _close(cur)
 
-    return Response(stream_with_context(generate()), status=200, headers=forwarded)
+    response = Response(stream_with_context(generate()), status=200, headers=forwarded)
+    response.call_on_close(lambda: _close(first))
+    return response
 
 
 _ffmpeg_cached: str | None = None
@@ -508,8 +548,6 @@ _MERGE_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
 )
-_MERGE_READ = 256 * 1024
-_MERGE_IO_TIMEOUT_US = 20 * 1_000_000       # ffmpeg -rw_timeout: abort a read stalled >20s
 
 
 @media_dl_bp.get("/merge")
@@ -533,163 +571,61 @@ def merge():
         referer = re.sub(r"[\r\n]+", "", referer)
 
     if not video or not audio:
-        return jsonify({"error": "缺少 v 或 a 参数"}), 400
+        return _download_error('缺少 v 或 a 参数', 400)
     for u in (video, audio):
         if not u.startswith(("http://", "https://")):
-            return jsonify({"error": "仅允许 http/https 链接"}), 400
+            return _download_error('仅允许 http/https 链接', 400)
         if not _host_allowed(u):
-            return jsonify({"error": "目标域名不在允许列表中"}), 403
+            return _download_error('目标域名不在允许列表中', 403)
 
     ffmpeg = _ffmpeg_path()
     if not ffmpeg:
-        return jsonify({
-            "error": "服务器未安装 ffmpeg，无法在线合并。请分别下载画面与音频后在本地合并。"
-        }), 501
+        return _download_error('服务器未安装 ffmpeg，无法在线合并。请分别下载画面与音频后在本地合并。', 501)
 
-    hdr = f"Referer: {referer}\r\n" if referer else ""
+    from .mux import MergeBusyError, merge_chunks
 
-    def _input_args(url: str) -> list[str]:
-        args = ["-user_agent", _MERGE_UA]
-        if hdr:
-            args += ["-headers", hdr]
-        # -rw_timeout (microseconds) aborts ffmpeg if a network read stalls, so a
-        # black-holed CDN connection can't hang the streaming read indefinitely
-        # (and leak the thread + process). Reconnect covers transient drops.
-        args += ["-rw_timeout", str(_MERGE_IO_TIMEOUT_US),
-                 "-reconnect", "1", "-reconnect_streamed", "1",
-                 "-reconnect_delay_max", "5", "-i", url]
-        return args
-
-    cmd = [
-        ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin",
-        *_input_args(video),
-        *_input_args(audio),
-        "-map", "0:v:0", "-map", "1:a:0", "-c", "copy",
-        "-movflags", "frag_keyframe+empty_moov", "-f", "mp4", "pipe:1",
-    ]
-
-    # Route ffmpeg's own fetches through MAXCOURSE_PROXY for foreign CDNs; make
-    # sure a domestic (bilibili) merge is NOT dragged through a global proxy.
-    env = dict(os.environ)
-    proxies = _outbound_proxies_for(video)
-    if proxies:
-        env["http_proxy"] = env["https_proxy"] = proxies["https"]
-    else:
-        for k in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
-            env.pop(k, None)
-
-    target_host = host_of(video)
-    target_platform = platform_of_host(target_host)
     started = time.monotonic()
-    visitor = _visitor_id()
-    user = _user_id()
+    visitor, user = _visitor_id(), _user_id()
+    target_host = host_of(video)
+    chunks = merge_chunks(ffmpeg, video, audio, referer=referer,
+                          proxies_for=_outbound_proxies_for, user_agent=_MERGE_UA)
 
-    def _log(success: bool, sent: int, error: str | None) -> None:
-        log_event(
-            visitor_id=visitor, user_id=user,
-            action="merge", platform=target_platform, host=target_host,
-            success=success, bytes_count=sent,
-            elapsed_ms=int((time.monotonic() - started) * 1000), error=error,
-        )
-
-    # stderr goes to a temp file, NOT a PIPE: ffmpeg can emit many error-level
-    # lines during a glitchy remux, and an unread PIPE would fill its OS buffer
-    # and deadlock ffmpeg (it blocks writing stderr → stops writing stdout → our
-    # read blocks forever). A file never blocks the writer; we read it on demand.
-    stderr_file = tempfile.TemporaryFile()
-
-    def _read_stderr(limit: int) -> str:
-        try:
-            stderr_file.seek(0)
-            return (stderr_file.read() or b"")[:limit].decode("utf-8", "replace")
-        except Exception:  # noqa: BLE001
-            return ""
-
-    def _reap() -> None:
-        try:
-            proc.stdout.close()
-        except Exception:  # noqa: BLE001
-            pass
-        if proc.poll() is None:
-            proc.kill()
-        try:
-            proc.wait(timeout=5)      # reap the zombie
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            stderr_file.close()
-        except Exception:  # noqa: BLE001
-            pass
+    def record(success, sent, error=None):
+        log_event(visitor_id=visitor, user_id=user, action='merge',
+                  platform=platform_of_host(target_host), host=target_host,
+                  success=success, bytes_count=sent,
+                  elapsed_ms=int((time.monotonic() - started) * 1000), error=error)
 
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_file, env=env)
-    except Exception as exc:  # noqa: BLE001
-        try:
-            stderr_file.close()
-        except Exception:  # noqa: BLE001
-            pass
-        _log(False, 0, f"spawn failed: {exc}")
-        return jsonify({"error": f"启动 ffmpeg 失败: {exc}"}), 500
-
-    # Prime the first chunk before committing to a 200: if ffmpeg can't fetch a
-    # stream or the map fails, surface a readable diagnosis instead of a 0-byte
-    # "mp4". `frag_keyframe+empty_moov` emits the header fragment promptly, so a
-    # healthy merge returns bytes within a second or two; a stalled fetch is
-    # bounded by -rw_timeout above, so this read can't block forever.
-    first = proc.stdout.read(_MERGE_READ)
-    if not first:
-        err = _read_stderr(800)
-        _reap()
-        _log(False, 0, f"ffmpeg produced no output: {err[:200]}")
-        body = (
-            "合并未能开始。\n\n"
-            f"画面: {video}\n音频: {audio}\n"
-            f"ffmpeg 错误: {err or '(无输出)'}\n\n"
-            "可能原因：签名 URL 已过期（回到工具页重新解析）/ 源站风控 / 需登录内容。\n"
-        ).encode("utf-8")
-        return Response(body, status=200, headers={
-            "Content-Type": "text/plain; charset=utf-8",
-            "Content-Disposition": _content_disposition_header("merge_error.txt"),
-            "Cache-Control": "no-store",
-        })
-
-    forwarded = {
-        "Cache-Control": "no-store",
-        "Accept-Ranges": "none",
-        "Content-Type": "video/mp4",
-        "Content-Disposition": _content_disposition_header(filename),
-    }
+        first = next(chunks)
+    except Exception as exc:
+        chunks.close()
+        record(False, 0, type(exc).__name__)
+        status = 429 if isinstance(exc, MergeBusyError) else 502
+        return _download_error(_friendly_error(exc), status)
 
     def generate():
-        sent = len(first)
+        sent = 0
         try:
+            sent += len(first)
             yield first
-            while True:
-                chunk = proc.stdout.read(_MERGE_READ)
-                if not chunk:
-                    break
+            for chunk in chunks:
                 sent += len(chunk)
                 yield chunk
-            proc.wait(timeout=10)
-            if proc.returncode not in (0, None):
-                err = _read_stderr(300)
-                log.warning("[merge] ffmpeg exit %s after %s bytes: %s",
-                            proc.returncode, sent, err)
-                # Bytes already streamed; abort so the browser flags it failed.
-                _log(False, sent, f"ffmpeg exit {proc.returncode}: {err[:150]}")
-                raise RuntimeError(f"ffmpeg exit {proc.returncode}")
-            _log(True, sent, None)
-        except GeneratorExit:
-            _log(False, sent, "client disconnected")
-            raise
-        except Exception as exc:  # noqa: BLE001
-            if not isinstance(exc, RuntimeError):
-                _log(False, sent, f"merge aborted: {exc}")
+            record(True, sent)
+        except BaseException as exc:
+            record(False, sent, type(exc).__name__)
             raise
         finally:
-            _reap()
+            chunks.close()
 
-    return Response(stream_with_context(generate()), status=200, headers=forwarded)
+    response = Response(stream_with_context(generate()), status=200, headers={
+        'Cache-Control': 'no-store', 'Accept-Ranges': 'none',
+        'Content-Type': 'video/mp4',
+        'Content-Disposition': _content_disposition_header(filename),
+    })
+    response.call_on_close(chunks.close)
+    return response
 
 
 @media_dl_bp.get("/stats")

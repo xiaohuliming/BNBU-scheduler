@@ -22,7 +22,7 @@ import logging
 import re
 from urllib.parse import parse_qs, urlparse
 
-import requests
+from . import http as requests
 
 from .ytdlp import _BROWSER_UA, bili_cookie_dict
 

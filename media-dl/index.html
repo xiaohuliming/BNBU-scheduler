@@ -148,7 +148,7 @@
             </div>
         </section>
 
-        <section id="status" class="mt-6"></section>
+        <section id="status" class="mt-6" aria-live="polite"></section>
         <section id="result" class="mt-6"></section>
     </main>
 
@@ -239,6 +239,50 @@
         const KIND_LABEL = { video: '视频', audio: '音频', image: '图片' };
 
         let currentItems = [];
+        let currentSourceUrl = '';
+        const pendingDownloads = new Map();
+
+        const downloadError = (message, sourceUrl) => {
+            $status.innerHTML = `<div class="err-card" role="alert"><strong>下载失败：</strong>${escapeHtml(message)}
+                <button type="button" class="btn-ghost" id="retry-download">重新解析</button></div>`;
+            document.getElementById('retry-download').addEventListener('click', () => {
+                if (sourceUrl) $url.value = sourceUrl;
+                $form.requestSubmit();
+            });
+        };
+
+        window.addEventListener('message', (event) => {
+            if (event.origin !== location.origin || event.data?.type !== 'media-dl-error') return;
+            const job = pendingDownloads.get(event.data.id);
+            if (!job || event.source !== job.frame.contentWindow) return;
+            pendingDownloads.delete(event.data.id);
+            job.frame.remove();
+            downloadError(event.data.error || '下载暂时不可用，请重新解析。', job.sourceUrl);
+        });
+
+        const startDownload = (href, direct, sourceUrl) => {
+            if (!href || href === '#') return;
+            if (direct) {
+                const a = document.createElement('a');
+                a.href = href;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.click();
+                return;
+            }
+            const id = crypto.randomUUID();
+            const target = new URL(href, location.origin);
+            target.searchParams.set('feedback', id);
+            const frame = document.createElement('iframe');
+            frame.hidden = true;
+            frame.title = '文件下载';
+            pendingDownloads.set(id, { frame, sourceUrl });
+            // Each transfer gets its own frame. A second download must not
+            // navigate away from the first, or from the tool's result panel.
+            frame.src = target.href;
+            document.body.appendChild(frame);
+            $status.innerHTML = '<div class="note-card" role="status">已提交下载请求，请在浏览器下载列表查看进度。若源站拒绝请求，此处会显示原因。</div>';
+        };
 
         const renderItems = (data) => {
             currentItems = data.items || [];
@@ -371,26 +415,11 @@
                 });
             });
 
-            // Brief busy feedback on proxied downloads: the same-origin
-            // navigation-download doesn't unload the page, so the button would
-            // otherwise look dead during the server's first range fetch.
-            $result.querySelectorAll('a.dl-btn[data-proxy="1"]').forEach((a) => {
-                a.addEventListener('click', () => {
-                    a.classList.add('busy');
-                    const original = a.textContent;
-                    a.textContent = '已开始下载…';
-                    setTimeout(() => { a.classList.remove('busy'); a.textContent = original; }, 4000);
+            $result.querySelectorAll('a.dl-btn[data-proxy="1"], a.merge-btn').forEach((a) => {
+                a.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    startDownload(a.getAttribute('href'), false, currentSourceUrl);
                 });
-            });
-
-            // Merge takes a beat to spin up (ffmpeg fetches both streams then
-            // muxes), so give a longer busy hint than a plain proxied download.
-            const $merge = $result.querySelector('a.merge-btn');
-            if ($merge) $merge.addEventListener('click', () => {
-                $merge.classList.add('busy');
-                const original = $merge.textContent;
-                $merge.textContent = '合并中（首次稍慢）…';
-                setTimeout(() => { $merge.classList.remove('busy'); $merge.textContent = original; }, 7000);
             });
 
             // Multi-select wiring: per-item checkboxes + 全选 toggle drive the
@@ -410,7 +439,7 @@
                 const boxes = $checks();
                 const n = selectedIdxs().length;
                 if ($selCount) $selCount.textContent = n;
-                if ($selBtn) $selBtn.classList.toggle('busy', n === 0);
+                if ($selBtn) { $selBtn.classList.toggle('busy', n === 0); $selBtn.disabled = n === 0; }
                 if ($checkAll) {
                     $checkAll.checked = n === boxes.length && n > 0;
                     $checkAll.indeterminate = n > 0 && n < boxes.length;
@@ -428,42 +457,30 @@
             refreshSelUi();
         };
 
-        // Sequential download of the given item indices. Staggered anchor clicks
-        // stream each file to disk via the proxy's Content-Disposition (no
-        // in-memory blobs, so large videos are fine). Chrome may ask once to
-        // allow multiple downloads.
+        // Snapshot the selected items so a new parse cannot change a batch
+        // already in progress. Independent frames keep concurrent files alive.
         const downloadIdxs = (idxs, btn) => {
-            if (!idxs.length) return;
-            const restore = btn.querySelector('#sel-count') ? null : btn.textContent;
+            const items = idxs.map((idx) => currentItems[idx]).filter(Boolean);
+            if (!items.length) return;
+            const source = currentSourceUrl;
+            btn.disabled = true;
             btn.classList.add('busy');
-            const label = btn.querySelector('#sel-count');
-            const setLabel = (t) => { if (!label) btn.textContent = t; };
-            setLabel('下载中…');
             let i = 0;
             const step = () => {
-                if (i >= idxs.length) {
+                if (i >= items.length) {
+                    btn.disabled = false;
                     btn.classList.remove('busy');
-                    if (restore != null) btn.textContent = restore;
                     return;
                 }
-                const item = currentItems[idxs[i++]];
-                const { href, direct } = downloadHref(item);
-                if (href && href !== '#') {
-                    const a = document.createElement('a');
-                    a.href = href;
-                    a.download = item.filename || '';
-                    if (direct) { a.target = '_blank'; a.rel = 'noopener'; }
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                }
+                const { href, direct } = downloadHref(items[i++]);
+                startDownload(href, direct, source);
                 setTimeout(step, 700);
             };
             step();
         };
 
         const showError = (message) => {
-            $result.innerHTML = `<div class="err-card"><strong>解析失败：</strong>${escapeHtml(message)}</div>`;
+            $result.innerHTML = `<div class="err-card" role="alert"><strong>解析失败：</strong>${escapeHtml(message)}</div>`;
         };
 
         const showLoading = () => {
@@ -513,6 +530,7 @@
                     showError(data.error || `服务返回 HTTP ${res.status}`);
                     return;
                 }
+                currentSourceUrl = url;
                 renderItems(data);
             } catch (err) {
                 if (err.name === 'AbortError') {
