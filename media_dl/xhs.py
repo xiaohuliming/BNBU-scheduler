@@ -21,7 +21,7 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
-import requests
+from . import http as requests
 
 
 _HEADERS = {

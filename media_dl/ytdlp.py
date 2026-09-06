@@ -5,13 +5,15 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import tempfile
 import threading
 import time
 from typing import Any
 from urllib.parse import urlparse
 
-import requests
+from . import http as requests
+from .transport import remember_headers
 
 try:
     import yt_dlp  # type: ignore
@@ -286,11 +288,7 @@ def _needs_proxy(url: str, host: str) -> tuple[bool, str | None]:
     if _KUAISHOU_HOST_RE.search(host):
         return True, "https://www.kuaishou.com"
     if _FOREIGN_HOST_RE.search(host):
-        # Only worth proxying if the server can actually reach the CDN — which,
-        # for these GFW-blocked hosts, means an outbound proxy is configured.
-        # (If it isn't, resolve itself would have failed, so this is moot; guard
-        # anyway so a directly-reachable deployment keeps the direct link.)
-        return bool(_server_proxy()), None
+        return True, None
     return False, None
 
 
@@ -314,7 +312,7 @@ def _platform_of(host: str) -> str:
     return host.split(".")[0] or "unknown"
 
 
-def extract(url: str) -> dict:
+def _extract_info(url: str) -> dict:
     if yt_dlp is None:
         raise RuntimeError("yt-dlp 未安装。请在服务器虚拟环境中执行 pip install yt-dlp。")
 
@@ -329,6 +327,12 @@ def extract(url: str) -> dict:
         http_headers["Referer"] = "https://www.bilibili.com"
         cookiefile = _bili_cookie_file() or None
 
+    runtimes = {name: {'path': path} for name in ('deno', 'node')
+                if (path := shutil.which(name))}
+    media_node = os.environ.get('MEDIA_DL_NODE') or '/opt/maxcourse-media/node/bin/node'
+    if os.path.isfile(media_node) and os.access(media_node, os.X_OK):
+        runtimes['node'] = {'path': media_node}
+
     opts: dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
@@ -338,6 +342,8 @@ def extract(url: str) -> dict:
         "http_headers": http_headers,
         "socket_timeout": 15,
         "retries": 2,
+        "cachedir": False,
+        "js_runtimes": runtimes,
     }
     if cookiefile:
         opts["cookiefile"] = cookiefile
@@ -350,11 +356,26 @@ def extract(url: str) -> dict:
         or os.environ.get("HTTPS_PROXY")
         or os.environ.get("https_proxy")
     )
-    if proxy:
-        opts["proxy"] = proxy
+    opts["proxy"] = proxy or ''
+
+    cookie_path = os.environ.get('MEDIA_DL_COOKIE_FILE', '').strip()
+    if cookie_path and not is_bili:
+        opts['cookiefile'] = cookie_path
 
     def _run() -> dict[str, Any]:
+        from yt_dlp.networking._requests import RequestsRH
+
+        class PublicRequestsRH(RequestsRH):
+            def _create_instance(self, cookiejar, legacy_ssl_support=None):
+                session = requests.Session()
+                session.headers.clear()
+                session.cookies = cookiejar
+                return session
+
         with yt_dlp.YoutubeDL(opts) as ydl:
+            # No unguarded urllib/curl fallback may bypass IP pinning.
+            ydl._request_director.close()
+            ydl._request_director = ydl.build_request_director([PublicRequestsRH])
             return ydl.extract_info(url, download=False)
 
     try:
@@ -371,6 +392,11 @@ def extract(url: str) -> dict:
         else:
             raise
 
+    return info
+
+
+def extract(url: str) -> dict:
+    info = _extract_info(url)
     if info.get("_type") == "playlist" and info.get("entries"):
         info = next((e for e in info["entries"] if e), info)
 
@@ -381,6 +407,7 @@ def extract(url: str) -> dict:
 
     def _item(kind: str, fmt: dict, ext: str, label: str, name: str,
               needs_merge: bool = False) -> dict:
+        remember_headers(fmt['url'], {**(info.get('http_headers') or {}), **(fmt.get('http_headers') or {})})
         return {
             "kind": kind,
             "url": fmt["url"],
@@ -425,7 +452,7 @@ def extract(url: str) -> dict:
         items.append(_item("audio", audio_only, a_ext,
                            _quality_label(audio_only) + " · 仅音频", title + "-audio",
                            needs_merge=True))
-    elif audio_only and combined:
+    elif audio_only:
         # Progressive already covers video; still expose a standalone audio grab.
         a_ext = audio_only.get("ext") or "m4a"
         items.append(_item("audio", audio_only, a_ext,

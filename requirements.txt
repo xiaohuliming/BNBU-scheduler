@@ -4,10 +4,11 @@
 Flask>=3.0
 pandas>=2.0
 openpyxl>=3.1
-requests>=2.30
+requests[socks]>=2.32.5,<3
 beautifulsoup4>=4.12
 cryptography>=42.0  # authenticated encryption for opt-in iSpace auto-sync credentials
 numpy>=1.26
 scipy>=1.11          # SkillPath PPR career recommender (/api/recommend)
 pypdf>=4.0           # transcript parsing (/api/parse-transcript) + course-catalog build
-# yt-dlp is an OPTIONAL dependency for media_dl (YouTube/Douyin/etc.); install if needed.
+# Media extraction is a public feature. Keep its tested upstream fixes installed.
+yt-dlp[default]==2026.08.19

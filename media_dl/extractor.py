@@ -30,7 +30,8 @@ import logging
 import re
 from urllib.parse import urlparse
 
-from . import bilibili, xhs, ytdlp
+from . import bilibili, douyin, xhs, ytdlp
+from .http import UnsafeURLError, validate_url
 
 log = logging.getLogger(__name__)
 
@@ -40,12 +41,11 @@ _YTDLP_HOST_RE = re.compile(
     r"vimeo\.com|weibo\.com|kuaishou\.com)$"
 )
 
-_BILI_HOST_RE = re.compile(r"(bilibili\.com|b23\.tv)$")
-_XHS_HOST_RE = re.compile(r"(xiaohongshu\.com|xhslink\.com)$")
+_BILI_HOST_RE = re.compile(r"(?:^|\.)(bilibili\.com|b23\.tv)$")
+_XHS_HOST_RE = re.compile(r"(?:^|\.)(xiaohongshu\.com|xhslink\.com)$")
 
 
-class UnsupportedURLError(ValueError):
-    pass
+UnsupportedURLError = UnsafeURLError
 
 
 # Share blurbs (douyin/xhs "复制打开" text) wrap the URL in CJK prose and
@@ -82,8 +82,10 @@ def resolve(url: str) -> dict:
     if not url:
         raise UnsupportedURLError("URL 为空")
 
-    if not url.startswith(("http://", "https://")):
+    if '://' not in url:
         url = "https://" + url
+
+    validate_url(url)
 
     host = _host_of(url)
     if not host:
@@ -91,6 +93,9 @@ def resolve(url: str) -> dict:
 
     if _XHS_HOST_RE.search(host):
         return xhs.extract(url)
+
+    if re.search(r'(?:^|\.)(?:douyin\.com|iesdouyin\.com)$', host):
+        return douyin.extract(url)
 
     if _BILI_HOST_RE.search(host):
         # Native API path is more reliable — yt-dlp's HTML scrape often hits 412
