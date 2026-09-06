@@ -6,6 +6,7 @@ import logging
 import json
 import os
 import re
+import secrets
 import shutil
 import sqlite3
 import time
@@ -234,6 +235,83 @@ def _download_error(message: str, status: int = 502):
             'X-Content-Type-Options': 'nosniff',
         })
     return jsonify({'error': message}), status
+
+
+@media_dl_bp.post('/batch')
+def prepare_batch():
+    from . import batch
+    payload = request.get_json(silent=True)
+    items = payload.get('items') if isinstance(payload, dict) else None
+    if not isinstance(items, list) or not 1 <= len(items) <= 50:
+        return jsonify({'error': '请选择 1 至 50 个文件。'}), 400
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get('url'), str):
+            return jsonify({'error': '下载列表格式无效。'}), 400
+        if not _host_allowed(item['url']):
+            return jsonify({'error': '选中的文件不支持打包下载。'}), 403
+        filename, referer = item.get('filename', 'media.bin'), item.get('referer')
+        if not isinstance(filename, str) or len(filename) > 500:
+            return jsonify({'error': '文件名格式无效。'}), 400
+        if referer is not None and (not isinstance(referer, str) or len(referer) > 16384
+                                    or '\r' in referer or '\n' in referer):
+            return jsonify({'error': '下载来源格式无效。'}), 400
+        cleaned.append({'url': item['url'], 'filename': filename, 'referer': referer})
+    owner = session.setdefault('media_dl_owner', secrets.token_urlsafe(24))
+    try:
+        token = batch.prepare(cleaned, owner)
+    except MediaDownloadError as exc:
+        return jsonify({'error': str(exc)}), 429
+    return jsonify({'url': '/api/media-dl/batch/' + token})
+
+
+@media_dl_bp.get('/batch/<token>')
+def download_batch(token):
+    from . import batch
+    items = batch.take(token, session.get('media_dl_owner'))
+    if not items:
+        return _download_error('打包链接已失效，请重新选择下载。', 404)
+    started = time.monotonic()
+    visitor, user = _visitor_id(), _user_id()
+    host = host_of(items[0]['url'])
+
+    def record(success, sent, error=None):
+        # One archive is one browser download; include its streamed bytes in
+        # the existing proxy bandwidth metrics.
+        log_event(visitor_id=visitor, user_id=user, action='proxy',
+                  platform=platform_of_host(host), host=host, success=success,
+                  bytes_count=sent, error=error,
+                  elapsed_ms=int((time.monotonic() - started) * 1000))
+
+    chunks = batch.archive(items, _outbound_proxies_for, _MERGE_UA)
+    try:
+        first = next(chunks)
+    except Exception as exc:
+        chunks.close()
+        record(False, 0, type(exc).__name__)
+        return _download_error(_friendly_error(exc))
+
+    def generate():
+        sent = 0
+        try:
+            sent += len(first)
+            yield first
+            for chunk in chunks:
+                sent += len(chunk)
+                yield chunk
+            record(True, sent)
+        except BaseException as exc:
+            record(False, sent, type(exc).__name__)
+            raise
+        finally:
+            chunks.close()
+
+    response = Response(stream_with_context(generate()), headers={
+        'Content-Type': 'application/zip', 'Cache-Control': 'no-store',
+        'Content-Disposition': _content_disposition_header('MAXCOURSE-素材.zip'),
+    })
+    response.call_on_close(chunks.close)
+    return response
 
 
 # Cobalt-style chunked proxy: instead of holding one giant streaming GET open

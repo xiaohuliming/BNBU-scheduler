@@ -3,6 +3,7 @@ import io
 import json
 import socket
 import unittest
+import zipfile
 from unittest import mock
 
 import requests
@@ -204,6 +205,38 @@ class MediaDownloaderTests(unittest.TestCase):
                 referer=None, proxies_for=lambda url: None, user_agent='test')
             with self.assertRaises(requests.ConnectionError):
                 b''.join(chunks)
+
+    def test_batch_is_one_streamed_zip_and_token_is_owned_and_single_use(self):
+        from media_dl import batch
+        items = [{'url': f'https://video.bilivideo.com/{i}.jpg', 'filename': '../same.jpg'} for i in range(2)]
+        reply = self.client.post('/api/media-dl/batch', json={'items': items})
+        self.assertEqual(reply.status_code, 200)
+        url = reply.get_json()['url']
+        self.assertEqual(self.app.test_client().get(url).status_code, 404)
+        responses = []
+        for content in (b'first-image', b'second-image'):
+            response = mock.MagicMock()
+            response.__enter__.return_value = response
+            response.iter_content.return_value = iter([content])
+            responses.append(response)
+        with mock.patch.object(batch.http, 'get', side_effect=responses):
+            download = self.client.get(url)
+            data = download.get_data()
+        self.assertEqual(download.mimetype, 'application/zip')
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            self.assertIsNone(archive.testzip())
+            names = archive.namelist()
+            self.assertEqual(len(set(names)), 2)
+            self.assertTrue(all('/' not in name for name in names))
+            self.assertEqual([archive.read(name) for name in names], [b'first-image', b'second-image'])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_batch_validates_private_urls_and_maximum_count(self):
+        with mock.patch('media_dl.batch.archive') as archive:
+            for items, status in (([], 400), ([{'url': 'http://127.0.0.1/'}], 403), ([{}] * 51, 400)):
+                response = self.client.post('/api/media-dl/batch', json={'items': items})
+                self.assertEqual(response.status_code, status)
+            archive.assert_not_called()
 
 
 if __name__ == '__main__':

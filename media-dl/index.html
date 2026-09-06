@@ -144,7 +144,7 @@
 
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-black/55">
                 <span class="pill">Tip</span>
-                <span>支持 1000+ 站点。小红书图集逐张返回，可一键<b>下载全部</b>。</span>
+                <span>支持 1000+ 站点。图集逐张返回，多项素材可一键<b>打包下载</b>。</span>
             </div>
         </section>
 
@@ -457,26 +457,40 @@
             refreshSelUi();
         };
 
-        // Snapshot the selected items so a new parse cannot change a batch
-        // already in progress. Independent frames keep concurrent files alive.
-        const downloadIdxs = (idxs, btn) => {
+        // One streamed ZIP avoids browser restrictions on multiple automatic
+        // downloads. Snapshot the selection before starting the request.
+        const downloadIdxs = async (idxs, btn) => {
             const items = idxs.map((idx) => currentItems[idx]).filter(Boolean);
             if (!items.length) return;
             const source = currentSourceUrl;
+            if (items.length === 1) {
+                const { href, direct } = downloadHref(items[0]);
+                startDownload(href, direct, source);
+                return;
+            }
             btn.disabled = true;
             btn.classList.add('busy');
-            let i = 0;
-            const step = () => {
-                if (i >= items.length) {
-                    btn.disabled = false;
-                    btn.classList.remove('busy');
-                    return;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+            try {
+                const response = await fetch('/api/media-dl/batch', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: items.map(({ url, filename, referer }) => ({ url, filename, referer })) }),
+                    signal: controller.signal,
+                });
+                if (!(response.headers.get('content-type') || '').includes('application/json')) {
+                    throw new Error('打包服务暂时不可用，请稍后重试。');
                 }
-                const { href, direct } = downloadHref(items[i++]);
-                startDownload(href, direct, source);
-                setTimeout(step, 700);
-            };
-            step();
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || '打包失败，请稍后重试。');
+                startDownload(data.url, false, source);
+            } catch (error) {
+                downloadError(error.name === 'AbortError' ? '打包请求超时，请重试。' : error.message, source);
+            } finally {
+                clearTimeout(timer);
+                btn.disabled = false;
+                btn.classList.remove('busy');
+            }
         };
 
         const showError = (message) => {
