@@ -41,6 +41,13 @@ Transfer failures return an error HTTP status. The page uses separate hidden
 frames and validates their message sources to report failures inline while
 keeping browser-managed large-file downloads.
 
+Selecting several items now prepares one streamed ZIP. This avoids browser
+restrictions that can silently block the second automatic download. Preparation
+tokens expire after five minutes, are bound to the requesting session, and can
+be used once. Archives allow up to 50 selected files and 2 GB in total, with
+three concurrent transfers. Member names are flattened and deduplicated. The
+server does not buffer entire videos or archives in memory or on disk.
+
 Run the Python test suite from an isolated checkout with a temporary database.
 After frontend edits, run `node precompile.js` and validate the page in a real
 browser. Exercise a complete downloaded file, not only a successful resolve.
