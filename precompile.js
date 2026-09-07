@@ -87,3 +87,20 @@ for (const { content, out } of TAILWIND_SHEETS) {
                  'newly added classes will be unstyled until you rerun this with npx available.');
   }
 }
+
+// Version standalone dashboard assets by content so a cached CSS/JS response
+// cannot survive a dashboard release. The page itself remains a static HTML entry point.
+const statsPagePath = 'stats/index.html';
+if (fs.existsSync(statsPagePath)) {
+  let statsHtml = fs.readFileSync(statsPagePath, 'utf8');
+  for (const asset of ['dashboard.css', 'dashboard.js']) {
+    const assetPath = 'stats/' + asset;
+    if (!fs.existsSync(assetPath)) continue;
+    const digest = require('crypto').createHash('sha256')
+      .update(fs.readFileSync(assetPath)).digest('hex').slice(0, 12);
+    const pattern = new RegExp('(/stats/' + asset.replace('.', '\\.') + '\\?v=)[^"]+', 'g');
+    statsHtml = statsHtml.replace(pattern, (_, prefix) => prefix + digest);
+  }
+  fs.writeFileSync(statsPagePath, statsHtml);
+  console.log('stats/index.html asset cache keys updated');
+}

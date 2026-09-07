@@ -31,6 +31,7 @@ from ispace_credentials import (
     is_ispace_credential_encryption_configured,
 )
 from media_dl import media_dl_bp
+from site_analytics import create_analytics_blueprint
 from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
 from campus_classrooms import ClassroomTools
 
@@ -603,6 +604,10 @@ def init_db():
 
         c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unsubscribe_token ON users (unsubscribe_token) WHERE unsubscribe_token IS NOT NULL')
         c.execute('CREATE INDEX IF NOT EXISTS idx_todos_user_ispace_lookup ON todos (user_id, ispace_id)')
+        try:
+            c.execute('ALTER TABLE page_views ADD COLUMN referrer_known INTEGER NOT NULL DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_view_name ON page_views (view_name)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_page_views_visitor_id ON page_views (visitor_id)')
@@ -1364,6 +1369,7 @@ def _resolve_course_refs(codes, catalog, enrichment):
 
 
 app.register_blueprint(media_dl_bp)
+app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: antiscrape_stats))
 
 
 @app.route('/')
@@ -3231,10 +3237,15 @@ def get_ddl():
 
 @app.route('/api/analytics/track', methods=['POST'])
 def track_page_view():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid analytics payload'}), 400
     view_name = str(data.get('view') or 'unknown').strip()[:80]
     path = str(data.get('path') or request.referrer or '').strip()[:300]
-    referrer = str(data.get('referrer') or request.referrer or '').strip()[:300]
+    # An explicitly empty document.referrer means a direct visit. The HTTP
+    # Referer on this fetch is the current page, not the visitor's source.
+    referrer_known = isinstance(data.get('referrer'), str)
+    referrer = data['referrer'].strip()[:300] if referrer_known else None
     user_agent = str(request.headers.get('User-Agent') or '').strip()[:300]
     visitor_id = get_analytics_visitor_id()
     user_id = session.get('user_id')
@@ -3243,10 +3254,10 @@ def track_page_view():
     c = conn.cursor()
     c.execute(
         '''
-        INSERT INTO page_views (visitor_id, user_id, view_name, path, referrer, user_agent)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO page_views (visitor_id, user_id, view_name, path, referrer, user_agent, referrer_known)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ''',
-        (visitor_id, user_id, view_name, path, referrer, user_agent),
+        (visitor_id, user_id, view_name, path, referrer, user_agent, int(referrer_known)),
     )
     conn.commit()
     conn.close()

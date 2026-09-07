@@ -15,6 +15,7 @@ from media_dl import extractor, routes, ytdlp
 class MediaDownloaderTests(unittest.TestCase):
     def setUp(self):
         self.app = Flask(__name__)
+        self.app.testing = True
         self.app.secret_key = 'media-tests-only'
         self.app.register_blueprint(routes.media_dl_bp)
         self.client = self.app.test_client()

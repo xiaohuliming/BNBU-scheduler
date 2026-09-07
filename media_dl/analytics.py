@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from flask import current_app, has_app_context, has_request_context, request
 from urllib.parse import urlparse
 
 log = logging.getLogger(__name__)
@@ -55,6 +56,8 @@ def log_event(
     elapsed_ms: int | None = None,
     error: str | None = None,
 ) -> None:
+    if (has_app_context() and current_app.testing) or (has_request_context() and request.environ.get('maxcourse.test_request')):
+        return
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(

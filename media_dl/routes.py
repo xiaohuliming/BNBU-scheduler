@@ -15,7 +15,7 @@ from urllib.parse import quote, urlparse
 from . import http as requests
 from .http import UnsafeURLError, validate_url
 from .transport import MediaDownloadError, headers_for
-from flask import Blueprint, Response, jsonify, request, session, stream_with_context
+from flask import Blueprint, Response, current_app, jsonify, request, session, stream_with_context
 
 from . import extractor
 from .douyin import DouyinError
@@ -70,6 +70,15 @@ def _friendly_error(exc: Exception) -> str:
 log = logging.getLogger(__name__)
 
 media_dl_bp = Blueprint("media_dl", __name__, url_prefix="/api/media-dl")
+
+
+@media_dl_bp.before_request
+def mark_test_request():
+    # Streaming responses can close after a test has restored app.testing.
+    # Keep the flag on the request so delayed telemetry cannot reach real data.
+    if current_app.testing:
+        request.environ['maxcourse.test_request'] = True
+
 
 
 # Hosts we trust to proxy on the user's behalf. Whitelist guards the proxy from
@@ -276,9 +285,9 @@ def download_batch(token):
     host = host_of(items[0]['url'])
 
     def record(success, sent, error=None):
-        # One archive is one browser download; include its streamed bytes in
-        # the existing proxy bandwidth metrics.
-        log_event(visitor_id=visitor, user_id=user, action='proxy',
+        # Archive transfers have a separate action; the dashboard includes all
+        # single, merge and batch transfers in total bandwidth.
+        log_event(visitor_id=visitor, user_id=user, action='batch',
                   platform=platform_of_host(host), host=host, success=success,
                   bytes_count=sent, error=error,
                   elapsed_ms=int((time.monotonic() - started) * 1000))
