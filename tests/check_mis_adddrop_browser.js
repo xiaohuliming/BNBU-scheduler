@@ -93,6 +93,43 @@ async (page) => {
   await start(); await stoppedWith('所有目标课程');
   assert(s.adds.length === 1 && s.searches[0].code === 'TEST1013', 'Search or add failed'); saveResult();
 
+  await prepare('full named section shows live progress between background searches', {
+    slowSearch: true,
+    results: () => [{ ...item('JAP1013', '1004', 'Full', true), title: 'Japanese I' }]
+  });
+  await start({ targets: 'Japanese I | 1004' });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('.bch-countdown')?.textContent || '';
+    return text.includes('已检查 2 次') && text.includes('JAP1013 | 1004：已满');
+  }, null, { timeout: 6000 });
+  const firstProgress = (await send(page, { type: 'get-state' })).countdown;
+  assert(/最近 \d{2}:\d{2}:\d{2}/.test(firstProgress), 'Last successful check time is missing');
+  await page.waitForFunction(() => document.querySelector('.bch-countdown')?.textContent.includes('已检查 3 次'));
+  const nextSearch = page.waitForRequest(r => r.method() === 'POST');
+  await nextSearch;
+  const searching = await send(page, { type: 'get-state' });
+  assert(searching.config.enabled && searching.countdown.includes('已检查 3 次') && searching.countdown.includes('已满'), 'Last result disappeared during the next request');
+  assert(await page.locator('#keyWord').inputValue() === 'unrelated old search', 'Background search unexpectedly navigated the school page');
+  assert(s.adds.length === 0, 'Full section was submitted');
+  await send(page, { type: 'stop-monitoring' });
+  assert(!(await send(page, { type: 'get-state' })).countdown, 'Stopped run still shows active progress');
+  saveResult();
+
+  for (const [name, rows, expected] of [
+    ['clash progress', [item('TEST1013', '1001', 'Clash', true)], '时间冲突'],
+    ['disabled Add progress', [item('TEST1013', '1001', 'Add', true)], 'Add 不可用'],
+    ['missing requested section progress', [item('TEST1013', '1002')], '未找到目标班号'],
+    ['any section progress', [item('TEST1013', '1001', 'Full', true), item('TEST1013', '1002', 'Clash', true)], '1 个班已满，1 个班时间冲突']
+  ]) {
+    await prepare(name, { results: () => rows });
+    await start({ targets: name === 'any section progress' ? 'TEST1013' : 'TEST1013 | 1001' });
+    await page.waitForFunction(expected => document.querySelector('.bch-countdown')?.textContent.includes(expected), expected);
+    const checked = await send(page, { type: 'get-state' });
+    assert(checked.config.enabled && checked.countdown.includes('已检查 1 次'), 'Progress did not reset for a fresh run');
+    await send(page, { type: 'stop-monitoring' });
+    assert(s.adds.length === 0, 'Unavailable result triggered an Add'); saveResult();
+  }
+
   await prepare('code without section accepts any eligible class', { results: () => [item('TEST1013', '1001', 'Clash', true), item('TEST1013', '1002')] });
   await start({ targets: 'TEST1013' }); await stoppedWith('所有目标课程');
   assert(s.adds.join() === 'TEST1013-1002' && s.searches.every(x => x.type === '7'), 'Any-section code failed'); saveResult();
