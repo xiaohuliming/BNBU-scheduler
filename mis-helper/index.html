@@ -667,7 +667,7 @@
     <main id="main">
         <section class="hero" aria-labelledby="page-title">
             <div>
-                <span class="kicker">Chrome Extension · v2.6.0</span>
+                <span class="kicker">Chrome Extension · v2.6.1</span>
                 <h1 id="page-title">抢课<br>脚本</h1>
                 <p class="lede">加减课阶段填课程代码或完整名称，即可自动搜索加课。不写班号就不限班，有可用名额就尝试；普通选课也可继续使用。不自动退课。</p>
                 <div class="hero-actions">
@@ -679,7 +679,7 @@
                     </a>
                     <a class="button secondary" href="#install">查看安装步骤</a>
                 </div>
-                <p class="hero-note">支持 Chrome 111 及以上版本。v2.6.0 新增完整课程名称搜课。更新时先停止监测，替换原插件文件夹内容，在 chrome://extensions/ 重新加载，再刷新 MIS。<a href="#updates">查看更新日志</a></p>
+                <p class="hero-note">支持 Chrome 111 及以上版本。v2.6.1 新增实时检查状态。更新时先停止监测，替换原插件文件夹内容，在 chrome://extensions/ 重新加载，再刷新 MIS。<a href="#updates">查看更新日志</a></p>
             </div>
 
             <aside class="product-card" aria-label="插件特点">
@@ -849,7 +849,11 @@
             <h2 id="faq-title">常见问题</h2>
             <details>
                 <summary>一直显示“正在连接 MIS 页面”怎么办？</summary>
-                <p>请更新到 v2.6.0，登录后打开普通选课模块 /mis/student/es/ 或加减课首页 /mis/student/as/home.do。安装或更新后需要刷新页面；登录过期时请重新登录。</p>
+                <p>请更新到 v2.6.1，登录后打开普通选课模块 /mis/student/es/ 或加减课首页 /mis/student/as/home.do。安装或更新后需要刷新页面；登录过期时请重新登录。</p>
+            </details>
+            <details>
+                <summary>一直显示搜索，页面不动，是卡住了吗？</summary>
+                <p>加课搜索在后台完成，学校页面不会自动刷新。查看控制台的检查次数、最近检查时间和结果；次数持续增加就表示仍在运行。目标班已满时会继续等待名额。</p>
             </details>
             <details>
                 <summary>可以关闭 MIS 页面或让电脑休眠吗？</summary>
@@ -880,6 +884,7 @@
         <section class="release-notes" id="updates" aria-labelledby="updates-title">
             <h2 id="updates-title">更新日志</h2>
             <ul role="list">
+                <li><strong class="mono">v2.6.1</strong><span>显示检查次数、最近检查时间和满员、冲突状态。</span></li>
                 <li><strong class="mono">v2.6.0</strong><span>支持完整课程名称搜课，补充不限班号填写示例。</span></li>
                 <li><strong class="mono">v2.5.0</strong><span>新增加减课自动搜索、加课确认和防重复提交。</span></li>
                 <li><strong class="mono">v2.4.4</strong><span>兼容学校新 MIS 域名，保留旧域名支持。</span></li>
