@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="3564964704-366707+12027406">
+<html lang="en" data-compiled-sum="1541868201-374352+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=3564964704-366707+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1541868201-374352+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=3564964704-366707+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1541868201-374352+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -272,6 +272,76 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+        /* Course browsing: touch controls and narrow-screen layouts. */
+        .course-touch { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .course-modal { min-height: 0; overflow: hidden; }
+        .course-modal-body { overscroll-behavior: contain; overflow-wrap: anywhere; }
+        .course-ref-chip { max-width: 100%; min-width: 0; }
+        .course-ref-chip > span { min-width: 0; }
+        .course-ref-chip > span:first-child { flex-shrink: 0; }
+        .course-results { scroll-margin-top: 100px; }
+        .course-cart-panel > .overflow-auto { min-height: 0; overscroll-behavior: contain; }
+        @media (max-width: 767px) {
+            .course-page { margin-top: 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+            .course-explorer { min-height: 0; justify-content: flex-start; }
+            .course-search-panel { padding: 14px; }
+            .course-search-panel h2 { text-align: left; font-size: 24px; filter: none; margin-bottom: 12px; }
+            .course-search-row { flex-wrap: wrap; margin-bottom: 0; }
+            .course-search-input { flex-basis: 100%; }
+            .course-search-input input { padding: 12px 10px 12px 44px; font-size: 16px; }
+            .course-search-input > span, .course-search-input > svg { left: 10px; }
+            .course-scope { flex: 1; min-width: 0; }
+            .course-scope > button { width: 100%; max-width: none; min-height: 44px; justify-content: space-between; }
+            .course-scope > div { right: auto; left: 0; width: min(280px, calc(100vw - 72px)); max-height: 50vh; overflow-y: auto; }
+            .course-filter-toggle { min-height: 44px; }
+            #course-filters { margin-top: 12px; }
+            #course-filters select { min-height: 44px; font-size: 16px; max-width: 100%; }
+            .course-result-summary { margin-top: 8px; gap: 8px; }
+            .course-result-summary > button { min-height: 44px; }
+            .course-results { gap: 16px; }
+            .course-card { min-width: 0; padding: 14px; overflow-wrap: anywhere; }
+            .course-card h3 { min-height: 0; font-size: 18px; line-height: 1.4; margin-bottom: 8px; }
+            .course-card .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+            .course-card .flex-grow > div { align-items: flex-start; }
+            .course-card .flex-grow > div > svg, .course-card .flex-grow > div > span:first-child { margin-top: 3px; }
+            .course-card .flex-grow button { min-height: 32px; }
+            .course-card .mt-4 { margin-top: 12px; }
+            .course-pagination { gap: 12px; font-size: 14px; }
+            .course-pagination button { min-height: 44px; padding: 8px 12px; }
+            .course-modal-overlay { padding: 0; }
+            .course-modal { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border: 0; box-shadow: none; }
+            .course-modal-header { padding: calc(12px + env(safe-area-inset-top)) 16px 12px; }
+            .course-modal-header h2 { font-size: 18px; line-height: 1.35; }
+            .course-modal-header button { min-height: 44px; }
+            .course-modal-body { padding: 16px; }
+            .course-modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+            .course-modal-footer button { min-height: 48px; }
+            .course-modal-body button { min-height: 44px; }
+            .course-ref-chip { text-align: left; }
+            .course-ref-chip .truncate { white-space: normal; overflow-wrap: anywhere; }
+            .course-cart-compact { bottom: 0; right: 0; left: 0; gap: 0; }
+            .course-cart-compact .course-cart-panel { width: 100%; max-width: 100%; max-height: 65vh; max-height: min(65dvh, calc(100dvh - 100px)); border-width: 3px 0 0; box-shadow: 0 -6px 24px #0002; }
+            .course-cart-bar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+            .course-cart-bar > button { min-height: 44px; }
+            .course-cart-compact .course-cart-optimize { display: none; }
+            .course-cart-panel button { min-height: 44px; }
+            .course-cart-panel .truncate { white-space: normal; overflow-wrap: anywhere; }
+        }
+        @media (hover: none) { .course-card:hover { transform: none; } }
+        @media (max-width: 1023px) and (max-height: 500px) {
+            .course-modal-overlay { padding: 0; }
+            .course-modal { height: 100dvh; max-height: 100dvh; max-width: none; border: 0; box-shadow: none; }
+            .course-modal-header { padding: 8px 16px; }
+            .course-modal-header h2 { font-size: 18px; }
+            .course-modal-header .course-header-meta, .course-modal-header .course-header-tagline { display: none; }
+            .course-modal .course-mobile-context { display: block; }
+            .course-modal-body { padding: 12px 16px; }
+            .course-modal-footer { padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .course-explorer, .course-explorer *, .course-cart-panel { animation: none !important; transition: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -493,7 +563,15 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [filters, setFilters] = useState({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
             const [currentPage, setCurrentPage] = useState(1);
-            const ITEMS_PER_PAGE = 50;
+            const [filtersOpen, setFiltersOpen] = useState(false);
+            const [pageSize, setPageSize] = useState(() => window.matchMedia('(max-width: 767px)').matches ? 12 : 50);
+            const resultsRef = useRef(null);
+            useEffect(() => {
+                const media = window.matchMedia('(max-width: 767px)');
+                const update = () => { setPageSize(media.matches ? 12 : 50); setCurrentPage(1); };
+                media.addEventListener('change', update);
+                return () => media.removeEventListener('change', update);
+            }, []);
 
             // Search scope: current semester (live) / whole catalog / a past semester
             const [scope, setScope] = useState('current');
@@ -619,6 +697,7 @@
                 };
             }, [allOfferings]);
 
+            const activeFilterCount = Object.values(filters).filter(Boolean).length + Number(!!progFilter) + Number(!!progRole);
             const hasActiveSearch = searchQuery.length > 0 || Object.values(filters).some(Boolean) || scope !== 'current' || !!progFilter;
 
             const filteredDatabase = useMemo(() => {
@@ -653,11 +732,15 @@
             useEffect(() => setCurrentPage(1), [searchQuery, filters, scope, progFilter, progRole]);
 
             const paginatedResults = useMemo(() => {
-                const start = (currentPage - 1) * ITEMS_PER_PAGE;
-                return filteredDatabase.slice(start, start + ITEMS_PER_PAGE);
-            }, [filteredDatabase, currentPage]);
+                const start = (currentPage - 1) * pageSize;
+                return filteredDatabase.slice(start, start + pageSize);
+            }, [filteredDatabase, currentPage, pageSize]);
 
-            const totalPages = Math.ceil(filteredDatabase.length / ITEMS_PER_PAGE);
+            const totalPages = Math.ceil(filteredDatabase.length / pageSize);
+            const changePage = (page) => {
+                setCurrentPage(page);
+                resultsRef.current?.scrollIntoView({ block: 'start' });
+            };
 
             const clearFilters = () => {
                 setFilters({ unit: '', programme: '', type: '', day: '', hours: '', session: '' });
@@ -667,26 +750,31 @@
             };
 
             return (
-                <div className={`transition-all duration-500 ${hasActiveSearch ? 'space-y-6 md:space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
-                    <div className={`bg-white border-4 border-black p-4 md:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full md:scale-110'}`}>
+                <div className={`course-explorer transition-all duration-500 ${hasActiveSearch ? 'space-y-6 md:space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
+                    <div className={`course-search-panel bg-white border-4 border-black p-4 md:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full md:scale-110'}`}>
                         <h2 className="text-2xl md:text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
-                            FIND YOUR <span className="text-[#ec4899]">TARGET</span>
+                            <span className="hidden md:inline">FIND YOUR <span className="text-[#ec4899]">TARGET</span></span>
+                            <span className="md:hidden">找一门<span className="text-[#ec4899]">好课</span></span>
                         </h2>
-                        <div className="mb-4 flex gap-2">
-                            <div className="relative flex-1 min-w-0">
+                        <div className="course-search-row mb-4 flex gap-2">
+                            <div className="course-search-input relative flex-1 min-w-0">
                                 <input
                                     type="text"
-                                    placeholder="搜索 Code / 课程名 / 老师 / 教室 ..."
+                                    aria-label="搜索课程代码、课程名、老师或教室"
+                                    autoComplete="off" spellCheck={false} enterKeyHint="search"
+                                    placeholder="课程代码 / 名称 / 老师 / 教室"
+                                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full bg-gray-100 border-2 border-black p-3 pl-11 md:p-4 md:pl-14 font-bold text-base md:text-xl focus:outline-none focus:bg-[#3b82f6] focus:text-white focus:placeholder-white transition-colors"
                                 />
                                 <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 text-gray-500 pointer-events-none" strokeWidth={3} />
                             </div>
-                            <div className="relative shrink-0" ref={scopeRef}>
+                            <div className="course-scope relative shrink-0" ref={scopeRef}>
                                 <button
                                     onClick={() => setScopeOpen(v => !v)}
                                     title="搜索范围：本学期 / 全部课程库 / 历史学期"
+                                    aria-label="选择搜索学期"
                                     aria-haspopup="true"
                                     aria-expanded={scopeOpen}
                                     className={`h-full max-w-[9rem] md:max-w-none border-2 border-black px-3 font-bold text-sm flex items-center gap-1.5 transition-colors ${scope !== 'current' ? 'bg-[#d6ff62]' : 'bg-white hover:bg-gray-50'}`}
@@ -716,35 +804,42 @@
                                     </div>
                                 )}
                             </div>
+                        <button type="button" onClick={() => setFiltersOpen(v => !v)}
+                            aria-expanded={filtersOpen} aria-controls="course-filters"
+                            className="course-filter-toggle md:hidden border-2 border-black px-3 font-bold text-sm flex items-center justify-center gap-2 bg-white">
+                            筛选{activeFilterCount > 0 && <span className="bg-[#d6ff62] px-1.5">{activeFilterCount}</span>}
+                            <ChevronDown className={`w-4 h-4 ${filtersOpen ? 'rotate-180' : ''}`} />
+                        </button>
                         </div>
+                        <div id="course-filters" className={`${filtersOpen ? 'block' : 'hidden'} md:block`}>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold">
-                             <select value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Offering Unit</option>
+                             <select aria-label="开课学院" value={filters.unit} onChange={e => setFilters({...filters, unit: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">开课学院 · 全部</option>
                                 {uniqueOptions.units.map(u => <option key={u} value={u}>{u}</option>)}
                              </select>
-                             <select value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Programme</option>
+                             <select aria-label="开课专业" value={filters.programme} onChange={e => setFilters({...filters, programme: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">开课专业 · 全部</option>
                                 {uniqueOptions.programmes.map(p => <option key={p} value={p}>{p}</option>)}
                              </select>
-                             <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Type</option>
+                             <select aria-label="课程类别" value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">课程类别 · 全部</option>
                                 {uniqueOptions.types.map(t => <option key={t} value={t}>{t}</option>)}
                              </select>
-                             <select value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Day</option>
-                                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <option key={d} value={d}>{d}</option>)}
+                             <select aria-label="上课日期" value={filters.day} onChange={e => setFilters({...filters, day: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">上课日期 · 全部</option>
+                                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => <option key={d} value={d}>{['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i]}</option>)}
                              </select>
-                             <select value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Hours</option>
+                             <select aria-label="课时" value={filters.hours} onChange={e => setFilters({...filters, hours: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">课时 · 全部</option>
                                 {uniqueOptions.hours.map(h => <option key={h} value={h}>{h}</option>)}
                              </select>
-                             <select value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
-                                <option value="">Session</option>
+                             <select aria-label="班次" value={filters.session} onChange={e => setFilters({...filters, session: e.target.value})} className="w-full min-w-0 border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
+                                <option value="">班次 · 全部</option>
                                 {uniqueOptions.sessions.map(s => <option key={s} value={s}>{s}</option>)}
                              </select>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold">
-                             <select value={progFilter} onChange={e => { setProgFilter(e.target.value); setProgRole(''); }}
+                             <select aria-label="培养方案专业" value={progFilter} onChange={e => { setProgFilter(e.target.value); setProgRole(''); }}
                                 className={`w-full md:w-auto border-2 border-black p-2 focus:outline-none md:max-w-[16rem] ${progFilter ? 'bg-[#d6ff62]' : 'bg-white focus:bg-[#d6ff62]'}`}>
                                 <option value="">培养方案（全部专业）</option>
                                 {Object.keys(progGrouped).map(fac => (
@@ -754,7 +849,7 @@
                                 ))}
                              </select>
                              {progFilter && (
-                                <select value={progRole} onChange={e => setProgRole(e.target.value)}
+                                <select aria-label="培养方案课程类别" value={progRole} onChange={e => setProgRole(e.target.value)}
                                     className="border-2 border-black p-2 bg-white focus:bg-[#d6ff62] focus:outline-none">
                                     <option value="">必修+选修</option>
                                     <option value="主修必修">仅主修必修</option>
@@ -764,17 +859,18 @@
                              )}
                              {progFilter && progLoading && <span className="text-gray-400 flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加载培养方案…</span>}
                         </div>
+                        </div>
                         {hasActiveSearch && (
-                            <div className="mt-4 flex justify-between items-center">
-                                <span className="text-xs font-bold text-gray-500">Found {filteredDatabase.length} results</span>
-                                <button onClick={clearFilters} className="text-xs font-bold underline hover:text-red-600 flex items-center gap-1"><X className="w-3 h-3"/> Clear Filters</button>
+                            <div className="course-result-summary mt-4 flex justify-between items-center">
+                                <span className="text-xs font-bold text-gray-500">{filteredDatabase.length} 条开课记录</span>
+                                <button onClick={clearFilters} className="text-xs font-bold underline hover:text-red-600 flex items-center gap-1"><X className="w-3 h-3"/> 清空条件</button>
                             </div>
                         )}
                     </div>
 
                     {hasActiveSearch && (
                     <React.Fragment>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                    <div ref={resultsRef} className="course-results grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
                         {(scopeLoading || progLoading) && paginatedResults.length === 0 ? (
                            <div className="col-span-full text-center py-20 opacity-50">
                               <Loader2 className="w-14 h-14 mx-auto mb-4 animate-spin" />
@@ -783,12 +879,12 @@
                         ) : paginatedResults.length === 0 ? (
                            <div className="col-span-full text-center py-20 opacity-40">
                               <Search className="w-20 h-20 mx-auto mb-4" />
-                              <p className="text-2xl font-black">NO RESULTS FOUND</p>
+                              <p className="text-2xl font-black">没有符合条件的课程</p>
                            </div>
                         ) : (
                           paginatedResults.map((course, idx) => (
                             // 整张卡片都可点进详情;做别的事的控件(老师主页、加入/移除)自己 stopPropagation
-                            <div key={idx} onClick={() => onViewCourse && onViewCourse(course.code)} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group cursor-pointer">
+                            <div key={idx} onClick={() => onViewCourse && onViewCourse(course.code)} className="course-card bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col h-full group cursor-pointer">
                               <div className="flex justify-between items-start mb-2 gap-2">
                                 <span title="查看课程详情" className="bg-black text-white px-2 py-1 font-black text-lg group-hover:bg-[#ec4899] transition-colors">{course.code}</span>
                                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -821,7 +917,7 @@
                                 </div>
                               </div>
                               <div className="mt-4 grid grid-cols-2 gap-2">
-                                <button onClick={() => onViewCourse && onViewCourse(course.code)}
+                                <button onClick={(event) => { event.stopPropagation(); onViewCourse && onViewCourse(course.code); }}
                                   className="bg-white text-black font-black py-3 border-2 border-black hover:bg-[#d6ff62] active:translate-y-1 transition-colors flex items-center justify-center gap-1.5">
                                   <BookOpen className="w-4 h-4" /> 详情
                                 </button>
@@ -846,10 +942,10 @@
                         )}
                     </div>
                     {totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-4 py-8">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">Prev</button>
-                            <span className="font-bold">Page {currentPage} of {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">Next</button>
+                        <div className="course-pagination flex justify-center items-center gap-4 py-8">
+                            <button onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">上一页</button>
+                            <span className="font-bold">{currentPage} / {totalPages}</span>
+                            <button onClick={() => changePage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-4 py-2 font-bold border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50">下一页</button>
                         </div>
                     )}
                     </React.Fragment>
@@ -925,7 +1021,7 @@
                         <button
                             onClick={() => onClick && onClick(item.equiv.code)}
                             title={`旧课程代码，等价于 ${item.equiv.code} ${item.equiv.title}`}
-                            className="inline-flex items-center border-2 border-black font-bold text-xs bg-gray-50 transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                            className="course-ref-chip inline-flex items-center border-2 border-black font-bold text-xs bg-gray-50 transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                         >
                             <span className="bg-gray-400 text-white px-1.5 py-1">{item.code}</span>
                             <span className="px-1.5 py-1 text-gray-600">≈ {item.equiv.code}</span>
@@ -934,7 +1030,7 @@
                     );
                 }
                 return (
-                    <span title="旧课程代码 / 等价课程，不在课程库中" className="inline-flex items-center border-2 border-black/25 font-bold text-xs bg-gray-50 text-gray-500">
+                    <span title="旧课程代码 / 等价课程，不在课程库中" className="course-ref-chip inline-flex items-center border-2 border-black/25 font-bold text-xs bg-gray-50 text-gray-500">
                         <span className="bg-gray-400 text-white px-1.5 py-1">{item.code}</span>
                         <span className="px-1.5 py-1 italic">旧代码</span>
                     </span>
@@ -944,7 +1040,7 @@
                 <button
                     onClick={() => onClick && item.code && onClick(item.code)}
                     title={item.title || item.code}
-                    className={`inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#d6ff62]' : 'bg-white'}`}
+                    className={`course-ref-chip inline-flex items-center gap-1.5 border-2 border-black pr-2 font-bold text-xs transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${item.offered ? 'bg-[#d6ff62]' : 'bg-white'}`}
                 >
                     <span className="bg-black text-white px-1.5 py-1">{item.code}</span>
                     <span className="truncate max-w-[11rem] py-1">{item.title}</span>
@@ -962,7 +1058,7 @@
             </div>
         );
 
-        const CourseInsightModal = ({ initialCode, onClose, onViewTeacher, onAddCourse, switchToOptimizer, cartCodes = [], onRemoveCourse }) => {
+        const CourseInsightModal = ({ initialCode, onClose, onViewTeacher, onAddCourse, switchToOptimizer, cartCodes = [], onRemoveCourse, suspended = false }) => {
             const [history, setHistory] = useState([]);
             const [code, setCode] = useState(initialCode);
             const [data, setData] = useState(null);
@@ -970,6 +1066,36 @@
             const [error, setError] = useState(null);
             const [showEnglish, setShowEnglish] = useState(false);
             const bodyRef = useRef(null);
+            const dialogRef = useRef(null);
+            const closeRef = useRef(null);
+            useEffect(() => {
+                const previousOverflow = document.body.style.overflow;
+                const previousFocus = document.activeElement;
+                document.body.style.overflow = 'hidden';
+                closeRef.current?.focus({ preventScroll: true });
+                return () => {
+                    document.body.style.overflow = previousOverflow;
+                    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+                };
+            }, []);
+            useEffect(() => {
+                if (suspended) return;
+                const onKey = event => {
+                    if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+                    if (event.key !== 'Tab') return;
+                    const targets = Array.from(dialogRef.current.querySelectorAll('button:not([disabled]), a[href], [tabindex="0"]'))
+                        .filter(el => el.getClientRects().length > 0);
+                    const first = targets[0], last = targets[targets.length - 1];
+                    if (!first) return;
+                    if (event.shiftKey && (document.activeElement === first || !dialogRef.current.contains(document.activeElement))) {
+                        event.preventDefault(); last.focus();
+                    } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current.contains(document.activeElement))) {
+                        event.preventDefault(); first.focus();
+                    }
+                };
+                document.addEventListener('keydown', onKey);
+                return () => document.removeEventListener('keydown', onKey);
+            }, [onClose, suspended]);
 
             useEffect(() => {
                 let alive = true;
@@ -997,11 +1123,11 @@
             }
 
             return (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4">
+                <div className="course-modal-overlay fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4">
                     <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
-                    <div className="relative bg-[#f4efe6] w-full max-w-5xl max-h-[94vh] flex flex-col border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+                    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="course-detail-title" className="course-modal relative bg-[#f4efe6] w-full max-w-5xl max-h-[94vh] flex flex-col border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
                         {/* Header */}
-                        <div className="bg-black text-white p-4 md:p-5 shrink-0">
+                        <div className="course-modal-header bg-black text-white p-4 md:p-5 shrink-0">
                             <div className="flex justify-between items-start gap-3">
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1014,20 +1140,20 @@
                                             ? <span className="bg-[#d6ff62] text-black px-2 py-0.5 font-bold text-xs">本学期开设</span>
                                             : <span className="bg-white/10 text-white/70 px-2 py-0.5 font-bold text-xs border border-white/30">本学期未开设</span>)}
                                     </div>
-                                    <h2 className="text-lg md:text-2xl font-black leading-tight line-clamp-2 md:line-clamp-none">{data ? data.title : '加载中…'}</h2>
-                                    {e && e.tagline && <p className="text-[#d6ff62] font-bold mt-1 text-sm md:text-base">{e.tagline}</p>}
+                                    <h2 id="course-detail-title" className="text-lg md:text-2xl font-black leading-tight">{data ? data.title : '加载中…'}</h2>
+                                    {e && e.tagline && <p className="course-header-tagline hidden md:block text-[#d6ff62] font-bold mt-1 text-sm md:text-base">{e.tagline}</p>}
                                 </div>
-                                <button onClick={onClose} className="shrink-0 bg-white text-black p-1.5 hover:bg-red-400 transition-colors border-2 border-white"><X className="w-5 h-5" /></button>
+                                <button ref={closeRef} onClick={onClose} aria-label="关闭课程详情" className="course-touch shrink-0 bg-white text-black p-1.5 hover:bg-red-400 transition-colors border-2 border-white"><X className="w-5 h-5" /></button>
                             </div>
                             {metaChips.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-3">
+                                <div className="course-header-meta hidden md:flex flex-wrap gap-1.5 mt-3">
                                     {metaChips.map((m, i) => <span key={i} className="bg-white/10 border border-white/30 px-2 py-0.5 text-[11px] font-bold text-white/90">{m}</span>)}
                                 </div>
                             )}
                         </div>
 
                         {/* Body */}
-                        <div ref={bodyRef} className="overflow-auto custom-scrollbar grow p-4 md:p-5 space-y-4">
+                        <div ref={bodyRef} className="course-modal-body min-h-0 overflow-auto custom-scrollbar grow p-4 md:p-5 space-y-4">
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-24 opacity-50">
                                     <Loader2 className="w-10 h-10 animate-spin mb-3" /><p className="font-black">加载课程详情…</p>
@@ -1036,6 +1162,12 @@
                                 <div className="text-center py-24 font-black text-red-600">{error}</div>
                             ) : data && (
                             <React.Fragment>
+                                <div className="course-mobile-context md:hidden space-y-2">
+                                    {e?.tagline && <p className="font-bold text-sm">{e.tagline}</p>}
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {metaChips.map((m, i) => <span key={i} className="border border-black/20 bg-white px-2 py-1 text-xs font-bold">{m}</span>)}
+                                    </div>
+                                </div>
                                 {!e && (
                                     <div className="border-2 border-dashed border-black/40 bg-white/60 p-3 font-bold text-sm flex items-center gap-2">
                                         <Sparkles className="w-4 h-4" /> 这门课的 AI 深度分析正在生成中，稍后回来即可查看就业升学、推荐与相似课分析。
@@ -1211,7 +1343,7 @@
                                     <InsightSection icon={Sparkles} title="相似 & 相关课程" accent="#f0abfc">
                                         <div className="space-y-2">
                                             {e.similar.map((s, i) => (
-                                                <div key={i} className="flex items-start gap-2 border-l-4 border-black pl-3 py-1">
+                                                <div key={i} className="flex flex-col md:flex-row items-start gap-2 border-l-4 border-black pl-3 py-1">
                                                     <CourseRefChip item={s} onClick={navTo} />
                                                     {s.reason && <span className="text-sm text-gray-700 pt-1">{s.reason}</span>}
                                                 </div>
@@ -1230,7 +1362,19 @@
                                 {/* Sessions */}
                                 {data.offered && data.sessions && data.sessions.length > 0 && (
                                     <InsightSection icon={Clock} title="本学期开课安排" accent="#67e8f9">
-                                        <div className="overflow-x-auto">
+                                        <div className="course-session-cards md:hidden space-y-3">
+                                            {data.sessions.map((session, i) => (
+                                                <div key={i} className="border-2 border-black bg-white p-3 space-y-2 text-sm">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="bg-black text-white px-2 py-1 font-bold">班次 {session.session || '待定'}</span>
+                                                        <span className="font-bold">{session.teacher || '老师待定'}</span>
+                                                    </div>
+                                                    <p className="flex items-start gap-2"><Clock className="w-4 h-4 shrink-0 mt-0.5" /><span>{session.schedule || '时间待定'}</span></p>
+                                                    <p className="flex items-start gap-2"><MapPin className="w-4 h-4 shrink-0 mt-0.5" /><span>{session.classroom || '教室待定'}</span></p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block overflow-x-auto">
                                             <table className="w-full text-xs border-collapse">
                                                 <thead><tr className="bg-black text-white">
                                                     {['Session', '老师', '时间', '教室'].map(h => <th key={h} className="border border-black p-2 text-left font-bold">{h}</th>)}
@@ -1255,7 +1399,7 @@
 
                         {/* Footer action */}
                         {data && data.offered && (
-                            <div className="shrink-0 border-t-4 border-black bg-white p-3 flex justify-end">
+                            <div className="course-modal-footer shrink-0 border-t-4 border-black bg-white p-3 flex justify-end">
                                 {cartCodes.includes(data.code) ? (
                                     <button
                                         onClick={() => onRemoveCourse && onRemoveCourse(data.code)}
@@ -4954,15 +5098,15 @@
             );
         };
 
-        const CartWidget = ({ items, open, setOpen, onRemove, onClear, onGoOptimize, onViewCourse, onClearTeacher }) => {
+        const CartWidget = ({ items, open, setOpen, onRemove, onClear, onGoOptimize, onViewCourse, onClearTeacher, compact = false }) => {
             if (!items || items.length === 0) return null;
             return (
-                <div className="fixed bottom-5 right-5 z-[9998] flex flex-col items-end gap-3">
+                <div className={`course-cart ${compact ? "course-cart-compact" : ""} fixed bottom-5 right-5 z-[9998] flex flex-col items-end gap-3`}>
                     {open && (
-                        <div className="w-80 max-w-[calc(100vw-2.5rem)] bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[70vh] animate-fade-in">
+                        <div id="course-cart-panel" role="region" aria-label="已选课程" className="course-cart-panel w-80 max-w-[calc(100vw-2.5rem)] bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[70vh] animate-fade-in">
                             <div className="bg-black text-white px-4 py-3 flex items-center justify-between shrink-0">
                                 <span className="font-black flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> 选课购物车 · {items.length}</span>
-                                <button onClick={() => setOpen(false)} className="hover:text-red-400"><X className="w-5 h-5" /></button>
+                                <button onClick={() => setOpen(false)} aria-label="关闭选课清单" className="course-touch hover:text-red-400"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="overflow-auto custom-scrollbar grow">
                                 {items.map((c) => (
@@ -4975,24 +5119,31 @@
                                                 <div className="mt-0.5 inline-flex items-center gap-1 bg-[#fef3c7] border border-black px-1.5 py-0.5 text-[10px] font-bold max-w-full">
                                                     <User className="w-3 h-3 shrink-0" />
                                                     <span className="truncate">仅 {c.preferredTeacher}</span>
-                                                    <button onClick={() => onClearTeacher && onClearTeacher(c.code)} title="改为任意老师" className="shrink-0 hover:text-red-600"><X className="w-3 h-3" /></button>
+                                                    <button onClick={() => onClearTeacher && onClearTeacher(c.code)} title="改为任意老师" className="course-touch shrink-0 hover:text-red-600"><X className="w-3 h-3" /></button>
                                                 </div>
                                             )}
                                         </div>
-                                        <button onClick={() => onRemove(c.code)} className="shrink-0 text-gray-300 hover:text-red-600 transition-colors" title="移除"><Trash2 className="w-4 h-4" /></button>
+                                        <button onClick={() => onRemove(c.code)} aria-label={`移除 ${c.code}`} className="course-touch shrink-0 text-gray-500 hover:text-red-600 transition-colors" title="移除"><Trash2 className="w-4 h-4" /></button>
                                     </div>
                                 ))}
                             </div>
                             <div className="p-3 border-t-4 border-black flex items-center justify-between gap-2 shrink-0">
                                 <button onClick={onClear} className="text-xs font-bold underline text-gray-500 hover:text-red-600">清空</button>
-                                <button onClick={onGoOptimize} className="bg-black text-white font-black py-2 px-4 border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors flex items-center gap-1.5 text-sm">
+                                <button onClick={onGoOptimize} className="course-cart-optimize bg-black text-white font-black py-2 px-4 border-2 border-black hover:bg-[#d6ff62] hover:text-black transition-colors flex items-center gap-1.5 text-sm">
                                     去排课 <ArrowRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     )}
-                    <button onClick={() => setOpen(!open)} title="选课购物车"
-                        className="relative bg-[#d6ff62] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-14 h-14 flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0 transition-transform">
+                    {compact && <div className="course-cart-bar md:hidden w-full flex items-center gap-3 bg-white border-t-4 border-black p-3">
+                        <button onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="course-cart-panel" className="min-w-0 grow flex items-center gap-2 font-black text-sm">
+                            <ShoppingCart className="w-5 h-5" /> 已选 {items.length} 门
+                            <ChevronDown className={`w-4 h-4 ${open ? '' : 'rotate-180'}`} />
+                        </button>
+                        <button onClick={onGoOptimize} className="bg-[#d6ff62] border-2 border-black px-4 font-black text-sm flex items-center gap-2">去排课 <ArrowRight className="w-4 h-4" /></button>
+                    </div>}
+                    <button onClick={() => setOpen(!open)} title="选课购物车" aria-expanded={open} aria-controls="course-cart-panel"
+                        className={`course-cart-fab ${compact ? 'hidden md:flex' : 'flex'} relative bg-[#d6ff62] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-14 h-14 items-center justify-center hover:-translate-y-0.5 active:translate-y-0 transition-transform`}>
                         <ShoppingCart className="w-6 h-6" strokeWidth={2.5} />
                         <span className="absolute -top-2 -right-2 bg-[#ec4899] text-white border-2 border-black rounded-full min-w-[1.4rem] h-6 px-1 flex items-center justify-center text-xs font-black">{items.length}</span>
                     </button>
@@ -5408,7 +5559,7 @@
                             onOpenLogin={() => setShowAuthModal(true)}
                         />
                     ) : currentView === 'explorer' ? (
-                        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8">
+                        <div className="course-page max-w-6xl mx-auto px-4 md:px-8 mt-8">
                              <ExplorerView
                                 availableCourses={availableCourses}
                                 onAddCourse={addCourse}
@@ -5637,6 +5788,7 @@
                     {viewingCourse && <CourseDetailsModal course={viewingCourse} onClose={() => setViewingCourse(null)} />}
                     {insightCourse && <CourseInsightModal
                         initialCode={insightCourse}
+                        suspended={!!viewingTeacher}
                         onClose={() => setInsightCourse(null)}
                         onViewTeacher={(name) => setViewingTeacher(name)}
                         onAddCourse={addCourse}
@@ -5647,6 +5799,7 @@
                     {viewingTeacher && <TeacherProfileModal teacherName={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
                     {currentView !== 'optimizer' && (
                         <CartWidget
+                            compact={currentView === 'explorer'}
                             items={selectedCodes}
                             open={cartOpen}
                             setOpen={setCartOpen}
