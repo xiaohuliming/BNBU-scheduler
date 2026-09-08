@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="1541868201-374352+12027406">
+<html lang="en" data-compiled-sum="4263810275-374201+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1541868201-374352+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=4263810275-374201+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1541868201-374352+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=4263810275-374201+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -286,7 +286,7 @@
             .course-page { margin-top: 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
             .course-explorer { min-height: 0; justify-content: flex-start; }
             .course-search-panel { padding: 14px; }
-            .course-search-panel h2 { text-align: left; font-size: 24px; filter: none; margin-bottom: 12px; }
+            .course-search-panel h2 { text-align: center; font-size: clamp(20px, 5.6vw, 24px); filter: none; margin-bottom: 12px; }
             .course-search-row { flex-wrap: wrap; margin-bottom: 0; }
             .course-search-input { flex-basis: 100%; }
             .course-search-input input { padding: 12px 10px 12px 44px; font-size: 16px; }
@@ -753,8 +753,7 @@
                 <div className={`course-explorer transition-all duration-500 ${hasActiveSearch ? 'space-y-6 md:space-y-8' : 'min-h-[60vh] flex flex-col justify-center'}`}>
                     <div className={`course-search-panel bg-white border-4 border-black p-4 md:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all ${hasActiveSearch ? '' : 'max-w-3xl mx-auto w-full md:scale-110'}`}>
                         <h2 className="text-2xl md:text-4xl font-black mb-4 uppercase drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center">
-                            <span className="hidden md:inline">FIND YOUR <span className="text-[#ec4899]">TARGET</span></span>
-                            <span className="md:hidden">找一门<span className="text-[#ec4899]">好课</span></span>
+                            FIND YOUR <span className="text-[#ec4899]">TARGET</span>
                         </h2>
                         <div className="course-search-row mb-4 flex gap-2">
                             <div className="course-search-input relative flex-1 min-w-0">
