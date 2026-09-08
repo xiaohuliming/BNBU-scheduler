@@ -334,6 +334,28 @@ input[type="checkbox"] {
   gap: 20px;
   margin-bottom: 20px;
 }
+.subscription-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 22px;
+}
+.subscription-summary > div:first-child {
+  flex: 1 1 180px;
+}
+.subscription-summary p {
+  margin: 8px 0 0;
+}
+.subscription-total {
+  text-align: right;
+}
+.subscription-total strong {
+  display: block;
+  font: 700 36px/1.2 "JetBrains Mono", monospace;
+  margin-bottom: 4px;
+}
 .layout-three {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

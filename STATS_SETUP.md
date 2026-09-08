@@ -10,7 +10,15 @@ content hashes into the page so deployments invalidate browser caches.
 ## Metric contract
 
 - The selected interval covers 1 to 365 Beijing calendar days. UTC bounds are
-  calculated once and applied to all cards, daily series, rankings, and tables.
+  calculated once and applied to visit/download cards, daily series, rankings,
+  and tables.
+- `subscriptions.ddlEmailEnabled` counts current accounts whose
+  `email_notifications_enabled` setting is 1. Disabled, unsubscribed, and unset
+  accounts are excluded. Each account is counted once, regardless of visits,
+  todos, email deliveries, the selected period, or the bot filter. This is a
+  current opt-in count, not historical signups or confirmed email delivery.
+  No usernames, addresses, or account identifiers are returned. It refreshes
+  with the dashboard and is deliberately excluded from the daily CSV.
 - If the interval includes today, the comparison ends at the same elapsed time
   in the preceding period. A partial day is not compared with an entire day.
 - Period UV uses `COUNT(DISTINCT visitor_id)` over the full period. Daily UV

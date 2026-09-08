@@ -6,8 +6,8 @@
     <title>数据看板 · MAXCOURSE</title>
     <link rel="icon" href="/favicon.png" />
     <link rel="stylesheet" href="/vendor/fonts.css" />
-    <link rel="stylesheet" href="/stats/dashboard.css?v=2e4e8bcf0f70" />
-    <script defer src="/stats/dashboard.js?v=6bf1b672b287"></script>
+    <link rel="stylesheet" href="/stats/dashboard.css?v=47ec322744ec" />
+    <script defer src="/stats/dashboard.js?v=4f12000af498"></script>
   </head>
   <body>
     <a class="skip" href="#dashboard">跳转到统计内容</a>
@@ -102,6 +102,16 @@
             class="metrics four"
             aria-label="访问核心指标"
           ></div>
+          <section class="panel subscription-summary" aria-labelledby="ddl-email-title">
+            <div>
+              <h2 id="ddl-email-title">DDL 邮箱提醒</h2>
+              <p class="hint">当前开启的账号数，不受日期与机器人筛选影响。</p>
+            </div>
+            <div class="subscription-total">
+              <strong id="ddl-email-enabled">…</strong>
+              <span class="hint">个账号已开启</span>
+            </div>
+          </section>
           <div class="layout-main">
             <section class="panel trend">
               <div class="panel-heading">
