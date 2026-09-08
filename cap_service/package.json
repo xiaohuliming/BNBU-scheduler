@@ -1,0 +1,18 @@
+{
+  "name": "maxcourse-cap-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test server.test.mjs"
+  },
+  "dependencies": {
+    "capjs-core": "0.1.2"
+  },
+  "devDependencies": {
+    "@cap.js/wasm": "0.0.7",
+    "cap-widget": "0.1.57",
+    "jsdom": "26.1.0"
+  }
+}

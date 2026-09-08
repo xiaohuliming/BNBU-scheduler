@@ -1,0 +1,23 @@
+[Unit]
+Description=MAXCOURSE Cap proof verifier
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/maxcourse-cap/current
+EnvironmentFile=/etc/maxcourse-cap.env
+ExecStart=/opt/maxcourse-media/node/bin/node /opt/maxcourse-cap/current/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target
