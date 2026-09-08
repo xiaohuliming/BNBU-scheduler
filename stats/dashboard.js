@@ -158,6 +158,11 @@
     return `<table><thead><tr>${headers.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   }
   function renderTraffic() {
+    const emailEnabled = data.subscriptions?.ddlEmailEnabled;
+    $("ddl-email-enabled").textContent =
+      Number.isSafeInteger(emailEnabled) && emailEnabled >= 0
+        ? num(emailEnabled)
+        : "暂无";
     const t = data.traffic,
       p = t.previous,
       complete = completePrevious("traffic");
@@ -557,7 +562,7 @@
       render();
       saveUrl();
       $("notice").textContent =
-        `共 ${data.window.days} 个自然日，所有指标使用同一时间范围。`;
+        `共 ${data.window.days} 个自然日，访问与下载指标使用此时间范围；邮箱提醒显示当前开启数量。`;
     } catch (error) {
       if (id !== requestId) return;
       if (lastQuery) restoreControls(lastQuery);

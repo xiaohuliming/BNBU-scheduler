@@ -164,6 +164,11 @@ def build_dashboard(conn, args, now=None, self_hosts=()):
     traffic_where = 'created_at >= ? AND created_at < ?' + bot_clause
     media_where = f'created_at >= ? AND created_at < ? AND NOT {FIXTURE_SQL}'
     traffic = traffic_totals(conn, bounds, window['excludeBots'])
+    # A current account setting, independent of event dates and visitor filters.
+    # Count each account once; do not expose addresses or account identifiers.
+    subscriptions = {'ddlEmailEnabled': conn.execute(
+        'SELECT COUNT(*) FROM users WHERE email_notifications_enabled = 1'
+    ).fetchone()[0]}
     traffic['previous'] = traffic_totals(conn, previous_bounds, window['excludeBots'])
     media = media_totals(conn, bounds)
     media['previous'] = media_totals(conn, previous_bounds)
@@ -233,7 +238,8 @@ def build_dashboard(conn, args, now=None, self_hosts=()):
                     entry[key] = None
         daily.append(entry)
     return {'generatedAt': now.isoformat(), 'timezone': 'Asia/Shanghai', 'window': window,
-            'traffic': traffic, 'media': media, 'daily': daily, 'coverage': coverage}
+            'traffic': traffic, 'media': media, 'daily': daily, 'coverage': coverage,
+            'subscriptions': subscriptions}
 
 
 def create_analytics_blueprint(db_path_provider, runtime_provider=None):

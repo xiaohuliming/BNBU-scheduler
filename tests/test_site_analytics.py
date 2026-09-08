@@ -19,6 +19,7 @@ class DashboardTests(unittest.TestCase):
           CREATE TABLE media_dl_events(action TEXT,platform TEXT,success INTEGER,bytes INTEGER,created_at TEXT,
             elapsed_ms INTEGER,error TEXT,host TEXT,visitor_id TEXT,user_id INTEGER);
           CREATE TABLE daily_page_stats(day TEXT,views INTEGER,visitors INTEGER);
+          CREATE TABLE users(id INTEGER PRIMARY KEY,username TEXT,email TEXT,email_notifications_enabled INTEGER);
         ''')
         self.addCleanup(self.db.close)
 
@@ -50,6 +51,27 @@ class DashboardTests(unittest.TestCase):
         result=self.result(days='2')
         self.assertEqual(result['traffic']['visitors'],1)
         self.assertEqual(sum(row['visitors'] or 0 for row in result['daily']),2)
+
+    def test_email_opt_ins_count_current_accounts_independently_of_visit_filters(self):
+        self.db.executemany('INSERT INTO users VALUES (?,?,?,?)', [
+            (1, 'private-enabled', 'private-enabled@example.test', 1),
+            (2, 'no-visits', 'no-visits@example.test', 1),
+            (3, 'disabled', 'disabled@example.test', 0),
+            (4, 'never-configured', None, None),
+        ])
+        self.visit(); self.visit(); self.visit('bot', ua='Googlebot')
+        for args in ({}, {'days': '30'}, {'exclude_bots': '0'},
+                     {'start': '2020-01-01', 'end': '2020-01-01'}):
+            with self.subTest(args=args):
+                result = self.result(**args)
+                self.assertEqual(result['subscriptions'], {'ddlEmailEnabled': 2})
+                self.assertNotIn('private-enabled', json.dumps(result))
+                self.assertNotIn('@example.test', json.dumps(result))
+        self.db.execute('UPDATE users SET email_notifications_enabled=0 WHERE id=1')
+        self.assertEqual(self.result()['subscriptions']['ddlEmailEnabled'], 1)
+
+    def test_email_opt_ins_are_zero_with_no_enabled_accounts(self):
+        self.assertEqual(self.result()['subscriptions']['ddlEmailEnabled'], 0)
 
     def test_beijing_boundaries_and_equal_elapsed_comparison(self):
         self.visit('today','2026-09-06 16:00:00')
