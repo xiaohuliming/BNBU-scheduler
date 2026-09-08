@@ -140,7 +140,7 @@ API_BROWSER_CACHE_PREFIXES = (
 )
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
-    '/tests', '/venv', '/.venv', '/logs', '/deploy',
+    '/tests', '/venv', '/.venv', '/logs', '/deploy', '/cap_service',
 )
 SENSITIVE_STATIC_SUFFIXES = (
     '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
@@ -188,9 +188,9 @@ def block_sensitive_project_files():
 
 # ---------------------------------------------------------------------------
 # Anti-scraping for /api/*: a cheap HTTP-library UA filter plus a generous
-# per-client rate limit. Thresholds sit far above real human/SPA usage so a
-# whole campus NAT egress never trips them; only bulk enumeration does.
-# Static pages are untouched — this guards the data, not the site.
+# per-client rate limit. Suspected automation is challenged through Cap before
+# business handlers run. Static pages stay public, and verification does not
+# remove the shared-IP ceiling or any endpoint's authorization checks.
 # ---------------------------------------------------------------------------
 SCRAPER_UA_MARKERS = (
     'python-requests', 'python-urllib', 'python/', 'aiohttp', 'httpx',
@@ -236,27 +236,32 @@ def _client_ip():
 
 
 @app.before_request
+def refresh_html_bootstrap():
+    # HTML includes the shared verification bootstrap at response time. Do not
+    # reuse a pre-integration 304 body which lacks it; API/asset validators stay.
+    if request.method == 'GET' and (request.path == '/' or request.path.lower().endswith('.html')):
+        request.environ.pop('HTTP_IF_NONE_MATCH', None)
+        request.environ.pop('HTTP_IF_MODIFIED_SINCE', None)
+
+
+@app.before_request
 def throttle_api_scrapers():
     path = request.path or ''
     # Only the scoped knowledge blueprint may authenticate automated readers.
     # These exact routes retain their own token, account, IP and concurrency limits.
     if path in AGENT_PATHS:
         return None
-    if not path.startswith('/api/') or path in RATE_LIMIT_EXEMPT_PATHS:
+    if not path.startswith('/api/') or path in RATE_LIMIT_EXEMPT_PATHS or path in HUMAN_PATHS:
         return None
 
-    ua = (request.headers.get('User-Agent') or '').strip().lower()
-    if not ua or any(marker in ua for marker in SCRAPER_UA_MARKERS):
-        with _rate_lock:
-            antiscrape_stats['uaBlocked'] += 1
-        return jsonify({"error": "Automated clients are not allowed on this API"}), 403
-
-    # Give every browser API client a signed, durable visitor identity on its
-    # first request. Previously only /api/analytics/track minted this value, so
-    # a scraper could skip that endpoint and receive the much looser IP-only
-    # allowance indefinitely.
     if 'user_id' not in session and 'analytics_visitor_id' not in session:
         get_analytics_visitor_id()
+    human_verified = human_verification.verified()
+    ua = (request.headers.get('User-Agent') or '').strip().lower()
+    if not human_verified and (not ua or any(marker in ua for marker in SCRAPER_UA_MARKERS)):
+        with _rate_lock:
+            antiscrape_stats['uaBlocked'] += 1
+        return human_verification.required('automated_client')
 
     # Always charge the IP bucket; add the per-visitor/user bucket when there is a
     # session. Reject if either is exceeded.
@@ -303,15 +308,34 @@ def throttle_api_scrapers():
 
     if not over:
         return None
-    response = jsonify({"error": "Too many requests, please slow down",
-                        "retry_after": retry_after})
+    if not human_verified:
+        return human_verification.required('request_rate', status=429, retry_after=retry_after)
+    if request.method == 'GET' and path.startswith('/api/media-dl/'):
+        from media_dl.routes import _download_error
+        response = app.make_response(_download_error('请求较多，请稍后重新点击下载。', 429))
+    else:
+        response = jsonify({"error": "Too many requests, please slow down",
+                            "retry_after": retry_after})
     response.status_code = 429
     response.headers['Retry-After'] = str(retry_after)
     return response
 
 
+def _reset_verified_visitor_bucket():
+    # Clearance belongs to this browser. Never reset a campus/shared IP bucket.
+    key = (f"u:{session['user_id']}" if session.get('user_id')
+           else f"v:{session.get('analytics_visitor_id', '')}")
+    with _rate_lock:
+        _rate_counters.pop(key, None)
+
+
+from human_verification import HUMAN_PATHS, HumanVerification, inject_client
+human_verification = HumanVerification(app, _client_ip, _reset_verified_visitor_bucket)
+
+
 @app.after_request
 def apply_response_optimizations(response):
+    response = inject_client(response)
     path = request.path or ''
     api_cache_seconds = None
     if request.method in ('GET', 'HEAD'):
@@ -1369,7 +1393,10 @@ def _resolve_course_refs(codes, catalog, enrichment):
 
 
 app.register_blueprint(media_dl_bp)
-app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: antiscrape_stats))
+app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
+    **antiscrape_stats, 'humanVerified': human_verification.stats['verified'],
+    'humanChallenges': human_verification.stats['challenges'],
+}))
 
 
 @app.route('/')

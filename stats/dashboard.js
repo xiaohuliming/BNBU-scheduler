@@ -463,7 +463,7 @@
     $("history-note").textContent =
       `历史原始记录共 ${num(data.coverage.traffic.records)} 次浏览、${num(data.coverage.traffic.visitors)} 个访客标识。此累计值含机器人，不随日期筛选变化。`;
     $("runtime-note").textContent = data.runtime
-      ? `当前服务进程累计拦截：识别的自动客户端 ${num(data.runtime.uaBlocked)} 次、触发限速 ${num(data.runtime.rateLimited)} 次。重启后重新计数。`
+      ? `当前服务进程累计：自动访问规则触发 ${num(data.runtime.uaBlocked)} 次、频率限制触发 ${num(data.runtime.rateLimited)} 次、人机验证通过 ${num(data.runtime.humanVerified ?? 0)} 次。重启后重新计数。`
       : "";
     $("coverage-note").textContent =
       `访问记录始于 ${since(data.coverage.traffic.firstEvent)}，最近事件 ${clock(data.coverage.traffic.latestEvent)}；下载记录始于 ${since(data.coverage.media.firstEvent)}，最近事件 ${clock(data.coverage.media.latestEvent)}。`;
