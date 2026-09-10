@@ -1,7 +1,7 @@
 """Best-effort Xiaohongshu (小红书) extractor.
 
 Strategy:
-  1. Follow xhslink.com short links to the real explore URL.
+  1. Follow xhslink.com / xhslink.cn short links to the real note URL.
   2. Fetch the page HTML with a browser-like User-Agent.
   3. Locate the `window.__INITIAL_STATE__ = {...}` blob and parse out
      `noteDetailMap[noteId].note` — that holds title, imageList, video info.
@@ -53,10 +53,11 @@ def _safe_filename(title: str, ext: str, idx: int | None = None) -> str:
 
 def _resolve_real_url(url: str) -> str:
     host = (urlparse(url).hostname or "").lower()
-    if "xhslink.com" not in host:
+    if not re.search(r"(?:^|\.)xhslink\.(?:com|cn)$", host):
         return url
     resp = requests.get(url, headers=_HEADERS, allow_redirects=True, timeout=12)
-    if resp.url and "xiaohongshu.com" in resp.url:
+    resolved_host = (urlparse(resp.url or '').hostname or '').lower()
+    if resolved_host == 'xiaohongshu.com' or resolved_host.endswith('.xiaohongshu.com'):
         return resp.url
     return url
 

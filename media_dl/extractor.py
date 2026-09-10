@@ -42,7 +42,7 @@ _YTDLP_HOST_RE = re.compile(
 )
 
 _BILI_HOST_RE = re.compile(r"(?:^|\.)(bilibili\.com|b23\.tv)$")
-_XHS_HOST_RE = re.compile(r"(?:^|\.)(xiaohongshu\.com|xhslink\.com)$")
+_XHS_HOST_RE = re.compile(r"(?:^|\.)(xiaohongshu\.com|xhslink\.(?:com|cn))$")
 
 
 UnsupportedURLError = UnsafeURLError
