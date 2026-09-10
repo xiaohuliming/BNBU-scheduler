@@ -33,7 +33,8 @@ def platform_of_host(host: str) -> str:
         return "youtube"
     if "bilibili.com" in host or "b23.tv" in host or "hdslb.com" in host or "bilivideo" in host:
         return "bilibili"
-    if "xiaohongshu.com" in host or "xhslink.com" in host or "xhscdn.com" in host:
+    if any(host == domain or host.endswith('.' + domain)
+           for domain in ('xiaohongshu.com', 'xhslink.com', 'xhslink.cn', 'xhscdn.com')):
         return "xiaohongshu"
     if "douyin" in host or "snssdk.com" in host:
         return "douyin"

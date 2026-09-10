@@ -9,7 +9,7 @@ from unittest import mock
 import requests
 
 from flask import Flask
-from media_dl import extractor, routes, ytdlp
+from media_dl import extractor, routes, xhs, ytdlp
 
 
 class MediaDownloaderTests(unittest.TestCase):
@@ -27,6 +27,40 @@ class MediaDownloaderTests(unittest.TestCase):
             with self.subTest(payload=payload):
                 response = self.client.post('/api/media-dl/resolve', json=payload)
                 self.assertEqual(response.status_code, 400)
+
+    def test_xhs_short_share_domains_use_the_native_extractor(self):
+        for domain in ('xhslink.cn', 'xhslink.com'):
+            url = f'https://{domain}/o/93LFTJYeCAq'
+            text = f'2026数学建模国赛B题｜解题思路与建模结果 {url} <br/>拷走文字，去【小红书】探索这篇笔记~'
+            with self.subTest(domain=domain), mock.patch.object(xhs, 'extract', return_value={'items': []}) as native, \
+                    mock.patch.object(ytdlp, 'extract') as fallback:
+                extractor.resolve(text)
+                native.assert_called_once_with(url)
+                fallback.assert_not_called()
+
+    def test_xhs_short_redirect_retains_note_id_and_signed_share_query(self):
+        target = 'https://www.xiaohongshu.com/discovery/item/6aa29f3c000000002b0254cf?xsec_token=share-token&xsec_source=app_share'
+        with mock.patch.object(xhs.requests, 'get', return_value=mock.Mock(url=target)) as fetch:
+            self.assertEqual(xhs._resolve_real_url('https://xhslink.cn/o/93LFTJYeCAq'), target)
+            fetch.assert_called_once()
+
+    def test_xhs_lookalike_domains_are_not_treated_as_short_links(self):
+        for url in ('https://xhslink.cn.evil.example/o/test', 'https://notxhslink.com/o/test'):
+            with self.subTest(url=url), mock.patch.object(xhs.requests, 'get') as fetch:
+                self.assertEqual(xhs._resolve_real_url(url), url)
+                fetch.assert_not_called()
+
+    def test_xhs_redirect_destination_checks_the_hostname_not_url_text(self):
+        source = 'https://xhslink.cn/o/test'
+        for target in ('https://xiaohongshu.com.evil.example/note',
+                       'https://evil.example/?next=https://xiaohongshu.com/note'):
+            with self.subTest(target=target), mock.patch.object(xhs.requests, 'get', return_value=mock.Mock(url=target)):
+                self.assertEqual(xhs._resolve_real_url(source), source)
+
+    def test_xhs_cn_short_links_are_labeled_consistently_in_analytics(self):
+        from media_dl.analytics import platform_of_host
+        self.assertEqual(platform_of_host('xhslink.cn'), 'xiaohongshu')
+        self.assertNotEqual(platform_of_host('xhslink.cn.evil.example'), 'xiaohongshu')
 
     def test_private_urls_never_reach_an_extractor(self):
         for url in ('http://127.0.0.1/a', 'http://[::1]/a',
