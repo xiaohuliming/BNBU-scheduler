@@ -229,6 +229,22 @@ class SMSLabRoutesTests(unittest.TestCase):
 
 
 class HeroSMSClientTests(unittest.TestCase):
+    def test_country_catalog_accepts_current_keyed_object_shape(self):
+        response = mock.Mock(status_code=200)
+        response.json.return_value = {
+            '2': {'chn': '哈萨克斯坦', 'eng': 'Kazakhstan', 'visible': 1},
+            '6': {'id': 6, 'chn': '印度尼西亚', 'eng': 'Indonesia', 'visible': 1},
+        }
+        request_session = mock.Mock()
+        request_session.request.return_value = response
+        client = HeroSMSClient('server-only-secret', session=request_session)
+
+        with mock.patch.dict(os.environ, {'HERO_SMS_MIN_REQUEST_INTERVAL': '0'}, clear=False):
+            countries = client.get_countries()
+
+        self.assertEqual(countries[0]['id'], '2')
+        self.assertEqual(countries[1]['id'], 6)
+
     def test_modern_api_uses_authorization_header_not_query_key(self):
         response = mock.Mock(status_code=200)
         response.json.return_value = {'data': []}
