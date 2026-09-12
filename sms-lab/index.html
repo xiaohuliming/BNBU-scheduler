@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>SMS Lab · MAXCOURSE</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="stylesheet" href="/vendor/fonts.css">
+    <style>
+        :root {
+            --paper: #fff7df;
+            --surface: #fffef9;
+            --ink: #302c29;
+            --muted: #655d56;
+            --line: #302c29;
+            --sun: #ffe66b;
+            --coral: #ff8066;
+            --sky: #8bd3ff;
+            --mint: #b8edc7;
+            --lilac: #cbbcff;
+            --blue: #295ea8;
+            --danger: #a92d28;
+            --danger-soft: #ffe4dd;
+            --shadow: 8px 9px 0 #302c29;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            min-width: 320px;
+            color: var(--ink);
+            font-family: 'Comic Sans MS', 'Kaiti SC', 'KaiTi', 'Space Grotesk', system-ui, sans-serif;
+            background:
+                radial-gradient(circle at 8% 12%, rgba(139, 211, 255, .5), transparent 24rem),
+                radial-gradient(circle at 92% 18%, rgba(255, 230, 107, .72), transparent 23rem),
+                radial-gradient(circle at 82% 82%, rgba(203, 188, 255, .35), transparent 20rem),
+                var(--paper);
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            opacity: .2;
+            background-image: radial-gradient(var(--ink) .8px, transparent .8px);
+            background-size: 18px 18px;
+        }
+        button, input, select { font: inherit; }
+        button, select { cursor: pointer; }
+        button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+            outline: 3px solid var(--blue);
+            outline-offset: 3px;
+        }
+        .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+        .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+        .topbar {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 3px dashed rgba(48, 44, 41, .42);
+        }
+        .back-link {
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-decoration: none;
+            text-transform: uppercase;
+            background: var(--sun);
+            border: 2px solid var(--line);
+            border-radius: 14px 10px 15px 9px;
+            box-shadow: 3px 4px 0 var(--ink);
+            padding: 9px 12px;
+            transform: rotate(-1.5deg);
+        }
+        .security-chip {
+            display: inline-flex;
+            min-height: 38px;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid var(--line);
+            border-radius: 999px;
+            background: var(--mint);
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            box-shadow: 3px 4px 0 var(--ink);
+            transform: rotate(1deg);
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+        main { padding: 30px 0 88px; }
+        .hero {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+            gap: 24px;
+            align-items: end;
+            padding: 46px 0 42px;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            right: 31%;
+            top: 20%;
+            width: 62px;
+            height: 28px;
+            border-top: 5px solid var(--coral);
+            border-radius: 55% 45%;
+            transform: rotate(-16deg);
+        }
+        .eyebrow {
+            margin: 0 0 16px;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .19em;
+            text-transform: uppercase;
+        }
+        h1 {
+            max-width: 860px;
+            margin: 0;
+            font-size: clamp(3.35rem, 9vw, 8.2rem);
+            line-height: .84;
+            letter-spacing: -.065em;
+            font-family: 'Comic Sans MS', 'Space Grotesk', sans-serif;
+            text-shadow: 6px 7px 0 var(--sky);
+            transform: rotate(-1deg);
+        }
+        .hero-copy {
+            margin: 18px 0 0;
+            max-width: 680px;
+            color: var(--muted);
+            font-size: 17px;
+            line-height: 1.7;
+        }
+        .hero-note {
+            border: 3px solid var(--ink);
+            border-radius: 18px 27px 17px 23px;
+            background: var(--mint);
+            box-shadow: 5px 6px 0 var(--ink);
+            padding: 18px 20px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.65;
+            transform: rotate(1.2deg);
+        }
+        .hero-note strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 16px; }
+        .panel {
+            border: 3px solid var(--line);
+            border-radius: 27px 36px 25px 33px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+        .gate {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(300px, .7fr);
+            gap: 30px;
+            padding: 30px;
+            background: #fff3b6;
+            transform: rotate(-.25deg);
+        }
+        .gate::before {
+            content: '';
+            position: absolute;
+            top: -14px;
+            left: 12%;
+            width: 92px;
+            height: 28px;
+            background: rgba(139, 211, 255, .85);
+            border: 2px solid rgba(48, 44, 41, .45);
+            transform: rotate(-3deg);
+        }
+        .gate h2, .workspace h2 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
+        .gate p { margin: 10px 0 0; color: var(--muted); line-height: 1.65; }
+        .field { display: grid; gap: 8px; }
+        label { font-size: 13px; font-weight: 800; }
+        .helper { color: var(--muted); font-size: 12px; line-height: 1.5; }
+        input, select {
+            width: 100%;
+            min-height: 50px;
+            border: 3px solid var(--line);
+            border-radius: 14px 19px 13px 17px;
+            background: white;
+            color: var(--ink);
+            padding: 0 14px;
+        }
+        input:disabled, select:disabled, button:disabled { cursor: not-allowed; opacity: .48; }
+        .btn {
+            min-height: 48px;
+            border: 3px solid var(--line);
+            border-radius: 17px 24px 16px 21px;
+            padding: 10px 18px;
+            background: white;
+            color: var(--ink);
+            font-weight: 800;
+            box-shadow: 3px 4px 0 var(--ink);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .btn:hover:not(:disabled) { transform: translate(-1px, -2px) rotate(-.4deg); box-shadow: 5px 6px 0 var(--ink); }
+        .btn:active:not(:disabled) { transform: translate(3px, 4px); box-shadow: none; }
+        .btn-primary { background: var(--coral); color: var(--ink); }
+        .btn-primary:hover:not(:disabled) { background: var(--sun); }
+        .btn-danger { border-color: var(--danger); color: var(--danger); }
+        .btn-small { min-height: 44px; padding: 8px 14px; font-size: 13px; }
+        .unlock-form { display: grid; gap: 14px; }
+        .notice {
+            border: 3px solid var(--line);
+            border-radius: 13px 20px 14px 18px;
+            background: var(--sky);
+            padding: 15px 17px;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .notice.error { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+        .notice.success { background: var(--mint); }
+        .hidden { display: none !important; }
+        .workspace { display: grid; gap: 24px; }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .balance {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .balance strong { color: var(--ink); font-size: 24px; font-variant-numeric: tabular-nums; }
+        .purchase-panel { padding: 28px; background: #eaf7ff; transform: rotate(.12deg); }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+        .purchase-action { display: grid; gap: 8px; }
+        .service-meta { min-height: 18px; color: var(--muted); font-size: 12px; }
+        .activation-panel { padding: 28px; background: #f0ffe9; transform: rotate(-.1deg); }
+        .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .activation-card {
+            border: 3px solid var(--line);
+            border-radius: 19px 27px 18px 24px;
+            background: #fff9c8;
+            box-shadow: 4px 5px 0 var(--ink);
+            padding: 20px;
+        }
+        .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+        .status-badge {
+            display: inline-flex;
+            min-height: 30px;
+            align-items: center;
+            border: 2px solid var(--line);
+            border-radius: 999px;
+            background: var(--lilac);
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .phone {
+            margin: 12px 0 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: clamp(1.45rem, 4vw, 2.2rem);
+            font-weight: 700;
+            letter-spacing: -.05em;
+            word-break: break-all;
+        }
+        .card-meta { margin-top: 8px; color: var(--muted); font-size: 12px; }
+        .otp {
+            margin-top: 18px;
+            border: 2px solid var(--line);
+            border-radius: 16px;
+            background: var(--sky);
+            padding: 15px;
+        }
+        .otp-code { font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 800; letter-spacing: .08em; }
+        .otp-text { margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.55; word-break: break-word; }
+        .waiting {
+            margin-top: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(16, 24, 32, .2);
+            border-top-color: var(--ink);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+        .empty {
+            border: 3px dashed rgba(48, 44, 41, .55);
+            border-radius: 17px 25px 16px 22px;
+            background: rgba(255, 230, 107, .38);
+            padding: 34px 18px;
+            text-align: center;
+            color: var(--muted);
+        }
+        .footer {
+            padding: 0 0 36px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.7;
+            text-align: center;
+        }
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 20;
+            max-width: min(390px, calc(100% - 40px));
+            border: 2px solid var(--line);
+            border-radius: 16px;
+            background: var(--lilac);
+            color: var(--ink);
+            box-shadow: 5px 5px 0 var(--ink);
+            padding: 13px 16px;
+            font-size: 13px;
+        }
+        @media (max-width: 820px) {
+            .hero, .gate { grid-template-columns: 1fr; }
+            .hero { padding-top: 18px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .cards { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 520px) {
+            .shell { width: min(100% - 22px, 1180px); }
+            .topbar { min-height: 64px; align-items: flex-start; padding-top: 18px; }
+            .security-chip { max-width: 180px; border-radius: 14px; }
+            main { padding-top: 14px; }
+            h1 { font-size: clamp(3rem, 20vw, 5.2rem); }
+            .panel { border-radius: 22px; box-shadow: 5px 5px 0 var(--ink); }
+            .hero::after { right: 6%; top: 11%; width: 44px; }
+            .gate, .purchase-panel, .activation-panel { padding: 20px; }
+            .toolbar { align-items: flex-start; flex-direction: column; }
+            .toolbar .btn { width: 100%; }
+            .card-head { flex-direction: column-reverse; }
+            .actions .btn { flex: 1 1 120px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <header class="shell topbar">
+        <a class="back-link mono" href="/">← MAXCOURSE</a>
+        <span class="security-chip"><span class="dot" aria-hidden="true"></span> 密钥藏在服务端</span>
+    </header>
+
+    <main class="shell">
+        <section class="hero" aria-labelledby="page-title">
+            <div>
+                <p class="eyebrow mono">Toolbox / Authorized testing only</p>
+                <h1 id="page-title">SMS<br>LAB.</h1>
+                <p class="hero-copy">一个轻松好用的临时短信收件箱。先挑服务，再选有库存的国家，验证码会自动跳进卡片里。</p>
+            </div>
+            <div class="hero-note">
+                <strong>安全小贴纸</strong>
+                单次仅购买一个号码，最多同时保留三个激活。银行、付费订阅、批量注册和非法用途均不支持。
+            </div>
+        </section>
+
+        <section id="gate" class="panel gate" aria-labelledby="gate-title">
+            <div>
+                <p class="eyebrow mono">Private console</p>
+                <h2 id="gate-title">输入访问码</h2>
+                <p>访问码由管理员单独提供。它与 HeroSMS API Key 不同，后者不会发送到浏览器。</p>
+                <div id="gate-message" class="notice hidden" role="status" aria-live="polite"></div>
+            </div>
+            <form id="unlock-form" class="unlock-form">
+                <div class="field">
+                    <label for="access-token">访问码</label>
+                    <input id="access-token" name="access-token" type="password" autocomplete="current-password" required maxlength="512">
+                    <span class="helper">解锁状态默认保留 120 分钟。</span>
+                </div>
+                <button id="unlock-button" class="btn btn-primary" type="submit">解锁 SMS Lab</button>
+            </form>
+        </section>
+
+        <section id="workspace" class="workspace hidden" aria-label="SMS Lab 工作台">
+            <div class="panel purchase-panel">
+                <div class="toolbar">
+                    <div>
+                        <p class="eyebrow mono">01 / Request</p>
+                        <h2>选择号码</h2>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                        <span class="balance">余额 <strong id="balance">···</strong> USD</span>
+                        <button id="lock-button" class="btn btn-small" type="button">锁定</button>
+                    </div>
+                </div>
+                <div id="config-message" class="notice hidden" role="status"></div>
+                <form id="purchase-form" class="form-grid">
+                    <div class="field">
+                        <label for="service">验证服务</label>
+                        <select id="service" required disabled><option value="">正在加载...</option></select>
+                        <span id="service-meta" class="service-meta"></span>
+                    </div>
+                    <div class="field">
+                        <label for="country">国家或地区</label>
+                        <select id="country" required disabled><option value="">请先选择服务</option></select>
+                        <span id="country-meta" class="service-meta"></span>
+                    </div>
+                    <div class="purchase-action">
+                        <button id="purchase-button" class="btn btn-primary" type="submit" disabled>购买一个号码</button>
+                        <span id="price-cap" class="helper">服务器价格上限 ···</span>
+                    </div>
+                </form>
+            </div>
+
+            <div class="panel activation-panel">
+                <div class="toolbar">
+                    <div>
+                        <p class="eyebrow mono">02 / Inbox</p>
+                        <h2>当前接收</h2>
+                    </div>
+                    <button id="refresh-button" class="btn btn-small" type="button">立即刷新</button>
+                </div>
+                <div id="activation-status" class="notice hidden" role="status" aria-live="polite"></div>
+                <div id="activation-list" class="cards"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="shell footer mono">HeroSMS provider · 授权测试用途 · 请遵守服务规则与所在地法律</footer>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script>
+        const state = { status: null, services: [], countries: [], activations: [], pollTimer: null, busy: false };
+        const $ = (id) => document.getElementById(id);
+        const api = async (path, options = {}) => {
+            const response = await fetch('/api/sms-lab' + path, {
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options,
+            });
+            let payload = {};
+            try { payload = await response.json(); } catch (_) {}
+            if (!response.ok) {
+                const error = new Error(payload.error || '请求失败，请稍后重试。');
+                error.status = response.status;
+                error.code = payload.code;
+                throw error;
+            }
+            return payload;
+        };
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[char]);
+        const showMessage = (element, message, type = '') => {
+            element.textContent = message;
+            element.className = 'notice' + (type ? ' ' + type : '');
+        };
+        const hideMessage = (element) => element.classList.add('hidden');
+        const toast = (message) => {
+            $('toast').textContent = message;
+            $('toast').classList.remove('hidden');
+            window.clearTimeout(toast.timer);
+            toast.timer = window.setTimeout(() => $('toast').classList.add('hidden'), 3600);
+        };
+        const setButtonBusy = (button, busy, label) => {
+            if (!button.dataset.label) button.dataset.label = button.textContent;
+            button.disabled = busy;
+            button.textContent = busy ? label : button.dataset.label;
+        };
+        const copyText = async (value, label) => {
+            try {
+                await navigator.clipboard.writeText(value);
+                toast(label + '已复制');
+            } catch (_) {
+                toast('复制失败，请手动选择文本。');
+            }
+        };
+
+        const renderGate = () => {
+            const unlocked = !!state.status?.unlocked;
+            $('gate').classList.toggle('hidden', unlocked);
+            $('workspace').classList.toggle('hidden', !unlocked);
+            if (!state.status?.configured) {
+                showMessage($('gate-message'), '服务端尚未配置 HERO_SMS_API_KEY 和至少 20 位的 SMS_LAB_ACCESS_TOKEN。', 'error');
+                $('access-token').disabled = true;
+                $('unlock-button').disabled = true;
+            } else {
+                hideMessage($('gate-message'));
+                $('access-token').disabled = false;
+                $('unlock-button').disabled = false;
+                $('price-cap').textContent = `服务器价格上限 ${Number(state.status.max_price).toFixed(4)} USD`;
+            }
+        };
+
+        const loadStatus = async () => {
+            state.status = await api('/status');
+            renderGate();
+            if (state.status.unlocked) await loadWorkspace();
+        };
+
+        const loadWorkspace = async () => {
+            if (!state.status.purchase_enabled) {
+                const missing = [];
+                if (!state.status.purchase_switch) missing.push('SMS_LAB_PURCHASES_ENABLED=1');
+                if (!state.status.service_allowlist_configured) missing.push('SMS_LAB_ALLOWED_SERVICES');
+                showMessage($('config-message'), '真实购买仍为关闭状态。管理员需要配置：' + missing.join('、') + '。');
+            } else {
+                hideMessage($('config-message'));
+            }
+            await Promise.all([loadBalance(), loadServices(), refreshActivations(false)]);
+            startPolling();
+        };
+
+        const loadBalance = async () => {
+            try {
+                const data = await api('/balance');
+                $('balance').textContent = Number(data.balance).toFixed(2);
+            } catch (error) {
+                $('balance').textContent = '不可用';
+                toast(error.message);
+            }
+        };
+
+        const loadCountries = async () => {
+            const service = $('service').value;
+            const select = $('country');
+            state.countries = [];
+            select.disabled = true;
+            select.innerHTML = '<option value="">正在加载...</option>';
+            $('country-meta').textContent = '';
+            $('purchase-button').disabled = true;
+            if (!service) {
+                select.innerHTML = '<option value="">请先选择服务</option>';
+                return;
+            }
+            try {
+                const data = await api('/countries?service=' + encodeURIComponent(service));
+                state.countries = data.countries || [];
+                select.innerHTML = '<option value="">选择有库存的国家</option>' + state.countries.map((country) => {
+                    const details = country.available
+                        ? ` · ${country.stock} 个 · ${Number(country.price ?? 0).toFixed(4)} USD`
+                        : ' · 暂无库存';
+                    return `<option value="${country.id}" ${country.available ? '' : 'disabled'}>${escapeHtml(country.name)}${country.name_en ? ' · ' + escapeHtml(country.name_en) : ''}${details}</option>`;
+                }).join('');
+                select.disabled = false;
+            } catch (error) {
+                select.innerHTML = '<option value="">国家列表加载失败</option>';
+                showMessage($('config-message'), error.message, 'error');
+            }
+        };
+
+        const loadServices = async () => {
+            const select = $('service');
+            state.services = [];
+            select.disabled = true;
+            select.innerHTML = '<option value="">正在加载...</option>';
+            $('country').disabled = true;
+            $('country').innerHTML = '<option value="">请先选择服务</option>';
+            $('purchase-button').disabled = true;
+            $('service-meta').textContent = '';
+            try {
+                const data = await api('/services');
+                state.services = data.services || [];
+                select.innerHTML = '<option value="">先选择验证服务</option>' + state.services.map((service) =>
+                    `<option value="${escapeHtml(service.code)}">${escapeHtml(service.name)} · ${escapeHtml(service.code)}</option>`
+                ).join('');
+                select.disabled = false;
+            } catch (error) {
+                select.innerHTML = '<option value="">服务列表加载失败</option>';
+                showMessage($('config-message'), error.message, 'error');
+            }
+        };
+
+        const updateServiceMeta = () => {
+            const selected = state.services.find((item) => item.code === $('service').value);
+            if (!selected) {
+                $('service-meta').textContent = '';
+                $('country').disabled = true;
+                $('country').innerHTML = '<option value="">请先选择服务</option>';
+                $('purchase-button').disabled = true;
+                return;
+            }
+            $('service-meta').textContent = selected.allowed
+                ? `服务代码 ${selected.code} · 接下来选择国家`
+                : `服务代码 ${selected.code} · 仅可查看，管理员未开放购买`;
+            loadCountries();
+        };
+
+        const updateCountryMeta = () => {
+            const selected = state.countries.find((item) => item.id === Number($('country').value));
+            if (!selected) {
+                $('country-meta').textContent = '';
+                $('purchase-button').disabled = true;
+                return;
+            }
+            const price = Number(selected.price);
+            const withinCap = Number.isFinite(price) && price <= Number(state.status.max_price);
+            $('country-meta').textContent = withinCap
+                ? `库存 ${selected.stock} · 预计 ${price.toFixed(4)} USD`
+                : '当前价格超过服务器上限';
+            $('purchase-button').disabled = !state.status.purchase_enabled || !selected.allowed || !selected.available || !withinCap;
+        };
+
+        const statusLabel = (status, hasOtp) => {
+            if (hasOtp) return '已收到验证码';
+            const labels = { 4: '等待短信', 6: '已完成', 8: '已取消', 10: '已退款' };
+            return labels[status] || '处理中';
+        };
+        const formatTime = (value) => {
+            if (!value) return '';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', { hour12: false });
+        };
+        const renderActivations = () => {
+            const list = $('activation-list');
+            if (!state.activations.length) {
+                list.innerHTML = '<div class="empty" style="grid-column:1/-1"><strong>还没有进行中的号码</strong><br><span>选择一个获准服务后购买，短信会在这里自动出现。</span></div>';
+                return;
+            }
+            list.innerHTML = state.activations.map((activation) => {
+                const otp = activation.otpList?.[activation.otpList.length - 1];
+                const createdAt = new Date(activation.createdAt || 0).getTime();
+                const cancelWait = Number.isFinite(createdAt) && createdAt > 0
+                    ? Math.max(0, Math.ceil((createdAt + 120000 - Date.now()) / 1000))
+                    : 0;
+                return `<article class="activation-card" data-id="${activation.id}">
+                    <div class="card-head">
+                        <div>
+                            <div class="mono" style="font-size:11px;color:var(--muted)">${escapeHtml(activation.service.toUpperCase())} · #${activation.id}</div>
+                            <div class="phone">+${escapeHtml(activation.phone.replace(/^\+/, ''))}</div>
+                            <div class="card-meta">${escapeHtml(activation.operator || '任意运营商')} · ${escapeHtml(formatTime(activation.expiredAt) || '有效期由服务商决定')}</div>
+                        </div>
+                        <span class="status-badge">${escapeHtml(statusLabel(activation.status, !!otp))}</span>
+                    </div>
+                    ${otp ? `<div class="otp"><div class="otp-code">${escapeHtml(otp.smsCode || '已收到')}</div><div class="otp-text">${escapeHtml(otp.smsText)}${otp.receivedAt ? '<br>' + escapeHtml(formatTime(otp.receivedAt)) : ''}</div></div>` : '<div class="waiting"><span class="spinner" aria-hidden="true"></span>每 5 秒自动检查一次新短信</div>'}
+                    <div class="actions">
+                        <button class="btn btn-small" type="button" data-action="copy-phone" data-value="+${escapeHtml(activation.phone.replace(/^\+/, ''))}">复制号码</button>
+                        ${otp?.smsCode ? `<button class="btn btn-small" type="button" data-action="copy-code" data-value="${escapeHtml(otp.smsCode)}">复制验证码</button>` : ''}
+                        ${otp ? `<button class="btn btn-small" type="button" data-action="finish">完成</button>` : `<button class="btn btn-small" type="button" data-action="replace">换号</button>`}
+                        ${otp ? '' : `<button class="btn btn-small btn-danger" type="button" data-action="cancel" ${cancelWait ? 'disabled' : ''} title="${cancelWait ? 'HeroSMS 购买后两分钟开放取消' : '取消并向 HeroSMS 申请退款'}">${cancelWait ? cancelWait + ' 秒后可取消' : '取消'}</button>`}
+                    </div>
+                </article>`;
+            }).join('');
+        };
+
+        const refreshActivations = async (announce = true) => {
+            if (state.busy || !state.status?.unlocked) return;
+            state.busy = true;
+            setButtonBusy($('refresh-button'), true, '刷新中...');
+            try {
+                const data = await api('/activations');
+                state.activations = data.activations || [];
+                renderActivations();
+                hideMessage($('activation-status'));
+                if (announce) toast('接收状态已刷新');
+            } catch (error) {
+                if (error.status === 401) {
+                    state.status.unlocked = false;
+                    stopPolling();
+                    renderGate();
+                    return;
+                }
+                showMessage($('activation-status'), error.message + ' 可点击“立即刷新”重试。', 'error');
+            } finally {
+                state.busy = false;
+                setButtonBusy($('refresh-button'), false, '刷新中...');
+            }
+        };
+
+        const startPolling = () => {
+            stopPolling();
+            state.pollTimer = window.setInterval(() => refreshActivations(false), 5000);
+        };
+        const stopPolling = () => {
+            if (state.pollTimer) window.clearInterval(state.pollTimer);
+            state.pollTimer = null;
+        };
+
+        $('unlock-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setButtonBusy($('unlock-button'), true, '正在验证...');
+            hideMessage($('gate-message'));
+            try {
+                state.status = await api('/session', {
+                    method: 'POST',
+                    body: JSON.stringify({ access_token: $('access-token').value }),
+                });
+                $('access-token').value = '';
+                renderGate();
+                await loadWorkspace();
+            } catch (error) {
+                showMessage($('gate-message'), error.message, 'error');
+                $('access-token').focus();
+            } finally {
+                setButtonBusy($('unlock-button'), false, '正在验证...');
+            }
+        });
+        $('lock-button').addEventListener('click', async () => {
+            await api('/session', { method: 'DELETE' });
+            stopPolling();
+            state.status.unlocked = false;
+            state.activations = [];
+            renderGate();
+            toast('SMS Lab 已锁定');
+        });
+        $('service').addEventListener('change', updateServiceMeta);
+        $('country').addEventListener('change', updateCountryMeta);
+        $('refresh-button').addEventListener('click', () => refreshActivations(true));
+        $('purchase-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const country = Number($('country').value);
+            const service = state.services.find((item) => item.code === $('service').value);
+            const selectedCountry = state.countries.find((item) => item.id === country);
+            if (!service || !selectedCountry) return;
+            const price = Number(selectedCountry.price);
+            const maxPrice = Math.min(state.status.max_price, Math.max(0.0067, Math.ceil(price * 1.08 * 10000) / 10000));
+            setButtonBusy($('purchase-button'), true, '购买中...');
+            try {
+                const data = await api('/activations', {
+                    method: 'POST',
+                    body: JSON.stringify({ service: service.code, country, max_price: maxPrice }),
+                });
+                state.activations = [...(data.activations || []), ...state.activations];
+                renderActivations();
+                await loadBalance();
+                toast('号码已购买，正在等待短信');
+            } catch (error) {
+                showMessage($('activation-status'), error.message, 'error');
+                $('activation-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                setButtonBusy($('purchase-button'), false, '购买中...');
+                updateCountryMeta();
+            }
+        });
+        $('activation-list').addEventListener('click', async (event) => {
+            const button = event.target.closest('button[data-action]');
+            const card = event.target.closest('[data-id]');
+            if (!button || !card) return;
+            const action = button.dataset.action;
+            const id = Number(card.dataset.id);
+            if (action === 'copy-phone') return copyText(button.dataset.value, '号码');
+            if (action === 'copy-code') return copyText(button.dataset.value, '验证码');
+            setButtonBusy(button, true, '处理中...');
+            try {
+                if (action === 'cancel') await api('/activations/' + id, { method: 'DELETE' });
+                if (action === 'finish') await api('/activations/' + id + '/finish', { method: 'POST', body: '{}' });
+                if (action === 'replace') await api('/activations/' + id + '/replace', { method: 'POST', body: '{}' });
+                await refreshActivations(false);
+                await loadBalance();
+                toast(action === 'replace' ? '号码已更换' : action === 'finish' ? '激活已完成' : '激活已取消');
+            } catch (error) {
+                showMessage($('activation-status'), error.message, 'error');
+            } finally {
+                setButtonBusy(button, false, '处理中...');
+            }
+        });
+
+        if (window.location.protocol !== 'file:') {
+            fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ view: 'sms-lab', path: location.pathname, referrer: document.referrer }),
+            }).catch(() => {});
+        }
+        loadStatus().catch((error) => {
+            showMessage($('gate-message'), error.message, 'error');
+            $('access-token').disabled = true;
+            $('unlock-button').disabled = true;
+        });
+    </script>
+</body>
+</html>
