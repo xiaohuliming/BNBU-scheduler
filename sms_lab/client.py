@@ -136,7 +136,16 @@ class HeroSMSClient:
             data = response.json()
         except ValueError:
             raise HeroSMSError("HeroSMS 国家列表暂不可用。", 502, "invalid_response")
-        if not isinstance(data, list):
+        if isinstance(data, dict):
+            countries = []
+            for country_id, value in data.items():
+                if not isinstance(value, dict):
+                    continue
+                item = dict(value)
+                item.setdefault("id", country_id)
+                countries.append(item)
+            data = countries
+        if not isinstance(data, list) or not data:
             raise HeroSMSError("HeroSMS 国家列表暂不可用。", 502, "invalid_response")
         return data
 
