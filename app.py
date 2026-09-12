@@ -31,7 +31,7 @@ from ispace_credentials import (
     is_ispace_credential_encryption_configured,
 )
 from media_dl import media_dl_bp
-from sms_lab import sms_lab_bp
+from sms_lab import create_sms_lab_blueprint, init_sms_lab_tables
 from site_analytics import create_analytics_blueprint
 from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
 from campus_classrooms import ClassroomTools
@@ -660,6 +660,7 @@ def init_db():
             )
         ''')
 
+        init_sms_lab_tables(c)
         init_agent_tables(c)
         conn.commit()
 
@@ -1394,7 +1395,7 @@ def _resolve_course_refs(codes, catalog, enrichment):
 
 
 app.register_blueprint(media_dl_bp)
-app.register_blueprint(sms_lab_bp)
+app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
     **antiscrape_stats, 'humanVerified': human_verification.stats['verified'],
     'humanChallenges': human_verification.stats['challenges'],

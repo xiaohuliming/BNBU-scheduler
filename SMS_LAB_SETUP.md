@@ -1,36 +1,61 @@
-# SMS Lab deployment setup
+# SMS Market reseller setup
 
-SMS Lab is a guarded, single tenant console for authorized SMS verification testing.
-It is not a public reseller storefront. The HeroSMS key stays in the Flask process.
+SMS Market is a public reseller storefront backed by one HeroSMS account. Buyers use
+their MAXCOURSE account and an isolated USD wallet. The HeroSMS key remains in the Flask
+process and is never sent to the browser.
+
+Apply for HeroSMS Reseller status before accepting public orders. Every upstream order
+includes the local user ID as `resellerUserId`.
 
 ## Required environment variables
 
 ```bash
 HERO_SMS_API_KEY=replace-with-herosms-key
-SMS_LAB_ACCESS_TOKEN=replace-with-a-random-value-at-least-20-characters
-SMS_LAB_ALLOWED_SERVICES=replace-with-approved-service-codes
-SMS_LAB_PURCHASES_ENABLED=1
+SMS_LAB_ACCESS_TOKEN=replace-with-a-random-admin-token-at-least-20-characters
+SMS_RESELLER_MARKUP_PERCENT=50
 ```
 
-Use a comma separated allowlist for `SMS_LAB_ALLOWED_SERVICES`. Real purchases remain
-disabled if this value is empty. Generate a strong access token with a password manager.
-Use `SMS_LAB_ALLOWED_SERVICES=*` only for a tightly controlled private console where every
-person holding the access token is trusted to spend the shared HeroSMS balance.
+`SMS_LAB_ACCESS_TOKEN` now protects administrator wallet operations. It is not a buyer
+login credential. Buyers use the existing MAXCOURSE registration and login endpoints.
 
-## Optional controls
+## Optional catalog controls
 
 ```bash
-SMS_LAB_ALLOWED_COUNTRIES=2,6
-SMS_LAB_MAX_PRICE=2.00
-SMS_LAB_SESSION_TTL_MINUTES=120
+SMS_RESELLER_ALLOWED_SERVICES=*
+SMS_RESELLER_BLOCKED_SERVICE_CODES=
+SMS_RESELLER_BLOCKED_SERVICE_TERMS=
 HERO_SMS_MIN_REQUEST_INTERVAL=0.15
 ```
 
-An empty country allowlist permits all countries. One browser session can hold no more
-than three active numbers. Every purchase is forced to one number and the configured
-price ceiling. The server rejects attempts to operate activations created by another
-browser session.
+Banking, cryptocurrency, payment-wallet, lending, and paid-subscription services are
+blocked by default to follow HeroSMS rules. Add exact codes or lowercase name fragments
+to the block variables when another service must be removed.
 
-After changing environment variables, restart `maxcourse.service` and open
-`/sms-lab/index.html`. Follow HeroSMS rules and local law. Do not use temporary numbers
-for banking, paid subscriptions, unsolicited account creation, or any illegal purpose.
+## Manual wallet credit
+
+Send the administrator token only over HTTPS. Reuse the same `reference` to make retries
+idempotent.
+
+```bash
+curl https://www.bnbscheduler.top/api/sms-lab/admin/credit \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "access_token": "ADMIN_TOKEN",
+    "username": "BUYER_USERNAME",
+    "amount": 10,
+    "reference": "credit_20260913_001",
+    "note": "Manual credit"
+  }'
+```
+
+## Administrator summary
+
+```bash
+curl https://www.bnbscheduler.top/api/sms-lab/admin/summary \
+  -H 'Content-Type: application/json' \
+  --data '{"access_token":"ADMIN_TOKEN"}'
+```
+
+Money is stored as integer ten-thousandths of one USD. Purchases reserve the marked-up
+sale price before the HeroSMS request. Upstream failures and accepted cancellations
+credit the same customer sale price back exactly once.

@@ -174,18 +174,21 @@ class HeroSMSClient:
     def list_activations(self):
         return self._rest("GET", "/activations")
 
-    def purchase(self, service, country, max_price):
+    def purchase(self, service, country, max_price, reseller_user_id=None):
+        payload = {
+            "service": service,
+            "country": country,
+            "amount": 1,
+            "maxPrice": max_price,
+            "fixedPrice": False,
+            "verificationType": "sms",
+        }
+        if reseller_user_id is not None:
+            payload["resellerUserId"] = str(reseller_user_id)[:36]
         return self._rest(
             "POST",
             "/activations",
-            payload={
-                "service": service,
-                "country": country,
-                "amount": 1,
-                "maxPrice": max_price,
-                "fixedPrice": False,
-                "verificationType": "sms",
-            },
+            payload=payload,
         )
 
     def cancel(self, activation_id):

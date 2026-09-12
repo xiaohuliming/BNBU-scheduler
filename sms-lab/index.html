@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
-    <title>SMS Lab · MAXCOURSE</title>
+    <title>SMS Market · MAXCOURSE</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="/vendor/fonts.css">
     <style>
@@ -100,6 +100,7 @@
         .balance-chip strong { font-size: 18px; font-variant-numeric: tabular-nums; }
         .balance-chip, #lock-button { white-space: nowrap; }
         .secure-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+        .account-name { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 900; }
 
         .panel {
             border: 3px solid var(--ink);
@@ -252,6 +253,22 @@
         .service-option:hover { transform: translateX(2px); background: #fff9c8; }
         .service-option.selected { background: var(--sun); box-shadow: 3px 3px 0 var(--ink); }
         .service-option strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+        .service-main { min-width: 0; display: flex; align-items: center; gap: 10px; }
+        .service-logo {
+            width: 34px;
+            height: 34px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border: 2px solid rgba(48,44,41,.28);
+            border-radius: 10px 13px 9px 12px;
+            background: white;
+        }
+        .service-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-fallback { display: grid; width: 100%; height: 100%; place-items: center; background: var(--lilac); font: 900 10px/1 'IBM Plex Mono', monospace; }
+        .logo-fallback[hidden] { display: none; }
+        .service-logo.order-logo { width: 40px; height: 40px; }
         .option-code { flex: none; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; }
         .result-hint { margin: 9px 2px 0; color: var(--muted); font-size: 11px; }
 
@@ -322,6 +339,10 @@
             border-bottom: 3px dashed rgba(48, 44, 41, .26);
         }
         .inbox-title-row { display: flex; align-items: center; gap: 11px; }
+        .inbox-controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+        .order-filters { display: inline-flex; gap: 5px; padding: 4px; border: 2px solid var(--ink); border-radius: 14px 18px 13px 16px; background: white; }
+        .filter-chip { min-height: 36px; border: 0; border-radius: 10px 13px 9px 12px; background: transparent; padding: 6px 10px; color: var(--ink); font-size: 11px; font-weight: 900; }
+        .filter-chip.selected { background: var(--lilac); }
         .count-badge {
             min-width: 31px;
             min-height: 31px;
@@ -344,6 +365,11 @@
             padding: 18px;
         }
         .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .order-service { min-width: 0; display: flex; align-items: center; gap: 10px; }
+        .order-service > div { min-width: 0; }
+        .order-service strong, .order-service span { display: block; }
+        .order-service strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+        .order-service span { margin-top: 4px; color: var(--muted); font-size: 10px; }
         .status-badge {
             flex: none;
             min-height: 30px;
@@ -391,6 +417,31 @@
         .empty-doodle::before { content: ''; position: absolute; inset: 10px 15px; border-top: 3px solid var(--coral); border-bottom: 3px solid var(--sky); transform: skewY(-12deg); }
         .empty strong { display: block; color: var(--ink); font-size: 18px; }
         .empty span { display: block; max-width: 34ch; margin-top: 7px; font-size: 13px; line-height: 1.6; }
+        .empty-action { margin-top: 18px; }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: grid;
+            place-items: center;
+            background: rgba(48,44,41,.55);
+            padding: 18px;
+        }
+        .auth-card { width: min(430px, 100%); padding: 25px; background: #fff3b6; }
+        .auth-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+        .auth-card h2 { margin: 5px 0 0; font-size: 28px; }
+        .auth-form { display: grid; gap: 14px; margin-top: 22px; }
+        .auth-switch { width: 100%; border: 0; background: transparent; padding: 8px; color: var(--blue); font-weight: 900; }
+        .confirm-card { width: min(450px, 100%); padding: 26px; background: #fff9d6; }
+        .confirm-card h2 { margin: 6px 0 8px; font-size: 28px; }
+        .confirm-card > p { margin: 0; color: var(--muted); line-height: 1.6; }
+        .confirm-order { display: grid; gap: 10px; margin-top: 20px; border: 2px dashed rgba(48,44,41,.45); border-radius: 13px 18px 12px 16px; background: white; padding: 15px; }
+        .confirm-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .confirm-row span { color: var(--muted); font-size: 12px; }
+        .confirm-row strong { text-align: right; }
+        .confirm-price { color: var(--danger); font: 900 24px/1 'IBM Plex Mono', monospace; }
+        .confirm-actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 18px; }
 
         .toast {
             position: fixed;
@@ -424,6 +475,8 @@
             .balance-chip strong { font-size: 16px; }
             .currency { display: none; }
             #lock-button { min-width: 48px; padding-inline: 9px; }
+            .account-name { display: none; }
+            .header-account { gap: 6px; }
             .gate-wrap { padding: 45px 0 80px; }
             .gate { grid-template-columns: 1fr; padding: 23px; }
             .workspace { gap: 18px; padding-top: 20px; }
@@ -434,6 +487,7 @@
             .cards { grid-template-columns: 1fr; padding: 18px; }
             .country-list { grid-template-columns: 1fr; }
             .inbox-head { align-items: flex-start; }
+            .inbox-controls { align-items: flex-end; flex-direction: column-reverse; }
             .inbox-head .btn { padding-inline: 11px; }
             .empty { min-height: 270px; }
         }
@@ -446,41 +500,26 @@
     <header class="shell app-header">
         <a class="brand" href="/" aria-label="返回 MAXCOURSE">
             <span class="brand-mark mono">SMS</span>
-            <span class="brand-copy"><strong>SMS Lab</strong><span>临时短信收件箱</span></span>
+            <span class="brand-copy"><strong>SMS Market</strong><span>全球号码 · 即时接码</span></span>
         </a>
-        <div id="header-account" class="header-account hidden">
-            <span class="secure-chip"><span class="secure-dot" aria-hidden="true"></span>密钥已保护</span>
-            <span class="balance-chip">余额 <strong id="balance">···</strong> <span class="currency">USD</span></span>
-            <button id="lock-button" class="btn btn-small" type="button">锁定</button>
+        <div id="account-guest" class="header-account">
+            <span class="secure-chip"><span class="secure-dot" aria-hidden="true"></span>安全接码</span>
+            <button id="login-button" class="btn btn-primary btn-small" type="button">登录 / 注册</button>
+        </div>
+        <div id="account-user" class="header-account hidden">
+            <span id="account-name" class="account-name"></span>
+            <span class="balance-chip">钱包 <strong id="wallet-balance">0.0000</strong> <span class="currency">USD</span></span>
+            <button id="logout-button" class="btn btn-small" type="button">退出</button>
         </div>
     </header>
 
     <main class="shell">
-        <section id="gate-wrap" class="gate-wrap">
-            <div id="gate" class="panel gate" aria-labelledby="gate-title">
-                <div>
-                    <p class="eyebrow mono">Private workspace</p>
-                    <h1 id="gate-title">打开短信工作台</h1>
-                    <p>输入管理员提供的访问码。HeroSMS API Key 始终留在服务器，不会发送到浏览器。</p>
-                    <div id="gate-message" class="notice hidden" role="status" aria-live="polite"></div>
-                </div>
-                <form id="unlock-form" class="unlock-form">
-                    <div class="field">
-                        <label for="access-token">访问码</label>
-                        <input id="access-token" name="access-token" type="password" autocomplete="current-password" required maxlength="512">
-                        <span class="helper">解锁状态默认保留 120 分钟。</span>
-                    </div>
-                    <button id="unlock-button" class="btn btn-primary" type="submit">进入工作台</button>
-                </form>
-            </div>
-        </section>
-
-        <section id="workspace" class="workspace hidden" aria-label="SMS Lab 工作台">
+        <section id="workspace" class="workspace" aria-label="SMS 转售平台">
             <aside class="panel request-panel" aria-labelledby="request-title">
                 <div class="request-head">
-                    <p class="eyebrow mono">New activation</p>
-                    <h1 id="request-title">获取一个号码</h1>
-                    <p>先选择需要验证的服务，再从有库存的国家中挑选号码。</p>
+                    <p class="eyebrow mono">Number marketplace</p>
+                    <h1 id="request-title">购买接码号码</h1>
+                    <p>选择服务与国家，使用站内钱包付款。未收到短信的可取消订单将原路退回钱包。</p>
                 </div>
                 <div id="config-message" class="notice hidden" role="status"></div>
                 <form id="purchase-form" class="purchase-form">
@@ -499,7 +538,7 @@
                     <section class="step" aria-labelledby="country-step-title">
                         <div id="country-step-title" class="step-title"><span class="step-number">2</span>选择国家和价格</div>
                         <div id="country-list" class="country-list" role="listbox" aria-label="国家和价格列表">
-                            <div class="step-placeholder">选好服务后，这里会显示实时库存</div>
+                            <div class="step-placeholder">选好服务后，这里会显示实时库存与售价</div>
                         </div>
                     </section>
 
@@ -509,7 +548,7 @@
                             <span>预计价格</span><strong id="selection-price">···</strong>
                         </div>
                         <button id="purchase-button" class="btn btn-primary purchase-button" type="submit" disabled>购买一个号码</button>
-                        <span id="price-cap" class="helper">服务器价格上限 ···</span>
+                        <span id="wallet-hint" class="helper">登录后可使用站内钱包购买</span>
                     </div>
                 </form>
             </aside>
@@ -517,13 +556,19 @@
             <section class="panel inbox-panel" aria-labelledby="inbox-title">
                 <div class="inbox-head">
                     <div>
-                        <p class="eyebrow mono">Live inbox</p>
+                        <p class="eyebrow mono">Orders & inbox</p>
                         <div class="inbox-title-row">
-                            <h1 id="inbox-title">验证码收件箱</h1>
+                            <h1 id="inbox-title">我的号码与订单</h1>
                             <span id="activation-count" class="count-badge">0</span>
                         </div>
                     </div>
-                    <button id="refresh-button" class="btn btn-small" type="button">立即刷新</button>
+                    <div class="inbox-controls">
+                        <div class="order-filters" aria-label="订单筛选">
+                            <button class="filter-chip selected" type="button" data-order-filter="active" aria-pressed="true">进行中</button>
+                            <button class="filter-chip" type="button" data-order-filter="all" aria-pressed="false">全部订单</button>
+                        </div>
+                        <button id="refresh-button" class="btn btn-small" type="button">立即刷新</button>
+                    </div>
                 </div>
                 <div id="activation-status" class="notice hidden" role="status" aria-live="polite"></div>
                 <div id="activation-list" class="cards"></div>
@@ -531,372 +576,42 @@
         </section>
     </main>
 
-    <footer class="shell footer mono">HeroSMS provider · 授权测试用途 · 请遵守服务规则与所在地法律</footer>
+    <footer class="shell footer mono">SMS Market · 每位用户拥有独立钱包与订单 · 禁止银行、付费订阅及非法用途</footer>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-    <script>
-        const state = {
-            status: null,
-            services: [],
-            countries: [],
-            selectedService: null,
-            selectedCountry: null,
-            activations: [],
-            pollTimer: null,
-            busy: false,
-        };
-        const SERVICE_RENDER_LIMIT = 100;
-        const $ = (id) => document.getElementById(id);
-        const api = async (path, options = {}) => {
-            const response = await fetch('/api/sms-lab' + path, {
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-                ...options,
-            });
-            let payload = {};
-            try { payload = await response.json(); } catch (_) {}
-            if (!response.ok) {
-                const error = new Error(payload.error || '请求失败，请稍后重试。');
-                error.status = response.status;
-                error.code = payload.code;
-                throw error;
-            }
-            return payload;
-        };
-        const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-        })[char]);
-        const showMessage = (element, message, type = '') => {
-            element.textContent = message;
-            element.className = 'notice' + (type ? ' ' + type : '');
-        };
-        const hideMessage = (element) => element.classList.add('hidden');
-        const toast = (message) => {
-            $('toast').textContent = message;
-            $('toast').classList.remove('hidden');
-            window.clearTimeout(toast.timer);
-            toast.timer = window.setTimeout(() => $('toast').classList.add('hidden'), 3600);
-        };
-        const setButtonBusy = (button, busy, label) => {
-            if (!button.dataset.label) button.dataset.label = button.textContent;
-            button.disabled = busy;
-            button.textContent = busy ? label : button.dataset.label;
-        };
-        const copyText = async (value, label) => {
-            try {
-                await navigator.clipboard.writeText(value);
-                toast(label + '已复制');
-            } catch (_) {
-                toast('复制失败，请手动选择文本。');
-            }
-        };
+    <div id="purchase-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="purchase-modal-title">
+        <div class="panel confirm-card">
+            <p class="eyebrow mono">Confirm order</p>
+            <h2 id="purchase-modal-title">确认购买号码</h2>
+            <p>下单后将从站内钱包扣款。未收到验证码且供应商接受取消时，款项会退回钱包。</p>
+            <div class="confirm-order">
+                <div class="confirm-row"><span>服务</span><strong id="confirm-service"></strong></div>
+                <div class="confirm-row"><span>国家</span><strong id="confirm-country"></strong></div>
+                <div class="confirm-row"><span>应付金额</span><strong id="confirm-price" class="confirm-price"></strong></div>
+            </div>
+            <div class="confirm-actions">
+                <button id="purchase-cancel" class="btn" type="button">返回修改</button>
+                <button id="purchase-confirm" class="btn btn-primary" type="button">确认付款</button>
+            </div>
+        </div>
+    </div>
 
-        const renderGate = () => {
-            const unlocked = !!state.status?.unlocked;
-            $('gate-wrap').classList.toggle('hidden', unlocked);
-            $('workspace').classList.toggle('hidden', !unlocked);
-            $('header-account').classList.toggle('hidden', !unlocked);
-            if (!state.status?.configured) {
-                showMessage($('gate-message'), '服务端尚未配置 HeroSMS API Key 和至少 20 位的访问码。', 'error');
-                $('access-token').disabled = true;
-                $('unlock-button').disabled = true;
-            } else {
-                hideMessage($('gate-message'));
-                $('access-token').disabled = false;
-                $('unlock-button').disabled = false;
-                $('price-cap').textContent = `服务器单次价格上限 ${Number(state.status.max_price).toFixed(4)} USD`;
-            }
-        };
+    <div id="auth-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="panel auth-card">
+            <div class="auth-card-head">
+                <div><p class="eyebrow mono">SMS Market account</p><h2 id="auth-title">登录账号</h2></div>
+                <button id="auth-close" class="btn btn-small" type="button" aria-label="关闭登录窗口">关闭</button>
+            </div>
+            <div id="auth-message" class="notice hidden" role="alert"></div>
+            <form id="auth-form" class="auth-form">
+                <div class="field"><label for="auth-username">用户名</label><input id="auth-username" autocomplete="username" maxlength="120" required></div>
+                <div class="field"><label for="auth-password">密码</label><input id="auth-password" type="password" autocomplete="current-password" minlength="8" maxlength="512" required></div>
+                <button id="auth-submit" class="btn btn-primary" type="submit">登录</button>
+                <button id="auth-switch" class="auth-switch" type="button">没有账号，去注册</button>
+            </form>
+        </div>
+    </div>
 
-        const loadStatus = async () => {
-            state.status = await api('/status');
-            renderGate();
-            if (state.status.unlocked) await loadWorkspace();
-        };
-        const loadWorkspace = async () => {
-            if (!state.status.purchase_enabled) {
-                const missing = [];
-                if (!state.status.purchase_switch) missing.push('购买开关');
-                if (!state.status.service_allowlist_configured) missing.push('服务白名单');
-                showMessage($('config-message'), '真实购买仍为关闭状态，请管理员配置：' + missing.join('、') + '。');
-            } else {
-                hideMessage($('config-message'));
-            }
-            await Promise.all([loadBalance(), loadServices(), refreshActivations(false)]);
-            startPolling();
-        };
-        const loadBalance = async () => {
-            try {
-                const data = await api('/balance');
-                $('balance').textContent = Number(data.balance).toFixed(2);
-            } catch (error) {
-                $('balance').textContent = '不可用';
-                toast(error.message);
-            }
-        };
-
-        const renderServices = () => {
-            const query = $('service-search').value.trim().toLowerCase();
-            const matches = state.services.filter((service) =>
-                !query || service.code.includes(query) || service.name.toLowerCase().includes(query)
-            );
-            const visible = matches.slice(0, SERVICE_RENDER_LIMIT);
-            if (!visible.length) {
-                $('service-list').innerHTML = '<div class="step-placeholder">没有匹配的服务，换个关键词试试</div>';
-            } else {
-                $('service-list').innerHTML = visible.map((service) => `
-                    <button class="service-option ${state.selectedService?.code === service.code ? 'selected' : ''}" type="button"
-                        role="option" aria-selected="${state.selectedService?.code === service.code}" data-service="${escapeHtml(service.code)}">
-                        <strong>${escapeHtml(service.name)}</strong>
-                        <span class="option-code">${escapeHtml(service.code)}${service.allowed ? '' : ' · 只读'}</span>
-                    </button>
-                `).join('');
-            }
-            $('service-hint').textContent = matches.length > SERVICE_RENDER_LIMIT
-                ? `找到 ${matches.length} 项，当前显示前 ${SERVICE_RENDER_LIMIT} 项，请继续输入关键词`
-                : `找到 ${matches.length} 项服务`;
-        };
-        const loadServices = async () => {
-            try {
-                const data = await api('/services');
-                state.services = data.services || [];
-                renderServices();
-            } catch (error) {
-                $('service-list').innerHTML = '<div class="step-placeholder">服务目录加载失败</div>';
-                showMessage($('config-message'), error.message, 'error');
-            }
-        };
-
-        const renderCountries = () => {
-            const available = state.countries.filter((country) => country.available);
-            if (!state.selectedService) {
-                $('country-list').innerHTML = '<div class="step-placeholder">选好服务后，这里会显示实时库存</div>';
-                return;
-            }
-            if (!available.length) {
-                $('country-list').innerHTML = '<div class="step-placeholder">这个服务目前没有可用国家，请换一个服务</div>';
-                return;
-            }
-            $('country-list').innerHTML = available.map((country) => `
-                <button class="country-option ${state.selectedCountry?.id === country.id ? 'selected' : ''}" type="button"
-                    role="option" aria-selected="${state.selectedCountry?.id === country.id}" data-country="${country.id}" ${country.allowed ? '' : 'disabled'}>
-                    <span class="country-name">${escapeHtml(country.name)}</span>
-                    <span class="country-meta">${country.stock} 个 · ${Number(country.price).toFixed(4)} USD</span>
-                </button>
-            `).join('');
-        };
-        const loadCountries = async () => {
-            state.countries = [];
-            state.selectedCountry = null;
-            updateCheckout();
-            $('country-list').innerHTML = '<div class="step-placeholder"><span class="spinner" aria-hidden="true"></span>正在读取实时库存...</div>';
-            try {
-                const data = await api('/countries?service=' + encodeURIComponent(state.selectedService.code));
-                state.countries = data.countries || [];
-                renderCountries();
-            } catch (error) {
-                $('country-list').innerHTML = '<div class="step-placeholder">国家库存加载失败，请重新选择服务</div>';
-                showMessage($('config-message'), error.message, 'error');
-            }
-        };
-        const updateCheckout = () => {
-            const service = state.selectedService;
-            const country = state.selectedCountry;
-            if (!service || !country) {
-                $('selection-name').textContent = service ? service.name + ' · 还需选择国家' : '尚未选完';
-                $('selection-price').textContent = '···';
-                $('purchase-button').textContent = '购买一个号码';
-                $('purchase-button').disabled = true;
-                return;
-            }
-            const price = Number(country.price);
-            const withinCap = Number.isFinite(price) && price <= Number(state.status.max_price);
-            $('selection-name').textContent = `${service.name} · ${country.name}`;
-            $('selection-price').textContent = Number.isFinite(price) ? `${price.toFixed(4)} USD` : '价格不可用';
-            $('purchase-button').textContent = Number.isFinite(price) ? `购买 1 个号码 · ${price.toFixed(4)} USD` : '购买一个号码';
-            $('purchase-button').disabled = !state.status.purchase_enabled || !service.allowed || !country.allowed || !country.available || !withinCap;
-        };
-
-        const statusLabel = (status, hasOtp) => {
-            if (hasOtp) return '已收到验证码';
-            const labels = { 4: '等待短信', 6: '已完成', 8: '已取消', 10: '已退款' };
-            return labels[status] || '处理中';
-        };
-        const formatTime = (value) => {
-            if (!value) return '';
-            const date = new Date(value);
-            return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', { hour12: false });
-        };
-        const renderActivations = () => {
-            $('activation-count').textContent = state.activations.length;
-            const list = $('activation-list');
-            if (!state.activations.length) {
-                list.innerHTML = '<div class="empty"><div><div class="empty-doodle" aria-hidden="true"></div><strong>收件箱还是空的</strong><span>从左侧完成两步选择并购买号码，收到的验证码会自动出现在这里。</span></div></div>';
-                return;
-            }
-            list.innerHTML = state.activations.map((activation) => {
-                const otp = activation.otpList?.[activation.otpList.length - 1];
-                const createdAt = new Date(activation.createdAt || 0).getTime();
-                const cancelWait = Number.isFinite(createdAt) && createdAt > 0
-                    ? Math.max(0, Math.ceil((createdAt + 120000 - Date.now()) / 1000))
-                    : 0;
-                return `<article class="activation-card" data-id="${activation.id}">
-                    <div class="card-head">
-                        <div>
-                            <div class="mono" style="font-size:10px;color:var(--muted)">${escapeHtml(activation.service.toUpperCase())} · #${activation.id}</div>
-                            <div class="phone">+${escapeHtml(activation.phone.replace(/^\+/, ''))}</div>
-                            <div class="card-meta">${escapeHtml(activation.operator || '任意运营商')} · ${escapeHtml(formatTime(activation.expiredAt) || '有效期由服务商决定')}</div>
-                        </div>
-                        <span class="status-badge">${escapeHtml(statusLabel(activation.status, !!otp))}</span>
-                    </div>
-                    ${otp ? `<div class="otp"><div class="otp-code">${escapeHtml(otp.smsCode || '已收到')}</div><div class="otp-text">${escapeHtml(otp.smsText)}${otp.receivedAt ? '<br>' + escapeHtml(formatTime(otp.receivedAt)) : ''}</div></div>` : '<div class="waiting"><span class="spinner" aria-hidden="true"></span>每 5 秒自动检查一次新短信</div>'}
-                    <div class="actions">
-                        <button class="btn btn-small" type="button" data-action="copy-phone" data-value="+${escapeHtml(activation.phone.replace(/^\+/, ''))}">复制号码</button>
-                        ${otp?.smsCode ? `<button class="btn btn-small" type="button" data-action="copy-code" data-value="${escapeHtml(otp.smsCode)}">复制验证码</button>` : ''}
-                        ${otp ? `<button class="btn btn-small" type="button" data-action="finish">完成</button>` : `<button class="btn btn-small" type="button" data-action="replace">换号</button>`}
-                        ${otp ? '' : `<button class="btn btn-small btn-danger" type="button" data-action="cancel" ${cancelWait ? 'disabled' : ''} title="${cancelWait ? 'HeroSMS 购买后两分钟开放取消' : '取消并向 HeroSMS 申请退款'}">${cancelWait ? cancelWait + ' 秒后可取消' : '取消'}</button>`}
-                    </div>
-                </article>`;
-            }).join('');
-        };
-        const refreshActivations = async (announce = true) => {
-            if (state.busy || !state.status?.unlocked) return;
-            state.busy = true;
-            setButtonBusy($('refresh-button'), true, '刷新中...');
-            try {
-                const data = await api('/activations');
-                state.activations = data.activations || [];
-                renderActivations();
-                hideMessage($('activation-status'));
-                if (announce) toast('收件状态已刷新');
-            } catch (error) {
-                if (error.status === 401) {
-                    state.status.unlocked = false;
-                    stopPolling();
-                    renderGate();
-                    return;
-                }
-                showMessage($('activation-status'), error.message + ' 可点击“立即刷新”重试。', 'error');
-            } finally {
-                state.busy = false;
-                setButtonBusy($('refresh-button'), false, '刷新中...');
-            }
-        };
-        const startPolling = () => {
-            stopPolling();
-            state.pollTimer = window.setInterval(() => refreshActivations(false), 5000);
-        };
-        const stopPolling = () => {
-            if (state.pollTimer) window.clearInterval(state.pollTimer);
-            state.pollTimer = null;
-        };
-
-        $('unlock-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            setButtonBusy($('unlock-button'), true, '正在验证...');
-            hideMessage($('gate-message'));
-            try {
-                state.status = await api('/session', {
-                    method: 'POST',
-                    body: JSON.stringify({ access_token: $('access-token').value }),
-                });
-                $('access-token').value = '';
-                renderGate();
-                await loadWorkspace();
-            } catch (error) {
-                showMessage($('gate-message'), error.message, 'error');
-                $('access-token').focus();
-            } finally {
-                setButtonBusy($('unlock-button'), false, '正在验证...');
-            }
-        });
-        $('lock-button').addEventListener('click', async () => {
-            await api('/session', { method: 'DELETE' });
-            stopPolling();
-            state.status.unlocked = false;
-            state.activations = [];
-            state.selectedService = null;
-            state.selectedCountry = null;
-            renderGate();
-            toast('SMS Lab 已锁定');
-        });
-        $('service-search').addEventListener('input', renderServices);
-        $('service-list').addEventListener('click', (event) => {
-            const button = event.target.closest('[data-service]');
-            if (!button) return;
-            state.selectedService = state.services.find((service) => service.code === button.dataset.service) || null;
-            state.selectedCountry = null;
-            renderServices();
-            updateCheckout();
-            if (state.selectedService) loadCountries();
-        });
-        $('country-list').addEventListener('click', (event) => {
-            const button = event.target.closest('[data-country]');
-            if (!button || button.disabled) return;
-            state.selectedCountry = state.countries.find((country) => country.id === Number(button.dataset.country)) || null;
-            renderCountries();
-            updateCheckout();
-        });
-        $('refresh-button').addEventListener('click', () => refreshActivations(true));
-        $('purchase-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const service = state.selectedService;
-            const country = state.selectedCountry;
-            if (!service || !country) return;
-            const price = Number(country.price);
-            const maxPrice = Math.min(state.status.max_price, Math.max(0.0067, Math.ceil(price * 1.08 * 10000) / 10000));
-            setButtonBusy($('purchase-button'), true, '正在购买...');
-            try {
-                const data = await api('/activations', {
-                    method: 'POST',
-                    body: JSON.stringify({ service: service.code, country: country.id, max_price: maxPrice }),
-                });
-                state.activations = [...(data.activations || []), ...state.activations];
-                renderActivations();
-                await loadBalance();
-                toast('号码已购买，正在等待短信');
-            } catch (error) {
-                showMessage($('activation-status'), error.message, 'error');
-                $('activation-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } finally {
-                updateCheckout();
-            }
-        });
-        $('activation-list').addEventListener('click', async (event) => {
-            const button = event.target.closest('button[data-action]');
-            const card = event.target.closest('[data-id]');
-            if (!button || !card) return;
-            const action = button.dataset.action;
-            const id = Number(card.dataset.id);
-            if (action === 'copy-phone') return copyText(button.dataset.value, '号码');
-            if (action === 'copy-code') return copyText(button.dataset.value, '验证码');
-            setButtonBusy(button, true, '处理中...');
-            try {
-                if (action === 'cancel') await api('/activations/' + id, { method: 'DELETE' });
-                if (action === 'finish') await api('/activations/' + id + '/finish', { method: 'POST', body: '{}' });
-                if (action === 'replace') await api('/activations/' + id + '/replace', { method: 'POST', body: '{}' });
-                await refreshActivations(false);
-                await loadBalance();
-                toast(action === 'replace' ? '号码已更换' : action === 'finish' ? '激活已完成' : '激活已取消');
-            } catch (error) {
-                showMessage($('activation-status'), error.message, 'error');
-            } finally {
-                setButtonBusy(button, false, '处理中...');
-            }
-        });
-
-        if (window.location.protocol !== 'file:') {
-            fetch('/api/analytics/track', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ view: 'sms-lab', path: location.pathname, referrer: document.referrer }),
-            }).catch(() => {});
-        }
-        loadStatus().catch((error) => {
-            showMessage($('gate-message'), error.message, 'error');
-            $('access-token').disabled = true;
-            $('unlock-button').disabled = true;
-        });
-    </script>
+    <script src="/sms-lab/reseller.js?v=20260913-3"></script>
 </body>
 </html>
