@@ -5,7 +5,6 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import urlsplit
 
 import requests
-from flask import current_app, has_app_context
 
 
 ORDER_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,99}")
@@ -57,16 +56,17 @@ def _order(payload):
 
 
 class OmniRechargeClient:
-    def __init__(self, base_url, token):
+    def __init__(self, base_url, token, *, allowed_hosts=None):
+        # Test destinations require explicit injection; environment and Flask
+        # testing flags never expand the production destination allowlist.
+        if allowed_hosts is None:
+            allowed_hosts = ("chat.bnbscheduler.top",)
         try:
             parsed = urlsplit(base_url)
-            valid_scheme = parsed.scheme == "https" or (
-                parsed.scheme == "http" and has_app_context() and current_app.testing
-            )
-            valid_base = (valid_scheme and parsed.hostname and not parsed.username
+            valid_base = (parsed.scheme == "https" and parsed.hostname in allowed_hosts
+                          and parsed.port in (None, 443) and not parsed.username
                           and not parsed.password and not parsed.query and not parsed.fragment
                           and parsed.path in ("", "/"))
-            parsed.port
         except (TypeError, ValueError):
             valid_base = False
         if not valid_base:

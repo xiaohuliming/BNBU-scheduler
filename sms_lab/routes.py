@@ -15,7 +15,7 @@ from .client import HeroSMSClient, HeroSMSError
 from .recharge import OmniRechargeClient, OmniRechargeError
 from .storage import (
     ACTIVE_ORDER_STATUSES, amount_to_units, sale_units_for_cost,
-    settle_paid_sms_recharge, units_to_amount,
+    settle_paid_sms_recharges, units_to_amount,
 )
 
 
@@ -377,12 +377,9 @@ def create_sms_lab_blueprint(db_path_getter):
     def settle_recharge_orders(user_id, orders):
         conn = _open_db(db_path_getter)
         try:
-            for order in orders:
-                if order["status"] == "credited":
-                    settle_paid_sms_recharge(conn, user_id, order)
-            balance = conn.execute(
-                "SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)
-            ).fetchone()[0]
+            _, balance = settle_paid_sms_recharges(
+                conn, user_id, [order for order in orders if order["status"] == "credited"],
+            )
             return units_to_amount(balance)
         finally:
             conn.close()
