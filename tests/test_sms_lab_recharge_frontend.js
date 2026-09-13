@@ -609,7 +609,7 @@ test('the real page initializes and URL recovery uses the modal focus lifecycle'
   vm.runInNewContext(source, sandbox, { filename: 'sms-lab/reseller.js' });
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(intervals.length, 1);
+  assert.deepEqual(intervals.map((timer) => timer.delay).sort((a, b) => a - b), [1000, 5000]);
   assert.equal(elements.get('config-message').textContent, '');
   assert.match(elements.get('wallet-hint').textContent, /在线充值/);
   assert.equal(elements.get('wallet-helper-recharge').classList.contains('hidden'), false);
