@@ -97,34 +97,49 @@ def sale_units_for_cost(cost_units, markup_percent):
 
 def settle_paid_sms_recharge(conn, user_id: int, order: dict) -> tuple[bool, int]:
     """Atomically claim one upstream payment and credit its local wallet once."""
-    validate_paid_recharge(order)
-    reference = f"online_recharge:{order['id']}"
+    applied, balance = settle_paid_sms_recharges(conn, user_id, [order])
+    return applied[0], balance
+
+
+def settle_paid_sms_recharges(conn, user_id: int, orders: list[dict]) -> tuple[list[bool], int]:
+    """Preflight and settle an entire payment batch in one wallet transaction."""
     conn.execute("BEGIN IMMEDIATE")
     try:
-        existing = conn.execute(
-            "SELECT user_id FROM sms_wallet_ledger WHERE reference = ?", (reference,)
-        ).fetchone()
-        if existing is not None and existing[0] != user_id:
-            raise OmniRechargeError("此充值订单已归属其他账号。", 409, "recharge_order_conflict")
+        settled = set()
+        for order in orders:
+            validate_paid_recharge(order)
+            reference = f"online_recharge:{order['id']}"
+            existing = conn.execute(
+                "SELECT user_id FROM sms_wallet_ledger WHERE reference = ?", (reference,)
+            ).fetchone()
+            if existing is not None:
+                if existing[0] != user_id:
+                    raise OmniRechargeError("此充值订单已归属其他账号。", 409, "recharge_order_conflict")
+                settled.add(reference)
         user = conn.execute(
             "SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)
         ).fetchone()
         if user is None:
             raise OmniRechargeError("请重新登录后继续。", 401, "login_required")
         balance = user[0]
-        if existing is not None:
-            conn.commit()
-            return False, balance
-        balance += order["wallet_units"]
-        conn.execute("UPDATE users SET sms_wallet_units = ? WHERE id = ?", (balance, user_id))
-        conn.execute(
-            "INSERT INTO sms_wallet_ledger "
-            "(user_id, amount_units, balance_after_units, kind, reference) "
-            "VALUES (?, ?, ?, 'online_recharge', ?)",
-            (user_id, order["wallet_units"], balance, reference),
-        )
+        applied = []
+        for order in orders:
+            reference = f"online_recharge:{order['id']}"
+            if reference in settled:
+                applied.append(False)
+                continue
+            balance += order["wallet_units"]
+            conn.execute("UPDATE users SET sms_wallet_units = ? WHERE id = ?", (balance, user_id))
+            conn.execute(
+                "INSERT INTO sms_wallet_ledger "
+                "(user_id, amount_units, balance_after_units, kind, reference) "
+                "VALUES (?, ?, ?, 'online_recharge', ?)",
+                (user_id, order["wallet_units"], balance, reference),
+            )
+            settled.add(reference)
+            applied.append(True)
         conn.commit()
-        return True, balance
+        return applied, balance
     except Exception:
         conn.rollback()
         raise

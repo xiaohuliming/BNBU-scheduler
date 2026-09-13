@@ -494,6 +494,46 @@ class SMSRechargeTests(unittest.TestCase):
         self.assertEqual(self.wallet_balance(), 0)
         self.assertEqual(self.wallet_balance('bob'), 50000)
 
+    def test_recharge_list_rolls_back_all_new_orders_on_later_user_conflict(self):
+        self.settle(recharge_order(id='S-bob'), user_id=2)
+        self.upstream({'orders': [recharge_order(id='S-alice-new'), recharge_order(id='S-bob')]})
+        response = self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()['code'], 'recharge_order_conflict')
+        self.assertEqual(self.wallet_balance(), 0)
+        self.assertEqual(self.wallet_balance('bob'), 50000)
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute('SELECT user_id, reference FROM sms_wallet_ledger').fetchall()
+        self.assertEqual(rows, [(2, 'online_recharge:S-bob')])
+
+    def test_recharge_list_rolls_back_earlier_orders_on_later_ledger_failure(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("CREATE TRIGGER fail_second_ledger BEFORE INSERT ON sms_wallet_ledger "
+                         "WHEN NEW.reference = 'online_recharge:S-second' "
+                         "BEGIN SELECT RAISE(ABORT, 'ledger unavailable'); END")
+        self.upstream({'orders': [recharge_order(id='S-first'), recharge_order(id='S-second')]})
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(self.wallet_balance(), 0)
+        with sqlite3.connect(self.db_path) as conn:
+            count = conn.execute('SELECT COUNT(*) FROM sms_wallet_ledger').fetchone()[0]
+        self.assertEqual(count, 0)
+
+    def test_recharge_list_settles_distinct_orders_and_deduplicates_within_batch(self):
+        self.upstream({'orders': [recharge_order(id='S-first'), recharge_order(id='S-first'),
+                                 recharge_order(id='S-second')]})
+        first = self.client.get('/api/sms-lab/recharge/orders')
+        replay = self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.get_json()['wallet_balance'], 10.0)
+        self.assertEqual(replay.get_json()['wallet_balance'], 10.0)
+        self.assertEqual(self.wallet_balance(), 100000)
+        with sqlite3.connect(self.db_path) as conn:
+            balances = conn.execute(
+                'SELECT balance_after_units FROM sms_wallet_ledger ORDER BY id'
+            ).fetchall()
+        self.assertEqual(balances, [(50000,), (100000,)])
+
     def test_upstream_timeout_and_malformed_orders_fail_without_secret_or_credit(self):
         import requests
         self.http.side_effect = requests.Timeout('shared-secret-never-echo')
@@ -547,15 +587,39 @@ class SMSRechargeTests(unittest.TestCase):
             {'usd_units': 10, 'usd': '10.00', 'fen': 6800},
         ]}
         self.upstream(payload)
-        with mock.patch.dict(os.environ, {'OMNICHAT_RECHARGE_API_BASE': 'https://payments.example.test'}):
+        with mock.patch.dict(os.environ, {'OMNICHAT_RECHARGE_API_BASE': 'https://chat.bnbscheduler.top:443'}):
             response = self.client.get('/api/sms-lab/recharge/config')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), payload)
-        self.assertEqual(self.http.call_args.args[:2], ('GET', 'https://payments.example.test/api/recharge/sms-market/config'))
+        self.assertEqual(self.http.call_args.args[:2], ('GET', 'https://chat.bnbscheduler.top:443/api/recharge/sms-market/config'))
         self.assertEqual(self.http.call_args.kwargs['headers']['Authorization'], 'Bearer shared-secret-never-echo')
+
+    def test_recharge_rejects_untrusted_hosts_and_ports_before_http(self):
+        self.upstream({'orders': [recharge_order()]})
+        for base in ('https://evil.test', 'https://chat.bnbscheduler.top:444',
+                     'https://chat.bnbscheduler.top.evil.test', 'http://chat.bnbscheduler.top'):
+            with self.subTest(base=base), mock.patch.dict(os.environ, {'OMNICHAT_RECHARGE_API_BASE': base}):
+                response = self.client.get('/api/sms-lab/recharge/orders')
+                self.assertEqual(response.status_code, 503)
+                self.assertEqual(response.get_json()['code'], 'recharge_service_unavailable')
+                self.http.assert_not_called()
+                self.assertEqual(self.wallet_balance(), 0)
 
 
 class OmniRechargeClientTests(unittest.TestCase):
+    def test_fake_upstream_host_requires_explicit_injected_allowlist(self):
+        from sms_lab.recharge import OmniRechargeClient, OmniRechargeError
+        response = mock.Mock(status_code=200)
+        response.json.return_value = {'orders': []}
+        with mock.patch('requests.Session.request', return_value=response) as http:
+            with self.assertRaises(OmniRechargeError):
+                OmniRechargeClient('https://payments.example.test', 'shared-secret')
+            http.assert_not_called()
+            client = OmniRechargeClient('https://payments.example.test', 'shared-secret',
+                                        allowed_hosts=('payments.example.test',))
+            self.assertEqual(client.list_orders(), {'orders': []})
+            self.assertEqual(http.call_args.args[:2], ('GET', 'https://payments.example.test/api/recharge/sms-market/orders'))
+
     def test_client_requires_https_outside_tests(self):
         from sms_lab.recharge import OmniRechargeClient, OmniRechargeError
         for base in ('http://localhost:3000', 'file:///tmp/recharge',
