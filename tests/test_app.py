@@ -99,6 +99,13 @@ class AppTestCase(unittest.TestCase):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 404)
 
+    def test_sms_market_directory_route_serves_payment_return_page(self):
+        response = self.client.get('/sms-lab/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'SMS Market', response.data)
+        self.assertIn(b'id="recharge-modal"', response.data)
+
     def test_oversized_api_request_is_rejected_before_handler_work(self):
         response = self.client.post(
             '/api/parse-transcript',
