@@ -645,6 +645,23 @@ class SMSMarketFrontendTests(unittest.TestCase):
         self.assertIn("authProvider: 'local'", script)
         self.assertIn('iSpace 登录成功，DDL 已同步', script)
 
+    def test_recharge_dialog_has_fixed_packages_and_accessible_controls(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, 'sms-lab', 'index.html'), encoding='utf-8') as file:
+            html = file.read()
+
+        self.assertIn('id="recharge-button"', html)
+        self.assertIn('id="wallet-helper-recharge"', html)
+        self.assertIn('id="recharge-modal"', html)
+        self.assertIn('aria-labelledby="recharge-title"', html)
+        self.assertIn('id="recharge-status"', html)
+        self.assertIn('aria-live="polite"', html)
+        self.assertIn('id="recharge-close"', html)
+        self.assertIn('$1 / ¥6.80', html)
+        self.assertIn('$5 / ¥34.00', html)
+        self.assertIn('$10 / ¥68.00', html)
+        self.assertIn('id="recharge-recent"', html)
+
 
 class HeroSMSClientTests(unittest.TestCase):
     def test_country_catalog_accepts_current_keyed_object_shape(self):

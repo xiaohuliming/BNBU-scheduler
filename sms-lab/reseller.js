@@ -1,5 +1,232 @@
 'use strict';
 
+function createRechargeController(dependencies) {
+    const terminalStatuses = new Set(['credited', 'failed', 'cancelled', 'expired']);
+    const request = dependencies.request;
+    const storage = dependencies.storage;
+    const makeRequestId = dependencies.makeRequestId;
+    const setTimer = dependencies.setTimer || setTimeout;
+    const clearTimer = dependencies.clearTimer || clearTimeout;
+    const onCheckout = dependencies.onCheckout || (() => {});
+    const onWallet = dependencies.onWallet || (() => {});
+    const onSuccess = dependencies.onSuccess || (() => {});
+    const onView = dependencies.onView || (() => {});
+    const view = {
+        visible: false,
+        busy: false,
+        selectedPackage: 5,
+        status: null,
+        message: '',
+        order: null,
+        orders: [],
+    };
+    let username = null;
+    let accountEpoch = 0;
+    let modalEpoch = 0;
+    let createPromise = null;
+    let pollTimer = null;
+    const successfulOrders = new Set();
+
+    const snapshot = () => ({ ...view, orders: view.orders.slice() });
+    const emit = () => onView(snapshot());
+    const pendingKey = (packageUsd) => `sms-market-recharge:${encodeURIComponent(username)}:${packageUsd}`;
+    const validPackage = (value) => [1, 5, 10].includes(value);
+    const isCurrent = (account, modal) => account === accountEpoch && modal === modalEpoch && view.visible;
+    const stopPolling = () => {
+        if (pollTimer !== null) clearTimer(pollTimer);
+        pollTimer = null;
+    };
+    const trustedCheckout = (value) => {
+        try {
+            const parsed = new URL(value);
+            return parsed.protocol === 'https:' && parsed.hostname === 'chat.bnbscheduler.top'
+                && (parsed.port === '' || parsed.port === '443')
+                && !parsed.username && !parsed.password;
+        } catch (_) {
+            return false;
+        }
+    };
+    const clearRequestId = (order) => {
+        if (!order || !terminalStatuses.has(order.status)) return;
+        const packageUsd = Number(order.wallet_units) / 10000;
+        if (!validPackage(packageUsd)) return;
+        const key = pendingKey(packageUsd);
+        if (storage.getItem(key) === order.request_id) storage.removeItem(key);
+    };
+    const applyDetail = (payload) => {
+        const order = payload.order;
+        view.order = order;
+        view.status = order.status;
+        view.message = '';
+        if (payload.wallet_balance !== undefined) onWallet(payload.wallet_balance);
+        clearRequestId(order);
+        if (order.status === 'credited' && !successfulOrders.has(order.id)) {
+            successfulOrders.add(order.id);
+            onSuccess(order);
+        }
+        emit();
+        return order;
+    };
+
+    const controller = {
+        getState: snapshot,
+        getUsername: () => username,
+        setAccount(nextUsername) {
+            const normalized = typeof nextUsername === 'string' && nextUsername.trim()
+                ? nextUsername.trim() : null;
+            if (normalized === username) return;
+            username = normalized;
+            accountEpoch += 1;
+            modalEpoch += 1;
+            stopPolling();
+            createPromise = null;
+            view.visible = false;
+            view.busy = false;
+            view.status = null;
+            view.message = '';
+            view.order = null;
+            view.orders = [];
+            emit();
+        },
+        open() {
+            if (!username) return false;
+            view.visible = true;
+            view.message = '';
+            emit();
+            return true;
+        },
+        close() {
+            modalEpoch += 1;
+            stopPolling();
+            view.visible = false;
+            emit();
+        },
+        select(packageUsd) {
+            if (!validPackage(packageUsd) || view.busy) return false;
+            view.selectedPackage = packageUsd;
+            emit();
+            return true;
+        },
+        create(packageUsd = view.selectedPackage) {
+            if (createPromise) return createPromise;
+            if (!username || !view.visible || !validPackage(packageUsd)) {
+                return Promise.reject(new Error('请选择有效的充值套餐。'));
+            }
+            view.selectedPackage = packageUsd;
+            const key = pendingKey(packageUsd);
+            let requestId = storage.getItem(key);
+            if (!requestId) {
+                requestId = makeRequestId();
+                storage.setItem(key, requestId);
+            }
+            const account = accountEpoch;
+            const modal = modalEpoch;
+            view.busy = true;
+            view.status = 'creating';
+            view.message = '';
+            emit();
+            let operation;
+            try {
+                operation = request('/recharge/orders', {
+                    method: 'POST',
+                    body: JSON.stringify({ package_usd: packageUsd, request_id: requestId }),
+                });
+            } catch (error) {
+                operation = Promise.reject(error);
+            }
+            const promise = Promise.resolve(operation).then((payload) => {
+                if (!isCurrent(account, modal)) return payload;
+                view.order = payload.order;
+                view.status = payload.order.status;
+                clearRequestId(payload.order);
+                if (trustedCheckout(payload.checkout_url)) {
+                    onCheckout(payload.checkout_url);
+                } else {
+                    view.status = 'invalid_checkout';
+                    view.message = '支付链接无效，请稍后重试。';
+                    emit();
+                }
+                return payload;
+            }).catch((error) => {
+                if (isCurrent(account, modal)) {
+                    view.status = 'error';
+                    view.message = error.message || '充值请求失败，请稍后重试。';
+                    emit();
+                }
+                throw error;
+            }).finally(() => {
+                if (createPromise === promise) createPromise = null;
+                if (account === accountEpoch) {
+                    view.busy = false;
+                    emit();
+                }
+            });
+            createPromise = promise;
+            return promise;
+        },
+        poll(orderId) {
+            if (!username || !view.visible || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(orderId)) {
+                return Promise.resolve(null);
+            }
+            stopPolling();
+            const account = accountEpoch;
+            const modal = modalEpoch;
+            return Promise.resolve(request(`/recharge/orders/${encodeURIComponent(orderId)}`)).then((payload) => {
+                if (!isCurrent(account, modal)) return payload;
+                const order = applyDetail(payload);
+                if (!terminalStatuses.has(order.status)) {
+                    pollTimer = setTimer(() => {
+                        pollTimer = null;
+                        controller.poll(orderId).catch(() => {});
+                    }, 2500);
+                }
+                return payload;
+            }).catch((error) => {
+                if (isCurrent(account, modal)) {
+                    view.status = 'error';
+                    view.message = error.message || '充值状态读取失败，请稍后重试。';
+                    emit();
+                }
+                throw error;
+            });
+        },
+        loadRecent() {
+            if (!username || !view.visible) return Promise.resolve(null);
+            const account = accountEpoch;
+            const modal = modalEpoch;
+            return Promise.resolve(request('/recharge/orders')).then((payload) => {
+                if (!isCurrent(account, modal)) return payload;
+                view.orders = Array.isArray(payload.orders) ? payload.orders : [];
+                if (payload.wallet_balance !== undefined) onWallet(payload.wallet_balance);
+                view.orders.forEach(clearRequestId);
+                emit();
+                return payload;
+            }).catch((error) => {
+                if (isCurrent(account, modal)) {
+                    view.status = 'error';
+                    view.message = error.message || '充值记录读取失败，请稍后重试。';
+                    emit();
+                }
+                throw error;
+            });
+        },
+        recoverFromUrl(urlValue, historyApi) {
+            let parsed;
+            try { parsed = new URL(urlValue); } catch (_) { return Promise.resolve(null); }
+            const orderId = parsed.searchParams.get('recharge_order');
+            if (!orderId || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(orderId)) {
+                return Promise.resolve(null);
+            }
+            parsed.searchParams.delete('recharge_order');
+            historyApi.replaceState(null, '', parsed.pathname + parsed.search + parsed.hash);
+            if (!controller.open()) return Promise.resolve(null);
+            return controller.poll(orderId).catch(() => null);
+        },
+    };
+    emit();
+    return controller;
+}
+
 const state = {
     status: null,
     account: { authenticated: false },
@@ -15,6 +242,7 @@ const state = {
     authMode: 'login',
     authProvider: 'local',
 };
+let recharge = null;
 
 const SERVICE_RENDER_LIMIT = 100;
 const ACTIVE_STATUSES = new Set(['purchasing', 'active', 'code_received']);
@@ -79,6 +307,7 @@ const renderAccount = () => {
         $('account-name').textContent = state.account.user.display_name;
         $('wallet-balance').textContent = Number(state.account.wallet.balance).toFixed(4);
     }
+    if (recharge) recharge.setAccount(authenticated ? state.account.user.username : null);
     updateCheckout();
 };
 
@@ -161,6 +390,7 @@ const updateCheckout = () => {
         $('purchase-button').textContent = '购买一个号码';
         $('purchase-button').disabled = true;
         $('wallet-hint').textContent = state.account.authenticated ? '余额不足时请联系管理员充值' : '登录后可使用站内钱包购买';
+        $('wallet-recharge-helper').classList.add('hidden');
         return;
     }
     const price = Number(country.price);
@@ -170,6 +400,7 @@ const updateCheckout = () => {
         $('purchase-button').textContent = '登录后购买';
         $('purchase-button').disabled = false;
         $('wallet-hint').textContent = '登录或注册后继续';
+        $('wallet-recharge-helper').classList.add('hidden');
         return;
     }
     const balance = Number(state.account.wallet.balance);
@@ -180,7 +411,8 @@ const updateCheckout = () => {
     $('purchase-button').disabled = !enough;
     $('wallet-hint').textContent = enough
         ? `购买后预计剩余 ${(balance - price).toFixed(4)} USD`
-        : '请联系管理员人工充值';
+        : '余额不足，可在线充值后继续购买';
+    $('wallet-recharge-helper').classList.toggle('hidden', enough);
 };
 
 const orderStatusLabel = (status) => ({
@@ -345,7 +577,100 @@ const copyText = async (value, label) => {
     }
 };
 
+const rechargeStatusText = (view) => ({
+    creating: '正在创建充值订单，请不要重复提交。',
+    pending: '订单待支付。完成支付后返回本页，我们会自动确认到账。',
+    paid: '支付结果已收到，正在确认钱包到账。',
+    credited: '充值成功，钱包余额已更新。',
+    failed: '本次充值失败，钱包未增加。请重新选择套餐。',
+    cancelled: '充值订单已取消。',
+    expired: '充值订单已过期，请重新创建。',
+    invalid_checkout: view.message,
+    error: view.message,
+})[view.status] || view.message;
+
+const rechargeStatusName = (status) => ({
+    pending: '待支付', paid: '确认中', credited: '已到账', failed: '失败',
+    cancelled: '已取消', expired: '已过期',
+})[status] || '处理中';
+
+const renderRecharge = (view) => {
+    $('recharge-modal').classList.toggle('hidden', !view.visible);
+    document.querySelectorAll('[data-recharge-package]').forEach((button) => {
+        const selected = Number(button.dataset.rechargePackage) === view.selectedPackage;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+        button.disabled = view.busy;
+    });
+    $('recharge-confirm').disabled = view.busy;
+    $('recharge-confirm').textContent = view.busy
+        ? '正在创建订单...'
+        : `前往支付 · $${view.selectedPackage}`;
+    const statusText = rechargeStatusText(view);
+    $('recharge-status').textContent = statusText || '';
+    $('recharge-status').className = 'recharge-status' + (statusText ? '' : ' hidden')
+        + (view.status === 'credited' ? ' success' : '')
+        + (['failed', 'error', 'invalid_checkout'].includes(view.status) ? ' error' : '');
+    $('recharge-recent').innerHTML = view.orders.length ? view.orders.map((order) => `
+        <li class="recharge-order-row">
+            <span><strong>$${escapeHtml(order.wallet_amount)}</strong><small>${escapeHtml(formatTime(order.created_at))}</small></span>
+            <span class="recharge-order-status">${escapeHtml(rechargeStatusName(order.status))}</span>
+        </li>
+    `).join('') : '<li class="recharge-empty">暂无充值记录</li>';
+};
+
+recharge = createRechargeController({
+    request: (path, options) => api(path, options),
+    storage: window.localStorage,
+    makeRequestId: () => {
+        const random = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
+        return `sms_${random}`.replace(/[^A-Za-z0-9_-]/g, '_');
+    },
+    setTimer: (callback, delay) => window.setTimeout(callback, delay),
+    clearTimer: (timer) => window.clearTimeout(timer),
+    onCheckout: (url) => window.location.assign(url),
+    onWallet: (balance) => {
+        if (!state.account.authenticated) return;
+        state.account.wallet.balance = balance;
+        renderAccount();
+    },
+    onSuccess: () => toast('充值成功，钱包余额已更新'),
+    onView: renderRecharge,
+});
+
+let rechargeFocusReturn = null;
+const openRecharge = () => {
+    if (!state.account.authenticated) {
+        openAuth('login');
+        return;
+    }
+    rechargeFocusReturn = document.activeElement;
+    recharge.open();
+    recharge.loadRecent().catch(() => {});
+    $('recharge-close').focus();
+};
+const closeRecharge = () => {
+    recharge.close();
+    if (rechargeFocusReturn && typeof rechargeFocusReturn.focus === 'function') {
+        rechargeFocusReturn.focus();
+    }
+    rechargeFocusReturn = null;
+};
+
 $('login-button').addEventListener('click', () => openAuth('login'));
+$('recharge-button').addEventListener('click', openRecharge);
+$('wallet-helper-recharge').addEventListener('click', openRecharge);
+$('recharge-close').addEventListener('click', closeRecharge);
+$('recharge-modal').addEventListener('click', (event) => {
+    if (event.target === $('recharge-modal')) closeRecharge();
+});
+$('recharge-packages').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-recharge-package]');
+    if (button) recharge.select(Number(button.dataset.rechargePackage));
+});
+$('recharge-confirm').addEventListener('click', () => {
+    recharge.create().catch(() => {});
+});
 $('logout-button').addEventListener('click', async () => {
     await api('/api/logout', { method: 'POST', body: '{}' });
     state.account = { authenticated: false };
@@ -366,6 +691,10 @@ $('purchase-cancel').addEventListener('click', closePurchaseConfirm);
 $('purchase-confirm').addEventListener('click', submitPurchase);
 $('purchase-modal').addEventListener('click', (event) => {
     if (event.target === $('purchase-modal')) closePurchaseConfirm();
+});
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !recharge.getState().visible) return;
+    if (event.key === 'Escape') closeRecharge();
 });
 $('auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -473,6 +802,7 @@ Promise.all([api('/status'), loadAccount(), loadServices()]).then(async ([status
     renderAccount();
     renderCountries();
     await loadOrders(false);
+    await recharge.recoverFromUrl(window.location.href, window.history);
     startPolling();
 }).catch((error) => {
     showMessage($('config-message'), error.message, 'error');
