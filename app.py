@@ -1976,6 +1976,10 @@ def recommend_courses():
 def ddl_page():
     return send_from_directory('.', 'ddl.html')
 
+@app.route('/sms-lab/')
+def sms_market_page():
+    return send_from_directory(os.path.join(APP_ROOT, 'sms-lab'), 'index.html')
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('.', 'favicon.png', mimetype='image/png')
