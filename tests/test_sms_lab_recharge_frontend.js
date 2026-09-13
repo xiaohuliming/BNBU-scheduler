@@ -51,8 +51,8 @@ function setupRechargeHarness() {
   let nextTimerId = 1;
   const controller = createRechargeController({
     request(pathname, options = {}) {
-      const item = { pathname, method: options.method || 'GET', body: options.body };
       const wait = deferred();
+      const item = { pathname, method: options.method || 'GET', body: options.body, wait, settled: false };
       requests.push(item);
       pending.push(wait);
       return wait.promise;
@@ -89,6 +89,12 @@ function setupRechargeHarness() {
     rejectCreate: (error) => pending.shift().reject(error),
     rejectPoll: (error) => pending.shift().reject(error),
     resolvePoll: (payload) => pending.shift().resolve(payload),
+    resolvePath(pathname, payload) {
+      const item = requests.find((request) => request.pathname === pathname && !request.settled);
+      assert.ok(item, `missing pending request for ${pathname}`);
+      item.settled = true;
+      item.wait.resolve(payload);
+    },
     runNextTimer() {
       const timer = timers.find((item) => !item.cancelled && !item.ran);
       if (!timer) return false;
@@ -186,11 +192,49 @@ test('URL return recovery removes only recharge_order and loads its detail', asy
   );
   assert.equal(ui.view().visible, true);
   assert.equal(ui.requests[0].pathname, '/recharge/orders/S-paid');
+  assert.equal(ui.requests[1].pathname, '/recharge/orders');
   assert.deepEqual(replaced, ['/sms-lab/?campaign=fall#wallet']);
-  ui.resolvePoll({ order: paidOrder('S-paid', 'credited'), wallet_balance: 5 });
+  const order = paidOrder('S-paid', 'credited');
+  ui.resolvePoll({ order, wallet_balance: 5 });
+  ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
   await recovering;
   assert.equal(ui.successCount(), 1);
   assert.equal(ui.opens.length, 2);
+});
+
+test('a paid return renders the order in recent recharges on its first open', async () => {
+  const ui = setupRechargeHarness();
+  ui.controller.close();
+  const recovering = ui.controller.recoverFromUrl(
+    'https://www.bnbscheduler.top/sms-lab/?recharge_order=S-first-open',
+    { replaceState() {} },
+  );
+  assert.deepEqual(
+    ui.requests.map((request) => request.pathname),
+    ['/recharge/orders/S-first-open', '/recharge/orders'],
+  );
+  const order = paidOrder('S-first-open', 'credited');
+  ui.resolvePath('/recharge/orders/S-first-open', { order, wallet_balance: 5 });
+  ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
+  await recovering;
+  assert.deepEqual(ui.view().orders.map((item) => item.id), ['S-first-open']);
+});
+
+test('late recent-order responses cannot update a closed modal or a new account', async () => {
+  for (const invalidate of [
+    (ui) => ui.controller.close(),
+    (ui) => ui.controller.setAccount('bob'),
+  ]) {
+    const ui = setupRechargeHarness();
+    const loading = ui.controller.loadRecent();
+    invalidate(ui);
+    ui.resolvePath('/recharge/orders', {
+      orders: [paidOrder('S-stale', 'credited')], wallet_balance: 5,
+    });
+    await loading;
+    assert.equal(ui.view().orders.length, 0);
+    assert.equal(ui.walletText(), undefined);
+  }
 });
 
 test('URL return recovery keeps the modal usable when detail is temporarily unavailable', async () => {
@@ -303,7 +347,9 @@ test('return parameter remains until login and is then recovered automatically',
   ui.controller.setAccount('alice');
   assert.deepEqual(replaced, ['/sms-lab/?campaign=fall#wallet']);
   assert.equal(ui.requests[0].pathname, '/recharge/orders/S-login');
-  ui.resolvePoll({ order: paidOrder('S-login', 'credited'), wallet_balance: 5 });
+  const order = paidOrder('S-login', 'credited');
+  ui.resolvePoll({ order, wallet_balance: 5 });
+  ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
   await ui.flush();
 });
 
