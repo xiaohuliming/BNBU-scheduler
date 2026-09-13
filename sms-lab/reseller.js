@@ -156,6 +156,11 @@ function createRechargeController(dependencies) {
             if (activeOrderId) return controller.poll(activeOrderId);
             return true;
         },
+        openWithRecent(trigger) {
+            const opening = controller.open(trigger);
+            if (!opening) return Promise.resolve(null);
+            return Promise.all([Promise.resolve(opening), controller.loadRecent()]);
+        },
         close() {
             const wasVisible = view.visible;
             modalEpoch += 1;
@@ -297,7 +302,7 @@ function createRechargeController(dependencies) {
             activeOrderId = orderId;
             parsed.searchParams.delete('recharge_order');
             historyApi.replaceState(null, '', parsed.pathname + parsed.search + parsed.hash);
-            return Promise.resolve(controller.open()).catch(() => null);
+            return controller.openWithRecent().catch(() => null);
         },
     };
     emit();
@@ -728,9 +733,7 @@ const openRecharge = () => {
         openAuth('login');
         return;
     }
-    const opening = recharge.open(document.activeElement);
-    if (opening && typeof opening.catch === 'function') opening.catch(() => {});
-    recharge.loadRecent().catch(() => {});
+    recharge.openWithRecent(document.activeElement).catch(() => {});
 };
 const closeRecharge = () => recharge.close();
 
