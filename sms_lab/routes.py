@@ -10,6 +10,7 @@ import time
 from functools import wraps
 
 from flask import Blueprint, jsonify, request, session
+import sso_bridge
 
 from .client import HeroSMSClient, HeroSMSError
 from .recharge import OmniRechargeClient, OmniRechargeError
@@ -35,7 +36,7 @@ _SERVICE_ALIASES = {
     "fb": ("facebook", "meta"),
     "ig": ("instagram",),
     "ds": ("discord",),
-    "dr": ("chatgpt", "gpt", "open ai"),
+    "dr": ("chatgpt", "gpt", "gpt-4", "open ai", "人工智能"),
     "wx": ("wechat", "we chat"),
 }
 
@@ -359,16 +360,22 @@ def create_sms_lab_blueprint(db_path_getter):
         @_require_user
         def wrapped(user_id, *args, **kwargs):
             try:
-                client = OmniRechargeClient(
-                    os.getenv("OMNICHAT_RECHARGE_API_BASE", "https://chat.bnbscheduler.top"),
-                    request.cookies.get("sso_token"),
-                )
                 conn = _open_db(db_path_getter)
                 try:
-                    if not conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone():
-                        raise OmniRechargeError("请重新登录后继续。", 401, "login_required")
+                    local_user = conn.execute(
+                        "SELECT username FROM users WHERE id = ?", (user_id,),
+                    ).fetchone()
                 finally:
                     conn.close()
+                token = request.cookies.get("sso_token")
+                shared_user = sso_bridge.shared_user_for_token(token)
+                if (local_user is None or shared_user is None
+                        or local_user["username"] != shared_user["username"]):
+                    raise OmniRechargeError("请重新使用同一共享账号登录。", 401, "shared_login_required")
+                client = OmniRechargeClient(
+                    os.getenv("OMNICHAT_RECHARGE_API_BASE", "https://chat.bnbscheduler.top"),
+                    token,
+                )
                 return view(user_id, client, *args, **kwargs)
             except OmniRechargeError as error:
                 return _provider_error_response(error)
@@ -402,6 +409,7 @@ def create_sms_lab_blueprint(db_path_getter):
     def recharge_orders(user_id, client):
         result = client.list_orders()
         result["wallet_balance"] = settle_recharge_orders(user_id, result["orders"])
+        result["orders"] = result["orders"][:10]
         return jsonify(result)
 
     @bp.get("/recharge/orders/<order_id>")

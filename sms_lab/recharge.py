@@ -93,9 +93,9 @@ class OmniRechargeClient:
             if not isinstance(payload, dict):
                 raise OmniRechargeError()
             if response.status_code in (409, 429):
-                message = payload.get("error")
+                message = payload.get("detail", payload.get("error"))
                 code = payload.get("code")
-                if (not isinstance(message, str) or not message or len(message) > 300
+                if (not isinstance(message, str) or not message.strip() or len(message) > 300
                         or self._token in message or any(ord(ch) < 32 for ch in message)):
                     raise OmniRechargeError()
                 if (not isinstance(code, str) or not re.fullmatch(r"[a-z_]{1,80}", code)
@@ -148,10 +148,28 @@ class OmniRechargeClient:
                 "reused": payload["reused"]}
 
     def list_orders(self):
-        payload = self._request("GET", "/orders")
-        if not isinstance(payload.get("orders"), list):
-            raise OmniRechargeError()
-        return {"orders": [_order(order) for order in payload["orders"]]}
+        orders = []
+        cursor = None
+        seen_cursors = set()
+        while True:
+            options = {"params": {"cursor": cursor}} if cursor is not None else {}
+            payload = self._request("GET", "/orders", **options)
+            page = payload.get("orders")
+            if (not isinstance(page, list) or len(page) > 100
+                    or "next_cursor" not in payload):
+                raise OmniRechargeError()
+            next_cursor = payload["next_cursor"]
+            if next_cursor is not None and (
+                type(next_cursor) is not int or not 0 < next_cursor <= 9223372036854775807
+                or not page or next_cursor in seen_cursors
+                or (cursor is not None and next_cursor >= cursor)
+            ):
+                raise OmniRechargeError()
+            orders.extend(_order(order) for order in page)
+            if next_cursor is None:
+                return {"orders": orders}
+            seen_cursors.add(next_cursor)
+            cursor = next_cursor
 
     def get_order(self, order_id):
         if not isinstance(order_id, str) or not ORDER_ID_RE.fullmatch(order_id):
