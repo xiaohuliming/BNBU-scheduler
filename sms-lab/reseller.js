@@ -339,6 +339,7 @@ const state = {
     ordersFingerprint: '',
     orderFilter: 'active',
     pollTimer: null,
+    cancelCountdownTimer: null,
     busy: false,
     authMode: 'login',
     authProvider: 'local',
@@ -391,6 +392,7 @@ const toast = (message) => {
 };
 const setButtonBusy = (button, busy, label) => {
     if (!button.dataset.label) button.dataset.label = button.textContent;
+    button.dataset.busy = String(busy);
     button.disabled = busy;
     button.textContent = busy ? label : button.dataset.label;
 };
@@ -521,6 +523,20 @@ const orderStatusLabel = (status) => ({
     completed: '已完成', cancelled: '已退款', failed: '购买失败', refunded: '已退款',
 })[status] || '处理中';
 
+const updateCancelCountdowns = () => {
+    const now = Date.now();
+    $('activation-list').querySelectorAll('button[data-cancel-at]').forEach((button) => {
+        if (button.dataset.busy === 'true') return;
+        const deadline = Number(button.dataset.cancelAt);
+        const remaining = Number.isFinite(deadline)
+            ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
+        const label = remaining > 0 ? `${remaining} 秒后可取消` : '取消并退款';
+        if (button.textContent !== label) button.textContent = label;
+        button.dataset.label = label;
+        button.disabled = remaining > 0;
+    });
+};
+
 const renderOrders = () => {
     const activeCount = state.orders.filter((order) => ACTIVE_STATUSES.has(order.status)).length;
     $('activation-count').textContent = activeCount;
@@ -544,9 +560,8 @@ const renderOrders = () => {
     $('activation-list').innerHTML = visible.map((order) => {
         const otp = order.otpList?.[order.otpList.length - 1];
         const createdAt = new Date(order.createdAt || 0).getTime();
-        const cancelWait = Number.isFinite(createdAt) && createdAt > 0
-            ? Math.max(0, Math.ceil((createdAt + 120000 - Date.now()) / 1000))
-            : 0;
+        const cancelAt = Number.isFinite(createdAt) && createdAt > 0 ? createdAt + 120000 : 0;
+        const cancelWait = Math.max(0, Math.ceil((cancelAt - Date.now()) / 1000));
         return `<article class="activation-card" data-id="${order.id}">
             <div class="card-head">
                 <div class="order-service">${logoMarkup(order.service, 'order-logo')}<div><strong>${escapeHtml(order.service.name)}</strong><span>${escapeHtml(order.country.name)} · ${Number(order.sale_price).toFixed(4)} USD</span></div></div>
@@ -560,7 +575,7 @@ const renderOrders = () => {
                 ${otp?.smsCode ? `<button class="btn btn-small" type="button" data-action="copy-code" data-value="${escapeHtml(otp.smsCode)}">复制验证码</button>` : ''}
                 ${order.can_finish ? '<button class="btn btn-small" type="button" data-action="finish">完成</button>' : ''}
                 ${order.can_replace ? '<button class="btn btn-small" type="button" data-action="replace">换号</button>' : ''}
-                ${order.can_cancel ? `<button class="btn btn-small btn-danger" type="button" data-action="cancel" ${cancelWait ? 'disabled' : ''}>${cancelWait ? cancelWait + ' 秒后可取消' : '取消并退款'}</button>` : ''}
+                ${order.can_cancel ? `<button class="btn btn-small btn-danger" type="button" data-action="cancel" data-cancel-at="${cancelAt}" ${cancelWait ? 'disabled' : ''}>${cancelWait ? cancelWait + ' 秒后可取消' : '取消并退款'}</button>` : ''}
             </div>
         </article>`;
     }).join('');
@@ -594,6 +609,11 @@ const loadOrders = async (announce = false) => {
 
 const startPolling = () => {
     if (state.pollTimer) window.clearInterval(state.pollTimer);
+    if (state.cancelCountdownTimer) window.clearInterval(state.cancelCountdownTimer);
+    updateCancelCountdowns();
+    state.cancelCountdownTimer = window.setInterval(() => {
+        if (!document.hidden) updateCancelCountdowns();
+    }, 1000);
     state.pollTimer = window.setInterval(() => {
         if (document.hidden || !state.orders.some((order) => ACTIVE_STATUSES.has(order.status))) return;
         loadOrders(false);
@@ -867,6 +887,9 @@ document.querySelectorAll('[data-order-filter]').forEach((button) => {
     });
 });
 $('refresh-button').addEventListener('click', () => loadOrders(true));
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) updateCancelCountdowns();
+});
 $('activation-list').addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
     const card = event.target.closest('[data-id]');
@@ -886,6 +909,7 @@ $('activation-list').addEventListener('click', async (event) => {
         showMessage($('activation-status'), error.message, 'error');
     } finally {
         setButtonBusy(button, false, '');
+        updateCancelCountdowns();
     }
 });
 
