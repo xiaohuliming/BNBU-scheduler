@@ -46,6 +46,7 @@ function setupRechargeHarness() {
   const views = [];
   const opens = [];
   const closes = [];
+  const lifecycle = [];
   let nextId = 1;
   let nextTimerId = 1;
   const controller = createRechargeController({
@@ -74,14 +75,14 @@ function setupRechargeHarness() {
     onCheckout: (url) => checkouts.push(url),
     onWallet: (balance) => wallets.push(Number(balance).toFixed(4)),
     onSuccess: (order) => successes.push(order.id),
-    onView: (view) => views.push(view),
-    onOpen: (trigger) => opens.push(trigger),
+    onView: (view) => { views.push(view); lifecycle.push(`view:${view.visible}`); },
+    onOpen: (trigger) => { opens.push(trigger); lifecycle.push('open'); },
     onClose: () => closes.push(true),
   });
   controller.setAccount('alice');
   controller.open();
   return {
-    controller, requests, pending, storageData, checkouts, successes, wallets, timers, views, opens, closes,
+    controller, requests, pending, storageData, checkouts, successes, wallets, timers, views, opens, closes, lifecycle,
     create: (amount) => controller.create(amount),
     poll: (id) => controller.poll(id),
     resolveCreate: (payload) => pending.shift().resolve(payload),
@@ -111,6 +112,14 @@ test('double submit creates only one recharge order', async () => {
   ui.resolveCreate({ order: paidOrder('S-one'), checkout_url: checkout, reused: false });
   await Promise.all([first, second]);
   assert.deepEqual(ui.checkouts, [checkout]);
+});
+
+test('ordinary open renders the visible modal before running focus setup', () => {
+  const ui = setupRechargeHarness();
+  ui.controller.close();
+  ui.lifecycle.length = 0;
+  ui.controller.open('header-recharge');
+  assert.deepEqual(ui.lifecycle, ['view:true', 'open']);
 });
 
 test('a paid order refreshes the SMS wallet once', async () => {
@@ -334,6 +343,7 @@ class FakeClassList {
   constructor() { this.values = new Set(); }
   add(...items) { items.forEach((item) => this.values.add(item)); }
   remove(...items) { items.forEach((item) => this.values.delete(item)); }
+  contains(item) { return this.values.has(item); }
   toggle(item, force) {
     const enabled = force === undefined ? !this.values.has(item) : force;
     if (enabled) this.values.add(item); else this.values.delete(item);
@@ -348,10 +358,17 @@ test('the real page initializes and URL recovery uses the modal focus lifecycle'
   const ids = [...html.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   const listeners = new Map();
   const documentState = { activeElement: null, hidden: false, referrer: '' };
+  const canReceiveFocus = (element) => {
+    for (let current = element; current; current = current.parentElement) {
+      if (current.classList?.contains('hidden')) return false;
+    }
+    return true;
+  };
   const elements = new Map(ids.map((id) => {
     const element = {
       id, dataset: {}, classList: new FakeClassList(), className: '', textContent: '', innerHTML: '',
-      value: '', disabled: false, focus() { documentState.activeElement = this; },
+      value: '', disabled: false, parentElement: null,
+      focus() { if (canReceiveFocus(this)) documentState.activeElement = this; },
       addEventListener(type, callback) { listeners.set(`${id}:${type}`, callback); },
       setAttribute() {}, removeAttribute() {}, closest() { return null; }, contains() { return false; },
       querySelectorAll() { return []; },
@@ -360,8 +377,11 @@ test('the real page initializes and URL recovery uses the modal focus lifecycle'
   }));
   const packageButtons = [1, 5, 10].map((value) => ({
     dataset: { rechargePackage: String(value) }, classList: new FakeClassList(), disabled: false,
-    setAttribute() {}, focus() { documentState.activeElement = this; },
+    parentElement: elements.get('recharge-modal'), setAttribute() {},
+    focus() { if (canReceiveFocus(this)) documentState.activeElement = this; },
   }));
+  elements.get('recharge-close').parentElement = elements.get('recharge-modal');
+  elements.get('recharge-confirm').parentElement = elements.get('recharge-modal');
   const filterButtons = ['active', 'all'].map((value) => ({
     dataset: { orderFilter: value }, classList: new FakeClassList(), addEventListener() {}, setAttribute() {},
   }));
