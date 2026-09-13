@@ -3,6 +3,8 @@
 import sqlite3
 from decimal import Decimal, InvalidOperation, ROUND_UP
 
+from .recharge import OmniRechargeError, validate_paid_recharge
+
 
 PRICE_SCALE = 10_000
 ACTIVE_ORDER_STATUSES = ("purchasing", "active", "code_received")
@@ -91,3 +93,38 @@ def units_to_amount(units):
 def sale_units_for_cost(cost_units, markup_percent):
     numerator = int(cost_units) * (100 + int(markup_percent))
     return (numerator + 99) // 100
+
+
+def settle_paid_sms_recharge(conn, user_id: int, order: dict) -> tuple[bool, int]:
+    """Atomically claim one upstream payment and credit its local wallet once."""
+    validate_paid_recharge(order)
+    reference = f"online_recharge:{order['id']}"
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        existing = conn.execute(
+            "SELECT user_id FROM sms_wallet_ledger WHERE reference = ?", (reference,)
+        ).fetchone()
+        if existing is not None and existing[0] != user_id:
+            raise OmniRechargeError("此充值订单已归属其他账号。", 409, "recharge_order_conflict")
+        user = conn.execute(
+            "SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        if user is None:
+            raise OmniRechargeError("请重新登录后继续。", 401, "login_required")
+        balance = user[0]
+        if existing is not None:
+            conn.commit()
+            return False, balance
+        balance += order["wallet_units"]
+        conn.execute("UPDATE users SET sms_wallet_units = ? WHERE id = ?", (balance, user_id))
+        conn.execute(
+            "INSERT INTO sms_wallet_ledger "
+            "(user_id, amount_units, balance_after_units, kind, reference) "
+            "VALUES (?, ?, ?, 'online_recharge', ?)",
+            (user_id, order["wallet_units"], balance, reference),
+        )
+        conn.commit()
+        return True, balance
+    except Exception:
+        conn.rollback()
+        raise

@@ -12,7 +12,11 @@ from functools import wraps
 from flask import Blueprint, jsonify, request, session
 
 from .client import HeroSMSClient, HeroSMSError
-from .storage import ACTIVE_ORDER_STATUSES, amount_to_units, sale_units_for_cost, units_to_amount
+from .recharge import OmniRechargeClient, OmniRechargeError
+from .storage import (
+    ACTIVE_ORDER_STATUSES, amount_to_units, sale_units_for_cost,
+    settle_paid_sms_recharge, units_to_amount,
+)
 
 
 _SERVICE_RE = re.compile(r"^[a-z0-9]{2,4}$")
@@ -349,6 +353,66 @@ def _admin_token_valid(value):
 
 def create_sms_lab_blueprint(db_path_getter):
     bp = Blueprint("sms_lab", __name__, url_prefix="/api/sms-lab")
+
+    def recharge_guard(view):
+        @wraps(view)
+        @_require_user
+        def wrapped(user_id, *args, **kwargs):
+            try:
+                client = OmniRechargeClient(
+                    os.getenv("OMNICHAT_RECHARGE_API_BASE", "https://chat.bnbscheduler.top"),
+                    request.cookies.get("sso_token"),
+                )
+                conn = _open_db(db_path_getter)
+                try:
+                    if not conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone():
+                        raise OmniRechargeError("请重新登录后继续。", 401, "login_required")
+                finally:
+                    conn.close()
+                return view(user_id, client, *args, **kwargs)
+            except OmniRechargeError as error:
+                return _provider_error_response(error)
+        return wrapped
+
+    def settle_recharge_orders(user_id, orders):
+        conn = _open_db(db_path_getter)
+        try:
+            for order in orders:
+                if order["status"] == "credited":
+                    settle_paid_sms_recharge(conn, user_id, order)
+            balance = conn.execute(
+                "SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)
+            ).fetchone()[0]
+            return units_to_amount(balance)
+        finally:
+            conn.close()
+
+    @bp.get("/recharge/config")
+    @recharge_guard
+    def recharge_config(user_id, client):
+        return jsonify(client.config())
+
+    @bp.post("/recharge/orders")
+    @recharge_guard
+    def recharge_create(user_id, client):
+        payload = request.get_json(silent=True)
+        payload = payload if isinstance(payload, dict) else {}
+        result = client.create_order(payload.get("package_usd"), payload.get("request_id"))
+        return jsonify(result), 200 if result["reused"] else 201
+
+    @bp.get("/recharge/orders")
+    @recharge_guard
+    def recharge_orders(user_id, client):
+        result = client.list_orders()
+        result["wallet_balance"] = settle_recharge_orders(user_id, result["orders"])
+        return jsonify(result)
+
+    @bp.get("/recharge/orders/<order_id>")
+    @recharge_guard
+    def recharge_order(user_id, client, order_id):
+        result = client.get_order(order_id)
+        result["wallet_balance"] = settle_recharge_orders(user_id, [result["order"]])
+        return jsonify(result)
 
     @bp.get("/status")
     def status():

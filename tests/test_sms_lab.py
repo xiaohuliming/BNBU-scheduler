@@ -324,6 +324,246 @@ class SMSMoneyTests(unittest.TestCase):
         self.assertEqual(sale_units_for_cost(1, 50), 2)
 
 
+def recharge_order(**changes):
+    order = {
+        'id': 'S-paid-1', 'app': 'sms_market', 'amount_fen': 3500,
+        'wallet_units': 50000, 'wallet_amount': '5.0000', 'status': 'credited',
+        'channel': 'xorpay', 'created_at': '2026-09-13T12:00:00Z',
+        'finished_at': '2026-09-13T12:01:00Z', 'request_id': 'recharge_test_001',
+    }
+    order.update(changes)
+    return order
+
+
+class SMSRechargeTests(unittest.TestCase):
+    login = SMSLabRouteTest.login
+    wallet_balance = SMSLabRouteTest.wallet_balance
+
+    def setUp(self):
+        SMSLabRouteTest.setUp(self)
+        self.login()
+        self.client.set_cookie('sso_token', 'shared-secret-never-echo')
+        self.http_patch = mock.patch('requests.Session.request')
+        self.http = self.http_patch.start()
+        self.addCleanup(self.http_patch.stop)
+
+    def upstream(self, payload, status=200):
+        response = mock.Mock(status_code=status)
+        response.json.return_value = payload
+        self.http.return_value = response
+
+    def settle(self, order, user_id=1):
+        from sms_lab.storage import settle_paid_sms_recharge
+        with sqlite3.connect(self.db_path) as conn:
+            return settle_paid_sms_recharge(conn, user_id, order)
+
+    def test_paid_recharge_settles_wallet_exactly_once(self):
+        self.assertEqual(self.settle(recharge_order()), (True, 50000))
+        self.assertEqual(self.settle(recharge_order()), (False, 50000))
+        self.assertEqual(self.wallet_balance(), 50000)
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                'SELECT kind, reference, amount_units FROM sms_wallet_ledger'
+            ).fetchall()
+        self.assertEqual(rows, [('online_recharge', 'online_recharge:S-paid-1', 50000)])
+
+    def test_settlement_replay_returns_current_wallet_after_spend(self):
+        self.settle(recharge_order())
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute('UPDATE users SET sms_wallet_units = 47000 WHERE id = 1')
+        self.assertEqual(self.settle(recharge_order()), (False, 47000))
+
+    def test_concurrent_paid_order_replays_credit_exactly_once(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        start = Barrier(4)
+
+        def settle_at_once():
+            start.wait(timeout=5)
+            return self.settle(recharge_order())
+
+        with ThreadPoolExecutor(max_workers=4) as workers:
+            results = list(workers.map(lambda _: settle_at_once(), range(4)))
+        self.assertEqual(sum(applied for applied, _ in results), 1)
+        self.assertEqual([balance for _, balance in results], [50000] * 4)
+        self.assertEqual(self.wallet_balance(), 50000)
+
+    def test_settlement_rejects_order_claimed_by_another_local_user(self):
+        from sms_lab.recharge import OmniRechargeError
+        self.settle(recharge_order())
+        with self.assertRaises(OmniRechargeError) as raised:
+            self.settle(recharge_order(), user_id=2)
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(self.wallet_balance(), 50000)
+        self.assertEqual(self.wallet_balance('bob'), 0)
+
+    def test_settlement_rejects_invalid_money_order_and_app_without_writes(self):
+        from sms_lab.recharge import OmniRechargeError
+        for changes in (
+            {'app': 'omnichat'}, {'status': 'pending'}, {'id': '../wrong'},
+            {'id': ''}, {'id': 'S\n'}, {'wallet_units': True},
+            {'wallet_units': '50000'}, {'wallet_units': 1.5},
+            {'wallet_units': 0}, {'wallet_units': -1}, {'wallet_units': 100001},
+        ):
+            with self.subTest(changes=changes), self.assertRaises(OmniRechargeError):
+                self.settle(recharge_order(**changes))
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_settlement_rolls_back_balance_if_ledger_insert_fails(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("CREATE TRIGGER fail_ledger BEFORE INSERT ON sms_wallet_ledger "
+                         "BEGIN SELECT RAISE(ABORT, 'ledger unavailable'); END")
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.settle(recharge_order())
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_recharge_requires_local_login(self):
+        with self.client.session_transaction() as browser_session:
+            browser_session.clear()
+        response = self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()['code'], 'login_required')
+        self.http.assert_not_called()
+
+    def test_recharge_requires_cookie_even_when_body_contains_token(self):
+        self.client.delete_cookie('sso_token')
+        response = self.client.post('/api/sms-lab/recharge/orders', json={
+            'package_usd': 5, 'request_id': 'recharge_test_001',
+            'sso_token': 'body-secret',
+        })
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()['code'], 'shared_login_required')
+        self.http.assert_not_called()
+
+    def test_recharge_create_forwards_only_fixed_package_and_request_id(self):
+        self.upstream({'order': recharge_order(status='pending', finished_at=None),
+                       'pay_url': '/api/recharge/sms-market/orders/S-paid-1/checkout', 'reused': False}, 201)
+        response = self.client.post('/api/sms-lab/recharge/orders', json={
+            'package_usd': 5, 'request_id': 'recharge_test_001',
+            'user_id': 2, 'username': 'bob', 'sso_token': 'body-secret',
+            'return_url': 'https://evil.example/',
+        })
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()['checkout_url'], 'https://chat.bnbscheduler.top/api/recharge/sms-market/orders/S-paid-1/checkout')
+        self.assertEqual(self.http.call_args.args[:2], ('POST', 'https://chat.bnbscheduler.top/api/recharge/sms-market/orders'))
+        sent = self.http.call_args.kwargs
+        self.assertEqual(sent['json'], {'package_usd': 5, 'request_id': 'recharge_test_001'})
+        self.assertEqual(sent['headers']['Authorization'], 'Bearer shared-secret-never-echo')
+        self.assertEqual(sent['timeout'], 10)
+        self.assertFalse(sent['allow_redirects'])
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_recharge_create_rejects_invalid_package_and_request_id(self):
+        for package, request_id in ((2, 'recharge_test_001'), (True, 'recharge_test_001'),
+                                    (5, '../wrong'), (5, ''), (5, None)):
+            with self.subTest(package=package, request_id=request_id):
+                response = self.client.post('/api/sms-lab/recharge/orders', json={
+                    'package_usd': package, 'request_id': request_id,
+                })
+                self.assertEqual(response.status_code, 400)
+        self.http.assert_not_called()
+
+    def test_recharge_list_and_detail_settle_paid_orders_and_replay(self):
+        self.upstream({'orders': [recharge_order(), recharge_order(id='S-pending-2', status='pending', finished_at=None)]})
+        first = self.client.get('/api/sms-lab/recharge/orders?user_id=2&username=bob')
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.get_json()['wallet_balance'], 5.0)
+        self.assertEqual(self.http.call_args.args[:2], ('GET', 'https://chat.bnbscheduler.top/api/recharge/sms-market/orders'))
+        self.assertNotIn('params', self.http.call_args.kwargs)
+        self.upstream({'order': recharge_order()})
+        second = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.get_json()['wallet_balance'], 5.0)
+        self.assertEqual(self.wallet_balance(), 50000)
+        self.assertEqual(self.wallet_balance('bob'), 0)
+
+    def test_recharge_detail_cannot_read_another_upstream_users_order(self):
+        self.upstream({'error': '订单不存在'}, 404)
+        response = self.client.get('/api/sms-lab/recharge/orders/S-other-user')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json()['code'], 'order_not_found')
+        self.assertEqual(self.http.call_args.args[:2], ('GET', 'https://chat.bnbscheduler.top/api/recharge/sms-market/orders/S-other-user'))
+        self.assertEqual(self.http.call_args.kwargs['headers']['Authorization'], 'Bearer shared-secret-never-echo')
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_recharge_detail_conflicts_on_other_local_users_settled_order(self):
+        self.settle(recharge_order(), user_id=2)
+        self.upstream({'order': recharge_order()})
+        response = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.wallet_balance(), 0)
+        self.assertEqual(self.wallet_balance('bob'), 50000)
+
+    def test_upstream_timeout_and_malformed_orders_fail_without_secret_or_credit(self):
+        import requests
+        self.http.side_effect = requests.Timeout('shared-secret-never-echo')
+        response = self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()['code'], 'recharge_service_unavailable')
+        self.assertNotIn('shared-secret', response.get_data(as_text=True))
+        self.http.side_effect = None
+        for payload in ([], {'orders': 'wrong'}, {'orders': [{'id': 'S-incomplete'}]},
+                        {'orders': [recharge_order(), recharge_order(id='S-bad', app='omnichat')]},
+                        {'orders': [recharge_order(wallet_amount='1.0000')]},
+                        {'orders': [recharge_order(wallet_units=True)]}):
+            self.upstream(payload)
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, 503)
+        self.http.return_value.json.side_effect = ValueError('shared-secret-never-echo')
+        response = self.client.get('/api/sms-lab/recharge/orders')
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('shared-secret', response.get_data(as_text=True))
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_upstream_auth_conflict_and_rate_limit_errors_are_safe(self):
+        for status, message, code in (
+            (401, 'expired', 'shared_login_required'),
+            (409, '订单请求冲突', 'request_conflict'),
+            (429, '请求过于频繁', 'rate_limited'),
+        ):
+            self.upstream({'error': message, 'code': code}, status)
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, status)
+            self.assertEqual(response.get_json()['code'], code)
+            if status != 401:
+                self.assertEqual(response.get_json()['error'], message)
+
+    def test_recharge_rejects_external_checkout_and_mismatched_detail_id(self):
+        self.upstream({'order': recharge_order(status='pending'),
+                       'pay_url': 'https://evil.example/', 'reused': False}, 201)
+        response = self.client.post('/api/sms-lab/recharge/orders', json={
+            'package_usd': 5, 'request_id': 'recharge_test_001',
+        })
+        self.assertEqual(response.status_code, 503)
+        self.upstream({'order': recharge_order(id='S-wrong')})
+        response = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(self.wallet_balance(), 0)
+
+    def test_recharge_config_uses_configured_base_and_bearer_cookie(self):
+        payload = {'usd_cny': '6.80', 'packages': [
+            {'usd_units': 1, 'usd': '1.00', 'fen': 680},
+            {'usd_units': 5, 'usd': '5.00', 'fen': 3400},
+            {'usd_units': 10, 'usd': '10.00', 'fen': 6800},
+        ]}
+        self.upstream(payload)
+        with mock.patch.dict(os.environ, {'OMNICHAT_RECHARGE_API_BASE': 'https://payments.example.test'}):
+            response = self.client.get('/api/sms-lab/recharge/config')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), payload)
+        self.assertEqual(self.http.call_args.args[:2], ('GET', 'https://payments.example.test/api/recharge/sms-market/config'))
+        self.assertEqual(self.http.call_args.kwargs['headers']['Authorization'], 'Bearer shared-secret-never-echo')
+
+
+class OmniRechargeClientTests(unittest.TestCase):
+    def test_client_requires_https_outside_tests(self):
+        from sms_lab.recharge import OmniRechargeClient, OmniRechargeError
+        for base in ('http://localhost:3000', 'file:///tmp/recharge',
+                     'https://user:password@example.com', 'https://example.com/?token=x'):
+            with self.subTest(base=base), self.assertRaises(OmniRechargeError):
+                OmniRechargeClient(base, 'shared-secret')
+
+
 class SMSMarketFrontendTests(unittest.TestCase):
     def test_auth_dialog_offers_maxcourse_and_ispace_login(self):
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
