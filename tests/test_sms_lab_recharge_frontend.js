@@ -204,12 +204,36 @@ test('creating any terminal order never navigates back to checkout', async () =>
   for (const status of ['rejected', 'credited', 'cancelled', 'expired', 'failed']) {
     const ui = setupRechargeHarness();
     const creating = ui.create(5);
-    ui.resolveCreate({ order: paidOrder('S-one', status), checkout_url: checkout, reused: true });
+    const order = paidOrder('S-one', status);
+    ui.resolveCreate({ order, checkout_url: checkout, reused: true });
+    if (status === 'credited') {
+      await ui.flush();
+      ui.resolvePath('/recharge/orders/S-one', { order, wallet_balance: 5 });
+    }
     await creating;
     assert.deepEqual(ui.checkouts, [], status);
     assert.equal(ui.view().status, status);
     assert.equal(ui.storageData.size, 0);
   }
+});
+
+test('a reused credited create settles through detail before reporting success', async () => {
+  const ui = setupRechargeHarness();
+  const order = paidOrder('S-reused-paid', 'credited');
+  const creating = ui.create(5);
+  ui.resolveCreate({ order, checkout_url: checkout, reused: true });
+  await ui.flush();
+  assert.deepEqual(
+    ui.requests.map((request) => request.pathname),
+    ['/recharge/orders', '/recharge/orders/S-reused-paid'],
+  );
+  assert.equal(ui.walletText(), undefined);
+  assert.equal(ui.successCount(), 0);
+  ui.resolvePath('/recharge/orders/S-reused-paid', { order, wallet_balance: 5 });
+  await creating;
+  assert.equal(ui.walletText(), '5.0000');
+  assert.equal(ui.successCount(), 1);
+  assert.deepEqual(ui.checkouts, []);
 });
 
 test('URL return recovery removes only recharge_order and loads its detail', async () => {
