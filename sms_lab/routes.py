@@ -24,6 +24,17 @@ _POPULAR_SERVICE_CODES = (
     "tg", "wa", "go", "fb", "ig", "lf", "tw", "ds", "dr", "am", "wx", "tn",
 )
 
+_SERVICE_ALIASES = {
+    "tg": ("telegram",),
+    "wa": ("whatsapp", "whats app"),
+    "go": ("google", "gmail"),
+    "fb": ("facebook", "meta"),
+    "ig": ("instagram",),
+    "ds": ("discord",),
+    "dr": ("chatgpt", "gpt", "open ai"),
+    "wx": ("wechat", "we chat"),
+}
+
 # HeroSMS forbids disposable-number use in banking and paid subscriptions. A
 # public reseller needs a stricter default than the private operator console.
 _BLOCKED_SERVICE_TERMS = (
@@ -148,7 +159,12 @@ def _service_catalog():
         name = str(item.get("name") or code.upper()).strip()
         if not _SERVICE_RE.fullmatch(code) or not _service_resellable(code, name):
             continue
-        result.append({"code": code, "name": name, "logo_url": _logo_url(code)})
+        result.append({
+            "code": code,
+            "name": name,
+            "aliases": list(_SERVICE_ALIASES.get(code, ())),
+            "logo_url": _logo_url(code),
+        })
     popular = {code: index for index, code in enumerate(_POPULAR_SERVICE_CODES)}
     result.sort(key=lambda item: (
         item["code"] not in popular,

@@ -23,6 +23,7 @@ class FakeHeroSMS:
     def get_services(self, country=None):
         return [
             {"code": "tg", "name": "Telegram"},
+            {"code": "dr", "name": "OpenAI"},
             {"code": "md", "name": "Banks"},
             {"code": "zz", "name": "QA Demo"},
         ]
@@ -105,7 +106,7 @@ class FakeHeroSMS:
         }]}
 
 
-class SMSResellerRoutesTests(unittest.TestCase):
+class SMSLabRouteTest(unittest.TestCase):
     def setUp(self):
         routes._catalog_cache.clear()
         self.tempdir = tempfile.TemporaryDirectory()
@@ -199,6 +200,11 @@ class SMSResellerRoutesTests(unittest.TestCase):
             services['tg']['logo_url'],
             'https://cdn.hero-sms.com/assets/img/service/tg0.webp',
         )
+
+    def test_openai_service_includes_search_aliases(self):
+        services = self.client.get('/api/sms-lab/services').get_json()['services']
+        openai = next(item for item in services if item['code'] == 'dr')
+        self.assertTrue({'chatgpt', 'gpt', 'open ai'}.issubset(set(openai['aliases'])))
 
     def test_country_prices_are_marked_up_50_percent_without_cost_leak(self):
         response = self.client.get('/api/sms-lab/countries?service=tg')

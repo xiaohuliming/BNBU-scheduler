@@ -89,10 +89,8 @@ const loadAccount = async () => {
 };
 
 const renderServices = () => {
-    const query = $('service-search').value.trim().toLowerCase();
-    const matches = state.services.filter((service) =>
-        !query || service.code.includes(query) || service.name.toLowerCase().includes(query)
-    );
+    const query = $('service-search').value;
+    const matches = state.services.filter((service) => SMSServiceSearch.matches(service, query));
     const visible = matches.slice(0, SERVICE_RENDER_LIMIT);
     if (!visible.length) {
         $('service-list').innerHTML = '<div class="step-placeholder">没有匹配的服务，换个关键词试试</div>';
