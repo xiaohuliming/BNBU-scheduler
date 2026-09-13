@@ -318,6 +318,24 @@ class SMSMoneyTests(unittest.TestCase):
         self.assertEqual(sale_units_for_cost(1, 50), 2)
 
 
+class SMSMarketFrontendTests(unittest.TestCase):
+    def test_auth_dialog_offers_maxcourse_and_ispace_login(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, 'sms-lab', 'index.html'), encoding='utf-8') as file:
+            html = file.read()
+        with open(os.path.join(root, 'sms-lab', 'reseller.js'), encoding='utf-8') as file:
+            script = file.read()
+
+        self.assertIn('id="auth-local-tab"', html)
+        self.assertIn('id="auth-ispace-tab"', html)
+        self.assertIn('MAXCOURSE 账号', html)
+        self.assertIn('iSpace 登录', html)
+        self.assertIn('id="auth-provider-hint"', html)
+        self.assertIn("'/api/login/ispace'", script)
+        self.assertIn("authProvider: 'local'", script)
+        self.assertIn('iSpace 登录成功，DDL 已同步', script)
+
+
 class HeroSMSClientTests(unittest.TestCase):
     def test_country_catalog_accepts_current_keyed_object_shape(self):
         response = mock.Mock(status_code=200)
