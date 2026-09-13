@@ -223,6 +223,9 @@ function createRechargeController(dependencies) {
                 if (terminalStatuses.has(payload.order.status)) {
                     stopPolling();
                     emit();
+                    if (payload.order.status === 'credited') {
+                        return controller.poll(payload.order.id).then(() => payload);
+                    }
                 } else if (trustedCheckout(payload.checkout_url)) {
                     onCheckout(payload.checkout_url);
                 } else {
