@@ -1,7 +1,51 @@
 'use strict';
 
+function createModalFocusManager({ modal, backgrounds, document: documentApi }) {
+    let active = false;
+    let returnFocus = null;
+    const focusableElements = () => Array.from(modal.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => !element.disabled);
+    return {
+        open(trigger) {
+            if (!active) returnFocus = trigger || documentApi.activeElement;
+            active = true;
+            backgrounds.forEach((element) => { if (element) element.inert = true; });
+            const first = focusableElements()[0];
+            if (first) first.focus();
+        },
+        close() {
+            if (!active) return;
+            active = false;
+            backgrounds.forEach((element) => { if (element) element.inert = false; });
+            if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus();
+            returnFocus = null;
+        },
+        handleKeydown(event) {
+            if (!active || event.key !== 'Tab') return false;
+            const focusable = focusableElements();
+            if (!focusable.length) return false;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && documentApi.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+                return true;
+            }
+            if (!event.shiftKey && (documentApi.activeElement === last
+                    || !modal.contains(documentApi.activeElement))) {
+                event.preventDefault();
+                first.focus();
+                return true;
+            }
+            return false;
+        },
+    };
+}
+
 function createRechargeController(dependencies) {
     const terminalStatuses = new Set(['credited', 'failed', 'cancelled', 'expired']);
+    const retryDelays = [1000, 2500, 5000];
     const request = dependencies.request;
     const storage = dependencies.storage;
     const makeRequestId = dependencies.makeRequestId;
@@ -11,6 +55,8 @@ function createRechargeController(dependencies) {
     const onWallet = dependencies.onWallet || (() => {});
     const onSuccess = dependencies.onSuccess || (() => {});
     const onView = dependencies.onView || (() => {});
+    const onOpen = dependencies.onOpen || (() => {});
+    const onClose = dependencies.onClose || (() => {});
     const view = {
         visible: false,
         busy: false,
@@ -25,6 +71,8 @@ function createRechargeController(dependencies) {
     let modalEpoch = 0;
     let createPromise = null;
     let pollTimer = null;
+    let activeOrderId = null;
+    let pendingRecovery = null;
     const successfulOrders = new Set();
 
     const snapshot = () => ({ ...view, orders: view.orders.slice() });
@@ -58,6 +106,8 @@ function createRechargeController(dependencies) {
         view.order = order;
         view.status = order.status;
         view.message = '';
+        activeOrderId = terminalStatuses.has(order.status) ? null : order.id;
+        if (!activeOrderId) stopPolling();
         if (payload.wallet_balance !== undefined) onWallet(payload.wallet_balance);
         clearRequestId(order);
         if (order.status === 'credited' && !successfulOrders.has(order.id)) {
@@ -75,30 +125,44 @@ function createRechargeController(dependencies) {
             const normalized = typeof nextUsername === 'string' && nextUsername.trim()
                 ? nextUsername.trim() : null;
             if (normalized === username) return;
+            const wasVisible = view.visible;
             username = normalized;
             accountEpoch += 1;
             modalEpoch += 1;
             stopPolling();
             createPromise = null;
+            activeOrderId = null;
             view.visible = false;
             view.busy = false;
             view.status = null;
             view.message = '';
             view.order = null;
             view.orders = [];
+            if (wasVisible) onClose();
             emit();
+            if (username && pendingRecovery) {
+                const recovery = pendingRecovery;
+                pendingRecovery = null;
+                controller.recoverFromUrl(recovery.urlValue, recovery.historyApi).catch(() => {});
+            }
         },
-        open() {
+        open(trigger) {
             if (!username) return false;
-            view.visible = true;
+            if (!view.visible) {
+                view.visible = true;
+                onOpen(trigger);
+            }
             view.message = '';
             emit();
+            if (activeOrderId) return controller.poll(activeOrderId);
             return true;
         },
         close() {
+            const wasVisible = view.visible;
             modalEpoch += 1;
             stopPolling();
             view.visible = false;
+            if (wasVisible) onClose();
             emit();
         },
         select(packageUsd) {
@@ -138,6 +202,7 @@ function createRechargeController(dependencies) {
                 if (!isCurrent(account, modal)) return payload;
                 view.order = payload.order;
                 view.status = payload.order.status;
+                activeOrderId = terminalStatuses.has(payload.order.status) ? null : payload.order.id;
                 clearRequestId(payload.order);
                 if (trustedCheckout(payload.checkout_url)) {
                     onCheckout(payload.checkout_url);
@@ -164,11 +229,12 @@ function createRechargeController(dependencies) {
             createPromise = promise;
             return promise;
         },
-        poll(orderId) {
+        poll(orderId, retryAttempt = 0) {
             if (!username || !view.visible || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(orderId)) {
                 return Promise.resolve(null);
             }
             stopPolling();
+            activeOrderId = orderId;
             const account = accountEpoch;
             const modal = modalEpoch;
             return Promise.resolve(request(`/recharge/orders/${encodeURIComponent(orderId)}`)).then((payload) => {
@@ -177,7 +243,7 @@ function createRechargeController(dependencies) {
                 if (!terminalStatuses.has(order.status)) {
                     pollTimer = setTimer(() => {
                         pollTimer = null;
-                        controller.poll(orderId).catch(() => {});
+                        controller.poll(orderId, 0).catch(() => {});
                     }, 2500);
                 }
                 return payload;
@@ -186,6 +252,13 @@ function createRechargeController(dependencies) {
                     view.status = 'error';
                     view.message = error.message || '充值状态读取失败，请稍后重试。';
                     emit();
+                    const recoverable = error.status === undefined || Number(error.status) >= 500;
+                    if (recoverable && retryAttempt < retryDelays.length) {
+                        pollTimer = setTimer(() => {
+                            pollTimer = null;
+                            controller.poll(orderId, retryAttempt + 1).catch(() => {});
+                        }, retryDelays[retryAttempt]);
+                    }
                 }
                 throw error;
             });
@@ -217,10 +290,15 @@ function createRechargeController(dependencies) {
             if (!orderId || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(orderId)) {
                 return Promise.resolve(null);
             }
+            if (!username) {
+                pendingRecovery = { urlValue, historyApi };
+                return Promise.resolve(null);
+            }
+            pendingRecovery = null;
+            activeOrderId = orderId;
             parsed.searchParams.delete('recharge_order');
             historyApi.replaceState(null, '', parsed.pathname + parsed.search + parsed.hash);
-            if (!controller.open()) return Promise.resolve(null);
-            return controller.poll(orderId).catch(() => null);
+            return Promise.resolve(controller.open()).catch(() => null);
         },
     };
     emit();
@@ -390,7 +468,7 @@ const updateCheckout = () => {
         $('purchase-button').textContent = '购买一个号码';
         $('purchase-button').disabled = true;
         $('wallet-hint').textContent = state.account.authenticated ? '余额不足时请联系管理员充值' : '登录后可使用站内钱包购买';
-        $('wallet-recharge-helper').classList.add('hidden');
+        $('wallet-helper-recharge').classList.add('hidden');
         return;
     }
     const price = Number(country.price);
@@ -400,7 +478,7 @@ const updateCheckout = () => {
         $('purchase-button').textContent = '登录后购买';
         $('purchase-button').disabled = false;
         $('wallet-hint').textContent = '登录或注册后继续';
-        $('wallet-recharge-helper').classList.add('hidden');
+        $('wallet-helper-recharge').classList.add('hidden');
         return;
     }
     const balance = Number(state.account.wallet.balance);
@@ -412,7 +490,7 @@ const updateCheckout = () => {
     $('wallet-hint').textContent = enough
         ? `购买后预计剩余 ${(balance - price).toFixed(4)} USD`
         : '余额不足，可在线充值后继续购买';
-    $('wallet-recharge-helper').classList.toggle('hidden', enough);
+    $('wallet-helper-recharge').classList.toggle('hidden', enough);
 };
 
 const orderStatusLabel = (status) => ({
@@ -619,6 +697,12 @@ const renderRecharge = (view) => {
     `).join('') : '<li class="recharge-empty">暂无充值记录</li>';
 };
 
+const rechargeFocus = createModalFocusManager({
+    modal: $('recharge-modal'),
+    backgrounds: [document.querySelector('.app-header'), document.querySelector('main'), document.querySelector('.footer')],
+    document,
+});
+
 recharge = createRechargeController({
     request: (path, options) => api(path, options),
     storage: window.localStorage,
@@ -636,26 +720,20 @@ recharge = createRechargeController({
     },
     onSuccess: () => toast('充值成功，钱包余额已更新'),
     onView: renderRecharge,
+    onOpen: (trigger) => rechargeFocus.open(trigger || $('recharge-button')),
+    onClose: () => rechargeFocus.close(),
 });
 
-let rechargeFocusReturn = null;
 const openRecharge = () => {
     if (!state.account.authenticated) {
         openAuth('login');
         return;
     }
-    rechargeFocusReturn = document.activeElement;
-    recharge.open();
+    const opening = recharge.open(document.activeElement);
+    if (opening && typeof opening.catch === 'function') opening.catch(() => {});
     recharge.loadRecent().catch(() => {});
-    $('recharge-close').focus();
 };
-const closeRecharge = () => {
-    recharge.close();
-    if (rechargeFocusReturn && typeof rechargeFocusReturn.focus === 'function') {
-        rechargeFocusReturn.focus();
-    }
-    rechargeFocusReturn = null;
-};
+const closeRecharge = () => recharge.close();
 
 $('login-button').addEventListener('click', () => openAuth('login'));
 $('recharge-button').addEventListener('click', openRecharge);
@@ -693,8 +771,9 @@ $('purchase-modal').addEventListener('click', (event) => {
     if (event.target === $('purchase-modal')) closePurchaseConfirm();
 });
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !recharge.getState().visible) return;
+    if (!recharge.getState().visible) return;
     if (event.key === 'Escape') closeRecharge();
+    else rechargeFocus.handleKeydown(event);
 });
 $('auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
