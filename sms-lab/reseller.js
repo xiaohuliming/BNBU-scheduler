@@ -44,7 +44,7 @@ function createModalFocusManager({ modal, backgrounds, document: documentApi }) 
 }
 
 function createRechargeController(dependencies) {
-    const terminalStatuses = new Set(['credited', 'failed', 'cancelled', 'expired']);
+    const terminalStatuses = new Set(['credited', 'rejected', 'failed', 'cancelled', 'expired']);
     const retryDelays = [1000, 2500, 5000];
     const request = dependencies.request;
     const storage = dependencies.storage;
@@ -73,6 +73,7 @@ function createRechargeController(dependencies) {
     let pollTimer = null;
     let activeOrderId = null;
     let pendingRecovery = null;
+    let detailRevision = 0;
     const successfulOrders = new Set();
 
     const snapshot = () => ({ ...view, orders: view.orders.slice() });
@@ -103,7 +104,11 @@ function createRechargeController(dependencies) {
     };
     const applyDetail = (payload) => {
         const order = payload.order;
+        detailRevision += 1;
         view.order = order;
+        const existingIndex = view.orders.findIndex((item) => item.id === order.id);
+        if (existingIndex === -1) view.orders.unshift(order);
+        else view.orders[existingIndex] = order;
         view.status = order.status;
         view.message = '';
         activeOrderId = terminalStatuses.has(order.status) ? null : order.id;
@@ -146,20 +151,27 @@ function createRechargeController(dependencies) {
                 controller.recoverFromUrl(recovery.urlValue, recovery.historyApi).catch(() => {});
             }
         },
-        open(trigger) {
+        open(trigger, startPolling = true) {
             if (!username) return false;
             const becomingVisible = !view.visible;
             if (becomingVisible) view.visible = true;
             view.message = '';
             emit();
             if (becomingVisible) onOpen(trigger);
-            if (activeOrderId) return controller.poll(activeOrderId);
+            if (startPolling && activeOrderId) return controller.poll(activeOrderId);
             return true;
         },
         openWithRecent(trigger) {
-            const opening = controller.open(trigger);
+            modalEpoch += 1;
+            stopPolling();
+            const opening = controller.open(trigger, false);
             if (!opening) return Promise.resolve(null);
-            return Promise.all([Promise.resolve(opening), controller.loadRecent()]);
+            const account = accountEpoch;
+            const modal = modalEpoch;
+            return controller.loadRecent().catch(() => null).then(() => {
+                if (isCurrent(account, modal) && activeOrderId) return controller.poll(activeOrderId);
+                return null;
+            });
         },
         close() {
             const wasVisible = view.visible;
@@ -208,7 +220,10 @@ function createRechargeController(dependencies) {
                 view.status = payload.order.status;
                 activeOrderId = terminalStatuses.has(payload.order.status) ? null : payload.order.id;
                 clearRequestId(payload.order);
-                if (trustedCheckout(payload.checkout_url)) {
+                if (terminalStatuses.has(payload.order.status)) {
+                    stopPolling();
+                    emit();
+                } else if (trustedCheckout(payload.checkout_url)) {
                     onCheckout(payload.checkout_url);
                 } else {
                     view.status = 'invalid_checkout';
@@ -271,15 +286,16 @@ function createRechargeController(dependencies) {
             if (!username || !view.visible) return Promise.resolve(null);
             const account = accountEpoch;
             const modal = modalEpoch;
+            const revision = detailRevision;
             return Promise.resolve(request('/recharge/orders')).then((payload) => {
-                if (!isCurrent(account, modal)) return payload;
+                if (!isCurrent(account, modal) || revision !== detailRevision) return payload;
                 view.orders = Array.isArray(payload.orders) ? payload.orders : [];
                 if (payload.wallet_balance !== undefined) onWallet(payload.wallet_balance);
                 view.orders.forEach(clearRequestId);
                 emit();
                 return payload;
             }).catch((error) => {
-                if (isCurrent(account, modal)) {
+                if (isCurrent(account, modal) && revision === detailRevision) {
                     view.status = 'error';
                     view.message = error.message || '充值记录读取失败，请稍后重试。';
                     emit();
@@ -471,8 +487,8 @@ const updateCheckout = () => {
         $('selection-price').textContent = '···';
         $('purchase-button').textContent = '购买一个号码';
         $('purchase-button').disabled = true;
-        $('wallet-hint').textContent = state.account.authenticated ? '余额不足时请联系管理员充值' : '登录后可使用站内钱包购买';
-        $('wallet-helper-recharge').classList.add('hidden');
+        $('wallet-hint').textContent = state.account.authenticated ? '可先在线充值，再选择服务和国家购买号码' : '登录后可使用站内钱包购买';
+        $('wallet-helper-recharge').classList.toggle('hidden', !state.account.authenticated);
         return;
     }
     const price = Number(country.price);
@@ -665,6 +681,7 @@ const rechargeStatusText = (view) => ({
     paid: '支付结果已收到，正在确认钱包到账。',
     credited: '充值成功，钱包余额已更新。',
     failed: '本次充值失败，钱包未增加。请重新选择套餐。',
+    rejected: '本次充值失败，钱包未增加。请重新选择套餐并创建订单。',
     cancelled: '充值订单已取消。',
     expired: '充值订单已过期，请重新创建。',
     invalid_checkout: view.message,
@@ -672,7 +689,7 @@ const rechargeStatusText = (view) => ({
 })[view.status] || view.message;
 
 const rechargeStatusName = (status) => ({
-    pending: '待支付', paid: '确认中', credited: '已到账', failed: '失败',
+    pending: '待支付', paid: '确认中', credited: '已到账', failed: '失败', rejected: '充值失败',
     cancelled: '已取消', expired: '已过期',
 })[status] || '处理中';
 
@@ -692,7 +709,7 @@ const renderRecharge = (view) => {
     $('recharge-status').textContent = statusText || '';
     $('recharge-status').className = 'recharge-status' + (statusText ? '' : ' hidden')
         + (view.status === 'credited' ? ' success' : '')
-        + (['failed', 'error', 'invalid_checkout'].includes(view.status) ? ' error' : '');
+        + (['rejected', 'failed', 'error', 'invalid_checkout'].includes(view.status) ? ' error' : '');
     $('recharge-recent').innerHTML = view.orders.length ? view.orders.map((order) => `
         <li class="recharge-order-row">
             <span><strong>$${escapeHtml(order.wallet_amount)}</strong><small>${escapeHtml(formatTime(order.created_at))}</small></span>

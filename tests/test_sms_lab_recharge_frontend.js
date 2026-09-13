@@ -182,6 +182,36 @@ test('an uncertain create reuses the persisted request id', async () => {
   await second;
 });
 
+test('rejected detail clears its request id, stops polling, and permits a fresh request', async () => {
+  const ui = setupRechargeHarness();
+  ui.storageData.set('sms-market-recharge:alice:5', 'recharge_test_001');
+  const polling = ui.poll('S-rejected');
+  ui.resolvePoll({ order: paidOrder('S-rejected', 'rejected'), wallet_balance: 0 });
+  await polling;
+  assert.equal(ui.activeTimers().length, 0);
+  assert.equal(ui.storageData.has('sms-market-recharge:alice:5'), false);
+  ui.storageData.set('sms-market-recharge:alice:5', 'old-request');
+  const again = ui.poll('S-rejected');
+  ui.resolvePoll({ order: paidOrder('S-rejected', 'rejected', 'old-request'), wallet_balance: 0 });
+  await again;
+  const creating = ui.create(5);
+  assert.notEqual(JSON.parse(ui.requests.at(-1).body).request_id, 'old-request');
+  ui.resolveCreate({ order: paidOrder('S-new'), checkout_url: checkout });
+  await creating;
+});
+
+test('creating any terminal order never navigates back to checkout', async () => {
+  for (const status of ['rejected', 'credited', 'cancelled', 'expired', 'failed']) {
+    const ui = setupRechargeHarness();
+    const creating = ui.create(5);
+    ui.resolveCreate({ order: paidOrder('S-one', status), checkout_url: checkout, reused: true });
+    await creating;
+    assert.deepEqual(ui.checkouts, [], status);
+    assert.equal(ui.view().status, status);
+    assert.equal(ui.storageData.size, 0);
+  }
+});
+
 test('URL return recovery removes only recharge_order and loads its detail', async () => {
   const ui = setupRechargeHarness();
   ui.controller.close();
@@ -191,12 +221,13 @@ test('URL return recovery removes only recharge_order and loads its detail', asy
     { replaceState(_state, _title, url) { replaced.push(url); } },
   );
   assert.equal(ui.view().visible, true);
-  assert.equal(ui.requests[0].pathname, '/recharge/orders/S-paid');
-  assert.equal(ui.requests[1].pathname, '/recharge/orders');
+  assert.equal(ui.requests[0].pathname, '/recharge/orders');
+  assert.equal(ui.requests.length, 1);
   assert.deepEqual(replaced, ['/sms-lab/?campaign=fall#wallet']);
   const order = paidOrder('S-paid', 'credited');
-  ui.resolvePoll({ order, wallet_balance: 5 });
   ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
+  await ui.flush();
+  ui.resolvePath('/recharge/orders/S-paid', { order, wallet_balance: 5 });
   await recovering;
   assert.equal(ui.successCount(), 1);
   assert.equal(ui.opens.length, 2);
@@ -211,11 +242,12 @@ test('a paid return renders the order in recent recharges on its first open', as
   );
   assert.deepEqual(
     ui.requests.map((request) => request.pathname),
-    ['/recharge/orders/S-first-open', '/recharge/orders'],
+    ['/recharge/orders'],
   );
   const order = paidOrder('S-first-open', 'credited');
-  ui.resolvePath('/recharge/orders/S-first-open', { order, wallet_balance: 5 });
   ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
+  await ui.flush();
+  ui.resolvePath('/recharge/orders/S-first-open', { order, wallet_balance: 5 });
   await recovering;
   assert.deepEqual(ui.view().orders.map((item) => item.id), ['S-first-open']);
 });
@@ -245,6 +277,8 @@ test('URL return recovery keeps the modal usable when detail is temporarily unav
     { replaceState() {} },
   );
   ui.rejectCreate(new Error('temporary upstream failure'));
+  await ui.flush();
+  ui.requests.at(-1).wait.reject(new Error('detail temporarily unavailable'));
   await assert.doesNotReject(recovering);
   assert.equal(ui.view().visible, true);
   assert.equal(ui.view().status, 'error');
@@ -346,11 +380,75 @@ test('return parameter remains until login and is then recovered automatically',
   assert.equal(ui.requests.length, 0);
   ui.controller.setAccount('alice');
   assert.deepEqual(replaced, ['/sms-lab/?campaign=fall#wallet']);
-  assert.equal(ui.requests[0].pathname, '/recharge/orders/S-login');
+  assert.equal(ui.requests[0].pathname, '/recharge/orders');
   const order = paidOrder('S-login', 'credited');
-  ui.resolvePoll({ order, wallet_balance: 5 });
   ui.resolvePath('/recharge/orders', { orders: [order], wallet_balance: 5 });
   await ui.flush();
+  ui.resolvePath('/recharge/orders/S-login', { order, wallet_balance: 5 });
+  await ui.flush();
+});
+
+test('initial recovery applies pending list before credited detail and updates the history row', async () => {
+  const ui = setupRechargeHarness();
+  const recovery = ui.controller.recoverFromUrl(
+    'https://www.bnbscheduler.top/sms-lab/?recharge_order=S-race', { replaceState() {} });
+  assert.deepEqual(ui.requests.map((item) => item.pathname), ['/recharge/orders']);
+  ui.resolvePath('/recharge/orders', { orders: [paidOrder('S-race')], wallet_balance: 0 });
+  await ui.flush();
+  assert.equal(ui.walletText(), '0.0000');
+  ui.resolvePath('/recharge/orders/S-race', { order: paidOrder('S-race', 'credited'), wallet_balance: 5 });
+  await recovery;
+  assert.deepEqual(ui.wallets, ['0.0000', '5.0000']);
+  assert.equal(ui.view().orders[0].status, 'credited');
+});
+
+test('an old list arriving after credited detail cannot replace wallet or history', async () => {
+  const ui = setupRechargeHarness();
+  const oldList = ui.controller.loadRecent();
+  const detail = ui.poll('S-newest');
+  ui.resolvePath('/recharge/orders/S-newest', { order: paidOrder('S-newest', 'credited'), wallet_balance: 5 });
+  await detail;
+  assert.equal(ui.view().orders[0]?.status, 'credited');
+  ui.resolvePath('/recharge/orders', { orders: [paidOrder('S-newest')], wallet_balance: 0 });
+  await oldList;
+  assert.equal(ui.walletText(), '5.0000');
+  assert.equal(ui.view().orders[0].status, 'credited');
+});
+
+test('recent failure still recovers active detail', async () => {
+  const ui = setupRechargeHarness();
+  const recovery = ui.controller.recoverFromUrl(
+    'https://www.bnbscheduler.top/sms-lab/?recharge_order=S-recover', { replaceState() {} });
+  ui.requests.find((item) => item.pathname === '/recharge/orders').wait.reject(new Error('list unavailable'));
+  await ui.flush();
+  ui.resolvePath('/recharge/orders/S-recover', { order: paidOrder('S-recover', 'credited'), wallet_balance: 5 });
+  await recovery;
+  assert.equal(ui.walletText(), '5.0000');
+  assert.equal(ui.view().orders[0]?.status, 'credited');
+});
+
+test('close or account change during either recovery stage prevents late writes and timers', async () => {
+  for (const stage of ['list', 'detail']) {
+    for (const invalidate of [(ui) => ui.controller.close(), (ui) => ui.controller.setAccount('bob')]) {
+      const ui = setupRechargeHarness();
+      const recovery = ui.controller.recoverFromUrl(
+        'https://www.bnbscheduler.top/sms-lab/?recharge_order=S-close', { replaceState() {} });
+      if (stage === 'detail') {
+        ui.resolvePath('/recharge/orders', { orders: [], wallet_balance: 0 });
+        await ui.flush();
+      }
+      const count = ui.requests.length;
+      invalidate(ui);
+      ui.resolvePath(stage === 'list' ? '/recharge/orders' : '/recharge/orders/S-close',
+        stage === 'list' ? { orders: [paidOrder('S-close')], wallet_balance: 10 }
+          : { order: paidOrder('S-close'), wallet_balance: 10 });
+      await recovery;
+      assert.equal(ui.requests.length, count);
+      assert.notEqual(ui.walletText(), '10.0000');
+      assert.equal(ui.view().orders.length, 0);
+      assert.equal(ui.activeTimers().length, 0);
+    }
+  }
 });
 
 test('modal focus manager traps Tab, blocks background, and restores its trigger', () => {
@@ -488,6 +586,8 @@ test('the real page initializes and URL recovery uses the modal focus lifecycle'
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(intervals.length, 1);
   assert.equal(elements.get('config-message').textContent, '');
+  assert.match(elements.get('wallet-hint').textContent, /在线充值/);
+  assert.equal(elements.get('wallet-helper-recharge').classList.contains('hidden'), false);
   assert.deepEqual(replaced, ['/sms-lab/?campaign=fall#wallet']);
   assert.equal(documentState.activeElement, elements.get('recharge-close'));
   assert.equal(backgrounds.every((item) => item.inert), true);

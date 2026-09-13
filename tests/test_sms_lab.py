@@ -204,7 +204,9 @@ class SMSLabRouteTest(unittest.TestCase):
     def test_openai_service_includes_search_aliases(self):
         services = self.client.get('/api/sms-lab/services').get_json()['services']
         openai = next(item for item in services if item['code'] == 'dr')
-        self.assertTrue({'chatgpt', 'gpt', 'open ai'}.issubset(set(openai['aliases'])))
+        self.assertTrue({'chatgpt', 'gpt', 'gpt-4', 'open ai', '人工智能'}.issubset(set(openai['aliases'])))
+        for query in ('GPT-4', '人工智能'):
+            self.assertIn(query.lower(), openai['aliases'])
 
     def test_country_prices_are_marked_up_50_percent_without_cost_leak(self):
         response = self.client.get('/api/sms-lab/countries?service=tg')
@@ -341,6 +343,19 @@ class SMSRechargeTests(unittest.TestCase):
 
     def setUp(self):
         SMSLabRouteTest.setUp(self)
+        import sso_bridge
+        shared_path = os.path.join(self.tempdir.name, 'shared-auth.db')
+        with sqlite3.connect(shared_path) as conn:
+            conn.executescript("""
+                CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, status TEXT, ispace INTEGER);
+                CREATE TABLE tokens (token TEXT, user_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+                INSERT INTO users VALUES (101, 'alice', 'active', 0), (102, 'bob', 'active', 0);
+                INSERT INTO tokens (token, user_id) VALUES ('shared-secret-never-echo', 101), ('bob-token', 102);
+            """)
+        self.shared_path = shared_path
+        shared_patch = mock.patch.object(sso_bridge, 'SHARED_AUTH_DB', shared_path)
+        shared_patch.start()
+        self.addCleanup(shared_patch.stop)
         self.login()
         self.client.set_cookie('sso_token', 'shared-secret-never-echo')
         self.http_patch = mock.patch('requests.Session.request')
@@ -348,6 +363,8 @@ class SMSRechargeTests(unittest.TestCase):
         self.addCleanup(self.http_patch.stop)
 
     def upstream(self, payload, status=200):
+        if isinstance(payload, dict) and isinstance(payload.get('orders'), list):
+            payload = {'next_cursor': None, **payload}
         response = mock.Mock(status_code=status)
         response.json.return_value = payload
         self.http.return_value = response
@@ -425,6 +442,40 @@ class SMSRechargeTests(unittest.TestCase):
         self.assertEqual(response.get_json()['code'], 'login_required')
         self.http.assert_not_called()
 
+    def test_mismatched_shared_identity_cannot_credit_either_wallet(self):
+        self.client.set_cookie('sso_token', 'bob-token')
+        self.upstream({'order': recharge_order()})
+        response = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()['code'], 'shared_login_required')
+        self.http.assert_not_called()
+        self.assertEqual(self.wallet_balance(), 0)
+        self.assertEqual(self.wallet_balance('bob'), 0)
+        with sqlite3.connect(self.db_path) as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM sms_wallet_ledger').fetchone()[0], 0)
+
+    def test_missing_or_noncanonical_identity_is_rejected_before_upstream(self):
+        for shared_name, local_id in [('Alice', 1), ('alice ', 1), ('alice', 999)]:
+            with sqlite3.connect(self.shared_path) as conn:
+                conn.execute('UPDATE users SET username = ? WHERE id = 101', (shared_name,))
+            self.login(user_id=local_id)
+            self.upstream({'order': recharge_order()})
+            response = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(response.get_json()['code'], 'shared_login_required')
+        self.login()
+        self.client.set_cookie('sso_token', 'missing-token')
+        self.assertEqual(self.client.get('/api/sms-lab/recharge/orders').status_code, 401)
+        self.http.assert_not_called()
+
+    def test_matching_ispace_canonical_username_can_settle(self):
+        with sqlite3.connect(self.shared_path) as conn:
+            conn.execute('UPDATE users SET ispace = 1 WHERE id = 101')
+        self.upstream({'order': recharge_order()})
+        response = self.client.get('/api/sms-lab/recharge/orders/S-paid-1')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['wallet_balance'], 5.0)
+
     def test_recharge_requires_cookie_even_when_body_contains_token(self):
         self.client.delete_cookie('sso_token')
         response = self.client.post('/api/sms-lab/recharge/orders', json={
@@ -476,6 +527,53 @@ class SMSRechargeTests(unittest.TestCase):
         self.assertEqual(second.get_json()['wallet_balance'], 5.0)
         self.assertEqual(self.wallet_balance(), 50000)
         self.assertEqual(self.wallet_balance('bob'), 0)
+
+    def test_oldest_paid_order_is_settled_from_later_page_once_and_display_stays_ten(self):
+        recent = [recharge_order(id=f'S-recent-{i}', status='pending', finished_at=None)
+                  for i in range(10, 0, -1)]
+        pages = [mock.Mock(status_code=200), mock.Mock(status_code=200)]
+        pages[0].json.return_value = {'orders': recent, 'next_cursor': 42}
+        pages[1].json.return_value = {'orders': [recharge_order(id='S-oldest')], 'next_cursor': None}
+        self.http.side_effect = pages * 2
+        for _ in range(2):
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()['wallet_balance'], 5.0)
+            self.assertEqual([row['id'] for row in response.get_json()['orders']],
+                             [f'S-recent-{i}' for i in range(10, 0, -1)])
+        self.assertEqual(self.http.call_args_list[1].kwargs['params'], {'cursor': 42})
+        self.assertEqual(self.wallet_balance(), 50000)
+        with sqlite3.connect(self.db_path) as conn:
+            self.assertEqual(conn.execute('SELECT reference FROM sms_wallet_ledger').fetchall(),
+                             [('online_recharge:S-oldest',)])
+
+    def test_later_page_failure_or_invalid_cursor_never_partially_settles(self):
+        import requests
+        invalid_pages = [
+            {'orders': []}, {'orders': [], 'next_cursor': 20},
+            {'orders': [recharge_order()], 'next_cursor': 42},
+            {'orders': [recharge_order()], 'next_cursor': 43},
+            {'orders': [recharge_order()], 'next_cursor': True},
+            {'orders': [recharge_order()], 'next_cursor': '20'},
+            {'orders': [recharge_order()], 'next_cursor': 0},
+            {'orders': [recharge_order()], 'next_cursor': -1},
+            {'orders': [recharge_order()], 'next_cursor': 9223372036854775808},
+            {'orders': [recharge_order()] * 101, 'next_cursor': None},
+            {'orders': [{'id': 'S-incomplete'}], 'next_cursor': None},
+            requests.Timeout('page unavailable'),
+        ]
+        for payload in invalid_pages:
+            first = mock.Mock(status_code=200)
+            first.json.return_value = {'orders': [recharge_order()], 'next_cursor': 42}
+            second = payload if isinstance(payload, Exception) else mock.Mock(status_code=200)
+            if not isinstance(payload, Exception):
+                second.json.return_value = payload
+            self.http.side_effect = [first, second]
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, 503)
+            self.assertEqual(self.wallet_balance(), 0)
+        with sqlite3.connect(self.db_path) as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM sms_wallet_ledger').fetchone()[0], 0)
 
     def test_recharge_detail_cannot_read_another_upstream_users_order(self):
         self.upstream({'error': '订单不存在'}, 404)
@@ -568,6 +666,23 @@ class SMSRechargeTests(unittest.TestCase):
             if status != 401:
                 self.assertEqual(response.get_json()['error'], message)
 
+    def test_fastapi_detail_preserves_safe_conflict_and_rate_limit(self):
+        for status, message, code in (
+            (409, '这次充值请求已用于其他套餐，请重新确认充值', 'request_conflict'),
+            (429, '待支付订单过多，请先完成或等待过期', 'rate_limited'),
+        ):
+            self.upstream({'detail': message}, status)
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, status)
+            self.assertEqual(response.get_json(), {'error': message, 'code': code})
+
+    def test_unsafe_fastapi_detail_never_leaks_or_uses_fallback(self):
+        for message in ('', ' ', 'x' * 301, 'bad\nmessage', 'shared-secret-never-echo'):
+            self.upstream({'detail': message, 'error': 'fallback'}, 409)
+            response = self.client.get('/api/sms-lab/recharge/orders')
+            self.assertEqual(response.status_code, 503)
+            self.assertEqual(response.get_json()['code'], 'recharge_service_unavailable')
+
     def test_recharge_rejects_external_checkout_and_mismatched_detail_id(self):
         self.upstream({'order': recharge_order(status='pending'),
                        'pay_url': 'https://evil.example/', 'reused': False}, 201)
@@ -610,7 +725,7 @@ class OmniRechargeClientTests(unittest.TestCase):
     def test_fake_upstream_host_requires_explicit_injected_allowlist(self):
         from sms_lab.recharge import OmniRechargeClient, OmniRechargeError
         response = mock.Mock(status_code=200)
-        response.json.return_value = {'orders': []}
+        response.json.return_value = {'orders': [], 'next_cursor': None}
         with mock.patch('requests.Session.request', return_value=response) as http:
             with self.assertRaises(OmniRechargeError):
                 OmniRechargeClient('https://payments.example.test', 'shared-secret')
