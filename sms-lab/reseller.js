@@ -148,12 +148,11 @@ function createRechargeController(dependencies) {
         },
         open(trigger) {
             if (!username) return false;
-            if (!view.visible) {
-                view.visible = true;
-                onOpen(trigger);
-            }
+            const becomingVisible = !view.visible;
+            if (becomingVisible) view.visible = true;
             view.message = '';
             emit();
+            if (becomingVisible) onOpen(trigger);
             if (activeOrderId) return controller.poll(activeOrderId);
             return true;
         },
