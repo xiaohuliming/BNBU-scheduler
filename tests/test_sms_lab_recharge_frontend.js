@@ -227,6 +227,7 @@ test('a reused credited create settles through detail before reporting success',
     ui.requests.map((request) => request.pathname),
     ['/recharge/orders', '/recharge/orders/S-reused-paid'],
   );
+  assert.equal(ui.view().status, 'paid');
   assert.equal(ui.walletText(), undefined);
   assert.equal(ui.successCount(), 0);
   ui.resolvePath('/recharge/orders/S-reused-paid', { order, wallet_balance: 5 });

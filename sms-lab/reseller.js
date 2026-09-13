@@ -217,7 +217,7 @@ function createRechargeController(dependencies) {
             const promise = Promise.resolve(operation).then((payload) => {
                 if (!isCurrent(account, modal)) return payload;
                 view.order = payload.order;
-                view.status = payload.order.status;
+                view.status = payload.order.status === 'credited' ? 'paid' : payload.order.status;
                 activeOrderId = terminalStatuses.has(payload.order.status) ? null : payload.order.id;
                 clearRequestId(payload.order);
                 if (terminalStatuses.has(payload.order.status)) {
