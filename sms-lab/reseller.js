@@ -13,6 +13,7 @@ const state = {
     pollTimer: null,
     busy: false,
     authMode: 'login',
+    authProvider: 'local',
 };
 
 const SERVICE_RENDER_LIMIT = 100;
@@ -268,12 +269,35 @@ const startPolling = () => {
     }, 5000);
 };
 
-const openAuth = (mode = 'login') => {
+const setAuthProvider = (provider) => {
+    state.authProvider = provider;
+    if (provider === 'ispace') state.authMode = 'login';
+    const isISpace = provider === 'ispace';
+    $('auth-local-tab').classList.toggle('selected', !isISpace);
+    $('auth-ispace-tab').classList.toggle('selected', isISpace);
+    $('auth-local-tab').setAttribute('aria-selected', String(!isISpace));
+    $('auth-ispace-tab').setAttribute('aria-selected', String(isISpace));
+    $('auth-username-label').textContent = isISpace ? 'iSpace 学号' : '用户名';
+    $('auth-password-label').textContent = isISpace ? 'iSpace 密码' : '密码';
+    $('auth-username').placeholder = isISpace ? '输入 BNBU 学号' : '输入用户名';
+    $('auth-password').minLength = 1;
+    $('auth-provider-hint').textContent = isISpace
+        ? '验证通过后会同步 iSpace DDL。密码只用于本次登录，不会保存在 SMS Market。'
+        : '使用 MAXCOURSE、SlideCraft 或 OmniChat 的同一账号登录。';
+    $('auth-switch').classList.toggle('hidden', isISpace);
+    $('auth-title').textContent = isISpace
+        ? '使用 iSpace 登录'
+        : (state.authMode === 'register' ? '创建 MAXCOURSE 账号' : '登录 MAXCOURSE');
+    $('auth-submit').textContent = isISpace
+        ? '连接 iSpace'
+        : (state.authMode === 'register' ? '注册并登录' : '登录');
+};
+
+const openAuth = (mode = 'login', provider = 'local') => {
     state.authMode = mode;
     $('auth-modal').classList.remove('hidden');
-    $('auth-title').textContent = mode === 'register' ? '创建账号' : '登录账号';
-    $('auth-submit').textContent = mode === 'register' ? '注册并登录' : '登录';
     $('auth-switch').textContent = mode === 'register' ? '已有账号，去登录' : '没有账号，去注册';
+    setAuthProvider(provider);
     hideMessage($('auth-message'));
     $('auth-username').focus();
 };
@@ -335,6 +359,8 @@ $('logout-button').addEventListener('click', async () => {
 });
 $('auth-close').addEventListener('click', closeAuth);
 $('auth-switch').addEventListener('click', () => openAuth(state.authMode === 'login' ? 'register' : 'login'));
+$('auth-local-tab').addEventListener('click', () => setAuthProvider('local'));
+$('auth-ispace-tab').addEventListener('click', () => setAuthProvider('ispace'));
 $('auth-modal').addEventListener('click', (event) => {
     if (event.target === $('auth-modal')) closeAuth();
 });
@@ -347,25 +373,32 @@ $('auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const username = $('auth-username').value.trim();
     const password = $('auth-password').value;
-    if (!username || password.length < 8) {
-        showMessage($('auth-message'), '请输入用户名和至少 8 位密码。', 'error');
+    const isISpace = state.authProvider === 'ispace';
+    if (!username || !password) {
+        showMessage($('auth-message'), isISpace ? '请输入 iSpace 学号和密码。' : '请输入用户名和密码。', 'error');
         return;
     }
-    setButtonBusy($('auth-submit'), true, state.authMode === 'register' ? '注册中...' : '登录中...');
+    const busyLabel = isISpace ? '正在连接 iSpace...' : (state.authMode === 'register' ? '注册中...' : '登录中...');
+    setButtonBusy($('auth-submit'), true, busyLabel);
     try {
-        if (state.authMode === 'register') {
+        if (!isISpace && state.authMode === 'register') {
             await api('/api/register', { method: 'POST', body: JSON.stringify({ username, password }) });
         }
-        await api('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+        await api(isISpace ? '/api/login/ispace' : '/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+        });
         closeAuth();
+        $('auth-username').value = '';
         $('auth-password').value = '';
         await loadAccount();
         await loadOrders(false);
-        toast(state.authMode === 'register' ? '注册成功' : '登录成功');
+        toast(isISpace ? 'iSpace 登录成功，DDL 已同步' : (state.authMode === 'register' ? '注册成功' : '登录成功'));
     } catch (error) {
         showMessage($('auth-message'), error.message, 'error');
     } finally {
         setButtonBusy($('auth-submit'), false, '');
+        setAuthProvider(state.authProvider);
     }
 });
 

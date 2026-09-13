@@ -431,7 +431,11 @@
         .auth-card { width: min(430px, 100%); padding: 25px; background: #fff3b6; }
         .auth-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
         .auth-card h2 { margin: 5px 0 0; font-size: 28px; }
+        .auth-provider-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 20px; padding: 5px; border: 2px solid var(--ink); border-radius: 14px 19px 13px 17px; background: white; }
+        .auth-provider-tab { min-height: 44px; border: 0; border-radius: 10px 14px 9px 12px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 900; }
+        .auth-provider-tab.selected { background: var(--lilac); box-shadow: 2px 3px 0 var(--ink); }
         .auth-form { display: grid; gap: 14px; margin-top: 22px; }
+        .auth-provider-hint { margin: -2px 1px 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
         .auth-switch { width: 100%; border: 0; background: transparent; padding: 8px; color: var(--blue); font-weight: 900; }
         .confirm-card { width: min(450px, 100%); padding: 26px; background: #fff9d6; }
         .confirm-card h2 { margin: 6px 0 8px; font-size: 28px; }
@@ -599,19 +603,24 @@
     <div id="auth-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <div class="panel auth-card">
             <div class="auth-card-head">
-                <div><p class="eyebrow mono">SMS Market account</p><h2 id="auth-title">登录账号</h2></div>
+                <div><p class="eyebrow mono">MAXCOURSE account</p><h2 id="auth-title">登录 MAXCOURSE</h2></div>
                 <button id="auth-close" class="btn btn-small" type="button" aria-label="关闭登录窗口">关闭</button>
+            </div>
+            <div class="auth-provider-tabs" role="tablist" aria-label="登录方式">
+                <button id="auth-local-tab" class="auth-provider-tab selected" type="button" role="tab" aria-selected="true">MAXCOURSE 账号</button>
+                <button id="auth-ispace-tab" class="auth-provider-tab" type="button" role="tab" aria-selected="false">iSpace 登录</button>
             </div>
             <div id="auth-message" class="notice hidden" role="alert"></div>
             <form id="auth-form" class="auth-form">
-                <div class="field"><label for="auth-username">用户名</label><input id="auth-username" autocomplete="username" maxlength="120" required></div>
-                <div class="field"><label for="auth-password">密码</label><input id="auth-password" type="password" autocomplete="current-password" minlength="8" maxlength="512" required></div>
+                <div class="field"><label id="auth-username-label" for="auth-username">用户名</label><input id="auth-username" autocomplete="username" maxlength="120" required></div>
+                <div class="field"><label id="auth-password-label" for="auth-password">密码</label><input id="auth-password" type="password" autocomplete="current-password" maxlength="512" required></div>
+                <p id="auth-provider-hint" class="auth-provider-hint">使用 MAXCOURSE、SlideCraft 或 OmniChat 的同一账号登录。</p>
                 <button id="auth-submit" class="btn btn-primary" type="submit">登录</button>
                 <button id="auth-switch" class="auth-switch" type="button">没有账号，去注册</button>
             </form>
         </div>
     </div>
 
-    <script src="/sms-lab/reseller.js?v=20260913-3"></script>
+    <script src="/sms-lab/reseller.js?v=20260913-4"></script>
 </body>
 </html>
