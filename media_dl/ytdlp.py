@@ -12,7 +12,7 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
-from . import http as requests
+from . import http as requests, instagram
 from .transport import remember_headers
 
 try:
@@ -322,6 +322,7 @@ def _extract_info(url: str) -> dict:
     }
 
     is_bili = bool(_BILI_HOST_RE.search(url))
+    is_instagram = instagram.is_post(url)
     cookiefile: str | None = None
     if is_bili:
         http_headers["Referer"] = "https://www.bilibili.com"
@@ -376,6 +377,10 @@ def _extract_info(url: str) -> dict:
             # No unguarded urllib/curl fallback may bypass IP pinning.
             ydl._request_director.close()
             ydl._request_director = ydl.build_request_director([PublicRequestsRH])
+            if is_instagram:
+                ydl.add_info_extractor(instagram.photo_aware_extractor())
+                raw = ydl.extract_info(url, download=False, process=False)
+                return instagram.process_result(ydl, raw)
             return ydl.extract_info(url, download=False)
 
     try:
@@ -397,6 +402,12 @@ def _extract_info(url: str) -> dict:
 
 def extract(url: str) -> dict:
     info = _extract_info(url)
+    if instagram.is_post(url):
+        return instagram.media_result(info, url, _media_result)
+    return _media_result(info, url)
+
+
+def _media_result(info: dict, url: str) -> dict:
     if info.get("_type") == "playlist" and info.get("entries"):
         info = next((e for e in info["entries"] if e), info)
 
