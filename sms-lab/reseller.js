@@ -342,6 +342,7 @@ const state = {
     cancelCountdownTimer: null,
     busy: false,
     authMode: 'login',
+    purchaseUsesTrial: false,
     authProvider: 'local',
 };
 let recharge = null;
@@ -402,6 +403,22 @@ const formatTime = (value) => {
     return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', { hour12: false });
 };
 
+const freeTrialApplies = (price) => !!state.account.authenticated
+    && !!state.account.free_trial?.available && Number.isFinite(price) && price > 0
+    && price <= Number(state.account.free_trial.max_price);
+
+const renderTrialNotice = () => {
+    const trial = state.account.free_trial;
+    const notice = $('trial-notice');
+    if (!state.account.authenticated || !trial || trial.status === 'used') {
+        hideMessage(notice);
+        return;
+    }
+    showMessage(notice, trial.available
+        ? `新用户免费接码 1 次 · 限售价 ${Number(trial.max_price).toFixed(2)} USD 以内。未收到验证码并成功取消后可重试。`
+        : '接码订单正在进行中，结束后会更新免费体验资格。');
+};
+
 const renderAccount = () => {
     const authenticated = !!state.account.authenticated;
     $('account-guest').classList.toggle('hidden', authenticated);
@@ -411,6 +428,7 @@ const renderAccount = () => {
         $('wallet-balance').textContent = Number(state.account.wallet.balance).toFixed(4);
     }
     if (recharge) recharge.setAccount(authenticated ? state.account.user.username : null);
+    renderTrialNotice();
     updateCheckout();
 };
 
@@ -464,7 +482,7 @@ const renderCountries = () => {
         <button class="country-option ${state.selectedCountry?.id === country.id ? 'selected' : ''}" type="button"
             role="option" aria-selected="${state.selectedCountry?.id === country.id}" data-country="${country.id}">
             <span class="country-name">${escapeHtml(country.name)}</span>
-            <span class="country-meta">${country.stock} 个 · ${Number(country.price).toFixed(4)} USD</span>
+            <span class="country-meta">${country.stock} 个 · ${Number(country.price).toFixed(4)} USD${freeTrialApplies(Number(country.price)) ? ' · 可免费体验' : ''}</span>
         </button>
     `).join('');
 };
@@ -492,8 +510,10 @@ const updateCheckout = () => {
         $('selection-price').textContent = '···';
         $('purchase-button').textContent = '购买一个号码';
         $('purchase-button').disabled = true;
-        $('wallet-hint').textContent = state.account.authenticated ? '可先在线充值，再选择服务和国家购买号码' : '登录后可使用站内钱包购买';
-        $('wallet-helper-recharge').classList.toggle('hidden', !state.account.authenticated);
+        $('wallet-hint').textContent = state.account.free_trial?.available
+            ? '选择售价不超过 0.50 USD 的号码，即可免费体验一次'
+            : state.account.authenticated ? '可先在线充值，再选择服务和国家购买号码' : '登录后可使用站内钱包购买';
+        $('wallet-helper-recharge').classList.toggle('hidden', !state.account.authenticated || !!state.account.free_trial?.available);
         return;
     }
     const price = Number(country.price);
@@ -506,6 +526,14 @@ const updateCheckout = () => {
         $('wallet-helper-recharge').classList.add('hidden');
         return;
     }
+    if (freeTrialApplies(price)) {
+        $('selection-price').textContent = '0.0000 USD · 免费体验';
+        $('purchase-button').textContent = '免费接码 · 1 次';
+        $('purchase-button').disabled = false;
+        $('wallet-hint').textContent = '本单使用新用户免费体验，钱包不扣款';
+        $('wallet-helper-recharge').classList.add('hidden');
+        return;
+    }
     const balance = Number(state.account.wallet.balance);
     const enough = Number.isFinite(balance) && balance >= price;
     $('purchase-button').textContent = enough
@@ -514,7 +542,8 @@ const updateCheckout = () => {
     $('purchase-button').disabled = !enough;
     $('wallet-hint').textContent = enough
         ? `购买后预计剩余 ${(balance - price).toFixed(4)} USD`
-        : '余额不足，可在线充值后继续购买';
+        : state.account.free_trial?.available ? '本单超过 0.50 USD 体验上限，请选择更低价格或充值购买'
+            : '余额不足，可在线充值后继续购买';
     $('wallet-helper-recharge').classList.toggle('hidden', enough);
 };
 
@@ -530,7 +559,7 @@ const updateCancelCountdowns = () => {
         const deadline = Number(button.dataset.cancelAt);
         const remaining = Number.isFinite(deadline)
             ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
-        const label = remaining > 0 ? `${remaining} 秒后可取消` : '取消并退款';
+        const label = remaining > 0 ? `${remaining} 秒后可取消` : (button.dataset.cancelLabel || '取消并退款');
         if (button.textContent !== label) button.textContent = label;
         button.dataset.label = label;
         button.disabled = remaining > 0;
@@ -564,8 +593,8 @@ const renderOrders = () => {
         const cancelWait = Math.max(0, Math.ceil((cancelAt - Date.now()) / 1000));
         return `<article class="activation-card" data-id="${order.id}">
             <div class="card-head">
-                <div class="order-service">${logoMarkup(order.service, 'order-logo')}<div><strong>${escapeHtml(order.service.name)}</strong><span>${escapeHtml(order.country.name)} · ${Number(order.sale_price).toFixed(4)} USD</span></div></div>
-                <span class="status-badge">${escapeHtml(orderStatusLabel(order.status))}</span>
+                <div class="order-service">${logoMarkup(order.service, 'order-logo')}<div><strong>${escapeHtml(order.service.name)}</strong><span>${escapeHtml(order.country.name)} · ${order.is_free_trial ? '免费体验 · 实付 0 USD' : Number(order.sale_price).toFixed(4) + ' USD'}</span></div></div>
+                <span class="status-badge">${escapeHtml(order.is_free_trial && order.status === 'cancelled' ? '已取消' : orderStatusLabel(order.status))}</span>
             </div>
             ${order.phone ? `<div class="phone">+${escapeHtml(order.phone.replace(/^\+/, ''))}</div>` : ''}
             <div class="card-meta">订单 #${order.id} · ${escapeHtml(formatTime(order.createdAt))}</div>
@@ -575,7 +604,7 @@ const renderOrders = () => {
                 ${otp?.smsCode ? `<button class="btn btn-small" type="button" data-action="copy-code" data-value="${escapeHtml(otp.smsCode)}">复制验证码</button>` : ''}
                 ${order.can_finish ? '<button class="btn btn-small" type="button" data-action="finish">完成</button>' : ''}
                 ${order.can_replace ? '<button class="btn btn-small" type="button" data-action="replace">换号</button>' : ''}
-                ${order.can_cancel ? `<button class="btn btn-small btn-danger" type="button" data-action="cancel" data-cancel-at="${cancelAt}" ${cancelWait ? 'disabled' : ''}>${cancelWait ? cancelWait + ' 秒后可取消' : '取消并退款'}</button>` : ''}
+                ${order.can_cancel ? `<button class="btn btn-small btn-danger" type="button" data-action="cancel" data-cancel-at="${cancelAt}" data-cancel-label="${order.is_free_trial ? '取消体验订单' : '取消并退款'}" ${cancelWait ? 'disabled' : ''}>${cancelWait ? cancelWait + ' 秒后可取消' : order.is_free_trial ? '取消体验订单' : '取消并退款'}</button>` : ''}
             </div>
         </article>`;
     }).join('');
@@ -591,6 +620,12 @@ const loadOrders = async (announce = false) => {
     try {
         const data = await api('/orders');
         const nextOrders = data.orders || [];
+        if (data.free_trial) {
+            state.account.free_trial = data.free_trial;
+            renderTrialNotice();
+            renderCountries();
+            updateCheckout();
+        }
         const fingerprint = JSON.stringify(nextOrders);
         if (fingerprint !== state.ordersFingerprint) {
             state.orders = nextOrders;
@@ -657,7 +692,13 @@ const closeAuth = () => $('auth-modal').classList.add('hidden');
 const openPurchaseConfirm = () => {
     $('confirm-service').textContent = state.selectedService.name;
     $('confirm-country').textContent = state.selectedCountry.name;
-    $('confirm-price').textContent = `${Number(state.selectedCountry.price).toFixed(4)} USD`;
+    state.purchaseUsesTrial = freeTrialApplies(Number(state.selectedCountry.price));
+    $('confirm-price').textContent = state.purchaseUsesTrial ? '0.0000 USD · 免费体验' : `${Number(state.selectedCountry.price).toFixed(4)} USD`;
+    $('purchase-explainer').textContent = state.purchaseUsesTrial
+        ? '本单免费，钱包不扣款。收到验证码后消耗体验机会；未收到验证码并成功取消后可重试。'
+        : '下单后将从站内钱包扣款。未收到验证码且供应商接受取消时，款项会退回钱包。';
+    $('purchase-confirm').textContent = state.purchaseUsesTrial ? '确认免费接码' : '确认付款';
+    $('purchase-confirm').dataset.label = $('purchase-confirm').textContent;
     $('purchase-modal').classList.remove('hidden');
     $('purchase-confirm').focus();
 };
@@ -673,9 +714,11 @@ const submitPurchase = async () => {
                 service: state.selectedService.code,
                 country: state.selectedCountry.id,
                 idempotency_key: key,
+                use_free_trial: state.purchaseUsesTrial,
             }),
         });
         state.account.wallet.balance = data.wallet_balance;
+        if (data.free_trial) state.account.free_trial = data.free_trial;
         closePurchaseConfirm();
         renderAccount();
         await loadOrders(false);
@@ -683,6 +726,7 @@ const submitPurchase = async () => {
     } catch (error) {
         closePurchaseConfirm();
         showMessage($('activation-status'), error.message, 'error');
+        if (error.code === 'trial_unavailable') await loadAccount().catch(() => {});
     } finally {
         setButtonBusy($('purchase-confirm'), false, '');
         updateCheckout();
@@ -896,6 +940,7 @@ $('activation-list').addEventListener('click', async (event) => {
     if (!button || !card) return;
     const action = button.dataset.action;
     const orderId = Number(card.dataset.id);
+    const isTrialOrder = state.orders.find((order) => order.id === orderId)?.is_free_trial;
     if (action === 'copy-phone') return copyText(button.dataset.value, '号码');
     if (action === 'copy-code') return copyText(button.dataset.value, '验证码');
     setButtonBusy(button, true, '处理中...');
@@ -904,7 +949,8 @@ $('activation-list').addEventListener('click', async (event) => {
         if (action === 'cancel' && result.authenticated) state.account = result;
         await loadAccount();
         await loadOrders(false);
-        toast(action === 'replace' ? '号码已更换' : action === 'finish' ? '订单已完成' : '订单已取消并退款');
+        toast(action === 'replace' ? '号码已更换' : action === 'finish' ? '订单已完成'
+            : isTrialOrder ? '体验订单已取消，资格已更新' : '订单已取消并退款');
     } catch (error) {
         showMessage($('activation-status'), error.message, 'error');
     } finally {
