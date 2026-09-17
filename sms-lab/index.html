@@ -590,6 +590,7 @@
                     <p>选择服务与国家，使用站内钱包付款。未收到短信的可取消订单将原路退回钱包。</p>
                 </div>
                 <div id="config-message" class="notice hidden" role="status"></div>
+                <div id="trial-notice" class="notice hidden" role="status" aria-live="polite"></div>
                 <form id="purchase-form" class="purchase-form">
                     <section class="step" aria-labelledby="service-step-title">
                         <div id="service-step-title" class="step-title"><span class="step-number">1</span>选择服务</div>
@@ -654,7 +655,7 @@
         <div class="panel confirm-card">
             <p class="eyebrow mono">Confirm order</p>
             <h2 id="purchase-modal-title">确认购买号码</h2>
-            <p>下单后将从站内钱包扣款。未收到验证码且供应商接受取消时，款项会退回钱包。</p>
+            <p id="purchase-explainer">下单后将从站内钱包扣款。未收到验证码且供应商接受取消时，款项会退回钱包。</p>
             <div class="confirm-order">
                 <div class="confirm-row"><span>服务</span><strong id="confirm-service"></strong></div>
                 <div class="confirm-row"><span>国家</span><strong id="confirm-country"></strong></div>
@@ -708,6 +709,6 @@
     </div>
 
     <script src="/sms-lab/search.js?v=20260913-4"></script>
-    <script src="/sms-lab/reseller.js?v=20260913-9"></script>
+    <script src="/sms-lab/reseller.js?v=20260917-trial1"></script>
 </body>
 </html>

@@ -15,7 +15,8 @@ import sso_bridge
 from .client import HeroSMSClient, HeroSMSError
 from .recharge import OmniRechargeClient, OmniRechargeError
 from .storage import (
-    ACTIVE_ORDER_STATUSES, amount_to_units, sale_units_for_cost,
+    ACTIVE_ORDER_STATUSES, FREE_TRIAL_LIMIT_UNITS, amount_to_units,
+    consume_free_trial, free_trial_status, sale_units_for_cost,
     settle_paid_sms_recharges, units_to_amount,
 )
 
@@ -287,6 +288,8 @@ def _order_payload(row, provider=None):
         "phone": provider.get("phone") if provider else (row["phone"] or ""),
         "operator": provider.get("operator") if provider else "",
         "sale_price": units_to_amount(row["sale_price_units"]),
+        "charged_price": units_to_amount(row["sale_price_units"] - row["trial_discount_units"]),
+        "is_free_trial": row["trial_discount_units"] > 0,
         "refunded": units_to_amount(row["refunded_units"]),
         "status": status,
         "provider_status": provider.get("status") if provider else row["provider_status"],
@@ -307,14 +310,17 @@ def _refund_order(db_path_getter, order_id, status, note):
         if not row:
             conn.rollback()
             return None
-        if row["refunded_units"]:
+        if row['refunded_units'] or conn.execute(
+            "SELECT 1 FROM sms_wallet_ledger WHERE reference = ?",
+            (f"order:{order_id}:refund",),
+        ).fetchone():
             conn.execute(
                 "UPDATE sms_orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (status, order_id),
             )
             conn.commit()
             return row["refunded_units"]
-        amount = row["sale_price_units"]
+        amount = row["sale_price_units"] - row["trial_discount_units"]
         conn.execute(
             "UPDATE users SET sms_wallet_units = sms_wallet_units + ? WHERE id = ?",
             (amount, row["user_id"]),
@@ -338,6 +344,11 @@ def _refund_order(db_path_getter, order_id, status, note):
             """,
             (row["user_id"], order_id, amount, balance, f"order:{order_id}:refund", note),
         )
+        if row["trial_discount_units"]:
+            conn.execute(
+                "DELETE FROM sms_trial_claims WHERE user_id = ? AND order_id = ? AND status = 'reserved'",
+                (row["user_id"], order_id),
+            )
         conn.commit()
         return amount
     except Exception:
@@ -507,6 +518,7 @@ def create_sms_lab_blueprint(db_path_getter):
                     "balance": units_to_amount(user["sms_wallet_units"]),
                     "currency": "USD",
                 },
+                "free_trial": free_trial_status(conn, user_id),
                 "ledger": [{
                     "amount": units_to_amount(row["amount_units"]),
                     "balance_after": units_to_amount(row["balance_after_units"]),
@@ -554,18 +566,21 @@ def create_sms_lab_blueprint(db_path_getter):
                     if not provider:
                         continue
                     new_status = "code_received" if provider["otpList"] else "active"
-                    conn.execute(
+                    updated = conn.execute(
                         """
                         UPDATE sms_orders
                         SET phone = ?, provider_status = ?, status = ?, expires_at = ?,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ? AND user_id = ?
+                          AND status IN ('purchasing', 'active', 'code_received')
                         """,
                         (
                             provider["phone"], provider["status"], new_status,
                             provider["expiredAt"], row["id"], user_id,
                         ),
                     )
+                    if updated.rowcount and provider["otpList"]:
+                        consume_free_trial(conn, user_id, row['id'])
                 conn.commit()
                 rows = conn.execute(
                     "SELECT * FROM sms_orders WHERE user_id = ? ORDER BY id DESC LIMIT 50",
@@ -574,7 +589,13 @@ def create_sms_lab_blueprint(db_path_getter):
             finally:
                 conn.close()
 
+        conn = _open_db(db_path_getter)
+        try:
+            trial = free_trial_status(conn, user_id)
+        finally:
+            conn.close()
         return jsonify({
+            "free_trial": trial,
             "orders": [
                 _order_payload(row, provider_map.get(row["provider_activation_id"]))
                 for row in rows
@@ -591,6 +612,9 @@ def create_sms_lab_blueprint(db_path_getter):
         service = str(data.get("service", "")).strip().lower()
         country = data.get("country")
         idempotency_key = str(data.get("idempotency_key", "")).strip()
+        use_trial = data.get('use_free_trial', False)
+        if type(use_trial) is not bool:
+            return jsonify({"error": "体验额度参数无效。", "code": "invalid_payload"}), 400
         if not _SERVICE_RE.fullmatch(service) or not _find_service(service):
             return jsonify({"error": "请选择可转售的服务。", "code": "invalid_service"}), 400
         if isinstance(country, bool) or not isinstance(country, int) or not 0 <= country <= 999:
@@ -605,7 +629,10 @@ def create_sms_lab_blueprint(db_path_getter):
                 (user_id, idempotency_key),
             ).fetchone()
             if existing:
-                return jsonify({"order": _order_payload(existing), "idempotent": True})
+                balance = conn.execute("SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)).fetchone()[0]
+                return jsonify({"order": _order_payload(existing), "idempotent": True,
+                                "wallet_balance": units_to_amount(balance),
+                                "free_trial": free_trial_status(conn, user_id)})
         finally:
             conn.close()
 
@@ -630,34 +657,48 @@ def create_sms_lab_blueprint(db_path_getter):
             if active_count >= 3:
                 conn.rollback()
                 return jsonify({"error": "最多同时保留 3 个进行中订单。", "code": "active_limit"}), 409
+            if use_trial:
+                if sale_units > FREE_TRIAL_LIMIT_UNITS:
+                    conn.rollback()
+                    return jsonify({"error": "免费体验仅限售价不超过 0.50 USD 的号码。", "code": "trial_price_limit"}), 409
+                if not free_trial_status(conn, user_id)['available']:
+                    conn.rollback()
+                    return jsonify({"error": "免费体验已使用或正在使用，请刷新后重试。", "code": "trial_unavailable"}), 409
+            discount_units = sale_units if use_trial else 0
+            charge_units = sale_units - discount_units
             try:
                 cursor = conn.execute(
                     """
                     INSERT INTO sms_orders
                     (user_id, idempotency_key, service_code, service_name, country_id,
-                     country_name, provider_cost_units, sale_price_units, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'purchasing')
+                     country_name, provider_cost_units, sale_price_units, trial_discount_units, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'purchasing')
                     """,
                     (
                         user_id, idempotency_key, service, service_item["name"], country,
-                        country_item["name"], cost_units, sale_units,
+                        country_item["name"], cost_units, sale_units, discount_units,
                     ),
                 )
             except sqlite3.IntegrityError:
                 conn.rollback()
                 return jsonify({"error": "订单标识已被使用。", "code": "duplicate_order"}), 409
             order_id = cursor.lastrowid
+            if use_trial:
+                conn.execute(
+                    "INSERT INTO sms_trial_claims (user_id, order_id, status) VALUES (?, ?, 'reserved')",
+                    (user_id, order_id),
+                )
             debit = conn.execute(
                 """
                 UPDATE users SET sms_wallet_units = sms_wallet_units - ?
                 WHERE id = ? AND sms_wallet_units >= ?
                 """,
-                (sale_units, user_id, sale_units),
+                (charge_units, user_id, charge_units),
             )
             if debit.rowcount != 1:
                 conn.rollback()
                 return jsonify({
-                    "error": "钱包余额不足，请联系管理员充值。",
+                    "error": "钱包余额不足，请充值后重试。",
                     "code": "insufficient_wallet_balance",
                 }), 402
             balance = conn.execute(
@@ -670,8 +711,8 @@ def create_sms_lab_blueprint(db_path_getter):
                 VALUES (?, ?, ?, ?, 'purchase', ?, ?)
                 """,
                 (
-                    user_id, order_id, -sale_units, balance,
-                    f"order:{order_id}:purchase", f"{service_item['name']} · {country_item['name']}",
+                    user_id, order_id, -charge_units, balance,
+                    f"order:{order_id}:purchase", ('新用户免费体验 · ' if use_trial else '') + f"{service_item['name']} · {country_item['name']}",
                 ),
             )
             conn.commit()
@@ -720,16 +761,20 @@ def create_sms_lab_blueprint(db_path_getter):
                     provider["expiredAt"], order_id, user_id,
                 ),
             )
+            if provider['otpList']:
+                consume_free_trial(conn, user_id, order_id)
             conn.commit()
             row = conn.execute("SELECT * FROM sms_orders WHERE id = ?", (order_id,)).fetchone()
             wallet = conn.execute(
                 "SELECT sms_wallet_units FROM users WHERE id = ?", (user_id,)
             ).fetchone()[0]
+            trial = free_trial_status(conn, user_id)
         finally:
             conn.close()
         return jsonify({
             "order": _order_payload(row, provider),
             "wallet_balance": units_to_amount(wallet),
+            "free_trial": trial,
         }), 201
 
     def owned_order(user_id, order_id):
@@ -767,6 +812,7 @@ def create_sms_lab_blueprint(db_path_getter):
                 "UPDATE sms_orders SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (order_id,),
             )
+            consume_free_trial(conn, user_id, order_id)
             conn.commit()
         finally:
             conn.close()
@@ -794,15 +840,18 @@ def create_sms_lab_blueprint(db_path_getter):
             conn.execute(
                 """
                 UPDATE sms_orders
-                SET provider_activation_id = ?, phone = ?, provider_status = ?, status = 'active',
+                SET provider_activation_id = ?, phone = ?, provider_status = ?, status = ?,
                     expires_at = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND user_id = ?
                 """,
                 (
                     provider["id"], provider["phone"], provider["status"],
+                    'code_received' if provider['otpList'] else 'active',
                     provider["expiredAt"], order_id, user_id,
                 ),
             )
+            if provider['otpList']:
+                consume_free_trial(conn, user_id, order_id)
             conn.commit()
             updated = conn.execute("SELECT * FROM sms_orders WHERE id = ?", (order_id,)).fetchone()
         finally:
@@ -887,7 +936,7 @@ def create_sms_lab_blueprint(db_path_getter):
             totals = conn.execute(
                 """
                 SELECT COUNT(*) AS orders,
-                       COALESCE(SUM(sale_price_units - refunded_units), 0) AS revenue,
+                       COALESCE(SUM(sale_price_units - trial_discount_units - refunded_units), 0) AS revenue,
                        COALESCE(SUM(CASE WHEN status NOT IN ('failed', 'cancelled')
                                    THEN provider_cost_units ELSE 0 END), 0) AS cost
                 FROM sms_orders

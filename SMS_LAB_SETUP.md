@@ -31,6 +31,25 @@ Banking, cryptocurrency, payment-wallet, lending, and paid-subscription services
 blocked by default to follow HeroSMS rules. Add exact codes or lowercase name fragments
 to the block variables when another service must be removed.
 
+## New-customer free SMS trial
+
+Every account without a successful SMS order can use one free order with a retail
+price of at most 0.50 USD, inclusive of the reseller markup. Existing MAXCOURSE
+accounts qualify if they have not successfully received a code. Existing active
+orders must finish or cancel before eligibility is reassessed.
+
+The UI explicitly submits `use_free_trial: true` after showing a zero-price
+confirmation. The server rechecks the live retail price and reserves the trial
+in the purchase transaction. One `sms_trial_claims` row per user prevents concurrent
+free orders. Receiving a code or finishing an order permanently consumes eligibility.
+Provider failure or accepted cancellation releases only an unused reservation.
+
+Trials are discounts, not wallet deposits. `trial_discount_units` preserves the
+retail quote; `charged_price` reports the actual payment. Free-order refunds are
+zero-value, idempotent ledger entries and cannot increase wallet funds. Admin revenue
+excludes the discount while provider cost remains recorded. Migrations preserve
+existing wallets and paid-order prices.
+
 ## Online wallet recharge
 
 Online recharge uses OmniChat's existing XorPay Alipay checkout. OmniChat owns the

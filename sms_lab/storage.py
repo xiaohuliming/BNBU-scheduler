@@ -7,6 +7,7 @@ from .recharge import OmniRechargeError, validate_paid_recharge
 
 
 PRICE_SCALE = 10_000
+FREE_TRIAL_LIMIT_UNITS = 5_000
 ACTIVE_ORDER_STATUSES = ("purchasing", "active", "code_received")
 
 
@@ -62,6 +63,21 @@ def init_sms_lab_tables(cursor):
         )
         """
     )
+    try:
+        cursor.execute(
+            "ALTER TABLE sms_orders ADD COLUMN trial_discount_units INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (trial_discount_units >= 0 AND trial_discount_units <= sale_price_units)"
+        )
+    except sqlite3.OperationalError:
+        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sms_trial_claims (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id),
+            order_id INTEGER NOT NULL UNIQUE REFERENCES sms_orders(id),
+            status TEXT NOT NULL CHECK (status IN ('reserved', 'used')),
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_sms_orders_user_created "
         "ON sms_orders (user_id, created_at DESC)"
@@ -93,6 +109,38 @@ def units_to_amount(units):
 def sale_units_for_cost(cost_units, markup_percent):
     numerator = int(cost_units) * (100 + int(markup_percent))
     return (numerator + 99) // 100
+
+
+def free_trial_status(conn, user_id):
+    """A new SMS customer gets one order, never a cash wallet grant."""
+    claim = conn.execute(
+        "SELECT status FROM sms_trial_claims WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    if claim:
+        status = claim[0]
+    elif conn.execute(
+        "SELECT 1 FROM sms_orders WHERE user_id = ? "
+        "AND status IN ('code_received', 'completed') LIMIT 1", (user_id,)
+    ).fetchone():
+        status = 'used'
+    elif conn.execute(
+        "SELECT 1 FROM sms_orders WHERE user_id = ? "
+        "AND status IN ('purchasing', 'active') LIMIT 1", (user_id,)
+    ).fetchone():
+        status = 'reserved'
+    else:
+        status = 'available'
+    return {'available': status == 'available', 'status': status,
+            'max_price': units_to_amount(FREE_TRIAL_LIMIT_UNITS), 'currency': 'USD'}
+
+
+def consume_free_trial(conn, user_id, order_id):
+    """Persist successful use even if a later status update changes the order."""
+    conn.execute(
+        "INSERT INTO sms_trial_claims (user_id, order_id, status) VALUES (?, ?, 'used') "
+        "ON CONFLICT(user_id) DO UPDATE SET status = 'used', updated_at = CURRENT_TIMESTAMP",
+        (user_id, order_id),
+    )
 
 
 def settle_paid_sms_recharge(conn, user_id: int, order: dict) -> tuple[bool, int]:
