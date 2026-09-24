@@ -10,7 +10,11 @@ The server follows BNBU MIS's authenticated mailbox jump. It scans inbox pages i
 
 A run covers up to 150 recent messages. Any cap or unparseable dates produce an explicit partial-coverage label. Long messages are bounded and flagged to the model. Headlines merge repeated notices, retain important dates and conditions, and omit stale or irrelevant announcements. The model must cite real source IDs. Only the brief, selected source metadata, and coverage dates are cached in SQLite. The payload is encrypted with a purpose-derived key from the app secret and binds the account ID and school identity inside the ciphertext. Raw messages are not stored.
 
-The cache is refreshed no more than once per four hours. Unchanged mail reuses a brief for up to twelve hours; date interpretation is then refreshed. Failed jobs back off for an hour, preserve a usable previous result, and never block the homepage. Cached briefs older than a day are not displayed. At most three jobs execute concurrently, with a bounded queue of 24. Passwords awaiting execution are encrypted in memory and discarded with the job. Jobs check account binding before reading and before saving.
+Each authenticated homepage visit requests one refresh. GET polling never starts work. Concurrent requests for the same account/binding share one in-flight job. The former four-hour gate and twelve-hour unchanged-mail reuse gate are removed: a new admitted visit rereads and regenerates the brief, while showing the previous result during the update.
+
+Mailbox sessions stay in process memory for at most eight hours. One-off login passwords are used only to establish a session. If the user explicitly enabled existing encrypted DDL auto-sync storage, that saved credential can reestablish an expired mailbox session; otherwise another manual iSpace login is required. Management pages never show plaintext, but the server can decrypt an opted-in saved password. Do not claim that no school passwords are ever stored.
+
+Unlinking in settings clears the active saved credential and the caller's school-derived data, increments the binding generation, and revokes queued/in-flight work. Polling and cache writes validate the current owner and generation. Historical backups are not automatically erased by unlink. At most three jobs execute concurrently, with a bounded queue of 24. Mail sessions and cached data are not shared across accounts.
 
 ## OmniChat service integration
 

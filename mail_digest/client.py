@@ -79,6 +79,7 @@ class SchoolMailbox:
         self.http = requests.Session()
         self.sid = None
         self.started = time.monotonic()
+        self.cancelled = lambda: False
 
     def close(self):
         self.http.cookies.clear()
@@ -90,6 +91,8 @@ class SchoolMailbox:
         # leave the exact school/Tencent host boundary.
         try:
             for _ in range(8):
+                if self.cancelled():
+                    raise MailError('Mailbox request cancelled', 'mail_cancelled')
                 parsed = urlsplit(url)
                 if (parsed.scheme != 'https' or parsed.hostname not in ALLOWED_HOSTS
                         or parsed.port not in (None, 443) or parsed.username or parsed.password):

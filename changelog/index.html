@@ -1,0 +1,9 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>更新日志 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"></head><body>
+<header><a href="/">MAXCOURSE</a><nav><a href="/privacy/">隐私说明</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码 ↗</a></nav></header>
+<main><p class="meta">CHANGELOG</p><h1>更新日志</h1><section><p class="meta">2026 年 9 月 24 日</p><h2>每次访问更新邮件摘要，补全隐私控制</h2>
+<ul><li>使用 iSpace 登录后，在首页直接显示最近七天邮件的简短重点，包含已读与未读邮件，最多展示四条，可展开查看来源。</li><li>每次进入已登录的首页都会发起一次后台更新，移除原来的四小时检查间隔和十二小时摘要复用限制。有效邮箱会话内会读取最新邮件并重新生成；并发访问复用进行中的任务，轮询只查询状态。</li><li>优先复用短期邮箱会话。未保存密码时，会话失效后需手动输入；已主动开启加密保存时，可自动重新连接。页面会区分“正在更新”和“本次未更新”。</li><li>保留用户自选的 DDL 自动同步。开启后密码加密保存在服务器，管理界面不显示明文，但服务器自动同步时会解密使用。介意保存的用户可以保持关闭并手动填写。</li><li>设置中新增“删除已添加的 iSpace 账号”。解除绑定会撤销后台读取，清除在线密码密文、临时邮箱会话、邮件摘要和从 iSpace 导入的数据，手动待办保留。</li><li>新增隐私说明，公开主项目仓库、审查范围和开发者联系方式，说明 AI 数据处理、历史保存行为与安全边界。</li><li>多数服务仍无需 iSpace 登录。非必要不要向第三方提供学号密码，包括本站。</li></ul>
+<p>本次邮件摘要使用 OmniChat 的现有模型服务，费用由项目服务端承担，不扣用户个人积分。项目不向用户发送或代替用户操作学校邮件。</p>
+<div class="note"><p><strong>开源可查，不是安全保证。</strong>本次完成范围有限的代码自查与自动化回归检查，没有第三方独立审计或学校认证。详细数据处理与删除范围请阅读<a href="/privacy/">隐私说明</a>。</p></div>
+<p><a href="https://github.com/xiaohuliming/BNBU-scheduler/commits/main/" target="_blank" rel="noopener noreferrer">查看 GitHub 提交记录 ↗</a> · <a href="https://github.com/xiaohuliming/BNBU-scheduler/blob/main/SECURITY_REVIEW_2026-09-24.md" target="_blank" rel="noopener noreferrer">查看本次代码检查记录 ↗</a></p></section>
+<section class="contact"><h2>维护者</h2><p>SIrus. · 微信 ToDoHacambiado · 学号 t330025032</p><p>个人博客：<a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></p></section></main>
+<footer><nav><a href="/">返回首页</a><a href="/privacy/">隐私与安全说明</a></nav></footer></body></html>

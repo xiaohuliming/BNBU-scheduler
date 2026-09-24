@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="1487724496-379235+12027406">
+<html lang="en" data-compiled-sum="1040066974-382970+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1487724496-379235+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1040066974-382970+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1487724496-379235+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1040066974-382970+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -2217,7 +2217,7 @@
                                                             <div className="flex items-start gap-2">
                                                                 <Lock className="w-4 h-4 mt-0.5 shrink-0" />
                                                                 <p>
-                                                                    密码会使用服务器密钥加密保存，只在自动同步时解密。关闭自动同步后会立即删除。为完成自动登录，服务器必须具备解密能力。
+                                                                    开启后，密码会加密保存在服务器，后台管理界面不显示明文。自动同步时服务器会解密使用。介意保存的话，请保持关闭并使用手动同步；关闭或解绑会删除密文。
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -3431,6 +3431,22 @@
             const [bindSid, setBindSid] = useState('');
             const [bindPw, setBindPw] = useState('');
             const [binding, setBinding] = useState(false);
+            const [unlinking, setUnlinking] = useState(false);
+            const handleUnlinkIspace = async () => {
+                if (!confirm('解除 iSpace 绑定后，将停止校园数据读取，清除邮箱会话、邮件摘要和已同步的 iSpace 待办。手动待办和本站账号会保留。是否继续？')) return;
+                setUnlinking(true);
+                try {
+                    const profile = await fetch('/api/user', {cache:'no-store'}).then(r => r.json());
+                    const response = await fetch('/api/user/bind/ispace', {
+                        method:'DELETE', headers:{'X-Account-CSRF':profile.account_csrf || ''}
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || '解除绑定失败');
+                    window.location.reload();
+                } catch (error) { alert(error.message); }
+                finally { setUnlinking(false); }
+            };
+
 
             const handleBindIspace = async () => {
                 if (!bindSid.trim() || !bindPw) { alert("请输入学号和 iSpace 密码"); return; }
@@ -3559,8 +3575,11 @@
                                 <div>
                                     <label className="block text-xs font-black uppercase mb-1 text-gray-500">iSpace Linked</label>
                                     {user.ispace_username ? (
-                                        <div className="font-bold text-xl flex items-center gap-2 p-2">
-                                            <span className="text-green-600 flex items-center gap-1"><CheckSquare className="w-4 h-4" /> {user.ispace_username}</span>
+                                        <div className="space-y-3 p-2">
+                                            <span className="font-bold text-lg text-green-700 flex items-center gap-1"><CheckSquare className="w-4 h-4" /> {user.ispace_username}</span>
+                                            <p className="text-sm leading-6 text-gray-600">手动输入的校园密码不持久保存。若你主动开启自动同步，密码会加密保存在服务器；管理界面不显示明文，但服务器能在同步时解密使用。</p>
+                                            <button onClick={handleUnlinkIspace} disabled={unlinking} className="min-h-11 px-4 py-2 border-2 border-red-700 text-red-700 font-bold disabled:opacity-50">{unlinking ? '正在解除…' : '删除已添加的 iSpace 账号'}</button>
+                                            <p className="text-xs leading-5 text-gray-500">只解除校园关联，不注销本站账号。主动再次使用 iSpace 登录时会重新关联。</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2 p-2">
@@ -3576,6 +3595,12 @@
                                     )}
                                 </div>
                             </div>
+                        </div>
+
+                        <div className="border border-black/15 bg-white p-6 text-sm leading-7">
+                            <h2 className="text-lg font-bold mb-2">隐私与项目说明</h2>
+                            <p>本项目非学校官方产品。多数服务无需校园登录。非必要不要向第三方提供学号密码，包括本站。</p>
+                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 underline underline-offset-4"><a href="/privacy/">隐私说明</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码与问题反馈 ↗</a></div>
                         </div>
 
                         {/* Danger Zone */}
@@ -3610,29 +3635,38 @@
             useEffect(() => {
                 setResult(null);
                 if (!user?.id || !user?.ispace_username) return;
-                let active = true;
-                let timer;
+                let active = true, timer;
                 const controller = new AbortController();
                 const started = Date.now();
-                const load = async () => {
+                const visit = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-visit`;
+                const show = data => { if (active && data.user_id === user.id) setResult({...data, owner:user.id}); };
+                const poll = async () => {
                     try {
-                        const response = await fetch('/api/mail-brief', {
-                            credentials: 'same-origin', cache: 'no-store', signal: controller.signal
-                        });
+                        const response = await fetch('/api/mail-brief', {credentials:'same-origin',cache:'no-store',signal:controller.signal});
+                        if (!response.ok) return;
+                        const data = await response.json(); show(data);
+                        if (active && (data.state === 'working' || data.updating) && Date.now()-started < 600000) timer=setTimeout(poll,4000);
+                    } catch (_) {}
+                };
+                const refresh = async () => {
+                    try {
+                        const response = await fetch('/api/mail-brief', {credentials:'same-origin',cache:'no-store',signal:controller.signal});
                         if (!response.ok) return;
                         const data = await response.json();
                         if (!active || data.user_id !== user.id) return;
-                        setResult({ ...data, owner: user.id });
-                        if ((data.state === 'working' || data.updating) && Date.now() - started < 600000) {
-                            timer = setTimeout(load, 4000);
-                        }
-                    } catch (_) {
-                        // A mail/provider outage must never disrupt the homepage.
-                    }
+                        show(data);
+                        const update = await fetch('/api/mail-brief/refresh', {
+                            method:'POST', credentials:'same-origin', cache:'no-store', signal:controller.signal,
+                            headers:{'Content-Type':'application/json','X-Mail-CSRF':data.csrf}, body:JSON.stringify({visit_id:visit})
+                        });
+                        if (!update.ok) return;
+                        const next = await update.json(); show(next);
+                        if (active && (next.state === 'working' || next.updating)) timer=setTimeout(poll,4000);
+                    } catch (_) {}
                 };
-                load();
-                return () => { active = false; clearTimeout(timer); controller.abort(); };
-            }, [user?.id, user?.ispace_username]);
+                refresh();
+                return () => {active=false;clearTimeout(timer);controller.abort();};
+            }, [user?.id,user?.ispace_username]);
 
             if (!user?.ispace_username || !result || result.owner !== user.id) return null;
             const brief = result.brief;
@@ -3641,9 +3675,9 @@
                     <p className="mx-auto mt-8 max-w-xl text-center text-xs text-[#8a7666]" role="status">
                         正在整理最近一周的邮件…
                     </p>
-                ) : null;
+                ) : result.reauth_required ? <p className="mx-auto mt-8 max-w-xl text-center text-xs text-[#8a7666]">邮箱会话已失效，下次 iSpace 登录后可更新邮件摘要。</p> : null;
             }
-            const updated = new Date(brief.generated_at * 1000).toLocaleString('zh-CN', {
+            const updated = new Date((brief.checked_at || brief.generated_at) * 1000).toLocaleString('zh-CN', {
                 month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Shanghai'
             });
             return (
@@ -3668,7 +3702,9 @@
                         {brief.items.length === 0 && <p className="py-2 text-sm text-[#7a6a5d]">最近一周没有需要特别提醒的邮件。</p>}
                     </div>
                     <p className="mt-3 text-[11px] leading-5 text-[#8a7666]">
-                        {brief.complete ? `整理自 ${brief.mail_count} 封邮件` : `已整理 ${brief.mail_count} 封，尚有未覆盖邮件`} · {updated} 更新
+                        {brief.complete ? `整理自 ${brief.mail_count} 封邮件` : `已整理 ${brief.mail_count} 封，尚有未覆盖邮件`} · {updated} 检查
+                        {result.updating && ' · 正在更新…'}
+                        {result.reauth_required && ' · 邮箱会话已失效，本次未更新'}
                     </p>
                 </section>
             );
@@ -3833,10 +3869,12 @@
                             <div className="mono-ui mt-3 text-[10px] uppercase tracking-[0.24em] text-[#a08c7d]">
                                 · Fin ·
                             </div>
-                            <a href="https://github.com/xiaohuliming" target="_blank" rel="noopener noreferrer"
-                                className="mono-ui inline-flex items-center gap-1.5 mt-4 text-[11px] tracking-[0.16em] text-[#a08c7d] hover:text-[#1a140d] transition-colors">
-                                <Github className="w-3.5 h-3.5" /> github.com/xiaohuliming
-                            </a>
+                            <nav className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-[#7a6a5d]" aria-label="项目信息">
+                                <a href="/privacy/" className="underline underline-offset-4">隐私说明</a>
+                                <a href="/changelog/" className="underline underline-offset-4">更新日志</a>
+                                <a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">开源代码 ↗</a>
+                                <a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">SIrus. 的博客 ↗</a>
+                            </nav>
                         </footer>
                     </section>
                 </div>
@@ -4480,9 +4518,10 @@
                         
                         {activeTab === 'ispace' && (
                             <p className="mt-4 text-xs text-gray-500 font-bold text-center">
-                                使用 iSpace 登录将同步 DDL，并由 OmniChat 自动整理最近一周的收件箱摘要。邮件状态保持不变，不扣个人积分。
+                                非必要请勿向第三方提供学号密码，包括本站。本次登录密码仅临时使用；如主动开启自动同步，密码将加密保存在服务器，并在同步时解密使用。邮件摘要不扣个人积分。
                             </p>
                         )}
+                        <p className="mt-3 text-xs leading-5 text-gray-600">多数服务无需 iSpace 登录。<a href="/privacy/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">隐私说明与开源代码</a></p>
                     </div>
                 </div>
             );
@@ -5086,7 +5125,7 @@
 
         // Shown once per NOTICE_VERSION on the user's first visit after an update;
         // bump the version string whenever a new announcement should appear.
-        const NOTICE_VERSION = '2026S1c';
+        const NOTICE_VERSION = '2026-09-24-privacy-visits';
         const UpdateNotice = () => {
             const [seen, setSeen] = useState(() => {
                 try { return localStorage.getItem('maxcourse_notice_seen') === NOTICE_VERSION; } catch (e) { return true; }
@@ -5102,7 +5141,7 @@
                     <div className="max-w-6xl mx-auto px-3 md:px-8 py-2">
                         <div className="flex items-center justify-center gap-2 sm:gap-3">
                             <span className="hidden sm:inline-flex bg-black text-[#ff4fd8] text-[10px] font-black px-2 py-1 shrink-0 uppercase tracking-wider">Update</span>
-                            <p className="font-black text-xs sm:text-sm min-w-0 text-center leading-5">iSpace 已迁移至 BNBU 新域名 · DDL 邮箱提醒现已启用</p>
+                            <p className="font-black text-xs sm:text-sm min-w-0 text-center leading-5">邮件摘要按访问更新 · 隐私说明与 iSpace 解绑已上线</p>
                             <button
                                 onClick={() => setOpen(v => !v)}
                                 aria-expanded={open}
@@ -5121,9 +5160,9 @@
                         </div>
                         {open && (
                             <div className="max-w-4xl mx-auto pb-3 pt-2 text-xs sm:text-sm font-bold leading-6 space-y-1.5 border-t-2 border-black/30">
-                                <p>· iSpace 登录与 DDL 同步已适配 <a href="https://ispace.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer" className="bg-black text-[#ff4fd8] px-1.5 py-0.5 underline decoration-1 underline-offset-2 hover:text-white">ispace.bnbu.edu.cn</a></p>
-                                <p>· DDL 邮箱提醒正式上线，可选择提前 72、24、3 或 1 小时提醒，不同时间会使用不同紧急程度和提示内容</p>
-                                <p>· 登录后进入 DDL 页面，点击右上角铃铛即可填写邮箱、开启提醒并发送测试邮件</p>
+                                <p>多数服务无需校园登录。非必要不要向第三方提供学号密码，包括本站。</p>
+                                <p>每次进入首页都会更新近一周摘要。你可选用手动输入，或主动开启加密保存以便自动同步。</p>
+                                <p>可在设置中删除已添加的 iSpace 账号。<a href="/privacy/" className="underline underline-offset-4">阅读隐私说明</a> · <a href="/changelog/" className="underline underline-offset-4">查看完整更新日志</a></p>
                             </div>
                         )}
                     </div>

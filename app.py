@@ -115,6 +115,7 @@ app.secret_key = load_or_create_secret_key()
 app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_LIFETIME_DAYS),
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=os.getenv('MAXCOURSE_COOKIE_SECURE', '0') == '1',
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_REFRESH_EACH_REQUEST=True,
     # The largest legitimate upload is a 12 MB transcript PDF. Reject larger
@@ -663,6 +664,10 @@ def init_db():
 
         init_sms_lab_tables(c)
         init_agent_tables(c)
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN ispace_link_version INTEGER NOT NULL DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
         init_mail_brief_tables(c)
         conn.commit()
 
@@ -862,6 +867,7 @@ def build_todo_reminder_email(user_row, todo_row, reminder_hours, unsubscribe_ur
 
 
 def set_authenticated_session(user_id, username, display_name):
+    session.pop('account_csrf', None)
     clear_mail_digest_session()
     session.permanent = True
     session['user_id'] = user_id
@@ -1984,6 +1990,16 @@ def ddl_page():
 def sms_market_page():
     return send_from_directory(os.path.join(APP_ROOT, 'sms-lab'), 'index.html')
 
+@app.route('/privacy/')
+def privacy_page():
+    return send_from_directory(APP_ROOT, 'privacy/index.html')
+
+
+@app.route('/changelog/')
+def changelog_page():
+    return send_from_directory(APP_ROOT, 'changelog/index.html')
+
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('.', 'favicon.png', mimetype='image/png')
@@ -2215,6 +2231,7 @@ def bind_ispace():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
+    mail_brief_service.revoke(session.get('user_id'))
     clear_mail_digest_session()
     session.clear()
     sso_bridge.revoke_token(request.cookies.get('sso_token'))
@@ -2240,7 +2257,7 @@ def get_current_user():
     display_name = user['display_name'] if user['display_name'] else user['ispace_username'] or user['username']
     session['display_name'] = display_name # Sync session
     
-    return jsonify({"user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": display_name}})
+    return jsonify({"user": {"id": user['id'], "username": user['username'], "ispace_username": user['ispace_username'], "display_name": display_name}, "account_csrf": account_csrf()})
 
 
 def ispace_auto_sync_settings_payload(user_row):
@@ -2407,6 +2424,44 @@ def update_ispace_auto_sync_settings():
     if sync_stats is not None:
         response['sync'] = sync_stats
     return jsonify(response)
+
+def account_csrf():
+    return session.setdefault('account_csrf', secrets.token_urlsafe(32))
+
+
+def account_csrf_valid():
+    expected = session.get('account_csrf', '')
+    supplied = request.headers.get('X-Account-CSRF', '')
+    return bool(expected and secrets.compare_digest(expected.encode(), supplied.encode()))
+
+
+@app.route('/api/user/bind/ispace', methods=['DELETE'])
+def unlink_ispace():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    if not account_csrf_valid():
+        return jsonify({'error': '页面验证已过期，请刷新后重试。'}), 403
+    uid = session['user_id']
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        if not conn.execute('SELECT id FROM users WHERE id=?', (uid,)).fetchone():
+            return jsonify({'error': 'Unauthorized'}), 401
+        conn.execute("""UPDATE users SET ispace_username=NULL,ispace_password_encrypted=NULL,
+                     ispace_auto_sync_enabled=0,ispace_auto_sync_last_at=NULL,
+                     ispace_auto_sync_last_status='unlinked',ispace_auto_sync_last_error=NULL,
+                     ispace_auto_sync_failure_count=0,ispace_link_version=COALESCE(ispace_link_version,0)+1
+                     WHERE id=?""", (uid,))
+        conn.execute('DELETE FROM mail_weekly_briefs WHERE user_id=?', (uid,))
+        conn.execute('DELETE FROM email_notification_deliveries WHERE user_id=? AND todo_id IN (SELECT id FROM todos WHERE user_id=? AND ispace_id IS NOT NULL)', (uid, uid))
+        removed = conn.execute('DELETE FROM todos WHERE user_id=? AND ispace_id IS NOT NULL', (uid,)).rowcount
+        conn.commit()
+    finally:
+        conn.close()
+    mail_brief_service.revoke(uid)
+    clear_mail_digest_session()
+    return jsonify({'success': True, 'ispace_username': None, 'removed_synced_todos': removed})
+
 
 @app.route('/api/user/profile', methods=['PUT'])
 def update_profile():
@@ -2689,12 +2744,18 @@ def delete_user_data():
         # It doesn't explicitly say NOT NULL, so it should allow NULL.
         c.execute('UPDATE teacher_ratings SET user_id = NULL, is_anonymous = 1 WHERE user_id = ?', (user_id,))
         
+        c.execute('DELETE FROM mail_weekly_briefs WHERE user_id = ?', (user_id,))
+        mail_brief_service.revoke(user_id)
+
         # 3. Delete user
         c.execute('DELETE FROM users WHERE id = ?', (user_id,))
         
         conn.commit()
         session.clear()
-        return jsonify({"success": True})
+        sso_bridge.revoke_token(request.cookies.get('sso_token'))
+        response = jsonify({"success": True})
+        sso_bridge.clear_sso_cookie(response)
+        return response
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -2858,7 +2919,7 @@ def sync_todos():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT ispace_username FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT ispace_username,COALESCE(ispace_link_version,0) AS version FROM users WHERE id = ?', (user_id,))
     user = c.fetchone()
     conn.close()
 
@@ -2875,6 +2936,11 @@ def sync_todos():
     conn = get_db()
     c = conn.cursor()
     
+    conn.execute('BEGIN IMMEDIATE')
+    current = conn.execute('SELECT ispace_username,COALESCE(ispace_link_version,0) AS version FROM users WHERE id=?', (user_id,)).fetchone()
+    if not current or current['ispace_username'] != submitted_ispace_user or current['version'] != user['version']:
+        conn.close()
+        return jsonify({'error': 'iSpace 绑定已更改，本次同步已取消。'}), 409
     sync_stats = sync_ispace_todos_for_user(conn, user_id, result)
 
     conn.commit()
@@ -2997,7 +3063,8 @@ def dispatch_ispace_auto_sync():
                 id,
                 ispace_username,
                 ispace_password_encrypted,
-                COALESCE(ispace_auto_sync_failure_count, 0) AS failure_count
+                COALESCE(ispace_auto_sync_failure_count, 0) AS failure_count,
+                COALESCE(ispace_link_version, 0) AS link_version
             FROM users
             WHERE COALESCE(ispace_auto_sync_enabled, 0) = 1
               AND ispace_username IS NOT NULL
@@ -3031,9 +3098,9 @@ def dispatch_ispace_auto_sync():
                         ispace_auto_sync_last_status = 'error',
                         ispace_auto_sync_last_error = ?,
                         ispace_auto_sync_failure_count = ispace_auto_sync_failure_count + 1
-                    WHERE id = ?
+                    WHERE id = ? AND ispace_username = ? AND COALESCE(ispace_link_version,0) = ?
                     ''',
-                    (now_ts, message, row['id']),
+                    (now_ts, message, row['id'], row['ispace_username'], row['link_version']),
                 )
                 conn.commit()
             finally:
@@ -3054,6 +3121,10 @@ def dispatch_ispace_auto_sync():
         if isinstance(result, list):
             conn = get_db()
             try:
+                conn.execute('BEGIN IMMEDIATE')
+                current = conn.execute('SELECT ispace_username,ispace_auto_sync_enabled,COALESCE(ispace_link_version,0) AS version FROM users WHERE id=?', (row['id'],)).fetchone()
+                if not current or current['ispace_username'] != row['ispace_username'] or not current['ispace_auto_sync_enabled'] or current['version'] != row['link_version']:
+                    continue
                 sync_ispace_todos_for_user(conn, row['id'], result)
                 conn.execute(
                     '''
@@ -3062,9 +3133,9 @@ def dispatch_ispace_auto_sync():
                         ispace_auto_sync_last_status = 'success',
                         ispace_auto_sync_last_error = NULL,
                         ispace_auto_sync_failure_count = 0
-                    WHERE id = ?
+                    WHERE id = ? AND ispace_username = ? AND COALESCE(ispace_link_version,0) = ?
                     ''',
-                    (now_ts, row['id']),
+                    (now_ts, row['id'], row['ispace_username'], row['link_version']),
                 )
                 conn.commit()
             finally:
@@ -3088,7 +3159,7 @@ def dispatch_ispace_auto_sync():
                     ispace_auto_sync_last_status = 'error',
                     ispace_auto_sync_last_error = ?,
                     ispace_auto_sync_failure_count = ?
-                WHERE id = ?
+                WHERE id = ? AND ispace_username = ? AND COALESCE(ispace_link_version,0) = ?
                 ''',
                 (
                     1 if should_disable else 0,
@@ -3096,7 +3167,7 @@ def dispatch_ispace_auto_sync():
                     now_ts,
                     message,
                     failure_count,
-                    row['id'],
+                    row['id'], row['ispace_username'], row['link_version'],
                 ),
             )
             conn.commit()

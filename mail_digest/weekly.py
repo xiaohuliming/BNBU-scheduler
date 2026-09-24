@@ -1,4 +1,4 @@
-"""Automatic, account-scoped weekly mail briefs with encrypted result caching."""
+"""Per-visit weekly briefs using short-lived mailbox sessions, never saved passwords."""
 import base64
 import hashlib
 import hmac
@@ -7,29 +7,36 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 
 from cryptography.fernet import Fernet, InvalidToken
 from .client import SchoolMailbox, MailError
 from .summary import summarize_week
 
-REFRESH_SECONDS = 4 * 3600
-RETRY_SECONDS = 3600
 DISPLAY_SECONDS = 24 * 3600
+SESSION_SECONDS = 8 * 3600
 MAX_JOBS = 24
+MAX_SESSIONS = 256
 LOG = logging.getLogger(__name__)
 
 
 def init_tables(cursor):
     cursor.execute('''CREATE TABLE IF NOT EXISTS mail_weekly_briefs (
-        user_id INTEGER PRIMARY KEY,
-        school_username TEXT NOT NULL,
-        payload_encrypted TEXT,
-        fingerprint TEXT,
-        generated_at INTEGER NOT NULL DEFAULT 0,
-        checked_at INTEGER NOT NULL DEFAULT 0,
-        last_attempt INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY(user_id) REFERENCES users(id)
+        user_id INTEGER PRIMARY KEY, school_username TEXT NOT NULL,
+        payload_encrypted TEXT, fingerprint TEXT,
+        generated_at INTEGER NOT NULL DEFAULT 0, checked_at INTEGER NOT NULL DEFAULT 0,
+        last_attempt INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
+
+
+@dataclass
+class MailboxSession:
+    mailbox: object
+    username: str
+    version: int
+    expires_at: float
+    revoked: threading.Event = field(default_factory=threading.Event)
+    busy: bool = False
 
 
 class WeeklyBriefService:
@@ -40,22 +47,57 @@ class WeeklyBriefService:
         self.cipher = Fernet(base64.urlsafe_b64encode(key))
         self.enabled = enabled
         self.executor = executor or ThreadPoolExecutor(max_workers=3, thread_name_prefix='mail-brief')
-        self.lock = threading.Lock()
-        self.jobs = set()
+        self.lock = threading.RLock()
+        self.jobs = {}
+        self.slots = threading.BoundedSemaphore(MAX_JOBS)
+        self.sessions = {}
+        if executor is None and enabled():
+            threading.Thread(target=self._housekeeping, daemon=True, name='mail-session-expiry').start()
+
+    def _housekeeping(self):
+        while True:
+            time.sleep(60)
+            with self.lock:
+                self._prune()
+
+    def _prune(self):
+        now = time.monotonic()
+        for uid, lease in list(self.sessions.items()):
+            if lease.expires_at <= now or lease.revoked.is_set():
+                self.sessions.pop(uid, None)
+                lease.revoked.set()
+                if not lease.busy:
+                    lease.mailbox.close()
+
+    def revoke(self, user_id):
+        with self.lock:
+            for key, cancelled in list(self.jobs.items()):
+                if key[0] == user_id:
+                    cancelled.set()
+                    self.jobs.pop(key, None)
+            lease = self.sessions.pop(user_id, None)
+            if lease:
+                lease.revoked.set()
+                if not lease.busy:
+                    lease.mailbox.close()
+
+    def _identity(self, user_id, username):
+        db = self.get_db()
+        try:
+            row = db.execute('SELECT ispace_username,COALESCE(ispace_link_version,0) AS version FROM users WHERE id=?',
+                             (user_id,)).fetchone()
+            return int(row['version']) if row and row['ispace_username'] == username else None
+        finally:
+            db.close()
+
+    def _owns(self, user_id, username, version):
+        return self._identity(user_id, username) == version
 
     def _row(self, user_id, username):
         db = self.get_db()
         try:
             return db.execute('SELECT * FROM mail_weekly_briefs WHERE user_id=? AND school_username=?',
                               (user_id, username)).fetchone()
-        finally:
-            db.close()
-
-    def _owns(self, user_id, username):
-        db = self.get_db()
-        try:
-            row = db.execute('SELECT ispace_username FROM users WHERE id=?', (user_id,)).fetchone()
-            return bool(row and row['ispace_username'] == username)
         finally:
             db.close()
 
@@ -66,27 +108,25 @@ class WeeklyBriefService:
             payload = json.loads(self.cipher.decrypt(row['payload_encrypted'].encode()).decode())
             if payload.pop('owner', None) != [row['user_id'], row['school_username']]:
                 return None
+            payload['checked_at'] = row['checked_at']
             return payload
         except (InvalidToken, ValueError, TypeError, AttributeError):
             return None
 
     def status(self, user_id, username):
+        version = self._identity(user_id, username)
         with self.lock:
-            working = (user_id, username) in self.jobs
-        row = self._row(user_id, username)
-        payload = self._payload(row)
-        if payload:
-            return {'state': 'ready', 'brief': payload, 'updating': working}
-        return {'state': 'working' if working else 'idle'}
+            self._prune()
+            lease = self.sessions.get(user_id)
+            available = bool(lease and lease.username == username and lease.version == version)
+            working = (user_id, username, version) in self.jobs
+        payload = self._payload(self._row(user_id, username))
+        return {'state': 'ready' if payload else ('working' if working else 'idle'),
+                'brief': payload, 'updating': working, 'connection_ready': available,
+                'reauth_required': not available and not working}
 
-    def should_refresh(self, user_id, username):
-        if not self.enabled():
-            return False
-        row = self._row(user_id, username)
-        now = time.time()
-        return not row or (now - row['checked_at'] >= REFRESH_SECONDS and now - row['last_attempt'] >= RETRY_SECONDS)
-
-    def start(self, user_id, username, password):
+    def start(self, user_id, username, password=None):
+        """Login supplies a one-off password; later visits reuse only the mailbox session."""
         try:
             return self._start(user_id, username, password)
         except Exception:
@@ -94,83 +134,112 @@ class WeeklyBriefService:
             return False
 
     def _start(self, user_id, username, password):
-        """Return immediately. Passwords live only as encrypted, bounded job data."""
-        if not isinstance(password, str) or not password or not self.should_refresh(user_id, username):
+        if not self.enabled():
             return False
-        key = (user_id, username)
+        version = self._identity(user_id, username)
+        if version is None:
+            return False
+        key = (user_id, username, version)
         with self.lock:
+            self._prune()
             if key in self.jobs or len(self.jobs) >= MAX_JOBS:
                 return False
-            self.jobs.add(key)
-        try:
-            if not self._owns(user_id, username):
-                with self.lock:
-                    self.jobs.discard(key)
+            lease = self.sessions.get(user_id)
+            if lease and (lease.username != username or lease.version != version):
+                self.revoke(user_id)
+                lease = None
+            if lease and isinstance(password, str) and password:
+                # An explicit login or opted-in saved password can renew the
+                # provider session immediately instead of discovering expiry
+                # midway through a visit and requiring another page refresh.
+                self.revoke(user_id)
+                lease = None
+            if not lease and (not isinstance(password, str) or not password):
                 return False
+            if not self.slots.acquire(blocking=False):
+                return False
+            cancelled = threading.Event()
+            self.jobs[key] = cancelled
+        try:
             now = int(time.time())
             db = self.get_db()
             try:
-                db.execute('''INSERT INTO mail_weekly_briefs (user_id,school_username,last_attempt)
-                    VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET
+                result = db.execute('''INSERT INTO mail_weekly_briefs (user_id,school_username,last_attempt)
+                    SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM users WHERE id=? AND ispace_username=? AND COALESCE(ispace_link_version,0)=?)
+                    ON CONFLICT(user_id) DO UPDATE SET
                     payload_encrypted=CASE WHEN school_username=excluded.school_username THEN payload_encrypted ELSE NULL END,
                     fingerprint=CASE WHEN school_username=excluded.school_username THEN fingerprint ELSE NULL END,
                     checked_at=CASE WHEN school_username=excluded.school_username THEN checked_at ELSE 0 END,
                     generated_at=CASE WHEN school_username=excluded.school_username THEN generated_at ELSE 0 END,
-                    school_username=excluded.school_username,last_attempt=excluded.last_attempt''', (user_id, username, now))
+                    school_username=excluded.school_username,last_attempt=excluded.last_attempt''', (user_id, username, now, user_id, username, version))
+                if not result.rowcount:
+                    raise MailError('Account binding changed', 'mail_cancelled')
                 db.commit()
             finally:
                 db.close()
-            sealed = self.cipher.encrypt(password.encode())
-            self.executor.submit(self._run, user_id, username, sealed, now)
+            sealed = self.cipher.encrypt(password.encode()) if not lease else None
+            self.executor.submit(self._run, user_id, username, version, lease, sealed, now, cancelled)
             return True
         except Exception:
             with self.lock:
-                self.jobs.discard(key)
-            LOG.warning('mail_brief_schedule_failed user_id=%s', user_id)
-            return False
+                if self.jobs.get(key) is cancelled:
+                    self.jobs.pop(key, None)
+            self.slots.release()
+            raise
 
-    def _save(self, user_id, username, payload, fingerprint, generated_at, checked_at):
-        # Authenticate the cached record's owner inside the ciphertext too.
+    def _save(self, user_id, username, version, payload, fingerprint, generated_at, checked_at):
         sealed = self.cipher.encrypt(json.dumps({'owner': [user_id, username], **payload}, ensure_ascii=False).encode()).decode()
         db = self.get_db()
         try:
             db.execute('''UPDATE mail_weekly_briefs SET payload_encrypted=?,fingerprint=?,generated_at=?,checked_at=?
                 WHERE user_id=? AND school_username=? AND EXISTS
-                (SELECT 1 FROM users WHERE id=? AND ispace_username=?)''',
-                       (sealed, fingerprint, generated_at, checked_at, user_id, username, user_id, username))
+                (SELECT 1 FROM users WHERE id=? AND ispace_username=? AND COALESCE(ispace_link_version,0)=?)''',
+                       (sealed, fingerprint, generated_at, checked_at, user_id, username, user_id, username, version))
             db.commit()
         finally:
             db.close()
 
-    def _run(self, user_id, username, sealed_password, queued_at):
+    def _run(self, user_id, username, version, lease, sealed_password, queued_at, cancellation):
+        key = (user_id, username, version)
         mailbox = None
         try:
-            if time.time() - queued_at > 600 or not self._owns(user_id, username):
+            if cancellation.is_set() or time.time() - queued_at > 600 or not self._owns(user_id, username, version):
                 return
-            mailbox = SchoolMailbox()
-            password = self.cipher.decrypt(sealed_password).decode()
-            mailbox.login(username, password)
-            password = None
-            sealed_password = None
+            if lease is None:
+                mailbox = SchoolMailbox()
+                mailbox.cancelled = lambda: cancellation.is_set() or not self._owns(user_id, username, version)
+                password = self.cipher.decrypt(sealed_password).decode()
+                mailbox.login(username, password)
+                password = sealed_password = None
+                lease = MailboxSession(mailbox, username, version, time.monotonic() + SESSION_SECONDS, busy=True)
+                with self.lock:
+                    self._prune()
+                    if len(self.sessions) >= MAX_SESSIONS:
+                        raise MailError('Mailbox capacity reached', 'mail_busy')
+                    if cancellation.is_set():
+                        lease.revoked.set()
+                        return
+                    self.sessions[user_id] = lease
+            lease.busy = True
+            mailbox = lease.mailbox
+            def cancelled():
+                return cancellation.is_set() or lease.revoked.is_set() or time.monotonic() >= lease.expires_at or not self._owns(user_id, username, version)
+            mailbox.cancelled = cancelled
             now = int(time.time())
             recent = mailbox.recent(now=now)
             metadata = recent['messages']
             fingerprint = hashlib.sha256(json.dumps(metadata, sort_keys=True).encode()).hexdigest()
-            old = self._row(user_id, username)
-            old_payload = self._payload(old)
-            # Even unchanged mail needs a fresh date interpretation each day.
-            if old_payload and old['fingerprint'] == fingerprint and now - old['generated_at'] < 12 * 3600:
-                self._save(user_id, username, old_payload, fingerprint, old['generated_at'], now)
-                return
             messages, unreadable = [], 0
             limit = min(4000, 180000 // max(1, len(metadata)))
             for item in metadata:
+                if cancelled():
+                    raise MailError('Mailbox connection was removed', 'mail_cancelled')
                 if time.time() - now > 360:
-                    raise MailError('邮件读取超时。', 'mail_read_timeout')
+                    raise MailError('Mail read timed out', 'mail_read_timeout')
                 try:
                     preview = mailbox.preview(item['id'])
                 except MailError as exc:
-                    if exc.code in ('mail_session_expired', 'mail_identity_mismatch'):
+                    if exc.code in ('mail_session_expired', 'mail_identity_mismatch', 'mail_cancelled'):
                         raise
                     unreadable += 1
                     preview = {'body': item['snippet'], 'body_truncated': True, 'has_images': False}
@@ -181,10 +250,9 @@ class WeeklyBriefService:
                     body = body[:head] + '\n[中间内容省略]\n' + body[-(limit - head):]
                 messages.append({**{k: v for k, v in item.items() if k != 'snippet'},
                                  **preview, 'body': body, 'body_truncated': preview['body_truncated'] or truncated})
-            mailbox.close()
-            mailbox = None
-            if not self._owns(user_id, username):
+            if cancelled():
                 return
+            # A distinct visit gets a fresh date-aware summary, even if the mail IDs are unchanged.
             highlights = summarize_week(messages, recent['window_start'], recent['window_end']) if messages else []
             indexed = {item['id']: item for item in metadata}
             items = [{'text': line['text'], 'sources': [
@@ -193,12 +261,24 @@ class WeeklyBriefService:
             payload = {'items': items, 'mail_count': len(metadata), 'complete': recent['complete'],
                        'limited_content': unreadable > 0 or any(m['body_truncated'] for m in messages),
                        'window_start': int(recent['window_start']), 'window_end': now, 'generated_at': int(time.time())}
-            self._save(user_id, username, payload, fingerprint, payload['generated_at'], now)
+            if not cancelled():
+                self._save(user_id, username, version, payload, fingerprint, payload['generated_at'], now)
         except Exception as exc:
             code = exc.code if isinstance(exc, MailError) else 'unexpected_error'
+            if lease and code in ('mail_session_expired', 'mail_identity_mismatch', 'mail_cancelled'):
+                lease.revoked.set()
             LOG.warning('mail_brief_failed user_id=%s code=%s', user_id, code)
         finally:
-            if mailbox:
-                mailbox.close()
             with self.lock:
-                self.jobs.discard((user_id, username))
+                if self.jobs.get(key) is cancellation:
+                    self.jobs.pop(key, None)
+                if lease:
+                    lease.busy = False
+                if lease and (cancellation.is_set() or lease.revoked.is_set() or lease.expires_at <= time.monotonic()
+                              or not self._owns(user_id, username, version)):
+                    if self.sessions.get(user_id) is lease:
+                        self.sessions.pop(user_id, None)
+                    lease.mailbox.close()
+                elif mailbox and (not lease or self.sessions.get(user_id) is not lease):
+                    mailbox.close()
+            self.slots.release()

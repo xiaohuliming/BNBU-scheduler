@@ -25,11 +25,11 @@ def get_login_token(session):
         if token_input:
             return token_input['value']
     except Exception as e:
-        logger.error(f"Error getting login token: {e}")
+        logger.error("School login-token request failed: %s", type(e).__name__)
     return None
 
 def login(session, username, password):
-    logger.info(f"Attempting to log in user: {username}")
+    logger.info("Attempting school login")
     token = get_login_token(session)
     
     payload = {
@@ -65,7 +65,7 @@ def login(session, username, password):
         logger.warning("Login status unknown.")
         return False
     except Exception as e:
-        logger.error(f"Login request failed: {e}")
+        logger.error("School login request failed: %s", type(e).__name__)
         return False
 
 def get_sesskey(session):
@@ -86,7 +86,7 @@ def get_sesskey(session):
             if 'sesskey=' in href:
                 return href.split('sesskey=')[1].split('&')[0]
     except Exception as e:
-        logger.error(f"Error getting sesskey: {e}")
+        logger.error("School session-key request failed: %s", type(e).__name__)
             
     return None
 
@@ -147,8 +147,8 @@ def fetch_timeline(username, password):
         return parse_events(events)
 
     except Exception as e:
-        logger.error(f"Error fetching timeline: {e}")
-        return {"error": str(e)}
+        logger.error("School timeline request failed: %s", type(e).__name__)
+        return {"error": "School service request failed"}
 
 import html
 

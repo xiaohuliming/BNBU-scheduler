@@ -71,3 +71,8 @@ After three consecutive authentication failures, auto-sync is disabled and the
 saved credential is deleted. Temporary network and iSpace service failures remain
 eligible for the next half-hourly retry. Authentication failures are still capped
 at three consecutive attempts; do not change this policy when adjusting cadence.
+
+
+## Privacy and unlink update, 2026-09-24
+
+Encrypted credential storage remains opt-in. The management UI does not show plaintext, but the server can decrypt credentials while syncing or reconnecting mail. Disabling auto-sync removes the active encrypted credential. Unlinking iSpace additionally cancels mail work and deletes the active brief and imported iSpace tasks. Historic database backups may retain earlier records and must not be represented as immediately erased.
