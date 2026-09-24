@@ -30,7 +30,7 @@ from ispace_credentials import (
     encrypt_ispace_password,
     is_ispace_credential_encryption_configured,
 )
-from mail_digest import create_blueprint as create_mail_digest_blueprint, clear_session as clear_mail_digest_session
+from mail_digest import register_mail_brief, init_tables as init_mail_brief_tables, clear_session as clear_mail_digest_session
 from media_dl import media_dl_bp
 from sms_lab import create_sms_lab_blueprint, init_sms_lab_tables
 from site_analytics import create_analytics_blueprint
@@ -663,6 +663,7 @@ def init_db():
 
         init_sms_lab_tables(c)
         init_agent_tables(c)
+        init_mail_brief_tables(c)
         conn.commit()
 
         # One-time backfill: if the rollup is empty but raw views exist, compute
@@ -1396,7 +1397,7 @@ def _resolve_course_refs(codes, catalog, enrichment):
     return resolved
 
 
-app.register_blueprint(create_mail_digest_blueprint(get_db))
+mail_brief_service = register_mail_brief(app, get_db)
 app.register_blueprint(media_dl_bp)
 app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
@@ -2155,6 +2156,7 @@ def login_ispace():
     # a bound self-chosen name is a password identity on the shared side.
     local_username = user['username'] if user else username
     set_authenticated_session(user_id, local_username, display_name)
+    mail_brief_service.start(user_id, username, password)
 
     resp = jsonify({
         "success": True,
@@ -2208,6 +2210,7 @@ def bind_ispace():
     finally:
         conn.close()
 
+    mail_brief_service.start(session['user_id'], sid, password)
     return jsonify({"success": True, "ispace_username": sid, "sync": sync_stats})
 
 @app.route('/api/logout', methods=['POST'])

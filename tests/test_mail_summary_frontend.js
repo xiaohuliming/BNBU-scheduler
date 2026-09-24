@@ -1,64 +1,61 @@
-const {test} = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const {JSDOM} = require('jsdom');
-const path = require('node:path');
-const root = path.resolve(__dirname,'..');
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {JSDOM}=require('jsdom');
+const root=path.resolve(__dirname,'..');
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
-const messages=Array.from({length:12},(_,i)=>({id:`m${i}`,subject:i===0?'<img src=x onerror=alert(1)>':'邮件 '+i,sender:'教务处',sender_address:'registry@example.edu',received_at:'2026-09-24T10:00:00Z',snippet:'报名通知'}));
-async function harness({failure=false}={}) {
-  const dom=new JSDOM(fs.readFileSync(path.join(root,'mail-summary/index.html'),'utf8'),{url:'http://localhost/mail-summary/',runScripts:'outside-only'});
-  const calls=[];
-  dom.window.fetch=async(url,opts={})=>{
-    calls.push({url,opts});
-    let status=200, data={};
-    if(url==='/api/user') data={user:{id:1,username:'test',ispace_username:'s123456789'}};
-    else if(url.endsWith('/status')) data={username:'s123456789',connected:true,csrf:'csrf-test',credential_saved:false};
-    else if(url.endsWith('/inbox')) data={messages,total_unread:99,page:0,has_next:true};
-    else if(url.endsWith('/ai-status')) data={model:'test-model'};
-    else if(url.endsWith('/summarize')) {
-      if(failure){status=502;data={error:'生成失败，请重试。'};}
-      else data={summarized_count:1,total_unread:99,digest:{overview:'报名提醒',credits:2,items:[{id:'m0',summary:'<script>bad()</script>',priority:'action',action:'提交申请',deadline:'9 月 26 日'}]},messages:[{...messages[0],body:'原文',has_images:true}]};
-    }
-    return {ok:status===200,status,json:async()=>data};
-  };
-  dom.window.eval(fs.readFileSync(path.join(root,'mail-summary/mail.js'),'utf8'));
-  await tick();await tick();return {dom,calls};
+function setup(fetch){
+ const dom=new JSDOM('<div id="test"></div>',{url:'https://example.test/',runScripts:'outside-only'}),w=dom.window;
+ w.fetch=fetch;
+ for(const file of ['react.production.min.js','react-dom.production.min.js','babel.min.js'])w.eval(fs.readFileSync(path.join(root,'vendor',file),'utf8'));
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),src=html.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/)[1];
+ const start=src.indexOf('const WeeklyMailBrief ='),end=src.indexOf('const ToolboxView ='),stop=src.indexOf('\n        const ',end+20),portion=src.slice(start,stop);
+ const icons=[...new Set([...src.matchAll(/\bIcon:\s*(\w+)/g)].map(x=>x[1]).concat([...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1])))].filter(x=>!['React','WeeklyMailBrief'].includes(x));
+ const stub='const '+icons.map(name=>`${name}=()=>React.createElement('span')`).join(',')+';';
+ w.eval(w.Babel.transform('const {useState,useEffect}=React;'+stub+portion+';window.MailTest={WeeklyMailBrief,HomeView,ToolboxView};',{presets:['react']}).code);
+ const render=(component,user)=>w.ReactDOM.render(w.React.createElement(w.MailTest[component],{user,onNavigate:()=>{},onOpenLogin:()=>{},onOpenView:()=>{}}),w.document.getElementById('test'));
+ return {dom,w,render};
 }
-test('renders inbox as text, caps selection, cites source, sends CSRF',async()=>{
- const {dom,calls}=await harness(); const d=dom.window.document;
- assert.equal(d.querySelectorAll('.message-row').length,12);
- assert.equal(d.querySelectorAll('.message-row img').length,0);
- assert.equal(d.querySelectorAll('.message-row input:checked').length,10);
- const eleventh=d.querySelectorAll('.message-row input')[10];eleventh.click();assert.equal(eleventh.checked,false);
- d.getElementById('summarize').click();await tick();await tick();
- assert.match(d.getElementById('digest-output').textContent,/本次 1 \/ 99/);
- assert.equal(d.querySelectorAll('#digest-output script').length,0);
- assert.match(d.querySelector('details').textContent,/原文/);
- assert.equal(calls.find(c=>c.url.endsWith('/summarize')).opts.headers['X-Mail-CSRF'],'csrf-test');
- d.getElementById('disconnect').click();await tick();await tick();
- assert.equal(d.querySelectorAll('.message-row').length,0);
- assert.equal(d.getElementById('digest-output').textContent,'');dom.window.close();
-});
-test('failed summary is visible and retry re-enabled',async()=>{
- const {dom}=await harness({failure:true});const d=dom.window.document;d.getElementById('summarize').click();await tick();await tick();
- assert.match(d.getElementById('notice').textContent,/生成失败/);assert.equal(d.getElementById('summarize').disabled,false);dom.window.close();
-});
-test('homepage and toolbox omit the mail entry with React',()=>{
- const dom=new JSDOM('<div id="test"></div>',{url:'http://localhost/',runScripts:'outside-only'});const w=dom.window;
- w.eval(fs.readFileSync(path.join(root,'vendor/react.production.min.js'),'utf8'));
- w.eval(fs.readFileSync(path.join(root,'vendor/react-dom.production.min.js'),'utf8'));
- w.eval(fs.readFileSync(path.join(root,'vendor/babel.min.js'),'utf8'));
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const src=html.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/)[1];
- const names=[...src.matchAll(/\bIcon:\s*(\w+)/g)].map(x=>x[1]);
- const start=src.indexOf('const HomeView ='); const end=src.indexOf('const ToolboxView =');const toolboxEnd=src.indexOf('\n        const ',end+20);
- const portion=src.slice(start,toolboxEnd);
- const iconStub='const '+[...new Set([...names,...[...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1]).filter(x=>x!=="React"),'ArrowRight','ArrowUpRight','ArrowLeft','Download','MapIcon','Bell','Mail','Sparkles','Search','Check','X','ChevronRight'])].join('=()=>React.createElement("span"),')+'=()=>React.createElement("span");';
- w.eval(w.Babel.transform('const {useState,useEffect,useRef}=React;'+iconStub+portion+';window.TestHomeView=HomeView;ReactDOM.render(React.createElement(ToolboxView,{onOpenView:()=>{}}),document.getElementById("test"));',{presets:['react']}).code);
- assert.doesNotMatch(w.document.getElementById('test').textContent,/AI 邮件总结/);
- assert.equal(w.document.querySelector('a[href="/mail-summary/"]'),null);
- w.ReactDOM.render(w.React.createElement(w.TestHomeView,{user:null,onNavigate:()=>{},onOpenLogin:()=>{}}),w.document.getElementById('test'));
- assert.doesNotMatch(w.document.getElementById('test').textContent,/AI 邮件总结/);
- assert.equal(w.document.querySelector('a[href="/mail-summary/"]'),null);
+const user={id:1,ispace_username:'s123456789',username:'fixture'};
+const ready=(id=1,copy='若计划留校使用实验室，请先完成假期登记。')=>({state:'ready',user_id:id,brief:{generated_at:1800000000,mail_count:65,complete:true,items:[{text:copy,sources:[{subject:'假期实验室安排',sender:'学院',received_at:'2026-09-24T00:00:00Z'}]}]}});
+const response=data=>({ok:true,json:async()=>data});
+
+test('signed-in homepage automatically shows compact highlights with sources',async()=>{
+ const calls=[];const {dom,w,render}=setup(async(url,opts)=>{calls.push({url,opts});return response(ready());});
+ render('HomeView',user);await tick();await tick();
+ const d=w.document;
+ assert.equal(calls[0].url,'/api/mail-brief');assert.equal(calls[0].opts.cache,'no-store');
+ assert.match(d.querySelector('.weekly-mail-brief').textContent,/若计划留校/);
+ assert.equal(d.querySelectorAll('.weekly-mail-brief summary').length,1);
+ assert.match(d.querySelector('.weekly-mail-brief details').textContent,/假期实验室安排/);
+ assert.equal(d.querySelector('.weekly-mail-brief button'),null);
+ assert.equal(d.querySelector('a[href="/mail-summary/"]'),null);
+ assert.doesNotMatch(d.querySelector('.weekly-mail-brief').textContent,/连接邮箱|选择邮件|生成摘要|积分/);
  dom.window.close();
+});
+test('visitors and local-only accounts see no mailbox feature or tool entry',async()=>{
+ let calls=0;const {dom,w,render}=setup(async()=>{calls++;return response(ready());});
+ for(const account of [null,{id:2,username:'local'}]){
+  render('HomeView',account);await tick();assert.equal(w.document.querySelector('.weekly-mail-brief'),null);
+ }
+ render('ToolboxView',user);assert.equal(w.document.querySelector('a[href="/mail-summary/"]'),null);
+ assert.equal(calls,0);dom.window.close();
+});
+test('account switching and logout never display a previous account response',async()=>{
+ const pending=[];const {dom,w,render}=setup(()=>new Promise(resolve=>pending.push(resolve)));
+ render('WeeklyMailBrief',user);await tick();
+ render('WeeklyMailBrief',{...user,id:2});await tick();
+ pending[1](response(ready(2,'当前账号的提醒')));await tick();await tick();
+ pending[0](response(ready(1,'前一个账号的私密内容')));await tick();await tick();
+ assert.match(w.document.body.textContent,/当前账号的提醒/);assert.doesNotMatch(w.document.body.textContent,/私密内容/);
+ render('WeeklyMailBrief',null);assert.equal(w.document.querySelector('.weekly-mail-brief'),null);dom.window.close();
+});
+test('mail and model text cannot execute HTML; service errors stay unobtrusive',async()=>{
+ const {dom,w,render}=setup(async()=>response(ready(1,'<img src=x onerror=alert(1)>')));
+ render('WeeklyMailBrief',user);await tick();await tick();
+ assert.equal(w.document.querySelector('.weekly-mail-brief img'),null);
+ assert.match(w.document.body.textContent,/<img/);dom.window.close();
+ const failed=setup(async()=>({ok:false}));failed.render('HomeView',user);await tick();await tick();
+ assert.match(failed.w.document.body.textContent,/Course & Day/);assert.equal(failed.w.document.querySelector('.weekly-mail-brief'),null);failed.dom.window.close();
 });

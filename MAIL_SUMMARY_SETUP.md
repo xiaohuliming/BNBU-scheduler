@@ -1,22 +1,26 @@
-# School inbox summaries
+# Automatic weekly homepage mail brief
 
-The `/mail-summary/` tool signs into BNBU MIS using the current user's bound iSpace account, then follows the authenticated school mailbox link. Each connection is private to a MAXCOURSE browser session and expires after ten minutes. Passwords are used for the connection only. Existing encrypted iSpace sync credentials are used only when the user selects that option.
+The signed-in homepage shows at most four concise, source-linked highlights from the last seven days of the student's inbox. Both read and unread mail are considered. There is no toolbox item, separate mail UI, connect form, selection step, or generate button. The old `/mail-summary/` and `/mail-summary/index.html` addresses redirect to the homepage; manual `/api/mail-digest/*` handlers are retired.
 
-The adapter requests inbox folder 1 with `flag=new`, extracts each page's unread message metadata, and fetches selected bodies through Tencent Exmail's `t=quickreadmail&mode=preview` endpoint. It does not use the normal read endpoint, send mail, change flags, download attachments or fetch remote images. The observed school login and Tencent HTML structure are covered by parser tests; upstream UI changes fail closed. This is a webmail integration, not an official stable Tencent mailbox API.
+A successful iSpace login or account binding schedules a background job using that verified password once. Login does not wait for MIS, mailbox reads, or AI generation. Returning users with an existing opt-in encrypted iSpace sync password can refresh automatically when their homepage loads. Old sessions without saved credentials begin on their next school login. The feature does not add password persistence.
 
-Each generation covers at most ten selected messages from the current page. The UI shows the unread total, the actual summarized count and source text. Only the first 8,000 characters of each body are included, with a visible truncation notice. Image contents and attachments are excluded. Older unread messages remain available through pagination.
+## Data and read behavior
 
-## OmniChat integration
+The server follows BNBU MIS's authenticated mailbox jump. It scans inbox pages in descending receipt order, filters the exact preceding seven days, and uses Tencent Exmail's `t=quickreadmail&mode=preview` endpoint for body text. It never marks messages read or loads remote images and attachments. This is an observed webmail protocol, not an official stable mailbox API.
 
-Deploy the sibling OmniChat `app/mail_summary.py` and route registration before enabling live summaries. MAXCOURSE calls `https://chat.bnbscheduler.top/api/integrations/mail-summary` with the current user's existing SSO bearer token. The shared identity is checked before forwarding. No API key is created or exposed. Both services must use their existing shared auth database and SSO configuration.
+A run covers up to 150 recent messages. Any cap or unparseable dates produce an explicit partial-coverage label. Long messages are bounded and flagged to the model. Headlines merge repeated notices, retain important dates and conditions, and omit stale or irrelevant announcements. The model must cite real source IDs. Only the brief, selected source metadata, and coverage dates are cached in SQLite. The payload is encrypted with a purpose-derived key from the app secret and binds the account ID and school identity inside the ciphertext. Raw messages are not stored.
 
-OmniChat uses its existing model routing, balance admission, usage accounting and refund implementation. Set `OMNICHAT_MAIL_SUMMARY_MODEL` in the OmniChat service environment to an available text model. The default is `gpt-6-luna`. Model selection cannot be supplied by the browser. This integration does not save email text to a conversation. Upstream processing still follows the configured model provider's data handling.
+The cache is refreshed no more than once per four hours. Unchanged mail reuses a brief for up to twelve hours; date interpretation is then refreshed. Failed jobs back off for an hour, preserve a usable previous result, and never block the homepage. Cached briefs older than a day are not displayed. At most three jobs execute concurrently, with a bounded queue of 24. Passwords awaiting execution are encrypted in memory and discarded with the job. Jobs check account binding before reading and before saving.
 
-An identical selection reuses a successfully generated result within the current mailbox page and connection. Refreshing, reconnecting or moving to another page clears that cache. A network interruption after model submission can leave the charge outcome uncertain; the UI reports this and does not retry automatically.
+## OmniChat service integration
 
-Mailbox sessions and results are held only in process memory. Restarting the current single Flask process disconnects them. A future multi-worker deployment needs a deliberate encrypted shared-session design; never put mailbox cookies or text in Flask's client cookie. API responses use `Cache-Control: no-store`. All mail source modules remain protected by the existing static-source guard.
+MAXCOURSE calls the fixed HTTPS endpoint `https://chat.bnbscheduler.top/api/integrations/mail-brief` with `X-Mail-Brief-Token`. Set the same private `MAXCOURSE_MAIL_BRIEF_TOKEN` in both systemd services. Browser cookies, SSO bearer tokens, and client-supplied model IDs cannot authorize this service endpoint. Do not expose its token to the frontend or commit it.
 
-## Validation
+OmniChat uses its existing model/provider routing directly, with no tools, no chat persistence and no personal credit debit. Model costs belong to the operator's configured provider account. `OMNICHAT_MAIL_SUMMARY_MODEL` defaults to `gpt-6-luna`. The route bounds payload text, output size, concurrent generations and daily attempts. It logs only aggregate usage, not mail bodies or service credentials.
+
+The iSpace login explanation discloses automatic DDL sync and mail summarization. Source details link to the official school mailbox and note that images and attachments were not read. Authentication errors or provider failures quietly omit an unavailable brief instead of adding another onboarding flow.
+
+## Checks
 
 ```sh
 ./venv/bin/python -m pytest tests/test_mail_digest.py tests/test_ispace_auto_sync.py -q
@@ -24,4 +28,4 @@ NODE_PATH=/path/to/jsdom/node_modules node --test tests/test_mail_summary_fronte
 node precompile.js
 ```
 
-The frontend test dependency is jsdom 26, separate from runtime requirements. In OmniChat run `.venv/bin/python -m unittest discover -s tests -p test_mail_summary.py -q` and the existing open API tests. Use only synthetic data in committed fixtures. Live acceptance should confirm login, unread preservation, generation, billing, disconnect, and desktop/mobile rendering. Do not record passwords, SIDs, cookies or real mail bodies in fixtures or reports.
+Frontend tests use jsdom 26 as a test-only dependency. In OmniChat run `.venv/bin/python -m unittest discover -s tests -p test_mail_summary.py -q` and the existing open API suite. Production tests must isolate all account databases and block real background jobs. Never save school passwords, SIDs, cookies or actual email bodies in fixtures or logs.
