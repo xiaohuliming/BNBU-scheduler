@@ -149,7 +149,13 @@ def create_blueprint(get_db):
                                   'mailbox': mailbox, 'inbox': inbox, 'page': 0, 'bodies': {}, 'digests': {},
                                   'lock': threading.Lock(), 'expires': time.monotonic() + TTL}
             session['mail_digest_key'] = key
-            return jsonify({**inbox, 'page': 0, 'csrf': session['mail_digest_csrf']})
+            response = jsonify({**inbox, 'page': 0, 'csrf': session['mail_digest_csrf']})
+            # A long-lived MAXCOURSE session may outlive the shared SSO token.
+            # MIS just reverified this bound school identity, so refresh the
+            # same shared account using the existing login identity rules.
+            sso_bridge.set_sso_cookie(response, sso_bridge.issue_shared_token(
+                user['username'], ispace=(user['username'] == user['ispace_username'])))
+            return response
         except Exception:
             mailbox.close()
             raise
