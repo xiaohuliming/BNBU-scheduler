@@ -10,7 +10,7 @@ from unittest import mock
 os.environ.setdefault('MAXCOURSE_SECRET_KEY', 'test-secret-key')
 import app as app_module
 from mail_digest.client import MailError, SchoolMailbox, parse_inbox, extract_preview
-from mail_digest.weekly import WeeklyBriefService, init_tables, REFRESH_SECONDS
+from mail_digest.weekly import WeeklyBriefService, init_tables
 from mail_digest.summary import summarize_week
 
 
@@ -84,8 +84,8 @@ class WeeklyServiceTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.db_path=self.tmp.name+'/mail.db'
         with self.db() as db:
-            db.execute('CREATE TABLE users (id INTEGER PRIMARY KEY,ispace_username TEXT)')
-            db.execute("INSERT INTO users VALUES (1,'s123456789'),(2,'s987654321')")
+            db.execute('CREATE TABLE users (id INTEGER PRIMARY KEY,ispace_username TEXT,ispace_link_version INTEGER DEFAULT 0)')
+            db.execute("INSERT INTO users(id,ispace_username) VALUES (1,'s123456789'),(2,'s987654321')")
             init_tables(db.cursor())
         self.executor=DeferredExecutor()
         self.service=WeeklyBriefService(self.db,'test-secret',lambda:True,executor=self.executor)
@@ -111,7 +111,8 @@ class WeeklyServiceTests(unittest.TestCase):
         with self.db() as db:raw=str([tuple(r) for r in db.execute('SELECT * FROM mail_weekly_briefs')])
         for private in ['transient-school-password','Only-in-transient-body','需要调整课程','申请截止提醒']:
             self.assertNotIn(private,raw)
-        self.assertFalse(self.start());self.assertEqual(self.summarizer.call_count,1)
+        self.assertTrue(self.service.status(1,'s123456789')['connection_ready'])
+        self.assertEqual(self.summarizer.call_count,1)
 
     def test_duplicate_jobs_and_cross_account_cache_are_blocked(self):
         self.assertTrue(self.start());self.assertFalse(self.start());self.executor.run()
@@ -126,17 +127,63 @@ class WeeklyServiceTests(unittest.TestCase):
         with self.db() as db:db.execute("UPDATE users SET ispace_username='another' WHERE id=1")
         self.executor.run();self.box.login.assert_not_called()
 
-    def test_unchanged_mail_does_not_regenerate_on_refresh(self):
-        self.start();self.executor.run();self.box.preview.reset_mock()
-        with self.db() as db:db.execute('UPDATE mail_weekly_briefs SET checked_at=?,last_attempt=0',(self.now-REFRESH_SECONDS-1,))
-        self.assertTrue(self.start());self.executor.run()
-        self.summarizer.assert_called_once();self.box.preview.assert_not_called()
+    def test_each_new_visit_rereads_and_regenerates_using_only_mail_session(self):
+        self.start();self.executor.run()
+        self.assertTrue(self.service.start(1,'s123456789'))
+        self.executor.run()
+        self.assertEqual(self.summarizer.call_count,2)
+        self.assertEqual(self.box.recent.call_count,2)
+        self.box.login.assert_called_once_with('s123456789','transient-school-password')
 
-    def test_provider_failure_is_silent_and_backed_off(self):
+    def test_expired_session_requires_manual_or_opt_in_saved_password(self):
+        self.start();self.executor.run()
+        self.service.sessions[1].expires_at=0
+        self.assertFalse(self.service.start(1,'s123456789'))
+        self.assertTrue(self.service.status(1,'s123456789')['reauth_required'])
+        self.box.close.assert_called()
+
+    def test_logout_cancels_queued_job_and_relogin_can_start_another(self):
+        self.start();self.service.revoke(1)
+        self.assertTrue(self.start())
+        self.executor.run();self.box.login.assert_not_called()
+        self.executor.run();self.box.login.assert_called_once()
+
+    def test_unlink_during_body_read_prevents_ai_and_cache_restore(self):
+        def preview(mid):
+            with self.db() as db:
+                db.execute('UPDATE users SET ispace_username=NULL,ispace_link_version=1 WHERE id=1')
+                db.execute('DELETE FROM mail_weekly_briefs WHERE user_id=1')
+            self.service.revoke(1)
+            return {'body':'unused','body_truncated':False,'has_images':False}
+        self.box.preview.side_effect=preview
+        self.start();self.executor.run();self.summarizer.assert_not_called()
+        with self.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
+        self.box.close.assert_called()
+
+    def test_unlink_after_ai_submission_does_not_restore_cached_output(self):
+        def finish(*args):
+            with self.db() as db:
+                db.execute('UPDATE users SET ispace_username=NULL,ispace_link_version=1 WHERE id=1')
+                db.execute('DELETE FROM mail_weekly_briefs WHERE user_id=1')
+            self.service.revoke(1)
+            return [{'text':'stale result','source_ids':['M~1']}]
+        self.summarizer.side_effect=finish
+        self.start();self.executor.run()
+        with self.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
+
+    def test_atomic_job_reservation_rejects_changed_binding(self):
+        with self.db() as db:db.execute('UPDATE users SET ispace_link_version=1 WHERE id=1')
+        with mock.patch.object(self.service,'_identity',return_value=0):
+            self.assertFalse(self.start())
+        self.assertEqual(len(self.executor.calls),0)
+        with self.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
+
+    def test_provider_failure_is_quiet_and_next_visit_may_retry(self):
         self.summarizer.side_effect=MailError('fixture upstream failure')
         self.start();self.executor.run()
         self.assertEqual(self.service.status(1,'s123456789')['state'],'idle')
-        self.assertFalse(self.start());self.box.close.assert_called()
+        self.assertTrue(self.service.start(1,'s123456789'))
+        self.executor.run()
 
     def test_empty_week_uses_no_model(self):
         self.box.recent.return_value['messages']=[]
@@ -144,7 +191,7 @@ class WeeklyServiceTests(unittest.TestCase):
         self.assertEqual(self.service.status(1,'s123456789')['brief']['items'],[])
 
     def test_scheduling_failure_never_breaks_login(self):
-        with mock.patch.object(self.service,'should_refresh',side_effect=RuntimeError('DB unavailable')):
+        with mock.patch.object(self.service,'_identity',side_effect=RuntimeError('DB unavailable')):
             self.assertFalse(self.start())
 
 
@@ -175,8 +222,21 @@ class BriefRoutesTests(unittest.TestCase):
     def test_cache_is_authenticated_private_and_not_query_selectable(self):
         self.assertEqual(self.client.get('/api/mail-brief').status_code,401)
         self.sign_in();result=self.client.get('/api/mail-brief?user_id=2')
-        self.assertEqual(result.json,{'state':'idle','user_id':1})
+        self.assertEqual(result.json['state'],'idle');self.assertEqual(result.json['user_id'],1)
+        self.assertIn('csrf',result.json)
         self.assertEqual(result.headers['Cache-Control'],'no-store')
+
+    def test_readonly_polling_does_not_schedule_but_new_visits_do(self):
+        self.sign_in()
+        data=self.client.get('/api/mail-brief').json
+        with mock.patch.object(app_module.mail_brief_service,'start') as start:
+            for _ in range(3):self.client.get('/api/mail-brief')
+            start.assert_not_called()
+            self.assertEqual(self.client.post('/api/mail-brief/refresh',json={'visit_id':'a'*20}).status_code,403)
+            for visit in ['a'*20,'a'*20,'b'*20]:
+                response=self.client.post('/api/mail-brief/refresh',json={'visit_id':visit},headers={'X-Mail-CSRF':data['csrf']})
+                self.assertEqual(response.status_code,200)
+            self.assertEqual(start.call_count,2)
 
     def test_separate_tool_is_retired(self):
         for path in ['/mail-summary/','/mail-summary/index.html']:

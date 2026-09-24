@@ -10,21 +10,24 @@ function setup(fetch){
  w.fetch=fetch;
  for(const file of ['react.production.min.js','react-dom.production.min.js','babel.min.js'])w.eval(fs.readFileSync(path.join(root,'vendor',file),'utf8'));
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),src=html.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/)[1];
- const start=src.indexOf('const WeeklyMailBrief ='),end=src.indexOf('const ToolboxView ='),stop=src.indexOf('\n        const ',end+20),portion=src.slice(start,stop);
+ const start=src.indexOf('const SettingsView ='),end=src.indexOf('const ToolboxView ='),stop=src.indexOf('\n        const ',end+20),portion=src.slice(start,stop);
  const icons=[...new Set([...src.matchAll(/\bIcon:\s*(\w+)/g)].map(x=>x[1]).concat([...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1])))].filter(x=>!['React','WeeklyMailBrief'].includes(x));
  const stub='const '+icons.map(name=>`${name}=()=>React.createElement('span')`).join(',')+';';
- w.eval(w.Babel.transform('const {useState,useEffect}=React;'+stub+portion+';window.MailTest={WeeklyMailBrief,HomeView,ToolboxView};',{presets:['react']}).code);
+ w.eval(w.Babel.transform('const {useState,useEffect}=React;'+stub+portion+';window.MailTest={WeeklyMailBrief,HomeView,ToolboxView,SettingsView};',{presets:['react']}).code);
  const render=(component,user)=>w.ReactDOM.render(w.React.createElement(w.MailTest[component],{user,onNavigate:()=>{},onOpenLogin:()=>{},onOpenView:()=>{}}),w.document.getElementById('test'));
  return {dom,w,render};
 }
 const user={id:1,ispace_username:'s123456789',username:'fixture'};
-const ready=(id=1,copy='若计划留校使用实验室，请先完成假期登记。')=>({state:'ready',user_id:id,brief:{generated_at:1800000000,mail_count:65,complete:true,items:[{text:copy,sources:[{subject:'假期实验室安排',sender:'学院',received_at:'2026-09-24T00:00:00Z'}]}]}});
+const ready=(id=1,copy='若计划留校使用实验室，请先完成假期登记。')=>({state:'ready',user_id:id,csrf:'fixture-csrf',connection_ready:true,brief:{generated_at:1800000000,mail_count:65,complete:true,items:[{text:copy,sources:[{subject:'假期实验室安排',sender:'学院',received_at:'2026-09-24T00:00:00Z'}]}]}});
 const response=data=>({ok:true,json:async()=>data});
 
 test('signed-in homepage automatically shows compact highlights with sources',async()=>{
  const calls=[];const {dom,w,render}=setup(async(url,opts)=>{calls.push({url,opts});return response(ready());});
  render('HomeView',user);await tick();await tick();
  const d=w.document;
+ assert.equal(calls.length,2);assert.equal(calls[1].url,'/api/mail-brief/refresh');
+ assert.equal(calls[1].opts.headers['X-Mail-CSRF'],'fixture-csrf');
+ assert.match(JSON.parse(calls[1].opts.body).visit_id,/^[A-Za-z0-9_-]{16,80}$/);
  assert.equal(calls[0].url,'/api/mail-brief');assert.equal(calls[0].opts.cache,'no-store');
  assert.match(d.querySelector('.weekly-mail-brief').textContent,/若计划留校/);
  assert.equal(d.querySelectorAll('.weekly-mail-brief summary').length,1);
@@ -58,4 +61,20 @@ test('mail and model text cannot execute HTML; service errors stay unobtrusive',
  assert.match(w.document.body.textContent,/<img/);dom.window.close();
  const failed=setup(async()=>({ok:false}));failed.render('HomeView',user);await tick();await tick();
  assert.match(failed.w.document.body.textContent,/Course & Day/);assert.equal(failed.w.document.querySelector('.weekly-mail-brief'),null);failed.dom.window.close();
+});
+
+test('each new homepage visit submits one refresh, while same render does not',async()=>{
+ const calls=[];const {dom,render}=setup(async(url,opts)=>{calls.push({url,opts});return response(ready());});
+ render('HomeView',user);await tick();await tick();
+ render('HomeView',user);await tick();
+ assert.equal(calls.filter(c=>c.url.endsWith('/refresh')).length,1);
+ render('HomeView',null);await tick();render('HomeView',user);await tick();await tick();
+ const posts=calls.filter(c=>c.url.endsWith('/refresh'));assert.equal(posts.length,2);
+ assert.notEqual(JSON.parse(posts[0].opts.body).visit_id,JSON.parse(posts[1].opts.body).visit_id);dom.window.close();
+});
+test('settings exposes unlink and states server-side decryption accurately',async()=>{
+ const {dom,w,render}=setup(async()=>response({}));render('SettingsView',user);await tick();
+ assert.match(w.document.body.textContent,/删除已添加的 iSpace 账号/);
+ assert.match(w.document.body.textContent,/服务器能在同步时解密使用/);
+ assert.ok(w.document.querySelector('a[href="/privacy/"]'));dom.window.close();
 });

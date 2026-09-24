@@ -1106,7 +1106,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("'时段已过'", source)
         self.assertIn("'已开始'", source)
         self.assertNotIn("'已结束'", source)
-        self.assertIn("NOTICE_VERSION = '2026S1c'", source)
+        self.assertIn("NOTICE_VERSION = '2026-09-24-privacy-visits'", source)
         self.assertNotIn('预约成功', source)
 
     def test_future_long_classroom_window_can_accept_an_intent(self):

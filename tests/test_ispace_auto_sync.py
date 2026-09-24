@@ -289,7 +289,7 @@ class ISpaceAutoSyncTestCase(unittest.TestCase):
         self.assertIn('手动同步', source)
         self.assertIn('服务器每 30 分钟自动登录 iSpace 并拉取新的 DDL', source)
         self.assertNotIn('每日自动同步', source)
-        self.assertIn('密码会使用服务器密钥加密保存', source)
+        self.assertIn('密码会加密保存在服务器', source)
         self.assertIn('绑定 iSpace 账号', source)
         self.assertIn('绑定时只验证一次，不会保存密码', source)
 
