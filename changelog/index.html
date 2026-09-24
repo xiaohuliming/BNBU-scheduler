@@ -1,9 +1,13 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>更新日志 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"></head><body>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>更新日志 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"><script defer src="/site-info/analytics.js?v=1" data-page="changelog"></script></head><body>
 <header><a href="/">MAXCOURSE</a><nav><a href="/privacy/">隐私说明</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码 ↗</a></nav></header>
-<main><p class='meta'>CHANGELOG</p><h1>更新日志</h1><section><p class='meta'>2026 年 9 月 24 日</p><h2>邮件摘要随访问更新，隐私说明和解绑功能上线</h2>
+<main><p class='meta'>CHANGELOG</p><h1>更新日志</h1>
+<section><p class="meta">2026 年 9 月 25 日</p><h2>补齐页面访问统计与排行</h2>
+<ul><li>更新日志、隐私说明、MIS 助手和数据看板开始记录页面访问，此前漏记的数据无法补回。</li><li>页面排行支持名称搜索，以及按浏览次数或独立访客排序。没有访问记录的页面也会列出，并标明“本周期无记录”。</li><li>补齐短信接码等工具的中文名称，以及数据看板与站点说明之间的跳转入口。</li><li>修正“今天吃什么”页面一次打开重复上报两次的问题，历史记录保留，旧数据可能偏高。</li><li>隐私说明补充访问统计使用的浏览器标识、记录字段和公开范围。</li></ul>
+<p><a href="/stats/index.html">打开数据看板</a></p></section>
+<section><p class='meta'>2026 年 9 月 24 日</p><h2>邮件摘要随访问更新，隐私说明和解绑功能上线</h2>
 <ul><li>用 iSpace 登录后，首页直接显示最近七天邮件的简短重点，已读未读都算，最多四条，可展开看来源。</li><li>每次进已登录首页都会在后台更新一次，取消原来的四小时检查间隔和十二小时摘要复用限制。有效邮箱会话内读最新邮件并重新生成；同时有任务就复用，轮询只查状态。</li><li>优先用短期邮箱会话。没保存密码时，会话失效后要手动输入；主动开启加密保存的话，服务器可以自动重连。页面会区分“正在更新”和“本次未更新”。</li><li>保留用户自选的 DDL 自动同步。开启后密码加密保存在服务器，管理界面不显示明文，但服务器自动同步时会解密使用。介意保存的同学可以关掉，改用手动填写。</li><li>设置里新增“删除已添加的 iSpace 账号”。解绑会撤销后台读取，清掉在线密码密文、临时邮箱会话、邮件摘要和从 iSpace 导入的数据，手动待办保留。</li><li>新增隐私说明，公开主项目仓库、检查范围和开发者联系方式，说明 AI 数据处理、历史保存行为和安全风险。</li><li>多数服务仍然不用 iSpace 登录。非必要不要向第三方提供学号密码，包括 MAXCOURSE。</li></ul>
 <p>本次邮件摘要用 OmniChat 的现有模型服务，费用由项目服务端承担，不扣个人积分。摘要功能只读取邮件，不会替你发信、删信或改动已读状态。</p>
 <div class='note'><p><strong>开源可以查，但没有安全保证。</strong>这次只做了范围有限的代码自查和自动化回归检查，没有第三方独立审计或学校认证。数据处理和删除范围请看<a href='/privacy/'>隐私说明</a>。</p></div>
 <p><a href='https://github.com/xiaohuliming/BNBU-scheduler/commits/main/' target='_blank' rel='noopener noreferrer'>查看 GitHub 提交记录 ↗</a> · <a href='https://github.com/xiaohuliming/BNBU-scheduler/blob/main/SECURITY_REVIEW_2026-09-24.md' target='_blank' rel='noopener noreferrer'>查看本次代码检查记录 ↗</a></p></section>
 <section class="contact"><h2>维护者</h2><p>SIrus. · 微信 ToDoHacambiado · 学号 t330025032</p><p>个人博客：<a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></p></section></main>
-<footer><nav><a href="/">返回首页</a><a href="/privacy/">隐私与安全说明</a></nav></footer></body></html>
+<footer><nav><a href="/stats/index.html">数据看板</a><a href="/">返回首页</a><a href="/privacy/">隐私与安全说明</a></nav></footer></body></html>

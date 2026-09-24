@@ -71,6 +71,19 @@
     "campus-map": "校园地图",
     pet: "校园宠物",
     stats: "数据看板",
+    changelog: "更新日志",
+    privacy: "隐私说明",
+    "mis-helper": "MIS 助手",
+    "sms-market": "短信接码",
+    "sms-lab": "短信接码旧版",
+  };
+  // Keep historical-only names readable without advertising retired pages.
+  const currentPages = Object.keys(views).filter((name) => !["pet", "sms-lab"].includes(name));
+  const pageLinks = {
+    changelog: "/changelog/", privacy: "/privacy/", stats: "/stats/index.html",
+    "mis-helper": "/mis-helper/index.html", "sms-market": "/sms-lab/index.html",
+    "media-dl": "/media-dl/index.html", "campus-map": "/campus-map/index.html",
+    "print-setup": "/print-setup/index.html", eatwhat: "/eatwhat/index.html",
   };
   const platforms = {
     youtube: "YouTube",
@@ -193,15 +206,7 @@
         complete,
       ),
     ].join("");
-    const max = Math.max(...t.pages.map((r) => r.views), 1);
-    $("pages").innerHTML = t.pages.length
-      ? t.pages
-          .map(
-            (r, i) =>
-              `<div class="rank-row"><span class="rank-order">${String(i + 1).padStart(2, "0")}</span><div><div class="rank-name">${esc(views[r.name] || r.name)}</div><div class="track"><div class="fill" style="width:${(r.views / max) * 100}%"></div></div></div><div class="rank-amount">${num(r.views)}<small class="hint">${num(r.visitors)} 访客</small></div></div>`,
-          )
-          .join("")
-      : empty("所选周期还没有访问记录");
+    renderPages();
     $("devices").innerHTML = splitRows(t.devices, deviceNames);
     $("sources").innerHTML = splitRows(t.sources, sourceNames);
     $("referrers").innerHTML = t.referrers.length
@@ -233,6 +238,32 @@
         r.visitors == null ? "未记录" : num(r.visitors),
       ]),
     );
+  }
+  function renderPages() {
+    if (!data) return;
+    const field = $("page-sort").value;
+    const query = $("page-search").value.trim().toLocaleLowerCase();
+    const recorded = new Set(data.traffic.pages.map((row) => row.name));
+    const all = [
+      ...data.traffic.pages,
+      ...currentPages.filter((name) => !recorded.has(name)).map((name) => ({ name, views: null, visitors: null })),
+    ].sort((a, b) => Number(b.views !== null) - Number(a.views !== null) ||
+      (b[field] ?? 0) - (a[field] ?? 0) || b.views - a.views || a.name.localeCompare(b.name));
+    const ranked = all.map((row, i) => ({ ...row, rank: row.views === null ? null : i + 1 }));
+    const filtered = ranked.filter((row) => `${views[row.name] || ""} ${row.name}`.toLocaleLowerCase().includes(query));
+    const max = Math.max(...all.map((row) => row[field] || 0), 1);
+    $("page-summary").textContent = query
+      ? `找到 ${filtered.length} 个页面，共 ${all.length} 个；序号保留全站排名。`
+      : `共 ${all.length} 个页面，${recorded.size} 个在本周期有访问记录。`;
+    $("pages").innerHTML = filtered.length ? filtered.map((row) => {
+      const name = esc(views[row.name] || row.name);
+      const link = Object.hasOwn(pageLinks, row.name) ? pageLinks[row.name] : null;
+      const title = link ? `<a href="${link}" class="rank-name">${name}<span aria-hidden="true"> ↗</span></a>` : `<span class="rank-name">${name}</span>`;
+      const amount = row.views === null
+        ? '<span class="hint">本周期无记录</span>'
+        : `${num(row[field])}<small class="hint">${field === "views" ? "次浏览" : "位访客"} · ${num(row[field === "views" ? "visitors" : "views"])} ${field === "views" ? "访客" : "浏览"}</small>`;
+      return `<div class="rank-row${row.views === null ? " unrecorded" : ""}"><span class="rank-order">${row.rank === null ? "·" : String(row.rank).padStart(2, "0")}</span><div>${title}${row.views === null ? "" : `<div class="track"><div class="fill" style="width:${(row[field] / max) * 100}%"></div></div>`}</div><div class="rank-amount">${amount}</div></div>`;
+    }).join("") : empty("没有匹配的页面，试试其他名称。");
   }
   function renderPlatforms() {
     const field = $("platform-sort").value;
@@ -639,6 +670,8 @@
   $("exclude-bots").addEventListener("change", load);
   $("refresh").addEventListener("click", load);
   $("export").addEventListener("click", exportCsv);
+  $("page-search").addEventListener("input", renderPages);
+  $("page-sort").addEventListener("change", renderPages);
   $("platform-sort").addEventListener("change", () => {
     if (data) renderPlatforms();
   });
