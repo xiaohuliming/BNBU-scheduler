@@ -2,6 +2,10 @@
 
 The signed-in homepage shows at most four concise, source-linked highlights from the last seven days of the student's inbox. Both read and unread mail are considered. There is no toolbox item, separate mail UI, connect form, selection step, or generate button. The old `/mail-summary/` and `/mail-summary/index.html` addresses redirect to the homepage; manual `/api/mail-digest/*` handlers are retired.
 
+Settings includes a per-account mail switch, enabled by default for existing behavior. `GET /api/mail-brief` returns `enabled`; authenticated `PUT /api/mail-brief/settings` accepts a boolean `enabled` with `X-Mail-CSRF`. Disabling deletes the active brief cache, revokes mailbox sessions and queued/in-flight work, and prevents login, binding, and visits from scheduling mail reads. A separate preference generation guards job reservation and final writes, including rapid off/on transitions. iSpace binding, saved encrypted passwords, and DDL sync remain unchanged. Already submitted provider requests cannot be recalled; their results are discarded. Re-enabling resumes updates on the next homepage visit when saved credentials are available, otherwise on the next manual iSpace login.
+
+The homepage collapse button hides content without disabling refresh. Only the collapsed boolean is saved in localStorage, keyed by account ID; email text is never stored there. Storage failures do not prevent folding the current view.
+
 A successful iSpace login or account binding schedules a background job using that verified password once. Login does not wait for MIS, mailbox reads, or AI generation. Returning users with an existing opt-in encrypted iSpace sync password can refresh automatically when their homepage loads. Old sessions without saved credentials begin on their next school login. The feature does not add password persistence.
 
 ## Data and read behavior
