@@ -16,7 +16,7 @@ The cache is refreshed no more than once per four hours. Unchanged mail reuses a
 
 MAXCOURSE calls the fixed HTTPS endpoint `https://chat.bnbscheduler.top/api/integrations/mail-brief` with `X-Mail-Brief-Token`. Set the same private `MAXCOURSE_MAIL_BRIEF_TOKEN` in both systemd services. Browser cookies, SSO bearer tokens, and client-supplied model IDs cannot authorize this service endpoint. Do not expose its token to the frontend or commit it.
 
-OmniChat uses its existing model/provider routing directly, with no tools, no chat persistence and no personal credit debit. Model costs belong to the operator's configured provider account. `OMNICHAT_MAIL_SUMMARY_MODEL` defaults to `gpt-5.6-terra` with low reasoning effort. The route bounds payload text, output size, concurrent generations and daily attempts. It logs only aggregate usage, not mail bodies or service credentials.
+OmniChat uses its existing model/provider routing directly, with no tools, no chat persistence and no personal credit debit. Model costs belong to the operator's configured provider account. `OMNICHAT_MAIL_SUMMARY_MODEL` defaults to `gpt-5.6-terra` using its supported default reasoning configuration. The route bounds payload text, output size, concurrent generations and daily attempts. It logs only aggregate usage, not mail bodies or service credentials.
 
 The iSpace login explanation discloses automatic DDL sync and mail summarization. Source details link to the official school mailbox and note that images and attachments were not read. Authentication errors or provider failures quietly omit an unavailable brief instead of adding another onboarding flow.
 
