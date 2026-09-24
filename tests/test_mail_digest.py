@@ -88,9 +88,11 @@ class MailRoutesTest(unittest.TestCase):
         self.mail_patch.start()
         self.shared_patch = mock.patch('mail_digest.sso_bridge.shared_user_for_token', side_effect=lambda token: {'username':'student-local'} if token == 'test-shared-token' else None)
         self.shared_patch.start()
+        self.issue_patch = mock.patch('mail_digest.sso_bridge.issue_shared_token', return_value=None)
+        self.issue_patch.start()
 
     def tearDown(self):
-        self.mail_patch.stop(); self.shared_patch.stop()
+        self.mail_patch.stop(); self.shared_patch.stop(); self.issue_patch.stop()
         for entry in mail_digest._sessions.values(): entry['mailbox'].close()
         mail_digest._sessions.clear()
         app_module.DB_PATH = self.old_db
