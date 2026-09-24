@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="1040066974-382970+12027406">
+<html lang="en" data-compiled-sum="1450616280-383014+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1040066974-382970+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1450616280-383014+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1040066974-382970+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1450616280-383014+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -2217,7 +2217,7 @@
                                                             <div className="flex items-start gap-2">
                                                                 <Lock className="w-4 h-4 mt-0.5 shrink-0" />
                                                                 <p>
-                                                                    开启后，密码会加密保存在服务器，后台管理界面不显示明文。自动同步时服务器会解密使用。介意保存的话，请保持关闭并使用手动同步；关闭或解绑会删除密文。
+                                                                    打开后，校园密码会加密存在服务器，管理界面不会显示明文，但服务器在自动同步时要解密用。不想让密码留在服务器，就别开，改成手动同步。关掉或解绑会删除在线数据库里的密码密文。
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -3577,7 +3577,7 @@
                                     {user.ispace_username ? (
                                         <div className="space-y-3 p-2">
                                             <span className="font-bold text-lg text-green-700 flex items-center gap-1"><CheckSquare className="w-4 h-4" /> {user.ispace_username}</span>
-                                            <p className="text-sm leading-6 text-gray-600">手动输入的校园密码不持久保存。若你主动开启自动同步，密码会加密保存在服务器；管理界面不显示明文，但服务器能在同步时解密使用。</p>
+                                            <p className="text-sm leading-6 text-gray-600">手动填的校园密码只用于本次处理。只有你主动打开自动同步，密码才会加密存在服务器；管理界面没有明文，服务器同步时能解密。</p>
                                             <button onClick={handleUnlinkIspace} disabled={unlinking} className="min-h-11 px-4 py-2 border-2 border-red-700 text-red-700 font-bold disabled:opacity-50">{unlinking ? '正在解除…' : '删除已添加的 iSpace 账号'}</button>
                                             <p className="text-xs leading-5 text-gray-500">只解除校园关联，不注销本站账号。主动再次使用 iSpace 登录时会重新关联。</p>
                                         </div>
@@ -3599,7 +3599,7 @@
 
                         <div className="border border-black/15 bg-white p-6 text-sm leading-7">
                             <h2 className="text-lg font-bold mb-2">隐私与项目说明</h2>
-                            <p>本项目非学校官方产品。多数服务无需校园登录。非必要不要向第三方提供学号密码，包括本站。</p>
+                            <p>MAXCOURSE 是学生自己做的，不是学校官方产品。大部分功能不用校园登录。非必要别把学号密码交给第三方，包括这里。</p>
                             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 underline underline-offset-4"><a href="/privacy/">隐私说明</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码与问题反馈 ↗</a></div>
                         </div>
 
@@ -4518,10 +4518,10 @@
                         
                         {activeTab === 'ispace' && (
                             <p className="mt-4 text-xs text-gray-500 font-bold text-center">
-                                非必要请勿向第三方提供学号密码，包括本站。本次登录密码仅临时使用；如主动开启自动同步，密码将加密保存在服务器，并在同步时解密使用。邮件摘要不扣个人积分。
+                                非必要别把学号密码交给第三方，包括 MAXCOURSE。这次登录的密码只临时在内存用；如果你主动开自动同步，密码会加密存在服务器，并在同步时解密。邮件摘要不扣个人积分。
                             </p>
                         )}
-                        <p className="mt-3 text-xs leading-5 text-gray-600">多数服务无需 iSpace 登录。<a href="/privacy/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">隐私说明与开源代码</a></p>
+                        <p className="mt-3 text-xs leading-5 text-gray-600">不登录 iSpace 也能用大部分功能。<a href="/privacy/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">隐私说明与开源代码</a></p>
                     </div>
                 </div>
             );
@@ -5141,7 +5141,7 @@
                     <div className="max-w-6xl mx-auto px-3 md:px-8 py-2">
                         <div className="flex items-center justify-center gap-2 sm:gap-3">
                             <span className="hidden sm:inline-flex bg-black text-[#ff4fd8] text-[10px] font-black px-2 py-1 shrink-0 uppercase tracking-wider">Update</span>
-                            <p className="font-black text-xs sm:text-sm min-w-0 text-center leading-5">邮件摘要按访问更新 · 隐私说明与 iSpace 解绑已上线</p>
+                            <p className="font-black text-xs sm:text-sm min-w-0 text-center leading-5">首页邮件摘要改版 · 隐私说明和 iSpace 解绑已上线</p>
                             <button
                                 onClick={() => setOpen(v => !v)}
                                 aria-expanded={open}
@@ -5160,9 +5160,9 @@
                         </div>
                         {open && (
                             <div className="max-w-4xl mx-auto pb-3 pt-2 text-xs sm:text-sm font-bold leading-6 space-y-1.5 border-t-2 border-black/30">
-                                <p>多数服务无需校园登录。非必要不要向第三方提供学号密码，包括本站。</p>
-                                <p>每次进入首页都会更新近一周摘要。你可选用手动输入，或主动开启加密保存以便自动同步。</p>
-                                <p>可在设置中删除已添加的 iSpace 账号。<a href="/privacy/" className="underline underline-offset-4">阅读隐私说明</a> · <a href="/changelog/" className="underline underline-offset-4">查看完整更新日志</a></p>
+                                <p>大多数服务不用校园登录。非必要别把学号密码交给第三方，包括这里。</p>
+                                <p>每次进首页都会更新最近一周摘要。你可以手动填密码，也可以主动开加密保存来让服务器自动同步。</p>
+                                <p>想解除绑定，去设置里删除已添加的 iSpace 账号。<a href="/privacy/" className="underline underline-offset-4">阅读隐私说明</a> · <a href="/changelog/" className="underline underline-offset-4">查看完整更新日志</a></p>
                             </div>
                         )}
                     </div>
