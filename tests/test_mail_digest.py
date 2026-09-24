@@ -173,7 +173,7 @@ class WeeklyServiceTests(unittest.TestCase):
 
     def test_atomic_job_reservation_rejects_changed_binding(self):
         with self.db() as db:db.execute('UPDATE users SET ispace_link_version=1 WHERE id=1')
-        with mock.patch.object(self.service,'_identity',return_value=0):
+        with mock.patch.object(self.service,'_identity',return_value=(0,0)):
             self.assertFalse(self.start())
         self.assertEqual(len(self.executor.calls),0)
         with self.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
@@ -193,6 +193,62 @@ class WeeklyServiceTests(unittest.TestCase):
     def test_scheduling_failure_never_breaks_login(self):
         with mock.patch.object(self.service,'_identity',side_effect=RuntimeError('DB unavailable')):
             self.assertFalse(self.start())
+
+    def test_disabled_account_does_not_queue_login_or_visit_work(self):
+        self.service.set_enabled(1,False)
+        self.assertFalse(self.start())
+        self.assertFalse(self.service.start(1,'s123456789'))
+        self.assertEqual(self.executor.calls,[])
+        self.box.login.assert_not_called();self.summarizer.assert_not_called()
+        state=self.service.status(1,'s123456789')
+        for field in ('brief','updating','connection_ready','reauth_required'):
+            self.assertFalse(state[field])
+
+    def test_disable_clears_cache_and_session_but_preserves_binding(self):
+        self.start();self.executor.run()
+        self.service.set_enabled(1,False)
+        self.box.close.assert_called();self.assertNotIn(1,self.service.sessions)
+        with self.db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
+            self.assertEqual(tuple(db.execute('SELECT ispace_username,ispace_link_version,mail_brief_enabled FROM users WHERE id=1').fetchone()),('s123456789',0,0))
+            init_tables(db.cursor())
+            self.assertEqual(db.execute('SELECT mail_brief_enabled FROM users WHERE id=1').fetchone()[0],0)
+
+    def test_disable_then_enable_cannot_revive_queued_old_work(self):
+        self.start();self.service.set_enabled(1,False);self.service.set_enabled(1,True)
+        self.assertTrue(self.start())
+        self.executor.run();self.box.login.assert_not_called()
+        self.assertTrue(self.service.status(1,'s123456789')['updating'])
+        self.executor.run();self.box.login.assert_called_once()
+        self.assertIsNotNone(self.service.status(1,'s123456789')['brief'])
+
+    def test_disable_during_read_stops_before_model_submission(self):
+        def preview(mid):
+            self.service.set_enabled(1,False)
+            return {'body':'discard','body_truncated':False,'has_images':False}
+        self.box.preview.side_effect=preview
+        self.start();self.executor.run();self.summarizer.assert_not_called()
+        self.assertIsNone(self.service.status(1,'s123456789')['brief'])
+
+    def test_disable_then_enable_during_model_call_discards_old_result(self):
+        def finish(*args):
+            self.service.set_enabled(1,False);self.service.set_enabled(1,True)
+            return [{'text':'stale result','source_ids':['M~1']}]
+        self.summarizer.side_effect=finish
+        self.start();self.executor.run()
+        with self.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM mail_weekly_briefs').fetchone()[0],0)
+        self.assertNotIn(1,self.service.sessions)
+
+    def test_preference_generation_guards_atomic_reservation_and_save(self):
+        self.service.set_enabled(1,False);self.service.set_enabled(1,True)
+        with mock.patch.object(self.service,'_identity',return_value=(0,0)):
+            self.assertFalse(self.start())
+        self.assertEqual(self.executor.calls,[])
+        self.assertTrue(self.start())
+        self.service._save(1,'s123456789',(0,0),{'items':[]},'old',self.now,self.now)
+        self.assertIsNone(self.service.status(1,'s123456789')['brief'])
+        self.executor.run()
+        self.assertIsNotNone(self.service.status(1,'s123456789')['brief'])
 
 
 class BriefRoutesTests(unittest.TestCase):
@@ -243,6 +299,40 @@ class BriefRoutesTests(unittest.TestCase):
             r=self.client.get(path);self.assertEqual(r.status_code,302);self.assertEqual(r.headers['Location'],'/')
         self.assertIn(self.client.post('/api/mail-digest/connect',json={}).status_code,(404,405))
         self.assertEqual(self.client.get('/mail_digest/weekly.py').status_code,404)
+
+    def test_setting_requires_auth_csrf_and_boolean_and_is_account_scoped(self):
+        path='/api/mail-brief/settings'
+        self.assertEqual(self.client.put(path,json={'enabled':False}).status_code,401)
+        self.sign_in();token=self.client.get('/api/mail-brief').json['csrf']
+        self.assertEqual(self.client.put(path,json={'enabled':False}).status_code,403)
+        headers={'X-Mail-CSRF':token}
+        for value in [None,'false',0,1,[],{}]:
+            self.assertEqual(self.client.put(path,json={'enabled':value},headers=headers).status_code,400)
+        with sqlite3.connect(app_module.DB_PATH) as db:
+            db.execute("INSERT INTO users(username,ispace_username) VALUES ('another','s987654321')")
+            db.execute("UPDATE users SET ispace_password_encrypted='fixture-ciphertext',ispace_auto_sync_enabled=1 WHERE id=1")
+        result=self.client.put(path,json={'enabled':False,'user_id':2},headers=headers)
+        self.assertEqual(result.status_code,200);self.assertFalse(result.json['enabled'])
+        self.assertIsNone(result.json['brief']);self.assertEqual(result.headers['Cache-Control'],'no-store')
+        # The saved setting survives a new session and schema initialization.
+        app_module.init_db();new_client=app_module.app.test_client()
+        with new_client.session_transaction() as sess:sess['user_id']=1
+        self.assertFalse(new_client.get('/api/mail-brief').json['enabled'])
+        with sqlite3.connect(app_module.DB_PATH) as db:
+            self.assertEqual(db.execute('SELECT ispace_username,ispace_link_version,ispace_auto_sync_enabled,ispace_password_encrypted FROM users WHERE id=1').fetchone(),('s123456789',0,1,'fixture-ciphertext'))
+            self.assertEqual(db.execute('SELECT mail_brief_enabled FROM users WHERE id=2').fetchone()[0],1)
+        with mock.patch.object(app_module.mail_brief_service,'start') as start,mock.patch('mail_digest.decrypt_ispace_password') as decrypt:
+            result=self.client.post('/api/mail-brief/refresh',json={'visit_id':'disabled-visit-123456'},headers=headers)
+            self.assertFalse(result.json['enabled']);start.assert_not_called();decrypt.assert_not_called()
+        result=self.client.put(path,json={'enabled':True},headers=headers)
+        self.assertTrue(result.json['enabled'])
+
+    def test_disabled_preference_survives_successful_ispace_login(self):
+        app_module.mail_brief_service.set_enabled(1,False)
+        with mock.patch('app.fetch_timeline',return_value=[]),mock.patch.object(app_module.mail_brief_service,'enabled',return_value=True),mock.patch.object(app_module.mail_brief_service.executor,'submit') as submit:
+            response=self.client.post('/api/login/ispace',json={'username':'s123456789','password':'one-off-password'})
+        self.assertEqual(response.status_code,200);submit.assert_not_called()
+        self.assertFalse(self.client.get('/api/mail-brief').json['enabled'])
 
 
 class SummaryBoundaryTests(unittest.TestCase):

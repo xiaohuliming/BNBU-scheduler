@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
+import sqlite3
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +22,12 @@ LOG = logging.getLogger(__name__)
 
 
 def init_tables(cursor):
+    for column in ('mail_brief_enabled INTEGER NOT NULL DEFAULT 1',
+                   'mail_brief_version INTEGER NOT NULL DEFAULT 0'):
+        try:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {column}')
+        except sqlite3.OperationalError:
+            pass
     cursor.execute('''CREATE TABLE IF NOT EXISTS mail_weekly_briefs (
         user_id INTEGER PRIMARY KEY, school_username TEXT NOT NULL,
         payload_encrypted TEXT, fingerprint TEXT,
@@ -33,7 +40,7 @@ def init_tables(cursor):
 class MailboxSession:
     mailbox: object
     username: str
-    version: int
+    version: tuple
     expires_at: float
     revoked: threading.Event = field(default_factory=threading.Event)
     busy: bool = False
@@ -84,11 +91,32 @@ class WeeklyBriefService:
     def _identity(self, user_id, username):
         db = self.get_db()
         try:
-            row = db.execute('SELECT ispace_username,COALESCE(ispace_link_version,0) AS version FROM users WHERE id=?',
+            row = db.execute('''SELECT ispace_username,COALESCE(ispace_link_version,0) AS version,
+                             mail_brief_enabled,mail_brief_version FROM users WHERE id=?''',
                              (user_id,)).fetchone()
-            return int(row['version']) if row and row['ispace_username'] == username else None
+            if row and row['ispace_username'] == username and row['mail_brief_enabled']:
+                return int(row['version']), int(row['mail_brief_version'])
+            return None
         finally:
             db.close()
+
+    def set_enabled(self, user_id, enabled):
+        # A separate generation prevents stale work surviving off/on without
+        # invalidating the user's independent iSpace/DDL binding generation.
+        with self.lock:
+            db = self.get_db()
+            try:
+                db.execute('BEGIN IMMEDIATE')
+                changed = db.execute('''UPDATE users SET mail_brief_enabled=?,
+                    mail_brief_version=mail_brief_version+1
+                    WHERE id=? AND mail_brief_enabled<>?''', (int(enabled), user_id, int(enabled))).rowcount
+                if not enabled:
+                    db.execute('DELETE FROM mail_weekly_briefs WHERE user_id=?', (user_id,))
+                db.commit()
+            finally:
+                db.close()
+            if changed or not enabled:
+                self.revoke(user_id)
 
     def _owns(self, user_id, username, version):
         return self._identity(user_id, username) == version
@@ -114,13 +142,16 @@ class WeeklyBriefService:
             return None
 
     def status(self, user_id, username):
-        version = self._identity(user_id, username)
         with self.lock:
+            version = self._identity(user_id, username)
+            if version is None:
+                return {'state': 'idle', 'brief': None, 'updating': False,
+                        'connection_ready': False, 'reauth_required': False}
             self._prune()
             lease = self.sessions.get(user_id)
             available = bool(lease and lease.username == username and lease.version == version)
             working = (user_id, username, version) in self.jobs
-        payload = self._payload(self._row(user_id, username))
+            payload = self._payload(self._row(user_id, username))
         return {'state': 'ready' if payload else ('working' if working else 'idle'),
                 'brief': payload, 'updating': working, 'connection_ready': available,
                 'reauth_required': not available and not working}
@@ -165,13 +196,14 @@ class WeeklyBriefService:
             db = self.get_db()
             try:
                 result = db.execute('''INSERT INTO mail_weekly_briefs (user_id,school_username,last_attempt)
-                    SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM users WHERE id=? AND ispace_username=? AND COALESCE(ispace_link_version,0)=?)
+                    SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM users WHERE id=? AND ispace_username=?
+                    AND COALESCE(ispace_link_version,0)=? AND mail_brief_version=? AND mail_brief_enabled=1)
                     ON CONFLICT(user_id) DO UPDATE SET
                     payload_encrypted=CASE WHEN school_username=excluded.school_username THEN payload_encrypted ELSE NULL END,
                     fingerprint=CASE WHEN school_username=excluded.school_username THEN fingerprint ELSE NULL END,
                     checked_at=CASE WHEN school_username=excluded.school_username THEN checked_at ELSE 0 END,
                     generated_at=CASE WHEN school_username=excluded.school_username THEN generated_at ELSE 0 END,
-                    school_username=excluded.school_username,last_attempt=excluded.last_attempt''', (user_id, username, now, user_id, username, version))
+                    school_username=excluded.school_username,last_attempt=excluded.last_attempt''', (user_id, username, now, user_id, username, *version))
                 if not result.rowcount:
                     raise MailError('Account binding changed', 'mail_cancelled')
                 db.commit()
@@ -193,8 +225,9 @@ class WeeklyBriefService:
         try:
             db.execute('''UPDATE mail_weekly_briefs SET payload_encrypted=?,fingerprint=?,generated_at=?,checked_at=?
                 WHERE user_id=? AND school_username=? AND EXISTS
-                (SELECT 1 FROM users WHERE id=? AND ispace_username=? AND COALESCE(ispace_link_version,0)=?)''',
-                       (sealed, fingerprint, generated_at, checked_at, user_id, username, user_id, username, version))
+                (SELECT 1 FROM users WHERE id=? AND ispace_username=? AND COALESCE(ispace_link_version,0)=?
+                AND mail_brief_version=? AND mail_brief_enabled=1)''',
+                       (sealed, fingerprint, generated_at, checked_at, user_id, username, user_id, username, *version))
             db.commit()
         finally:
             db.close()
