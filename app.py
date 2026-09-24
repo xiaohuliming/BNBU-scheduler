@@ -30,6 +30,7 @@ from ispace_credentials import (
     encrypt_ispace_password,
     is_ispace_credential_encryption_configured,
 )
+from mail_digest import create_blueprint as create_mail_digest_blueprint, clear_session as clear_mail_digest_session
 from media_dl import media_dl_bp
 from sms_lab import create_sms_lab_blueprint, init_sms_lab_tables
 from site_analytics import create_analytics_blueprint
@@ -860,6 +861,7 @@ def build_todo_reminder_email(user_row, todo_row, reminder_hours, unsubscribe_ur
 
 
 def set_authenticated_session(user_id, username, display_name):
+    clear_mail_digest_session()
     session.permanent = True
     session['user_id'] = user_id
     session['username'] = username
@@ -1394,6 +1396,7 @@ def _resolve_course_refs(codes, catalog, enrichment):
     return resolved
 
 
+app.register_blueprint(create_mail_digest_blueprint(get_db))
 app.register_blueprint(media_dl_bp)
 app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
@@ -2209,6 +2212,7 @@ def bind_ispace():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
+    clear_mail_digest_session()
     session.clear()
     sso_bridge.revoke_token(request.cookies.get('sso_token'))
     resp = jsonify({"success": True})
