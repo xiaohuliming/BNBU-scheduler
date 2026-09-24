@@ -1,24 +1,24 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>隐私与安全说明 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"></head><body>
 <header><a href="/">MAXCOURSE</a><nav><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码 ↗</a></nav></header>
 <main><p class='meta'>更新日期：2026 年 9 月 24 日</p><h1>隐私与安全说明</h1>
-<p>我是 SIrus.，MAXCOURSE 是我维护的一个校园工具网站。它不是学校官方产品，我也没有拿到学校授权给这个项目的接口。查课程、排课、找空教室、看校园资料这些事，不登录 iSpace 也能用。如果只是这些需求，你完全不用把校园账号交出来。</p>
+<p>MAXCOURSE 是由 SIrus. 维护的校园工具网站，并非学校官方产品，学校也未向本项目开放官方接口。查课程、排课、找空教室、看校园资料，不登录 iSpace 也能用，无需提供校园账号。</p>
 <div class='note'><strong>非必要不要把自己的学号和密码给任何第三方，包括 MAXCOURSE。</strong><p>用不用校园账号相关功能，由你自己决定。</p></div>
 <h2>密码和账号标识怎么处理</h2>
-<p>你在 iSpace 登录、绑定或手动同步时填的密码，会通过 HTTPS 发到我的服务器，再交给学校系统。处理时密码短暂在内存里，完成后就不留了。一次登录不会自动把密码写进数据库。不过绑定会保存一个校园账号标识，用来关联你的校园账号和 MAXCOURSE 账号。不存密码和不存账号标识是两件事。</p>
+<p>你在 iSpace 登录、绑定或手动同步时填的密码，会通过 HTTPS 发到项目服务器，再交给学校系统。处理时密码短暂在内存里，完成后就不留了。一次登录不会自动把密码写进数据库。不过绑定会保存一个校园账号标识，用来关联你的校园账号和 MAXCOURSE 账号。不存密码和不存账号标识是两件事。</p>
 <p>只有你主动打开 DDL 自动同步，密码才会加密保存在服务器上。后台管理界面没有明文展示接口，但服务器持有解密密钥，自动同步或恢复邮箱会话时会解密使用。万一服务器被入侵，也存在密码泄露的风险。不想把密码留在服务器，就别开自动同步，每次用的时候手动填。关掉自动同步，或者解绑 iSpace，在线业务库里的密码密文会被删掉。这个可选的加密保存功能以前就有，历史实现也能在 GitHub 查看。</p>
 <p>邮箱临时登录状态只放在服务器内存，最长八小时，学校也可能提前让它失效。退出、解绑或重启都会清掉会话。没保存密码时，会话失效后要重新输入；主动开启加密保存的话，服务器可以用保存的密码重新连。MAXCOURSE 自己的账号密码只存单向哈希，不存原始密码。请不要把校园密码重复用作这里的密码。</p>
 <h2>邮件摘要会用到什么</h2>
 <p>iSpace 登录成功后，服务器会走 MIS 的正常登录跳转连校园邮箱。这不是学校给 MAXCOURSE 的官方 API。每次进入已登录的首页，后台都会尝试看最近七天的收件箱，已读未读都包括，然后生成简短摘要，最多四条要点。以前那套四小时检查、十二小时复用摘要的限制已经取消。同一时间有更新任务时就直接复用，轮询只查状态，不会反复触发。</p>
 <p>读取用的是邮箱预览方式。程序不会改变邮件的已读未读状态，不发送、不删除学校邮件，不下载附件，也不看图片和二维码内容。单次最多处理一百五十封，长正文可能被截断，覆盖不全时页面会提示。请以学校邮件原文为准。</p>
 <p>选定范围内的发件人、主题、时间和正文文字会交给 OmniChat 及其配置的模型提供方处理。邮件正文可能包含个人信息，使用前请考虑是否愿意交给这些服务处理。校园密码和邮箱会话标识不会作为模型输入字段发出去。现在费用由项目服务端出，不扣你个人的 OmniChat 积分。</p>
-<p>原始邮件正文不写进 MAXCOURSE 数据库。简短摘要、选中的来源主题和时间、覆盖范围会加密缓存，按 MAXCOURSE 账号隔离。超过一天的摘要不再展示。公开代码能查这部分处理，但 OmniChat 和上游模型服务不在我仓库的完整开源和检查范围内。对于第三方如何保留数据，我目前无法作出保证。</p>
+<p>原始邮件正文不写进 MAXCOURSE 数据库。简短摘要、选中的来源主题和时间、覆盖范围会加密缓存，按 MAXCOURSE 账号隔离。超过一天的摘要不再展示。公开代码能查这部分处理，但 OmniChat 和上游模型服务不在这个公开仓库的完整开源和检查范围内。对于第三方如何保留数据，目前无法作出保证。</p>
 <h2>删除 iSpace 账号会删掉什么</h2>
 <p>在设置的 <strong>iSpace Linked</strong> 一栏，选择<strong>删除已添加的 iSpace 账号</strong>，会解除校园账号绑定，取消还在跑的后台任务，并清掉在线业务库里的校园密码密文、临时邮箱会话、邮件摘要，以及从 iSpace 导入的待办和提醒。已经发出去的请求没法撤回，但解绑后程序不会继续读后续邮件，也不会把旧结果写回去。</p>
 <p>学校账号和学校邮件不会因此删除，MAXCOURSE 账号和手动待办也还在。MAXCOURSE 用户名里可能还有你的学号。要删 MAXCOURSE 账号数据，用设置里的账号注销。你再次主动用 iSpace 登录或绑定，关联会重新建起来。历史数据库备份里可能还有解绑前的账号数据和密码密文，它们不会自动用来恢复绑定或重新登录，会按维护流程处理，但不能保证所有历史备份都会立即清除。解绑不等于学校改密码，也不等于退出学校所有设备。</p>
 <h2>代码公开到了哪里，做过哪些检查</h2>
-<p>主项目在 GitHub 公开：<a href='https://github.com/xiaohuliming/BNBU-scheduler' target='_blank' rel='noopener noreferrer'>github.com/xiaohuliming/BNBU-scheduler</a>。登录、邮箱读取、摘要请求、缓存和解绑相关代码都能查，也欢迎在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/issues' target='_blank' rel='noopener noreferrer'>GitHub Issues</a> 提问。2026 年 9 月 24 日这次更新，我用自动化工具对密码保存、邮箱请求、账号隔离、解绑后任务撤销、静态文件保护和页面输出做了范围有限的自查和回归检查，记录在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/blob/main/SECURITY_REVIEW_2026-09-24.md' target='_blank' rel='noopener noreferrer'>本次检查记录</a>。</p>
-<p>这些检查是我借助工具做的，没有第三方独立审计，也没有学校安全认证，目前没有独立审计报告可以公开。开源代码不能证明线上部署一直和仓库一致，也不能保证绝对安全。欢迎有能力的同学自己查或做独立审计。</p>
+<p>主项目在 GitHub 公开：<a href='https://github.com/xiaohuliming/BNBU-scheduler' target='_blank' rel='noopener noreferrer'>github.com/xiaohuliming/BNBU-scheduler</a>。登录、邮箱读取、摘要请求、缓存和解绑相关代码都能查，也欢迎在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/issues' target='_blank' rel='noopener noreferrer'>GitHub Issues</a> 提问。2026 年 9 月 24 日这次更新，开发者使用自动化工具对密码保存、邮箱请求、账号隔离、解绑后任务撤销、静态文件保护和页面输出做了范围有限的自查和回归检查，记录在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/blob/main/SECURITY_REVIEW_2026-09-24.md' target='_blank' rel='noopener noreferrer'>本次检查记录</a>。</p>
+<p>这些检查由开发者借助自动化工具完成，没有第三方独立审计，也没有学校安全认证，目前没有独立审计报告可以公开。开源代码不能证明线上部署一直和仓库一致，也不能保证绝对安全。欢迎有能力的同学自己查或做独立审计。</p>
 <h2>其他必要数据和提醒</h2>
-<p>为了账号、待办、评价、限流和服务维护，项目还会处理账号标识、你主动保存的数据和必要访问日志。HTTP 访问日志可能包含 IP、时间、路径和状态码。不要在公开评论、问题反馈或聊天里贴密码、邮箱登录链接、Cookie、验证码或其他敏感信息。学校系统入口请以学校官网或 ITSC 发布的为准。我不会通过微信或 GitHub 向你索取校园密码。别因为源码公开或者认识我，就放松对凭据的保护。</p>
+<p>为了账号、待办、评价、限流和服务维护，项目还会处理账号标识、你主动保存的数据和必要访问日志。HTTP 访问日志可能包含 IP、时间、路径和状态码。不要在公开评论、问题反馈或聊天里贴密码、邮箱登录链接、Cookie、验证码或其他敏感信息。学校系统入口请以学校官网或 ITSC 发布的为准。开发者不会通过微信或 GitHub 向你索取校园密码。别因为源码公开或者认识开发者，就放松对凭据的保护。</p>
 <section class="contact"><h2>开发者与联系</h2><dl><dt>开发者</dt><dd>SIrus.</dd><dt>微信</dt><dd>ToDoHacambiado</dd><dt>学号</dt><dd>t330025032</dd><dt>个人博客</dt><dd><a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></dd><dt>项目仓库</dt><dd><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">BNBU-scheduler ↗</a></dd></dl><p class="meta">以上信息由开发者主动公开，用于说明项目维护者身份，不代表学校授权或背书。反馈安全问题时请先描述现象，不要发送任何账号密码。</p></section>
 </main><footer><nav><a href="/">返回首页</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler/issues" target="_blank" rel="noopener noreferrer">问题反馈 ↗</a></nav></footer></body></html>
