@@ -56,9 +56,9 @@ class PrivacyControlsTests(unittest.TestCase):
             for required in ['ToDoHacambiado','https://f0xy.me/','t330025032','SIrus.','github.com/xiaohuliming/BNBU-scheduler']:
                 self.assertIn(required,result.text)
         page=self.client.get('/privacy/').text
-        self.assertIn('不是第三方独立安全审计',page)
+        self.assertIn('没有第三方独立审计',page)
         self.assertIn('服务器持有解密密钥',page)
-        self.assertIn('历史数据库备份可能保留',page)
+        self.assertIn('历史数据库备份里可能还有',page)
         self.assertNotIn('已清理在线业务库及本项目控制范围',page)
 
     def test_account_deletion_revokes_shared_cookie_and_brief(self):

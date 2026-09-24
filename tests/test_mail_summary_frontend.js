@@ -75,6 +75,6 @@ test('each new homepage visit submits one refresh, while same render does not',a
 test('settings exposes unlink and states server-side decryption accurately',async()=>{
  const {dom,w,render}=setup(async()=>response({}));render('SettingsView',user);await tick();
  assert.match(w.document.body.textContent,/删除已添加的 iSpace 账号/);
- assert.match(w.document.body.textContent,/服务器能在同步时解密使用/);
+ assert.match(w.document.body.textContent,/服务器同步时能解密/);
  assert.ok(w.document.querySelector('a[href="/privacy/"]'));dom.window.close();
 });
