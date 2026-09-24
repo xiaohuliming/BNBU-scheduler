@@ -1,66 +1,40 @@
-"""Narrow authenticated boundary to the sibling OmniChat service."""
-import json
+"""Server-funded, bounded weekly briefs through the sibling OmniChat relay."""
+import os
 import requests
 from .client import MailError
 
-OMNI = 'https://chat.bnbscheduler.top/api/integrations/mail-summary'
+OMNI = 'https://chat.bnbscheduler.top/api/integrations/mail-brief'
 
 
-def omni_request(token, messages=None):
-    if not token or '\r' in token or '\n' in token:
-        raise MailError('请重新登录 MAXCOURSE，以连接 OmniChat 共享账号。', 'shared_login_required', 401)
+def configured():
+    return bool(os.getenv('MAXCOURSE_MAIL_BRIEF_TOKEN', '').strip())
+
+
+def summarize_week(messages, window_start, window_end):
+    token = os.getenv('MAXCOURSE_MAIL_BRIEF_TOKEN', '').strip()
+    if not token:
+        raise MailError('邮件摘要服务尚未配置。', 'not_configured', 503)
     try:
         with requests.Session() as http:
-            response = http.request('POST' if messages is not None else 'GET',
-                                    OMNI if messages is not None else OMNI + '/config',
-                                    json={'messages': messages} if messages is not None else None,
-                                    headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/json'},
-                                    timeout=(8, 120), allow_redirects=False)
-        errors = {401: ('请重新登录以连接 OmniChat。', 'shared_login_required'),
-                  402: ('OmniChat 积分不足，请充值后重试。', 'insufficient_credits'),
-                  403: ('OmniChat 账号暂时不可用。', 'omnichat_account_unavailable'),
-                  404: ('OmniChat 邮件总结接口或模型尚未就绪。', 'summary_not_configured'),
-                  429: ('总结请求较多，请稍后重试。', 'summary_rate_limited')}
-        if response.status_code in errors:
-            message, code = errors[response.status_code]
-            raise MailError(message, code, response.status_code)
+            response = http.post(OMNI, json={'messages': messages,
+                                  'window_start': int(window_start), 'window_end': int(window_end)},
+                                 headers={'X-Mail-Brief-Token': token, 'Accept': 'application/json'},
+                                 timeout=(8, 150), allow_redirects=False)
         if response.status_code != 200:
-            raise MailError('OmniChat 暂时无法生成总结，请稍后重试。', 'summary_unavailable')
+            raise MailError('邮件摘要暂时不可用。', 'summary_unavailable')
         payload = response.json()
-        if not isinstance(payload, dict):
+        items = payload['items']
+        if not isinstance(items, list) or len(items) > 4:
             raise ValueError()
-        return payload
-    except (requests.RequestException, ValueError, TypeError):
-        raise MailError('OmniChat 连接中断，暂时无法确认生成结果。请稍后再试。', 'summary_unavailable') from None
-
-
-def summarize(token, messages):
-    payload = omni_request(token, messages)
-    try:
-        choice = payload['choices'][0]
-        if choice.get('finish_reason') not in (None, 'stop', 'end_turn'):
-            raise ValueError()
-        text = choice['message']['content'].strip()
-        if text.startswith('```'):
-            text = text.split('\n', 1)[1].rsplit('```', 1)[0]
-        digest = json.loads(text)
-        if not isinstance(digest, dict) or not isinstance(digest.get('overview'), str):
-            raise ValueError()
-        items = digest['items']
-        if not isinstance(items, list) or len(items) != len(messages):
-            raise ValueError()
-        ids = {m['id'] for m in messages}
-        seen, clean = set(), []
+        known = {m['id'] for m in messages}
+        clean = []
         for item in items:
-            if not isinstance(item, dict) or item.get('id') not in ids or item['id'] in seen:
+            if (not isinstance(item, dict) or not isinstance(item.get('text'), str)
+                    or not 1 <= len(item['text']) <= 180 or not isinstance(item.get('source_ids'), list)
+                    or not 1 <= len(item['source_ids']) <= 4
+                    or any(not isinstance(mid, str) or mid not in known for mid in item['source_ids'])):
                 raise ValueError()
-            if item.get('priority') not in ('action', 'info'):
-                raise ValueError()
-            seen.add(item['id'])
-            if not all(isinstance(item.get(k), str) and len(item[k]) <= 2000 for k in ('summary', 'action', 'deadline')):
-                raise ValueError()
-            clean.append({key: item[key] for key in ('id', 'summary', 'priority', 'action', 'deadline')})
-        return {'overview': digest['overview'][:3000], 'items': clean, 'model': payload.get('model', ''),
-                'credits': payload.get('usage', {}).get('credits')}
-    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
-        raise MailError('AI 返回的总结不完整，未展示不可靠结果。可稍后重试或查看原文。', 'invalid_summary') from None
+            clean.append({'text': item['text'], 'source_ids': list(dict.fromkeys(item['source_ids']))})
+        return clean
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        raise MailError('邮件摘要暂时不可用。', 'summary_unavailable') from None

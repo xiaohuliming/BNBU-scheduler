@@ -28,16 +28,17 @@ def soup(text):
     return BeautifulSoup(text, 'html.parser')
 
 
-def parse_inbox(html):
+def parse_inbox(html, unread_only=True):
     doc = soup(html)
     if doc.select_one('input[type=password]') or not doc.select_one('body#list'):
         raise MailError('邮箱登录状态已过期，请重新连接。', 'mail_session_expired', 401)
     text = doc.get_text(' ', strip=True)
     count = re.search(r'有\s*([\d,]+)\s*封\s*未读邮件', text)
-    if not count:
+    if unread_only and not count:
         raise MailError('邮箱列表格式发生变化，暂时无法确认未读数量。')
     messages = []
-    for field in doc.select('input[type=checkbox][name=mailid][unread=true]'):
+    selector = 'input[type=checkbox][name=mailid]' + ('[unread=true]' if unread_only else '')
+    for field in doc.select(selector):
         mid = field.get('value', '')
         row = field.find_parent('table')
         title = row.select_one('.gt u') if row else None
@@ -51,8 +52,10 @@ def parse_inbox(html):
         messages.append({'id': mid, 'subject': title.get_text(' ', strip=True)[:500],
                          'sender': field.get('fn', '')[:200], 'sender_address': field.get('fa', '')[:254],
                          'received_at': sent_at, 'snippet': snippet.get_text(' ', strip=True)[:500] if snippet else ''})
-    total = int(count.group(1).replace(',', ''))
-    if total and not messages:
+    if not unread_only and not messages and not re.search(r'(?:没有|暂无).{0,8}邮件|收件箱.{0,8}空|共\s*0\s*封', text):
+        raise MailError('邮箱列表格式发生变化，无法确认最近一周邮件。')
+    total = int(count.group(1).replace(',', '')) if count else None
+    if unread_only and total and not messages:
         raise MailError('未能读取未读邮件列表，请重新连接。')
     return {'total_unread': total, 'messages': messages, 'has_next': bool(doc.select_one('a#nextpage'))}
 
@@ -144,6 +147,38 @@ class SchoolMailbox:
         html, _ = self._request('GET', MAIL + '/cgi-bin/mail_list',
                                 params={'sid': self.sid, 'folderid': 1, 'flag': 'new', 's': 'unread', 'page': page})
         return parse_inbox(html)
+
+    def recent(self, now=None, max_messages=150):
+        """Inspect both read and unread inbox mail from the last seven days."""
+        now = now or time.time()
+        cutoff, collected, seen = now - 7 * 86400, [], set()
+        complete = True
+        for page in range(20):
+            html, _ = self._request('GET', MAIL + '/cgi-bin/mail_list', params={
+                'sid': self.sid, 'folderid': 1, 's': 'inbox', 'page': page,
+                'sorttype': 'time', 'sortasc': 0, 'topmails': 0})
+            batch = parse_inbox(html, unread_only=False)
+            dates = []
+            for item in batch['messages']:
+                try:
+                    timestamp = datetime.fromisoformat(item['received_at']).timestamp()
+                except (ValueError, TypeError):
+                    complete = False
+                    continue
+                dates.append(timestamp)
+                if cutoff <= timestamp <= now and item['id'] not in seen:
+                    if len(collected) >= max_messages:
+                        return {'messages': collected, 'complete': False, 'window_start': cutoff, 'window_end': now}
+                    collected.append(item)
+                    seen.add(item['id'])
+            if not batch['has_next'] or (dates and max(dates) < cutoff):
+                break
+            if not batch['messages']:
+                raise MailError('无法确认最近一周的邮件范围。')
+        else:
+            complete = False
+        collected.sort(key=lambda item: item['received_at'], reverse=True)
+        return {'messages': collected, 'complete': complete, 'window_start': cutoff, 'window_end': now}
 
     def preview(self, mail_id):
         if not MAIL_ID.fullmatch(mail_id):
