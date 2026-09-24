@@ -6,8 +6,9 @@
     <title>数据看板 · MAXCOURSE</title>
     <link rel="icon" href="/favicon.png" />
     <link rel="stylesheet" href="/vendor/fonts.css" />
-    <link rel="stylesheet" href="/stats/dashboard.css?v=47ec322744ec" />
-    <script defer src="/stats/dashboard.js?v=092a1515b090"></script>
+    <link rel="stylesheet" href="/stats/dashboard.css?v=bc278295cafb" />
+    <script defer src="/site-info/analytics.js?v=1" data-page="stats"></script>
+    <script defer src="/stats/dashboard.js?v=4ba97c3f9249"></script>
   </head>
   <body>
     <a class="skip" href="#dashboard">跳转到统计内容</a>
@@ -151,9 +152,14 @@
                   <span class="eyebrow">POPULAR TOOLS</span>
                   <h3>页面与工具排行</h3>
                 </div>
-                <span class="hint">浏览次数</span>
               </div>
-              <div id="pages"></div>
+              <div class="page-controls">
+                <label for="page-search">搜索页面<input id="page-search" type="search" placeholder="名称或页面标识" /></label>
+                <label for="page-sort">排序<select id="page-sort"><option value="views">浏览次数</option><option value="visitors">独立访客</option></select></label>
+              </div>
+              <p id="page-summary" class="hint" role="status" aria-live="polite"></p>
+              <div id="pages" tabindex="0" role="region" aria-label="页面排行列表"></div>
+              <p class="hint page-note">本周期无记录的页面列在末尾。2026 年 9 月 25 日起补充更新日志、隐私说明、MIS 助手和数据看板的访问统计，此前漏记的访问无法补回。</p>
             </section>
           </div>
           <div class="layout-three">
@@ -325,6 +331,7 @@
       <footer>
         <span>MAXCOURSE · CAMPUS TOOLKIT</span
         ><span>只展示聚合统计，不展示个人访问明细。</span>
+        <nav aria-label="站点说明"><a href="/changelog/">更新日志</a><a href="/privacy/">隐私说明</a></nav>
       </footer>
     </div>
   </body>

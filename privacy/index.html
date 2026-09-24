@@ -1,6 +1,6 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>隐私与安全说明 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"></head><body>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>隐私与安全说明 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"><script defer src="/site-info/analytics.js?v=1" data-page="privacy"></script></head><body>
 <header><a href="/">MAXCOURSE</a><nav><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码 ↗</a></nav></header>
-<main><p class='meta'>更新日期：2026 年 9 月 24 日</p><h1>隐私与安全说明</h1>
+<main><p class='meta'>更新日期：2026 年 9 月 25 日</p><h1>隐私与安全说明</h1>
 <p>MAXCOURSE 是由 SIrus. 维护的校园工具网站，并非学校官方产品，学校也未向本项目开放官方接口。查课程、排课、找空教室、看校园资料，不登录 iSpace 也能用，无需提供校园账号。</p>
 <div class='note'><strong>非必要不要把自己的学号和密码给任何第三方，包括 MAXCOURSE。</strong><p>用不用校园账号相关功能，由你自己决定。</p></div>
 <h2>密码和账号标识怎么处理</h2>
@@ -18,7 +18,10 @@
 <h2>代码公开到了哪里，做过哪些检查</h2>
 <p>主项目在 GitHub 公开：<a href='https://github.com/xiaohuliming/BNBU-scheduler' target='_blank' rel='noopener noreferrer'>github.com/xiaohuliming/BNBU-scheduler</a>。登录、邮箱读取、摘要请求、缓存和解绑相关代码都能查，也欢迎在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/issues' target='_blank' rel='noopener noreferrer'>GitHub Issues</a> 提问。2026 年 9 月 24 日这次更新，开发者使用自动化工具对密码保存、邮箱请求、账号隔离、解绑后任务撤销、静态文件保护和页面输出做了范围有限的自查和回归检查，记录在 <a href='https://github.com/xiaohuliming/BNBU-scheduler/blob/main/SECURITY_REVIEW_2026-09-24.md' target='_blank' rel='noopener noreferrer'>本次检查记录</a>。</p>
 <p>这些检查由开发者借助自动化工具完成，没有第三方独立审计，也没有学校安全认证，目前没有独立审计报告可以公开。开源代码不能证明线上部署一直和仓库一致，也不能保证绝对安全。欢迎有能力的同学自己查或做独立审计。</p>
+<h2>页面访问如何统计</h2>
+<p>站点使用第一方访问统计，服务器通过会话 Cookie 中的随机浏览器标识统计独立访客。访问记录包含页面名称、路径、时间、来源和浏览器信息；登录时还会关联 MAXCOURSE 账号标识。更新日志、隐私说明、MIS 助手和数据看板也会记录访问，这些页面的埋点不发送查询参数、页面正文或表单内容。清除 Cookie 或换设备可能被计为新的访客。</p>
+<p><a href="/stats/index.html">公开数据看板</a>只提供聚合数字，不展示个人访问明细、账号标识或具体访问者。未接入统计时的访问无法补回，历史数字不等于完整访问人数。</p>
 <h2>其他必要数据和提醒</h2>
 <p>为了账号、待办、评价、限流和服务维护，项目还会处理账号标识、你主动保存的数据和必要访问日志。HTTP 访问日志可能包含 IP、时间、路径和状态码。不要在公开评论、问题反馈或聊天里贴密码、邮箱登录链接、Cookie、验证码或其他敏感信息。学校系统入口请以学校官网或 ITSC 发布的为准。开发者不会通过微信或 GitHub 向你索取校园密码。别因为源码公开或者认识开发者，就放松对凭据的保护。</p>
 <section class="contact"><h2>开发者与联系</h2><dl><dt>开发者</dt><dd>SIrus.</dd><dt>微信</dt><dd>ToDoHacambiado</dd><dt>学号</dt><dd>t330025032</dd><dt>个人博客</dt><dd><a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></dd><dt>项目仓库</dt><dd><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">BNBU-scheduler ↗</a></dd></dl><p class="meta">以上信息由开发者主动公开，用于说明项目维护者身份，不代表学校授权或背书。反馈安全问题时请先描述现象，不要发送任何账号密码。</p></section>
-</main><footer><nav><a href="/">返回首页</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler/issues" target="_blank" rel="noopener noreferrer">问题反馈 ↗</a></nav></footer></body></html>
+</main><footer><nav><a href="/stats/index.html">数据看板</a><a href="/">返回首页</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler/issues" target="_blank" rel="noopener noreferrer">问题反馈 ↗</a></nav></footer></body></html>

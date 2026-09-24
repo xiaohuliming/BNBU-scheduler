@@ -484,7 +484,7 @@
             }
         }
     </style>
-</head>
+<script defer src="/site-info/analytics.js?v=1" data-page="eatwhat"></script></head>
 
 <body>
     <canvas id="threejs-canvas"></canvas>
@@ -627,19 +627,6 @@
     </main>
 
     <script>
-        // Page-view tracking → /api/analytics/summary byView list.
-        if (window.location.protocol !== 'file:') {
-            fetch('/api/analytics/track', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    view: 'eatwhat',
-                    path: window.location.pathname + window.location.hash,
-                    referrer: document.referrer,
-                }),
-            }).catch(() => {});
-        }
-
         const CSV_PATHS = {
             shops: "clean_output/shops_clean.csv",
             dishes: "clean_output/dishes_clean.csv"
@@ -1480,20 +1467,6 @@
             return parts.join(" · ");
         }
 
-        function trackEatwhatVisit() {
-            if (window.location.protocol === "file:") return;
-            fetch("/api/analytics/track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    view: "eatwhat",
-                    path: `${window.location.pathname}${window.location.search}${window.location.hash}`,
-                    referrer: document.referrer
-                }),
-                keepalive: true
-            }).catch(() => {});
-        }
-
         async function initData() {
             try {
                 const [shopRows, dishRows] = await Promise.all([loadCSV(CSV_PATHS.shops), loadCSV(CSV_PATHS.dishes)]);
@@ -1514,7 +1487,6 @@
 
         bindControls();
         updateAddonUI();
-        trackEatwhatVisit();
         initData();
 
         const canvas = document.getElementById("threejs-canvas");
