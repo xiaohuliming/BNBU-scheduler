@@ -120,6 +120,18 @@ class MailRoutesTest(unittest.TestCase):
         with self.client.session_transaction() as sess:
             self.assertNotIn('test-only-password', str(dict(sess)))
 
+    def test_successful_school_connection_refreshes_same_shared_identity(self):
+        with mock.patch('mail_digest.sso_bridge.issue_shared_token', return_value='new-shared-token') as issue:
+            response = self.connect()
+        issue.assert_called_once_with('student-local', ispace=False)
+        self.assertTrue(any('sso_token=new-shared-token' in value for value in response.headers.getlist('Set-Cookie')))
+
+    def test_failed_school_login_never_mints_shared_token(self):
+        self.fake_mail.login.side_effect = MailError('Login failed', 'school_login_failed', 401)
+        with mock.patch('mail_digest.sso_bridge.issue_shared_token') as issue:
+            self.assertEqual(self.post('connect', {'password':'bad'}).status_code, 401)
+            issue.assert_not_called()
+
     def test_connect_rejects_missing_csrf_and_logout_clears_cache(self):
         r=self.client.post('/api/mail-digest/connect',json={'password':'p'})
         self.assertEqual(r.status_code,403)
