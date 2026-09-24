@@ -44,7 +44,7 @@ test('failed summary is visible and retry re-enabled',async()=>{
  const {dom}=await harness({failure:true});const d=dom.window.document;d.getElementById('summarize').click();await tick();await tick();
  assert.match(d.getElementById('notice').textContent,/生成失败/);assert.equal(d.getElementById('summarize').disabled,false);dom.window.close();
 });
-test('homepage and toolbox render the mail entry with React',()=>{
+test('homepage and toolbox omit the mail entry with React',()=>{
  const dom=new JSDOM('<div id="test"></div>',{url:'http://localhost/',runScripts:'outside-only'});const w=dom.window;
  w.eval(fs.readFileSync(path.join(root,'vendor/react.production.min.js'),'utf8'));
  w.eval(fs.readFileSync(path.join(root,'vendor/react-dom.production.min.js'),'utf8'));
@@ -55,8 +55,10 @@ test('homepage and toolbox render the mail entry with React',()=>{
  const portion=src.slice(start,toolboxEnd);
  const iconStub='const '+[...new Set([...names,...[...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1]).filter(x=>x!=="React"),'ArrowRight','ArrowUpRight','ArrowLeft','Download','MapIcon','Bell','Mail','Sparkles','Search','Check','X','ChevronRight'])].join('=()=>React.createElement("span"),')+'=()=>React.createElement("span");';
  w.eval(w.Babel.transform('const {useState,useEffect,useRef}=React;'+iconStub+portion+';window.TestHomeView=HomeView;ReactDOM.render(React.createElement(ToolboxView,{onOpenView:()=>{}}),document.getElementById("test"));',{presets:['react']}).code);
- assert.match(w.document.getElementById('test').textContent,/AI 邮件总结/);
+ assert.doesNotMatch(w.document.getElementById('test').textContent,/AI 邮件总结/);
+ assert.equal(w.document.querySelector('a[href="/mail-summary/"]'),null);
  w.ReactDOM.render(w.React.createElement(w.TestHomeView,{user:null,onNavigate:()=>{},onOpenLogin:()=>{}}),w.document.getElementById('test'));
- assert.match(w.document.getElementById('test').textContent,/AI 邮件总结/);
+ assert.doesNotMatch(w.document.getElementById('test').textContent,/AI 邮件总结/);
+ assert.equal(w.document.querySelector('a[href="/mail-summary/"]'),null);
  dom.window.close();
 });
