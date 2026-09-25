@@ -10,11 +10,12 @@ function setup(fetch){
  w.fetch=fetch;
  for(const file of ['react.production.min.js','react-dom.production.min.js','babel.min.js'])w.eval(fs.readFileSync(path.join(root,'vendor',file),'utf8'));
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),src=html.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/)[1];
- const start=src.indexOf('const SettingsView ='),end=src.indexOf('const ToolboxView ='),stop=src.indexOf('\n        const ',end+20),portion=src.slice(start,stop);
- const icons=[...new Set([...src.matchAll(/\bIcon:\s*(\w+)/g)].map(x=>x[1]).concat([...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1])))].filter(x=>!['React','WeeklyMailBrief'].includes(x));
+ const start=src.indexOf('const SettingsView ='),end=src.indexOf('const ToolboxView ='),stop=src.indexOf('\n        const ',end+20);
+ const portion=src.slice(start,stop)+src.slice(src.indexOf('const AuthModal ='),src.indexOf('const FACULTY_LABEL ='));
+ const icons=[...new Set([...src.matchAll(/\bIcon:\s*(\w+)/g)].map(x=>x[1]).concat([...portion.matchAll(/<([A-Z]\w*)/g)].map(x=>x[1])))].filter(x=>!['React','WeeklyMailBrief','AuthModal'].includes(x));
  const stub='const '+icons.map(name=>`${name}=()=>React.createElement('span')`).join(',')+';';
- w.eval(w.Babel.transform('const {useState,useEffect}=React;'+stub+portion+';window.MailTest={WeeklyMailBrief,HomeView,ToolboxView,SettingsView};',{presets:['react']}).code);
- const render=(component,user)=>w.ReactDOM.render(w.React.createElement(w.MailTest[component],{user,onNavigate:()=>{},onOpenLogin:()=>{},onOpenView:()=>{}}),w.document.getElementById('test'));
+ w.eval(w.Babel.transform('const {useState,useEffect}=React;'+stub+portion+';window.MailTest={WeeklyMailBrief,HomeView,ToolboxView,SettingsView,AuthModal};',{presets:['react']}).code);
+ const render=(component,user,props={})=>w.ReactDOM.render(w.React.createElement(w.MailTest[component],{user,onNavigate:()=>{},onOpenLogin:()=>{},onOpenView:()=>{},...props}),w.document.getElementById('test'));
  return {dom,w,render};
 }
 const user={id:1,ispace_username:'s123456789',username:'fixture'};
@@ -140,4 +141,44 @@ test('failed setting save keeps the confirmed state and offers retry',async()=>{
  const button=w.document.querySelector('[role="switch"]');button.click();await tick();await tick();
  assert.equal(button.getAttribute('aria-checked'),'true');assert.equal(button.disabled,false);
  assert.match(w.document.querySelector('[role="alert"]').textContent,/保存失败/);dom.window.close();
+});
+
+test('disconnected mailbox offers immediate iSpace verification without logout',async()=>{
+ const opened=[];
+ const {dom,w,render}=setup(async()=>response({...ready(),brief:null,state:'idle',connection_ready:false,reauth_required:true}));
+ render('HomeView',user,{onOpenLogin:options=>opened.push(options)});await tick();await tick();
+ const reconnect=[...w.document.querySelectorAll('.weekly-mail-brief button')].find(b=>b.textContent.includes('验证 iSpace'));
+ assert.ok(reconnect,'disconnected mailbox must provide a recovery action');
+ reconnect.click();await tick();
+ assert.equal(opened[0].initialTab,'ispace');assert.equal(opened[0].initialUsername,user.ispace_username);
+ assert.doesNotMatch(w.document.querySelector('.weekly-mail-brief').textContent,/下次 iSpace 登录/);dom.window.close();
+});
+
+test('automatic reconnection finishes before requesting manual verification',async()=>{
+ let finish;
+ const {dom,w,render}=setup(async(url)=>url.endsWith('/refresh')?new Promise(resolve=>finish=resolve):response({...ready(),brief:null,state:'idle',connection_ready:false,reauth_required:true}));
+ render('HomeView',user);await tick();await tick();
+ assert.doesNotMatch(w.document.body.textContent,/已失效|下次 iSpace 登录|需要验证 iSpace/);
+ assert.match(w.document.body.textContent,/正在更新邮件摘要/);
+ finish(response(ready()));await tick();await tick();
+ assert.match(w.document.querySelector('.weekly-mail-brief').textContent,/若计划留校/);dom.window.close();
+});
+
+test('successful verification refreshes a previously idle brief for the same account',async()=>{
+ let restored=false;const calls=[];
+ const {dom,w,render}=setup(async(url)=>{
+  calls.push(url);return response(restored?ready():{...ready(),brief:null,state:'idle',connection_ready:false,reauth_required:true});
+ });
+ render('HomeView',user,{mailRefreshKey:0});await tick();await tick();
+ restored=true;render('HomeView',user,{mailRefreshKey:1});await tick();await tick();
+ assert.equal(calls.filter(url=>url.endsWith('/refresh')).length,2);
+ assert.match(w.document.querySelector('.weekly-mail-brief').textContent,/若计划留校/);dom.window.close();
+});
+
+test('recovery opens the existing school login form with the bound account',async()=>{
+ const {dom,w,render}=setup(async()=>response({}));
+ render('AuthModal',user,{initialTab:'ispace',initialUsername:user.ispace_username});await tick();
+ assert.match(w.document.querySelector('h2').textContent,/iSpace Login/);
+ assert.equal(w.document.querySelector('input[type="text"]').value,user.ispace_username);
+ assert.equal(w.document.querySelector('input[type="password"]').value,'');dom.window.close();
 });

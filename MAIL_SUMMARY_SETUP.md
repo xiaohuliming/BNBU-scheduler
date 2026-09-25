@@ -6,6 +6,8 @@ Settings includes a per-account mail switch, enabled by default for existing beh
 
 The homepage collapse button hides content without disabling refresh. Only the collapsed boolean is saved in localStorage, keyed by account ID; email text is never stored there. Storage failures do not prevent folding the current view.
 
+When no mailbox session or saved credential is available, the homepage offers iSpace verification through the existing login dialog, with the bound school account prefilled. No logout or password storage is required. Successful authentication remounts the brief even for the same account, so it reloads and polls the newly scheduled job. Initial status retrieval does not display a manual-verification prompt until the visit refresh has tried automatic reconnection.
+
 A successful iSpace login or account binding schedules a background job using that verified password once. Login does not wait for MIS, mailbox reads, or AI generation. Returning users with an existing opt-in encrypted iSpace sync password can refresh automatically when their homepage loads. Old sessions without saved credentials begin on their next school login. The feature does not add password persistence.
 
 ## Data and read behavior
