@@ -6,3 +6,5 @@ venv/
 maxcourse.db
 enrich_work/
 backups/
+.playwright-cli/
+output/playwright/print-portal/

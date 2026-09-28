@@ -32,6 +32,7 @@ from ispace_credentials import (
 )
 from mail_digest import register_mail_brief, init_tables as init_mail_brief_tables, clear_session as clear_mail_digest_session
 from media_dl import media_dl_bp
+from campus_print import create_print_blueprint
 from sms_lab import create_sms_lab_blueprint, init_sms_lab_tables
 from site_analytics import create_analytics_blueprint
 from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
@@ -143,7 +144,7 @@ API_BROWSER_CACHE_PREFIXES = (
 )
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
-    '/tests', '/venv', '/.venv', '/logs', '/deploy', '/cap_service',
+    '/tests', '/venv', '/.venv', '/logs', '/deploy', '/cap_service', '/campus_print',
 )
 SENSITIVE_STATIC_SUFFIXES = (
     '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
@@ -1405,6 +1406,7 @@ def _resolve_course_refs(codes, catalog, enrichment):
 
 mail_brief_service = register_mail_brief(app, get_db)
 app.register_blueprint(media_dl_bp)
+app.register_blueprint(create_print_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
     **antiscrape_stats, 'humanVerified': human_verification.stats['verified'],
@@ -1415,6 +1417,11 @@ app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
+
+
+@app.route('/print/')
+def print_portal():
+    return send_from_directory(os.path.join(APP_ROOT, 'print'), 'index.html')
 
 
 @app.route('/api/course/<path:code>', methods=['GET'])
