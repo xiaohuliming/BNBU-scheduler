@@ -180,6 +180,33 @@ button, a, input { transition: background-color .16s ease, color .16s ease, box-
 .help-sec h3 { margin: 0 0 8px; font-size: 15px; }
 .help-sec p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.9; }
 .noscript-note { padding: 20px; color: var(--error); }
+/* Credentials are requested only after the document is ready. */
+.output-body { padding: 22px 27px 25px; }
+.col-output .spec-heading { color: #bfc1b9; margin: 0 0 12px; }
+.col-output .print-specs { grid-template-columns: repeat(2, 1fr); border-color: #697171; }
+.col-output .print-specs div { padding: 15px 17px; }
+.col-output .print-specs div + div { border: 0; }
+.col-output .print-specs div:nth-child(even) { border-left: 1px solid #4c5253; }
+.col-output .print-specs div:nth-child(n+3) { border-top: 1px solid #4c5253; }
+.col-output .print-specs dt { color: #bfc1b9; font-size: 11px; }
+.col-output .print-specs dd { font-size: 22px; }
+.go-print { width: 100%; justify-content: space-between; margin-top: 25px; min-height: 56px; box-shadow: 4px 4px 0 var(--sheet); }
+.go-print span { font-size: 25px; font-weight: 400; }
+.go-print:disabled { color: #b4b8aa; background: #2c3538; border-color: #637065; box-shadow: none; }
+.go-print:focus-visible { outline-color: var(--signal); }
+.go-print-note { margin: 14px 0 0; font-size: 12px; color: #bfc1b9; }
+.account-dialog { width: min(470px, calc(100% - 40px)); max-height: calc(100dvh - 56px); padding: 0; overflow-y: auto; }
+.account-dialog::backdrop { background: rgba(16,24,32,.62); }
+.account-dialog .panel-heading { padding: 18px 22px; }
+.account-back { margin-left: auto; min-height: 44px; background: transparent; border: 0; padding: 8px 0 8px 12px; font-size: 12px; color: #ded8cc; text-decoration: underline; text-underline-offset: 4px; }
+.account-back:focus-visible { outline-color: var(--signal); }
+.account-back:disabled { opacity: .45; }
+.confirm-document { border-bottom: 1px solid #4c5253; padding-bottom: 18px; margin-bottom: 20px; }
+.confirm-document > span { color: #bfc1b9; font-size: 11px; }
+.confirm-document p { margin: 7px 0; font-size: 16px; overflow-wrap: anywhere; }
+.confirm-document small { color: #bfc1b9; font-size: 11px; }
+.account-service { color: #f4d989; border-left: 2px solid #f4d989; padding: 6px 10px; margin: 0 0 19px; font-size: 12px; }
+
 @media (max-width: 1050px) {
   .wrap { width: calc(100% - 64px); }
   .hero, .workspace-fields { grid-template-columns: 1.15fr 1fr; }
@@ -221,6 +248,8 @@ button, a, input { transition: background-color .16s ease, color .16s ease, box-
   .panel-heading h2 { font-size: 22px; }
   .document-body { padding: 18px; }
   .account-body { padding: 19px 20px 22px; }
+  .output-body { padding: 19px 20px 22px; }
+  .account-dialog .panel-heading { padding: 12px 20px; }
   .dropzone { min-height: 213px; padding: 24px 15px 15px; grid-template-columns: 69px minmax(0, 1fr); gap: 16px; }
   .paper-token { width: 63px; height: 89px; padding: 8px; }
   .paper-token-label { font-size: 6px; }

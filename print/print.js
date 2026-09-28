@@ -12,6 +12,7 @@
     'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-query', 'receipt-retry',
     'new-print', 'history', 'jobs-count', 'jobs-list', 'jobs-empty', 'jobs-refresh',
     'help-open', 'help-close', 'help-dialog', 'announce',
+    'go-print', 'go-print-note', 'account-dialog', 'account-back', 'confirm-name', 'account-service',
   ].map(id => [id, $(id)]));
   const state = {
     session: null, sessionGeneration: 0, identityGeneration: 0, fileGeneration: 0,
@@ -88,7 +89,13 @@
     ui['school-username'].disabled = locked || !!state.intent;
     ui['school-password'].disabled = locked;
     ui['password-toggle'].disabled = locked;
-    ui['submit-btn'].disabled = state.busy || state.reading || !ready();
+    ui['go-print'].disabled = locked || state.reading || !state.pdf;
+    ui['go-print-note'].textContent = state.reading ? '正在读取文件…' : state.pdf ? '下一步填写学校账号。' : '选择文件后继续。';
+    ui['account-back'].disabled = state.busy;
+    ui['account-service'].hidden = ready();
+    ui['account-service'].textContent = service?.busy ? '设备正在处理其他任务，请稍后提交。' : '打印服务未连接，暂时无法提交。';
+    ui['confirm-name'].textContent = state.file?.name || '';
+    ui['submit-btn'].disabled = state.busy || state.reading || !state.pdf || !ready();
     ui['submit-btn'].setAttribute('aria-describedby', 'service-text form-error');
     ui['dropzone'].hidden = !!state.file;
     ui['doc-panel'].hidden = !state.file;
@@ -109,6 +116,21 @@
     ui['school-password'].type = 'password';
     ui['password-toggle'].setAttribute('aria-pressed', 'false');
     ui['password-toggle'].setAttribute('aria-label', '显示密码');
+  }
+
+  function openAccount() {
+    if (state.busy || state.reading || state.receipt || !state.pdf) return;
+    clearPassword();
+    showError('form-error');
+    render();
+    if (!ui['account-dialog'].open) ui['account-dialog'].showModal();
+    (username() ? ui['school-password'] : ui['school-username']).focus();
+  }
+
+  function closeAccount(force = false) {
+    if (state.busy && !force) return;
+    clearPassword();
+    if (ui['account-dialog'].open) ui['account-dialog'].close();
   }
 
   function clearFile() {
@@ -179,9 +201,9 @@
         state.jobs = [];
         renderJobs();
         if (!flow && previous !== null) {
-          clearPassword(); clearFile(); stopPolling();
+          closeAccount(true); clearPassword(); clearFile(); stopPolling();
           state.intent = state.receipt = null;
-          showError('form-error', '登录账号已变更，请重新选择文件并确认学号。');
+          showError('file-error', '登录账号已变更，请重新选择文件并确认学号。');
         }
       }
       state.session = result.data;
@@ -247,6 +269,7 @@
   }
 
   function showReceipt(job, focus = true) {
+    closeAccount(true);
     state.receipt = job;
     if (state.intent && job.id) state.intent.id = job.id;
     if (state.intent && ['unknown', 'processing'].includes(job.state)) state.intent.uncertain = true;
@@ -305,7 +328,7 @@
       clearFile();
       showReceipt(result.data.job);
       state.polls = 0; schedulePoll();
-    } catch (_) { showError('form-error', '暂时无法查询任务，请稍后重试。'); }
+    } catch (_) { showError('file-error', '暂时无法查询任务，请稍后重试。'); }
   }
 
   async function submit(event) {
@@ -315,6 +338,7 @@
     ui['school-username'].removeAttribute('aria-invalid');
     ui['school-password'].removeAttribute('aria-invalid');
     if (!state.pdf) { showError('file-error', '先选择一份需要打印的 PDF。'); ui['pick-btn'].focus(); return; }
+    if (!ui['account-dialog'].open) { openAccount(); return; }
     const account = username();
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(account)) {
       showError('form-error', '请输入正确的学校账号。');
@@ -393,6 +417,18 @@
   }
 
   ui['submit-form'].addEventListener('submit', submit);
+  ui['go-print'].addEventListener('click', openAccount);
+  ui['account-back'].addEventListener('click', () => closeAccount());
+  ui['account-dialog'].addEventListener('cancel', event => {
+    if (state.busy) event.preventDefault();
+    else clearPassword();
+  });
+  ui['account-dialog'].addEventListener('close', clearPassword);
+  ui['account-dialog'].addEventListener('click', event => {
+    if (event.target !== ui['account-dialog']) return;
+    const bounds = ui['account-dialog'].getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeAccount();
+  });
   ui['pick-btn'].addEventListener('click', () => ui['file-input'].click());
   ui['file-input'].addEventListener('change', () => selectFiles(ui['file-input'].files));
   ui['doc-remove'].addEventListener('click', () => { if (!state.busy && !state.intent) { clearFile(); render(); ui['pick-btn'].focus(); } });
@@ -421,6 +457,7 @@
   ui['receipt-retry'].addEventListener('click', () => {
     if (state.busy || !state.intent || !state.pdf) return;
     stopPolling(); state.receipt = null; render();
+    openAccount();
     showError('form-error', '将沿用原任务编号。请输入密码后继续。');
     ui['school-password'].focus();
   });
@@ -429,7 +466,7 @@
     stopPolling(); state.intent = state.receipt = null;
     if (!failed) clearFile();
     clearPassword(); showError('form-error'); render();
-    (state.file ? ui['school-password'] : ui['pick-btn']).focus();
+    (state.file ? ui['go-print'] : ui['pick-btn']).focus();
   });
   ui['jobs-refresh'].addEventListener('click', async () => {
     ui['jobs-refresh'].disabled = true;

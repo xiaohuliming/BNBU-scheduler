@@ -35,7 +35,7 @@
     </div>
     <div class="hero-intro">
       <p class="hero-lede">从屏幕，到纸上。</p>
-      <p class="hero-description">上传 PDF，使用本人的学校账号提交。<br>随后到校园打印点，刷卡取件。</p>
+      <p class="hero-description">先选择 PDF，打印时再填写学校账号。<br>提交成功后，到校园打印点刷卡取件。</p>
     </div>
   </header>
 
@@ -74,25 +74,39 @@
           </div>
           <p class="file-error" id="file-error" role="alert" hidden></p>
 
-          <div class="spec-heading"><span>本次输出</span><span id="cap-pages" hidden></span></div>
+          <p class="document-note">临时文件在处理结束后清理。</p>
+        </div>
+      </section>
+
+      <section class="col-account col-output" aria-labelledby="output-title">
+        <header class="panel-heading">
+          <span class="step-number" aria-hidden="true">↗</span>
+          <h2 id="output-title">本次打印</h2>
+          <span class="panel-caption" aria-hidden="true">OUTPUT</span>
+        </header>
+        <div class="output-body">
+          <div class="spec-heading"><span>固定规格</span><span id="cap-pages" hidden></span></div>
           <dl class="print-specs" aria-label="固定输出：A4，黑白，单面，1 份">
             <div><dt>纸张</dt><dd>A4</dd></div>
             <div><dt>颜色</dt><dd>黑白</dd></div>
             <div><dt>单双面</dt><dd>单面</dd></div>
             <div><dt>份数</dt><dd>1 份</dd></div>
           </dl>
-          <p class="document-note">临时文件在处理结束后清理。</p>
+          <button class="btn btn-primary go-print" id="go-print" type="button" disabled>去打印 <span aria-hidden="true">↗</span></button>
+          <p class="go-print-note" id="go-print-note">选择文件后继续。</p>
         </div>
       </section>
+    </div>
 
-      <section class="col-account" aria-labelledby="account-title">
+      <dialog class="col-account account-dialog" id="account-dialog" aria-labelledby="account-title" aria-describedby="confirm-name">
         <header class="panel-heading">
           <span class="step-number" aria-hidden="true">02</span>
           <h2 id="account-title">学校账号</h2>
-          <span class="panel-caption" aria-hidden="true">ACCOUNT</span>
+          <button class="account-back" id="account-back" type="button" aria-label="返回文档">← 返回文档</button>
         </header>
         <div class="account-body">
-          <p class="account-intro">打印到你的校园账户。</p>
+          <div class="confirm-document"><span>本次文档</span><p id="confirm-name"></p><small>A4 · 黑白 · 单面 · 1 份</small></div>
+          <p class="account-service" id="account-service" role="status" hidden>打印服务未连接，暂时无法提交。</p>
           <div class="field">
             <label for="school-username">学号</label>
             <input id="school-username" aria-describedby="form-error" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="输入学校账号">
@@ -113,8 +127,7 @@
           <button class="btn btn-primary submit-btn" id="submit-btn" type="submit" disabled><span id="submit-label">提交打印</span><span class="submit-arrow" aria-hidden="true">↗</span></button>
           <p class="submit-note">提交成功后，请到打印点刷卡取件。</p>
         </div>
-      </section>
-    </div>
+      </dialog>
 
     <section class="receipt" id="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden>
       <p class="receipt-kicker">MAXCOURSE / PRINT RECEIPT</p>
