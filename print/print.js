@@ -13,12 +13,16 @@
     'new-print', 'history', 'jobs-count', 'jobs-list', 'jobs-empty', 'jobs-refresh',
     'help-open', 'help-close', 'help-dialog', 'announce',
     'go-print', 'go-print-note', 'account-dialog', 'account-back', 'confirm-name', 'account-service',
+    'upload-stage', 'preview-canvas', 'page-stage', 'preview-loading', 'page-prev', 'page-next',
+    'page-current', 'page-total', 'preview-zoom', 'replace-file', 'range-summary', 'print-total',
+    'page-title', 'page-description', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs',
   ].map(id => [id, $(id)]));
   const state = {
     session: null, sessionGeneration: 0, identityGeneration: 0, fileGeneration: 0,
     file: null, fileURL: null, pdf: null, pages: null, busy: false, reading: false,
     intent: null, receipt: null, jobs: [], pollTimer: null, polls: 0,
     checking: false, retry: false, jobQuery: false,
+    previewReady: false, previewRendering: false, previewPage: 1,
   };
   const labels = { submitted: '待刷卡取件', processing: '正在提交', unknown: '结果待确认',
     failed: '未提交', rejected: '账号验证失败' };
@@ -86,18 +90,34 @@
     ui['pick-btn'].disabled = locked || !!state.intent;
     ui['file-input'].disabled = locked || !!state.intent;
     ui['doc-remove'].disabled = locked || !!state.intent;
+    ui['replace-file'].disabled = locked || !!state.intent;
     ui['school-username'].disabled = locked || !!state.intent;
     ui['school-password'].disabled = locked;
     ui['password-toggle'].disabled = locked;
-    ui['go-print'].disabled = locked || state.reading || !state.pdf;
-    ui['go-print-note'].textContent = state.reading ? '正在读取文件…' : state.pdf ? '下一步填写学校账号。' : '选择文件后继续。';
+    ui['go-print'].disabled = locked || state.reading || !state.pdf || !state.previewReady;
+    ui['go-print-note'].textContent = state.reading || state.previewRendering ? '正在生成预览…' : state.previewReady ? '下一步填写学校账号。' : '预览完成后继续。';
     ui['account-back'].disabled = state.busy;
     ui['account-service'].hidden = ready();
     ui['account-service'].textContent = service?.busy ? '设备正在处理其他任务，请稍后提交。' : '打印服务未连接，暂时无法提交。';
     ui['confirm-name'].textContent = state.file?.name || '';
-    ui['submit-btn'].disabled = state.busy || state.reading || !state.pdf || !ready();
+    ui['submit-btn'].disabled = state.busy || state.reading || !state.pdf || !state.previewReady || !ready();
     ui['submit-btn'].setAttribute('aria-describedby', 'service-text form-error');
     ui['dropzone'].hidden = !!state.file;
+    ui['upload-stage'].hidden = !!state.file;
+    ui['page-title'].textContent = state.receipt ? '提交结果' : state.file ? '打印预览' : '校园打印';
+    ui['page-description'].textContent = state.receipt ? '查看任务状态，提交成功后到打印点刷卡取件。' : state.file ? '核对文档内容与打印规格，再确认提交。' : '先上传文件，预览确认后再提交。';
+    const step = state.receipt || ui['account-dialog'].open ? 'step-submit' : state.file ? 'step-preview' : 'step-upload';
+    for (const id of ['step-upload', 'step-preview', 'step-submit']) {
+      if (id === step) ui[id].setAttribute('aria-current', 'step');
+      else ui[id].removeAttribute('aria-current');
+    }
+    ui['range-summary'].textContent = state.pages ? `全部 ${state.pages} 页` : '全部页面';
+    ui['print-total'].textContent = state.pages ? `${state.pages} 页 / ${state.pages} 张` : '正在检查页数';
+    ui['confirm-specs'].textContent = [state.pages ? `${state.pages} 页` : '', 'A4', '黑白', '单面', '1 份'].filter(Boolean).join(' · ');
+    ui['page-prev'].disabled = locked || !state.previewReady || state.previewPage <= 1;
+    ui['page-next'].disabled = locked || !state.previewReady || state.previewPage >= state.pages;
+    ui['page-current'].disabled = locked || !state.previewReady;
+    ui['preview-zoom'].disabled = locked || !state.previewReady;
     ui['doc-panel'].hidden = !state.file;
     ui['doc-progress'].hidden = !state.reading && !state.busy;
     ui['cap-pages'].hidden = !state.pages;
@@ -119,11 +139,12 @@
   }
 
   function openAccount() {
-    if (state.busy || state.reading || state.receipt || !state.pdf) return;
+    if (state.busy || state.reading || state.receipt || !state.pdf || !state.previewReady) return;
     clearPassword();
     showError('form-error');
     render();
     if (!ui['account-dialog'].open) ui['account-dialog'].showModal();
+    render();
     (username() ? ui['school-password'] : ui['school-username']).focus();
   }
 
@@ -138,6 +159,7 @@
     if (state.fileURL) URL.revokeObjectURL(state.fileURL);
     state.file = state.fileURL = state.pdf = state.pages = null;
     state.reading = false;
+    pdfPreview.clear();
     ui['file-input'].value = '';
     ui['doc-open'].removeAttribute('href');
     showError('file-error');
@@ -170,15 +192,19 @@
       });
       if (generation !== state.fileGeneration) return;
       if (atob(data.slice(0, 8)).slice(0, 5) !== '%PDF-') throw new Error('signature');
+      const inspected = await pdfPreview.load(file, state.session?.limits?.max_pages || 50);
+      if (generation !== state.fileGeneration) return;
+      state.pages = inspected.pages;
       state.pdf = data;
       // The browser opens the local blob, never an uploaded public URL.
       state.fileURL = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
       ui['doc-open'].href = state.fileURL;
-      announce('已选择 ' + file.name);
-    } catch (_) {
+      announce(`已生成预览，共 ${state.pages} 页。`);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } catch (error) {
       if (generation !== state.fileGeneration) return;
       clearFile();
-      showError('file-error', '无法读取这份 PDF，请重新选择或导出文件。');
+      showError('file-error', error.message && /页|加密|无法读取|预览组件/.test(error.message) ? error.message : '无法生成这份 PDF 的预览，请重新选择或导出文件。');
     } finally {
       if (generation === state.fileGeneration) state.reading = false;
       render();
@@ -333,7 +359,7 @@
 
   async function submit(event) {
     event.preventDefault();
-    if (state.busy || state.reading || state.receipt) return;
+    if (state.busy || state.reading || state.receipt || !state.previewReady) return;
     showError('file-error'); showError('form-error');
     ui['school-username'].removeAttribute('aria-invalid');
     ui['school-password'].removeAttribute('aria-invalid');
@@ -423,13 +449,20 @@
     if (state.busy) event.preventDefault();
     else clearPassword();
   });
-  ui['account-dialog'].addEventListener('close', clearPassword);
+  ui['account-dialog'].addEventListener('close', () => { clearPassword(); render(); });
   ui['account-dialog'].addEventListener('click', event => {
     if (event.target !== ui['account-dialog']) return;
     const bounds = ui['account-dialog'].getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeAccount();
   });
   ui['pick-btn'].addEventListener('click', () => ui['file-input'].click());
+  ui['replace-file'].addEventListener('click', () => ui['file-input'].click());
+  const previewFailure = () => showError('file-error', '这一页暂时无法预览，请重新选择文件。');
+  ui['page-prev'].addEventListener('click', () => pdfPreview.setPage(state.previewPage - 1).catch(previewFailure));
+  ui['page-next'].addEventListener('click', () => pdfPreview.setPage(state.previewPage + 1).catch(previewFailure));
+  ui['page-current'].addEventListener('change', () => pdfPreview.setPage(ui['page-current'].value).catch(previewFailure));
+  ui['page-current'].addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); pdfPreview.setPage(ui['page-current'].value).catch(previewFailure); } });
+  ui['preview-zoom'].addEventListener('change', () => pdfPreview.setZoom(ui['preview-zoom'].value).catch(previewFailure));
   ui['file-input'].addEventListener('change', () => selectFiles(ui['file-input'].files));
   ui['doc-remove'].addEventListener('click', () => { if (!state.busy && !state.intent) { clearFile(); render(); ui['pick-btn'].focus(); } });
   for (const event of ['dragenter', 'dragover']) ui.dropzone.addEventListener(event, e => {
@@ -483,6 +516,21 @@
   });
   window.addEventListener('pagehide', clearPassword);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !state.busy) refreshSession(); });
+  const pdfPreview = new window.MaxcoursePdfPreview(ui['preview-canvas'], ui['page-stage'], info => {
+    state.previewReady = info.ready;
+    state.previewRendering = info.rendering;
+    state.previewPage = info.page;
+    if (state.file && info.pages) state.pages = info.pages;
+    ui['page-current'].value = info.page;
+    ui['page-current'].max = info.pages || 1;
+    ui['page-total'].textContent = '/ ' + info.pages;
+    ui['preview-zoom'].value = info.zoom;
+    ui['page-stage'].setAttribute('aria-busy', String(info.rendering));
+    ui['preview-canvas'].hidden = !info.ready;
+    ui['preview-loading'].hidden = info.ready;
+    ui['preview-loading'].textContent = info.error || '正在生成预览…';
+    render();
+  });
   render();
   refreshSession().then(() => loadJobs()).catch(() => {});
   setInterval(() => { if (!document.hidden && !state.busy) refreshSession(); }, 60000);

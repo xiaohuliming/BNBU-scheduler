@@ -3,109 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="MAXCOURSE 校园打印：上传 PDF，使用自己的学校账号提交，到校园打印点刷卡取件。">
+<meta name="description" content="MAXCOURSE 校园打印：上传 PDF，查看打印预览，使用学校账号提交并刷卡取件。">
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
 <link href="print.css" rel="stylesheet">
 </head>
 <body>
-<header class="site-header wrap">
-  <a class="wordmark" href="/" aria-label="MAXCOURSE 首页">
-    <span class="wordmark-text">Maxcourse</span>
-    <span class="wordmark-caption">CAMPUS TOOLKIT</span>
-  </a>
-  <a class="home-link" href="/"><span aria-hidden="true">↖</span> 返回首页</a>
+<header class="site-header">
+  <div class="header-inner wrap">
+    <a class="wordmark" href="/" aria-label="MAXCOURSE 首页"><span class="brand-square" aria-hidden="true">M</span> MAXCOURSE</a>
+    <a class="home-link" href="/">返回首页 <span aria-hidden="true">↗</span></a>
+  </div>
 </header>
-
 <main class="wrap">
-  <div class="edition-line">
-    <p class="edition-label"><span class="edition-index">VIII</span> CAMPUS SERVICES / PRINT</p>
+  <div class="page-heading">
+    <div><h1 id="page-title">校园打印</h1><p id="page-description">先上传文件，预览确认后再提交。</p></div>
     <div class="service-status" id="service-status" role="status">
-      <span class="service-dot" id="service-dot" aria-hidden="true"></span>
-      <span id="service-text">正在连接打印服务</span>
+      <span class="service-dot" id="service-dot" aria-hidden="true"></span><span id="service-text">正在连接打印服务</span>
       <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
     </div>
   </div>
-
-  <header class="hero">
-    <div class="hero-heading">
-      <p class="hero-caption">The print desk.</p>
-      <h1>校园打印<span class="title-period">。</span></h1>
-    </div>
-    <div class="hero-intro">
-      <p class="hero-lede">从屏幕，到纸上。</p>
-      <p class="hero-description">先选择 PDF，打印时再填写学校账号。<br>提交成功后，到校园打印点刷卡取件。</p>
-    </div>
-  </header>
-
+  <ol class="flow-steps" aria-label="打印流程">
+    <li id="step-upload" aria-current="step"><span>1</span> 上传文档</li>
+    <li id="step-preview"><span>2</span> 打印预览</li>
+    <li id="step-submit"><span>3</span> 确认提交</li>
+  </ol>
   <form class="workspace" id="submit-form" method="post" action="/api/print/jobs" novalidate>
-    <div class="workspace-fields" id="workspace-fields">
-      <section class="col-doc" aria-labelledby="doc-title">
-        <header class="panel-heading">
-          <span class="step-number" aria-hidden="true">01</span>
-          <h2 id="doc-title">选择文档</h2>
-          <span class="panel-caption" aria-hidden="true">DOCUMENT</span>
-        </header>
-        <div class="document-body">
-          <div class="dropzone" id="dropzone">
-            <div class="paper-token" aria-hidden="true"><span class="paper-token-label">DOCUMENT</span><strong>PDF</strong><span class="paper-lines"></span></div>
-            <div class="drop-actions">
-              <p class="dz-title">你的下一份打印</p>
-              <button class="btn btn-upload" id="pick-btn" type="button">选择 PDF <span aria-hidden="true">↗</span></button>
-              <p class="dz-drop">或将文件拖到这里</p>
-            </div>
-            <p class="dz-hint" id="limits-hint">PDF 格式 · 最大 10 MB · 最多 50 页</p>
-            <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
-          </div>
-
-          <div class="doc-panel" id="doc-panel" hidden>
-            <div class="paper-token selected-paper" aria-hidden="true"><span class="paper-token-label">DOCUMENT</span><strong>PDF</strong><span class="paper-lines"></span></div>
-            <div class="doc-meta">
-              <span class="file-label">已选择文件</span>
-              <p class="doc-name" id="doc-name"></p>
-              <p class="doc-sub" id="doc-sub"></p>
-              <div class="doc-actions">
-                <a class="doc-open" id="doc-open" target="_blank" rel="noopener">查看文件 <span aria-hidden="true">↗</span></a>
-                <button class="doc-remove" id="doc-remove" type="button" aria-label="移除文件">移除</button>
-              </div>
-            </div>
-            <div class="doc-progress" id="doc-progress" hidden><span></span></div>
-          </div>
-          <p class="file-error" id="file-error" role="alert" hidden></p>
-
-          <p class="document-note">临时文件在处理结束后清理。</p>
+    <p class="file-error" id="file-error" role="alert" hidden></p>
+    <div id="workspace-fields">
+      <section class="upload-stage" id="upload-stage" aria-labelledby="upload-title">
+        <div class="dropzone" id="dropzone">
+          <span class="upload-badge" aria-hidden="true">PDF</span>
+          <h2 id="upload-title">上传需要打印的文件</h2>
+          <p>将 PDF 拖到这里，或从设备中选择</p>
+          <button class="btn btn-primary pick-btn" id="pick-btn" type="button">选择 PDF <span aria-hidden="true">↑</span></button>
+          <p class="dz-hint" id="limits-hint">最大 10 MB · 最多 50 页</p>
+          <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
         </div>
+        <p class="upload-foot">无需先登录，选好文件即可预览。</p>
       </section>
 
-      <section class="col-account col-output" aria-labelledby="output-title">
-        <header class="panel-heading">
-          <span class="step-number" aria-hidden="true">↗</span>
-          <h2 id="output-title">本次打印</h2>
-          <span class="panel-caption" aria-hidden="true">OUTPUT</span>
-        </header>
-        <div class="output-body">
-          <div class="spec-heading"><span>固定规格</span><span id="cap-pages" hidden></span></div>
-          <dl class="print-specs" aria-label="固定输出：A4，黑白，单面，1 份">
-            <div><dt>纸张</dt><dd>A4</dd></div>
-            <div><dt>颜色</dt><dd>黑白</dd></div>
-            <div><dt>单双面</dt><dd>单面</dd></div>
-            <div><dt>份数</dt><dd>1 份</dd></div>
-          </dl>
-          <button class="btn btn-primary go-print" id="go-print" type="button" disabled>去打印 <span aria-hidden="true">↗</span></button>
-          <p class="go-print-note" id="go-print-note">选择文件后继续。</p>
+      <section class="preview-workspace" id="doc-panel" aria-labelledby="preview-title" hidden>
+        <div class="preview-main">
+          <header class="file-bar">
+            <span class="file-type" aria-hidden="true">PDF</span>
+            <div class="file-info"><h2 id="doc-name"></h2><p id="doc-sub"></p></div>
+            <button class="text-btn" id="replace-file" type="button">更换文件</button>
+            <button class="icon-btn" id="doc-remove" type="button" aria-label="移除文件">×</button>
+          </header>
+          <div class="preview-toolbar">
+            <h3 id="preview-title">打印预览</h3>
+            <div class="page-controls">
+              <button class="icon-btn" id="page-prev" type="button" aria-label="上一页" disabled>‹</button>
+              <label class="sr-only" for="page-current">页码</label><input id="page-current" type="number" value="1" min="1" max="1" inputmode="numeric" disabled>
+              <span id="page-total">/ 0</span>
+              <button class="icon-btn" id="page-next" type="button" aria-label="下一页" disabled>›</button>
+            </div>
+            <label class="sr-only" for="preview-zoom">预览缩放</label>
+            <select id="preview-zoom" aria-label="预览缩放" disabled><option value="fit">适合页面</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select>
+          </div>
+          <div class="page-stage" id="page-stage" aria-busy="true">
+            <p class="preview-loading" id="preview-loading" role="status">正在生成预览…</p>
+            <canvas id="preview-canvas" role="img" aria-label="文档预览" hidden></canvas>
+          </div>
+          <div class="doc-progress" id="doc-progress" hidden><span></span></div>
+          <div class="preview-caption"><span id="preview-caption">按 A4 纸张适配，黑白预览</span><a id="doc-open" target="_blank" rel="noopener">打开原文件 ↗</a></div>
         </div>
+
+        <aside class="print-settings" aria-labelledby="output-title">
+          <h2 id="output-title">打印设置</h2>
+          <p class="settings-intro">当前校园队列支持以下规格</p>
+          <dl class="settings-list">
+            <div><dt>纸张大小</dt><dd>A4 <small>210 × 297 mm</small></dd></div>
+            <div><dt>打印颜色</dt><dd>黑白</dd></div>
+            <div><dt>单双面</dt><dd>单面</dd></div>
+            <div><dt>打印份数</dt><dd>1 份</dd></div>
+            <div><dt>打印范围</dt><dd id="range-summary">全部页面</dd></div>
+          </dl>
+          <div class="print-total"><span>本次打印</span><strong id="print-total">正在检查页数</strong><span id="cap-pages" hidden></span></div>
+          <p class="cost-note">取件时按学校标准计费。</p>
+          <button class="btn btn-primary go-print" id="go-print" type="button" disabled>确认打印 <span aria-hidden="true">→</span></button>
+          <p class="go-print-note" id="go-print-note">预览完成后继续。</p>
+          <p class="settings-help">需要彩色、双面或多份？<a href="/print-setup/index.html">使用电脑打印配置 ↗</a></p>
+        </aside>
       </section>
     </div>
-
       <dialog class="col-account account-dialog" id="account-dialog" aria-labelledby="account-title" aria-describedby="confirm-name">
         <header class="panel-heading">
-          <span class="step-number" aria-hidden="true">02</span>
-          <h2 id="account-title">学校账号</h2>
-          <button class="account-back" id="account-back" type="button" aria-label="返回文档">← 返回文档</button>
+          <span class="step-number" aria-hidden="true">3</span>
+          <h2 id="account-title">确认提交</h2>
+          <button class="account-back" id="account-back" type="button" aria-label="返回预览">← 返回预览</button>
         </header>
         <div class="account-body">
-          <div class="confirm-document"><span>本次文档</span><p id="confirm-name"></p><small>A4 · 黑白 · 单面 · 1 份</small></div>
+          <div class="confirm-document"><span>本次文档</span><p id="confirm-name"></p><small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small></div>
           <p class="account-service" id="account-service" role="status" hidden>打印服务未连接，暂时无法提交。</p>
           <div class="field">
             <label for="school-username">学号</label>
@@ -130,7 +121,7 @@
       </dialog>
 
     <section class="receipt" id="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden>
-      <p class="receipt-kicker">MAXCOURSE / PRINT RECEIPT</p>
+      <p class="receipt-kicker">打印回执</p>
       <div class="receipt-content">
         <div class="receipt-icon" id="receipt-icon" aria-hidden="true"></div>
         <h2 class="receipt-title" id="receipt-title"></h2>
@@ -172,6 +163,7 @@
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
+<script src="pdf-preview.js" defer></script>
 <script src="print.js" defer></script>
 </body>
 </html>
