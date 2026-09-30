@@ -2,6 +2,7 @@
 'use strict';
 (() => {
   const ROOT = '/vendor/pdfjs-6.3.289/';
+  const A4 = [595.28, 841.89];
   let library;
   const getLibrary = () => library ||= import(ROOT + 'pdf.mjs').then(pdfjs => {
     pdfjs.GlobalWorkerOptions.workerSrc = ROOT + 'pdf.worker.mjs';
@@ -16,9 +17,11 @@
       this.onChange = onChange;
       this.generation = 0;
       this.drawGeneration = 0;
+      this.sideGeneration = 0;
       this.page = 1;
       this.pages = 0;
       this.zoom = 'fit';
+      this.scale = 1;
       this.ready = false;
       this.resizer = new ResizeObserver(() => {
         clearTimeout(this.resizeTimer);
@@ -34,9 +37,11 @@
     clear() {
       this.generation++;
       this.drawGeneration++;
+      this.sideGeneration++;
       clearTimeout(this.resizeTimer);
       this.renderTask?.cancel();
-      this.renderTask = null;
+      this.sideTask?.cancel();
+      this.renderTask = this.sideTask = null;
       const oldTask = this.loadingTask;
       this.loadingTask = this.document = null;
       if (oldTask) oldTask.destroy().catch(() => {});
@@ -44,6 +49,20 @@
       this.canvas.width = this.canvas.height = 0;
       this.canvas.removeAttribute('data-page');
       this.update();
+    }
+    // The stage publishes how much room its chrome needs around a fitted page.
+    fitScale() {
+      const style = getComputedStyle(this.host);
+      const padX = parseFloat(style.getPropertyValue('--fit-x')) || 48;
+      const padY = parseFloat(style.getPropertyValue('--fit-y')) || 48;
+      return Math.max(.15, Math.min((this.host.clientWidth - padX) / A4[0], (this.host.clientHeight - padY) / A4[1], 1));
+    }
+    // Size the empty sheet before the first draw so the page can animate into place.
+    reserve() {
+      if (this.document) return;
+      const scale = this.fitScale();
+      this.canvas.style.width = Math.round(A4[0] * scale) + 'px';
+      this.canvas.style.height = Math.round(A4[1] * scale) + 'px';
     }
     async load(file, maxPages) {
       this.clear();
@@ -95,6 +114,34 @@
       this.zoom = value;
       await this.render();
     }
+    // Draw off screen, then swap, so page turns and zoom changes never flash blank.
+    async paint(number, slot, current) {
+      const page = await this.document.getPage(number);
+      if (!current()) return null;
+      const original = page.getViewport({ scale: 1 });
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const pageFit = Math.min(A4[0] / original.width, A4[1] / original.height);
+      const viewport = page.getViewport({ scale: pageFit * this.scale * ratio });
+      const target = document.createElement('canvas');
+      target.width = Math.ceil(A4[0] * this.scale * ratio);
+      target.height = Math.ceil(A4[1] * this.scale * ratio);
+      const task = page.render({
+        canvasContext: target.getContext('2d', { alpha: false }), viewport,
+        transform: [1, 0, 0, 1, (target.width - viewport.width) / 2, (target.height - viewport.height) / 2],
+        background: '#ffffff', intent: 'print', annotationMode: this.pdfjs.AnnotationMode.ENABLE,
+      });
+      this[slot] = task;
+      await task.promise;
+      return current() ? { source: target, ratio } : null;
+    }
+    blit({ source, ratio }, target) {
+      target.width = source.width;
+      target.height = source.height;
+      target.style.width = (source.width / ratio) + 'px';
+      target.style.height = (source.height / ratio) + 'px';
+      target.getContext('2d', { alpha: false }).drawImage(source, 0, 0);
+      source.width = source.height = 0;
+    }
     async render() {
       if (!this.document) return;
       const generation = this.generation;
@@ -104,39 +151,48 @@
       oldRender?.cancel();
       this.ready = false;
       this.update(true);
+      const current = () => generation === this.generation && draw === this.drawGeneration;
       try {
         if (oldRender) await oldRender.promise.catch(() => {});
-        const page = await this.document.getPage(number);
-        if (generation !== this.generation || draw !== this.drawGeneration) return;
-        const original = page.getViewport({ scale: 1 });
-        const fit = Math.max(.15, Math.min((this.host.clientWidth - 48) / 595.28, (this.host.clientHeight - 48) / 841.89, 1));
-        const scale = this.zoom === 'fit' ? fit : Number(this.zoom);
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
-        const pageFit = Math.min(595.28 / original.width, 841.89 / original.height);
-        const viewport = page.getViewport({ scale: pageFit * scale * ratio });
-        const width = Math.ceil(595.28 * scale * ratio);
-        const height = Math.ceil(841.89 * scale * ratio);
-        this.canvas.width = width; this.canvas.height = height;
-        this.canvas.style.width = (width / ratio) + 'px';
-        this.canvas.style.height = (height / ratio) + 'px';
-        const context = this.canvas.getContext('2d', { alpha: false });
-        const render = page.render({
-          canvasContext: context, viewport,
-          transform: [1, 0, 0, 1, (width - viewport.width) / 2, (height - viewport.height) / 2],
-          background: '#ffffff', intent: 'print', annotationMode: this.pdfjs.AnnotationMode.ENABLE,
-        });
-        this.renderTask = render;
-        await render.promise;
-        if (generation !== this.generation || draw !== this.drawGeneration) return;
+        if (!current()) return;
+        this.scale = this.zoom === 'fit' ? this.fitScale() : Number(this.zoom);
+        const result = await this.paint(number, 'renderTask', current);
+        if (!result) return;
+        this.blit(result, this.canvas);
         this.ready = true;
         this.canvas.dataset.page = String(number);
-        this.canvas.setAttribute('aria-label', `文档第 ${number} 页，共 ${this.pages} 页，A4 黑白预览`);
+        this.canvas.setAttribute('aria-label', `文档第 ${number} 页，共 ${this.pages} 页`);
         this.update();
       } catch (error) {
-        if (generation !== this.generation || draw !== this.drawGeneration || error.name === 'RenderingCancelledException') return;
+        if (!current() || error.name === 'RenderingCancelledException') return;
         this.ready = false;
         this.update(false, '这一页暂时无法预览，请重新选择文件。');
         throw error;
+      }
+    }
+    // Render the reverse side of a duplex sheet at the current scale; 0 is a blank back.
+    async drawInto(target, number) {
+      if (!this.document) return;
+      const generation = this.generation;
+      const side = ++this.sideGeneration;
+      this.sideTask?.cancel();
+      const current = () => generation === this.generation && side === this.sideGeneration;
+      if (!number || number > this.pages) {
+        target.width = this.canvas.width || 1;
+        target.height = this.canvas.height || 1;
+        const context = target.getContext('2d', { alpha: false });
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, target.width, target.height);
+        target.removeAttribute('data-page');
+        return;
+      }
+      try {
+        const result = await this.paint(number, 'sideTask', current);
+        if (!result) return;
+        this.blit(result, target);
+        target.dataset.page = String(number);
+      } catch (error) {
+        if (error?.name !== 'RenderingCancelledException') throw error;
       }
     }
   };

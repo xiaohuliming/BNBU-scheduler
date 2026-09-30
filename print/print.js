@@ -4,28 +4,44 @@
 (() => {
   const $ = id => document.getElementById(id);
   const ui = Object.fromEntries([
-    'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
-    'service-refresh', 'dropzone', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
-    'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error',
-    'cap-pages', 'school-username', 'school-password', 'password-toggle', 'form-error',
-    'progress-text', 'submit-btn', 'submit-label', 'receipt', 'receipt-icon',
-    'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-query', 'receipt-retry',
+    'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
+    'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
+    'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'capability-row',
+    'school-username', 'school-password', 'password-toggle', 'form-error',
+    'progress-text', 'submit-btn', 'submit-label', 'submit-steps', 'account-fields', 'receipt', 'receipt-icon',
+    'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-details', 'receipt-query', 'receipt-retry',
     'new-print', 'history', 'jobs-count', 'jobs-list', 'jobs-empty', 'jobs-refresh',
     'help-open', 'help-close', 'help-dialog', 'announce',
     'go-print', 'go-print-note', 'account-dialog', 'account-back', 'confirm-name', 'account-service',
-    'upload-stage', 'preview-canvas', 'page-stage', 'preview-loading', 'page-prev', 'page-next',
-    'page-current', 'page-total', 'preview-zoom', 'replace-file', 'range-summary', 'print-total',
-    'page-title', 'page-description', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs',
+    'confirm-thumb', 'thumb-frame', 'upload-stage', 'preview-canvas', 'preview-tint', 'back-canvas', 'back-tint',
+    'blank-note', 'sheet', 'sheet-wrap', 'copies-badge', 'page-stage', 'preview-loading', 'preview-caption',
+    'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
+    'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
+    'cost-note', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
+    'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs',
   ].map(id => [id, $(id)]));
+  const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
+  const DEFAULT_OPTIONS = Object.freeze({ color: 'grayscale', sides: 'one-sided', copies: 1 });
+  const COPIES_LIMIT = 20;
+  const ZOOMS = ['fit', '1', '1.5', '2'];
+  const STEPS = ['auth', 'inspect', 'send'];
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const state = {
     session: null, sessionGeneration: 0, identityGeneration: 0, fileGeneration: 0,
     file: null, fileURL: null, pdf: null, pages: null, busy: false, reading: false,
-    intent: null, receipt: null, jobs: [], pollTimer: null, polls: 0,
+    intent: null, receipt: null, receiptTone: '', receiptDoc: null, jobs: [], pollTimer: null, polls: 0,
     checking: false, retry: false, jobQuery: false,
-    previewReady: false, previewRendering: false, previewPage: 1,
+    previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
+    faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
+    step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0,
   };
   const labels = { submitted: '待刷卡取件', processing: '正在提交', unknown: '结果待确认',
     failed: '未提交', rejected: '账号验证失败' };
+  const ICONS = {
+    success: '<svg viewBox="0 0 48 48"><path class="draw" d="M14 25l7 7 13-15"/></svg>',
+    error: '<svg viewBox="0 0 48 48"><path class="draw" d="M24 13.5v14"/><path d="M24 34.5v.2"/></svg>',
+    pending: '<span class="dots"><i></i><i></i><i></i></span>',
+  };
   const username = () => ui['school-username'].value.trim();
   const schoolUser = () => state.session?.user?.school_username || '';
   const announce = text => { ui.announce.textContent = text; };
@@ -35,6 +51,32 @@
   };
   const ready = () => navigator.onLine && state.session?.service?.ready === true &&
     state.session.service.enabled === true && !state.session.service.busy && !state.session.service.demo;
+  const calm = () => reduceMotion.matches;
+
+  // Output options. Until the service reports its features, every option stays previewable.
+  const duplex = (options = state.options) => options.sides !== 'one-sided';
+  const sidesFor = edge => edge === 'short' ? 'two-sided-short-edge' : 'two-sided-long-edge';
+  const activeOptions = () => state.intent?.options || state.options;
+  const featuresKnown = () => state.session?.service?.online === true;
+  const supports = feature => !featuresKnown() || (state.session.service.features || []).includes(feature);
+  const copiesCap = () => {
+    const cap = !featuresKnown() ? COPIES_LIMIT :
+      supports('copies') ? (state.session.capabilities?.copies?.max || COPIES_LIMIT) : 1;
+    const impressions = state.session?.limits?.max_impressions || 200;
+    return state.pages ? Math.max(1, Math.min(cap, Math.floor(impressions / state.pages))) : cap;
+  };
+  const unsupported = (options = state.options) => [
+    options.color !== 'grayscale' && !supports('color') && '彩色',
+    duplex(options) && !supports('duplex') && '双面',
+    options.copies !== 1 && !supports('copies') && '多份',
+  ].filter(Boolean);
+  const describe = (options = DEFAULT_OPTIONS) => [
+    options.color === 'color' ? '彩色' : '黑白',
+    !duplex(options) ? '单面' : options.sides === 'two-sided-short-edge' ? '双面 · 短边' : '双面 · 长边',
+    options.copies + ' 份',
+  ];
+  const sheetsFor = (pages, options) => (duplex(options) ? Math.ceil(pages / 2) : pages) * options.copies;
+  const previewed = () => !!state.pdf && state.drawn;
 
   async function api(path, body, timeout = 60000) {
     const controller = new AbortController();
@@ -64,11 +106,64 @@
     return typeof result.data?.error === 'string' ? result.data.error : fallback;
   }
 
-  function progress(message = '') {
+  function progress(message = '', step = '') {
     ui['progress-text'].hidden = !message;
     ui['progress-text'].textContent = message;
     ui['submit-label'].textContent = message || '提交打印';
+    state.step = message ? step || state.step : '';
+    const current = STEPS.indexOf(state.step);
+    for (const item of ui['submit-steps'].children) {
+      const index = STEPS.indexOf(item.dataset.step);
+      item.dataset.state = current < 0 ? '' : index < current ? 'done' : index === current ? 'active' : '';
+    }
     if (message) announce(message);
+  }
+
+  // Motion helpers. Every one of them is a no-op under reduced motion.
+  async function morph(update) {
+    if (calm() || !document.startViewTransition) { update(); return; }
+    const transition = document.startViewTransition(update);
+    // A newer transition may skip this one; that is expected, not an error.
+    transition.ready.catch(() => {});
+    transition.finished.catch(() => {});
+    await transition.updateCallbackDone.catch(() => {});
+  }
+  function setText(element, text) {
+    if (element.textContent === text) return;
+    element.textContent = text;
+    if (!calm()) element.animate([{ opacity: 0, transform: 'translateY(6px)', filter: 'blur(4px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
+      { duration: 520, easing: 'cubic-bezier(.16,1,.3,1)' });
+  }
+  function tweenNumber(element, value) {
+    const from = Number(element.dataset.value || 0);
+    if (from === value) return;
+    element.dataset.value = String(value);
+    cancelAnimationFrame(element.tween);
+    if (calm()) { element.textContent = String(value); return; }
+    const start = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - start) / 560);
+      element.textContent = String(Math.round(from + (value - from) * (1 - Math.pow(1 - t, 4))));
+      if (t < 1) element.tween = requestAnimationFrame(step);
+    };
+    element.tween = requestAnimationFrame(step);
+  }
+  function roll(element, direction) {
+    if (calm() || !direction) return;
+    element.animate([{ opacity: 0, transform: `translateY(${direction * 60}%)` }, { opacity: 1, transform: 'none' }],
+      { duration: 380, easing: 'cubic-bezier(.16,1,.3,1)' });
+  }
+  async function turn(direction, work) {
+    const wrap = ui['sheet-wrap'];
+    if (!direction || calm()) return work();
+    const away = wrap.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-direction * 36}px) rotate(${-direction * .8}deg)` }],
+      { duration: 150, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+    await away.finished.catch(() => {});
+    try { await work(); } finally {
+      wrap.animate([{ opacity: 0, transform: `translateX(${direction * 36}px) rotate(${direction * .8}deg)` }, { opacity: 1, transform: 'none' }],
+        { duration: 420, easing: 'cubic-bezier(.16,1,.3,1)' });
+      away.cancel();
+    }
   }
 
   function render() {
@@ -86,6 +181,7 @@
     ui['service-refresh'].hidden = ready() || state.busy;
     ui['service-refresh'].disabled = state.checking;
     const locked = state.busy || !!state.receipt;
+    const options = activeOptions();
     ui['submit-form'].setAttribute('aria-busy', String(state.busy));
     ui['pick-btn'].disabled = locked || !!state.intent;
     ui['file-input'].disabled = locked || !!state.intent;
@@ -94,34 +190,34 @@
     ui['school-username'].disabled = locked || !!state.intent;
     ui['school-password'].disabled = locked;
     ui['password-toggle'].disabled = locked;
-    ui['go-print'].disabled = locked || state.reading || !state.pdf || !state.previewReady;
-    ui['go-print-note'].textContent = state.reading || state.previewRendering ? '正在生成预览…' : state.previewReady ? '下一步填写学校账号。' : '预览完成后继续。';
+    ui['go-print'].disabled = locked || state.reading || !previewed();
+    const missing = unsupported(options);
+    ui['go-print-note'].textContent = state.reading || (state.file && !state.drawn) ? '正在生成预览…' :
+      !previewed() ? '预览完成后继续。' : missing.length ? `当前设备暂不支持${missing.join('、')}` : '下一步填写学校账号。';
     ui['account-back'].disabled = state.busy;
+    ui['account-dialog'].classList.toggle('is-busy', state.busy);
+    ui['account-fields'].inert = state.busy;
     ui['account-service'].hidden = ready();
     ui['account-service'].textContent = service?.busy ? '设备正在处理其他任务，请稍后提交。' : '打印服务未连接，暂时无法提交。';
     ui['confirm-name'].textContent = state.file?.name || '';
-    ui['submit-btn'].disabled = state.busy || state.reading || !state.pdf || !state.previewReady || !ready();
+    ui['submit-btn'].disabled = state.busy || state.reading || !previewed() || !ready();
     ui['submit-btn'].setAttribute('aria-describedby', 'service-text form-error');
     ui['dropzone'].hidden = !!state.file;
     ui['upload-stage'].hidden = !!state.file;
-    ui['page-title'].textContent = state.receipt ? '提交结果' : state.file ? '打印预览' : '校园打印';
-    ui['page-description'].textContent = state.receipt ? '查看任务状态，提交成功后到打印点刷卡取件。' : state.file ? '核对文档内容与打印规格，再确认提交。' : '先上传文件，预览确认后再提交。';
-    const step = state.receipt || ui['account-dialog'].open ? 'step-submit' : state.file ? 'step-preview' : 'step-upload';
-    for (const id of ['step-upload', 'step-preview', 'step-submit']) {
-      if (id === step) ui[id].setAttribute('aria-current', 'step');
+    setText(ui['page-title'], state.receipt ? '提交结果' : state.file ? '打印预览' : '校园打印');
+    setText(ui['page-description'], state.receipt ? '查看任务状态，提交成功后到打印点刷卡取件。' :
+      state.file ? '核对文档内容，选择颜色、单双面与份数，再确认提交。' : '先上传文件，预览确认后再提交。');
+    const step = state.receipt || ui['account-dialog'].open ? 3 : state.file ? 2 : 1;
+    ui.stepper.dataset.step = String(step);
+    ['step-upload', 'step-preview', 'step-submit'].forEach((id, index) => {
+      if (index + 1 === step) ui[id].setAttribute('aria-current', 'step');
       else ui[id].removeAttribute('aria-current');
-    }
-    ui['range-summary'].textContent = state.pages ? `全部 ${state.pages} 页` : '全部页面';
-    ui['print-total'].textContent = state.pages ? `${state.pages} 页 / ${state.pages} 张` : '正在检查页数';
-    ui['confirm-specs'].textContent = [state.pages ? `${state.pages} 页` : '', 'A4', '黑白', '单面', '1 份'].filter(Boolean).join(' · ');
-    ui['page-prev'].disabled = locked || !state.previewReady || state.previewPage <= 1;
-    ui['page-next'].disabled = locked || !state.previewReady || state.previewPage >= state.pages;
-    ui['page-current'].disabled = locked || !state.previewReady;
-    ui['preview-zoom'].disabled = locked || !state.previewReady;
+    });
+    renderSettings(locked, options);
+    renderPreview(locked, options);
+    renderCapabilities();
     ui['doc-panel'].hidden = !state.file;
-    ui['doc-progress'].hidden = !state.reading && !state.busy;
-    ui['cap-pages'].hidden = !state.pages;
-    ui['cap-pages'].textContent = state.pages ? state.pages + ' 页' : '';
+    ui['doc-progress'].hidden = !state.reading && !state.busy && !state.previewRendering;
     if (state.file) {
       ui['doc-name'].textContent = state.file.name;
       ui['doc-sub'].textContent = state.reading ? '正在读取文件…' :
@@ -131,6 +227,222 @@
     ui.receipt.hidden = !state.receipt;
   }
 
+  function note(id, text, warn = false) {
+    ui[id].textContent = text;
+    ui[id].classList.toggle('is-warn', warn);
+  }
+
+  function renderSettings(locked, options) {
+    const frozen = locked || !!state.intent;
+    const two = duplex(options);
+    for (const input of radios('color')) {
+      input.checked = input.value === options.color;
+      input.disabled = frozen || (input.value === 'color' && !supports('color'));
+    }
+    for (const input of radios('sides-mode')) {
+      input.checked = (input.value === 'two') === two;
+      input.disabled = frozen || (input.value === 'two' && !supports('duplex'));
+    }
+    const edge = two ? (options.sides === 'two-sided-short-edge' ? 'short' : 'long') : state.edge;
+    for (const input of radios('edge')) {
+      input.checked = input.value === edge;
+      input.disabled = frozen;
+    }
+    ui['edge-setting'].dataset.open = String(two);
+    ui['edge-setting'].inert = !two;
+    const cap = copiesCap();
+    if (!state.copiesTyping) ui.copies.value = String(options.copies);
+    ui.copies.max = String(cap);
+    ui.copies.disabled = frozen || cap <= 1;
+    ui['copies-dec'].disabled = frozen || options.copies <= 1;
+    ui['copies-inc'].disabled = frozen || options.copies >= cap;
+    const pages = state.pages || 0;
+    if (!supports('color')) note('color-note', '设备暂不支持彩色', true);
+    else note('color-note', options.color === 'color' ? '按彩色标准计费' : '');
+    if (!supports('duplex')) note('sides-note', '设备暂不支持双面', true);
+    else note('sides-note', two && pages ? `每份 ${Math.ceil(pages / 2)} 张纸` : '');
+    if (!supports('copies')) note('copies-note', '设备暂不支持多份', true);
+    else note('copies-note', pages && cap < COPIES_LIMIT ? `最多 ${cap} 份` : '');
+    tweenNumber(ui['print-total-sheets'], pages ? sheetsFor(pages, options) : 0);
+    ui['print-total'].textContent = pages ? `${pages} 页 × ${options.copies} 份 · 共 ${pages * options.copies} 面` : '正在检查页数';
+    ui['cost-note'].textContent = options.color === 'color' ? '彩色按学校彩色标准计费，刷卡取件时扣费。' : '刷卡取件时按学校标准计费。';
+    ui['range-summary'].textContent = pages ? `全部 ${pages} 页` : '全部页面';
+    ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options)].filter(Boolean).join(' · ');
+  }
+
+  function renderPreview(locked, options) {
+    const two = duplex(options);
+    const edge = options.sides === 'two-sided-short-edge' ? 'short' : 'long';
+    const pages = state.pages || 0;
+    const blankBack = two && state.previewPage + 1 > pages;
+    ui.sheet.dataset.flip = two ? edge : 'none';
+    ui.sheet.classList.toggle('is-color', options.color === 'color');
+    ui.sheet.classList.toggle('is-flipped', two && state.flipped);
+    ui.sheet.classList.toggle('is-loading', !state.drawn);
+    ui['sheet-wrap'].dataset.copies = String(Math.min(options.copies, 5));
+    ui['copies-badge'].textContent = '× ' + options.copies;
+    ui['blank-note'].hidden = !blankBack;
+    ui['flip-group'].hidden = !two;
+    ui['flip-sheet'].setAttribute('aria-pressed', String(two && state.flipped));
+    ui['sheet-caption'].textContent = state.flipped ? (blankBack ? '背面空白' : '背面') : '正面';
+    ui['page-current'].value = String(two && state.flipped && !blankBack ? state.previewPage + 1 : state.previewPage);
+    ui['page-current'].max = String(pages || 1);
+    ui['page-total'].textContent = '/ ' + pages;
+    const stride = two ? 2 : 1;
+    const idle = locked || !state.drawn;
+    ui['page-prev'].disabled = idle || state.previewPage <= 1;
+    ui['page-next'].disabled = idle || state.previewPage + stride > pages;
+    ui['page-current'].disabled = idle;
+    ui['flip-sheet'].disabled = idle;
+    const zoom = ZOOMS.indexOf(state.previewZoom);
+    ui['zoom-out'].disabled = idle || zoom <= 0;
+    ui['zoom-in'].disabled = idle || zoom >= ZOOMS.length - 1;
+    ui['zoom-fit'].disabled = idle;
+    ui['zoom-fit'].textContent = state.previewZoom === 'fit' ? '适合' : Math.round(Number(state.previewZoom) * 100) + '%';
+    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', 'A4',
+      ...(two ? [edge === 'short' ? '短边翻页' : '长边翻页'] : [])].join(' · ');
+  }
+
+  function renderCapabilities() {
+    const cap = state.session?.capabilities?.copies?.max || COPIES_LIMIT;
+    const items = featuresKnown()
+      ? ['A4 纸张', supports('color') ? '黑白 / 彩色' : '黑白', supports('duplex') ? '单面 / 双面' : '单面', supports('copies') ? `最多 ${cap} 份` : '单份']
+      : ['A4 纸张', 'PDF 格式', '浏览器本地预览'];
+    const key = items.join('|');
+    if (ui['capability-row'].dataset.items === key) return;
+    ui['capability-row'].dataset.items = key;
+    ui['capability-row'].replaceChildren(...items.map((text, index) => {
+      const item = document.createElement('li');
+      item.textContent = text;
+      item.style.animationDelay = (index * 60) + 'ms';
+      return item;
+    }));
+  }
+
+  // Options change the preview itself: colour sweeps in, duplex flips, copies stack up.
+  function applyOptions(next) {
+    const before = state.options;
+    next.copies = Math.max(1, Math.min(copiesCap(), Math.trunc(Number(next.copies)) || 1));
+    state.options = next;
+    if (before.color !== next.color) sweep();
+    if (before.sides !== next.sides) sidesChanged(before, next);
+    if (before.copies !== next.copies) roll(ui.copies, Math.sign(next.copies - before.copies));
+  }
+
+  function setOptions(patch) {
+    if (state.busy || state.receipt || state.intent) { render(); return; }
+    applyOptions({ ...state.options, ...patch });
+    render();
+  }
+
+  function reconcileOptions() {
+    if (state.intent || state.busy) return;
+    const next = { ...state.options };
+    const dropped = [];
+    if (next.color !== 'grayscale' && !supports('color')) { next.color = 'grayscale'; dropped.push('彩色'); }
+    if (duplex(next) && !supports('duplex')) { next.sides = 'one-sided'; dropped.push('双面'); }
+    if (next.copies !== 1 && !supports('copies')) dropped.push('多份');
+    applyOptions(next);
+    if (dropped.length) announce(`当前打印设备暂不支持${dropped.join('、')}，已恢复默认设置。`);
+  }
+
+  function sweep() {
+    clearTimeout(state.sweepTimer);
+    if (calm() || !state.drawn) return;
+    ui.sheet.classList.add('scanning');
+    state.sweepTimer = setTimeout(() => ui.sheet.classList.remove('scanning'), 1150);
+  }
+
+  function setFlipped(value, animate = true) {
+    value = !!value && duplex(activeOptions());
+    if (value === state.flipped) return;
+    if (!animate) ui.sheet.classList.add('no-anim');
+    state.flipped = value;
+    ui.sheet.classList.toggle('is-flipped', value);
+    if (!animate) { void ui.sheet.offsetWidth; ui.sheet.classList.remove('no-anim'); }
+  }
+
+  function sidesChanged(before, next) {
+    clearTimeout(state.demoTimer);
+    const back = state.flipped && state.previewPage + 1 <= (state.pages || 0) ? state.previewPage + 1 : 0;
+    state.flipped = false;
+    ui.sheet.classList.add('no-anim');
+    ui.sheet.classList.remove('is-flipped');
+    void ui.sheet.offsetWidth;
+    ui.sheet.classList.remove('no-anim');
+    if (!duplex(next)) {
+      // Keep looking at the same page when leaving duplex.
+      if (back) queueMicrotask(() => goToPage(back));
+      return;
+    }
+    const front = state.previewPage % 2 ? state.previewPage : state.previewPage - 1;
+    if (front !== state.previewPage) queueMicrotask(() => pdfPreview.setPage(front).catch(previewFailure));
+    else syncFaces();
+    demoFlip();
+  }
+
+  // Show the reverse side once, so the chosen binding edge is obvious.
+  function demoFlip() {
+    clearTimeout(state.demoTimer);
+    if (calm() || !state.drawn || !state.pages) return;
+    state.demoTimer = setTimeout(async () => {
+      await (state.facePromise || Promise.resolve());
+      if (!duplex(activeOptions()) || state.flipped || state.busy) return;
+      setFlipped(true); render();
+      state.demoTimer = setTimeout(() => {
+        if (duplex(activeOptions()) && state.flipped) { setFlipped(false); render(); }
+      }, 1400);
+    }, 320);
+  }
+
+  function copyInto(source, target) {
+    target.width = source.width;
+    target.height = source.height;
+    if (source.width) target.getContext('2d', { alpha: false }).drawImage(source, 0, 0);
+  }
+
+  function syncFaces() {
+    const canvas = ui['preview-canvas'];
+    if (!state.drawn || !canvas.width) return Promise.resolve();
+    const two = duplex(activeOptions());
+    const key = [canvas.dataset.page, canvas.width, canvas.height, two].join(':');
+    if (key === state.faceKey) return state.facePromise || Promise.resolve();
+    state.faceKey = key;
+    copyInto(canvas, ui['preview-tint']);
+    if (!two) return (state.facePromise = Promise.resolve());
+    const back = Number(canvas.dataset.page) + 1;
+    state.facePromise = pdfPreview.drawInto(ui['back-canvas'], back <= state.pages ? back : 0)
+      .then(() => copyInto(ui['back-canvas'], ui['back-tint'])).catch(() => {});
+    return state.facePromise;
+  }
+
+  async function goToPage(value) {
+    if (!state.drawn) return;
+    clearTimeout(state.demoTimer);
+    const pages = state.pages || 1;
+    let target = Math.max(1, Math.min(pages, Math.trunc(Number(value)) || 1));
+    let flipped = false;
+    if (duplex(activeOptions())) {
+      flipped = target % 2 === 0;
+      if (flipped) target -= 1;
+    }
+    if (target === state.previewPage) { setFlipped(flipped); render(); return; }
+    try {
+      await turn(Math.sign(target - state.previewPage), async () => {
+        setFlipped(flipped, false);
+        await pdfPreview.setPage(target);
+      });
+    } catch (_) { previewFailure(); }
+    render();
+  }
+
+  function zoomTo(value) {
+    if (!state.drawn || !ZOOMS.includes(value)) return;
+    state.previewZoom = value;
+    pdfPreview.setZoom(value).catch(previewFailure);
+    render();
+  }
+
   function clearPassword() {
     ui['school-password'].value = '';
     ui['school-password'].type = 'password';
@@ -138,10 +450,21 @@
     ui['password-toggle'].setAttribute('aria-label', '显示密码');
   }
 
+  function drawThumb() {
+    const source = ui['preview-canvas'];
+    const thumb = ui['confirm-thumb'];
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    thumb.width = Math.round(54 * ratio);
+    thumb.height = Math.round(76 * ratio);
+    if (source.width) thumb.getContext('2d').drawImage(source, 0, 0, thumb.width, thumb.height);
+    ui['thumb-frame'].classList.toggle('is-gray', activeOptions().color !== 'color');
+  }
+
   function openAccount() {
-    if (state.busy || state.reading || state.receipt || !state.pdf || !state.previewReady) return;
+    if (state.busy || state.reading || state.receipt || !previewed()) return;
     clearPassword();
     showError('form-error');
+    drawThumb();
     render();
     if (!ui['account-dialog'].open) ui['account-dialog'].showModal();
     render();
@@ -158,16 +481,22 @@
     state.fileGeneration++;
     if (state.fileURL) URL.revokeObjectURL(state.fileURL);
     state.file = state.fileURL = state.pdf = state.pages = null;
-    state.reading = false;
+    state.reading = state.drawn = state.flipped = false;
+    state.faceKey = '';
+    state.facePromise = null;
+    clearTimeout(state.demoTimer);
     pdfPreview.clear();
     ui['file-input'].value = '';
     ui['doc-open'].removeAttribute('href');
+    ui['preview-loading'].hidden = false;
+    ui['preview-loading'].textContent = '正在生成预览…';
     showError('file-error');
   }
 
   async function selectFiles(files) {
     if (state.busy || state.receipt || state.intent || !files?.length) return;
     files = Array.from(files); // FileList is live and clearing the input empties it.
+    const fromUpload = !state.file;
     clearFile();
     showError('form-error');
     if (files.length !== 1) { showError('file-error', '每次选择一份 PDF。'); render(); return; }
@@ -182,7 +511,10 @@
     state.file = file;
     state.reading = true;
     const generation = state.fileGeneration;
-    render();
+    // The empty upload sheet grows into the preview page while the PDF parses.
+    const reveal = () => { render(); pdfPreview.reserve(); };
+    if (fromUpload) await morph(reveal); else reveal();
+    if (generation !== state.fileGeneration) return;
     try {
       const data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -196,6 +528,7 @@
       if (generation !== state.fileGeneration) return;
       state.pages = inspected.pages;
       state.pdf = data;
+      applyOptions({ ...state.options }); // Re-check the copy cap for this page count.
       // The browser opens the local blob, never an uploaded public URL.
       state.fileURL = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
       ui['doc-open'].href = state.fileURL;
@@ -234,6 +567,7 @@
       }
       state.session = result.data;
       if (!username() && schoolUser()) ui['school-username'].value = schoolUser();
+      reconcileOptions();
       return true;
     } catch (_) {
       if (generation === state.sessionGeneration) state.session = null;
@@ -253,15 +587,19 @@
     for (const job of jobs.slice(0, 10)) {
       const li = document.createElement('li');
       li.className = 'job-row';
+      li.dataset.state = job.state;
       const title = document.createElement('span');
       title.className = 'job-status';
       title.textContent = labels[job.state] || '结果待确认';
+      const spec = document.createElement('span');
+      spec.className = 'job-spec';
+      spec.textContent = describe(job.options || DEFAULT_OPTIONS).join(' · ');
       const meta = document.createElement('span');
       meta.className = 'job-meta';
       const date = new Date(job.created_at * 1000);
       meta.textContent = (Number.isInteger(job.pages) ? job.pages + ' 页 · ' : '') +
         (Number.isFinite(date.valueOf()) ? date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
-      li.append(title, meta);
+      li.append(title, spec, meta);
       if (['unknown', 'processing'].includes(job.state)) {
         const button = document.createElement('button');
         button.type = 'button'; button.className = 'text-btn'; button.textContent = '查询';
@@ -296,25 +634,58 @@
 
   function showReceipt(job, focus = true) {
     closeAccount(true);
+    const previousTone = state.receipt ? state.receiptTone : '';
     state.receipt = job;
     if (state.intent && job.id) state.intent.id = job.id;
     if (state.intent && ['unknown', 'processing'].includes(job.state)) state.intent.uncertain = true;
     const success = job.state === 'submitted';
     const failed = ['failed', 'rejected'].includes(job.state);
-    ui.receipt.className = 'receipt ' + (success ? 'is-success' : failed ? 'is-error' : 'is-pending');
-    ui['receipt-icon'].textContent = success ? '✓' : failed ? '!' : '…';
+    const tone = success ? 'success' : failed ? 'error' : 'pending';
+    state.receiptTone = tone;
+    if (tone !== previousTone) {
+      // A new outcome prints a fresh ticket.
+      ui.receipt.className = 'receipt is-' + tone;
+      ui['receipt-icon'].innerHTML = ICONS[tone];
+      ui.receipt.hidden = false;
+      void ui.receipt.offsetWidth;
+      ui.receipt.classList.add('is-printing');
+    }
     ui['receipt-title'].textContent = success ? '文件已提交，去刷卡取件吧' :
       job.state === 'processing' ? '正在送往学校队列' : failed ? '这次没有提交成功' : '提交结果待确认';
     ui['receipt-message'].textContent = success ? '到学校打印点刷卡，在待打印列表中选择这份文件。' :
       failed ? (job.message || '请检查账号或文件后重试。') :
       '请先查询任务状态，或在打印机上查看待取任务，避免重复提交。';
-    ui['receipt-meta'].textContent = [state.intent?.username, Number.isInteger(job.pages) ? job.pages + ' 页' : '', job.id ? '任务 ' + job.id.slice(0, 8) : ''].filter(Boolean).join(' · ');
+    const doc = state.receiptDoc;
+    const options = job.options || doc?.options || DEFAULT_OPTIONS;
+    const pages = Number.isInteger(job.pages) ? job.pages : doc?.pages;
+    const rows = [
+      doc?.name && ['文档', doc.name],
+      pages && ['纸张', `${pages} 页 · ${sheetsFor(pages, options)} 张 A4`],
+      ['设置', describe(options).join(' · ')],
+      job.id && ['任务', job.id.slice(0, 8)],
+    ].filter(Boolean);
+    ui['receipt-details'].replaceChildren(...rows.map(([term, value], index) => {
+      const row = document.createElement('div');
+      row.style.setProperty('--i', String(index));
+      const dt = document.createElement('dt');
+      dt.textContent = term;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      row.append(dt, dd);
+      return row;
+    }));
+    ui['receipt-meta'].textContent = [state.intent?.username,
+      new Date((job.created_at || Date.now() / 1000) * 1000).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })].filter(Boolean).join(' · ');
     ui['receipt-query'].hidden = success || failed;
     ui['receipt-retry'].hidden = true;
     ui['new-print'].hidden = !success && !failed;
     ui['new-print'].textContent = success ? '打印另一份' : '返回修改';
     render();
-    if (focus) { ui.receipt.focus({ preventScroll: true }); announce(ui['receipt-title'].textContent); }
+    if (focus) {
+      window.scrollTo({ top: 0, behavior: calm() ? 'instant' : 'smooth' });
+      ui.receipt.focus({ preventScroll: true });
+      announce(ui['receipt-title'].textContent);
+    }
     if (success || failed) stopPolling();
   }
 
@@ -349,17 +720,19 @@
       const result = await api('/api/print/jobs/' + encodeURIComponent(id), undefined, 15000);
       if (generation !== state.identityGeneration || user !== username()) return;
       if (!result.ok || !result.data?.job) throw new Error('query');
+      const job = result.data.job;
       // History inspection cannot reuse a different file for an old intent.
-      state.intent = { key: result.data.job.idempotency_key, username: user, owner: state.session.user.id };
+      state.intent = { key: job.idempotency_key, username: user, owner: state.session.user.id, options: job.options || { ...DEFAULT_OPTIONS } };
+      state.receiptDoc = { name: '', pages: job.pages, options: state.intent.options };
       clearFile();
-      showReceipt(result.data.job);
+      showReceipt(job);
       state.polls = 0; schedulePoll();
     } catch (_) { showError('file-error', '暂时无法查询任务，请稍后重试。'); }
   }
 
   async function submit(event) {
     event.preventDefault();
-    if (state.busy || state.reading || state.receipt || !state.previewReady) return;
+    if (state.busy || state.reading || state.receipt || !previewed()) return;
     showError('file-error'); showError('form-error');
     ui['school-username'].removeAttribute('aria-invalid');
     ui['school-password'].removeAttribute('aria-invalid');
@@ -379,16 +752,20 @@
     state.busy = true;
     state.sessionGeneration++; // Invalidate earlier background requests before authenticating.
     stopPolling();
+    clearTimeout(state.demoTimer);
     let dispatchStarted = false;
     let acceptedResponse = false;
     try {
-      render(); progress('正在连接打印服务…');
+      render(); progress('正在连接打印服务…', 'auth');
       if (!await refreshSession({ flow: true }) || !ready()) throw new Error('打印服务暂未连接，请稍后再试。');
+      const options = state.intent?.options || { ...state.options };
+      const missing = unsupported(options);
+      if (missing.length) throw new Error(`当前打印设备暂不支持${missing.join('、')}，请返回调整打印设置。`);
       if (state.intent && state.intent.username !== account) {
         throw new Error('账号已变更，不能重试原任务。请先核对学校队列。');
       }
       if (schoolUser() !== account) {
-        progress('正在验证学校账号…');
+        progress('正在验证学校账号…', 'auth');
         const login = await api('/api/login/ispace', { username: account, password });
         if (!login.ok) throw new Error(errorText(login, '账号验证暂时不可用，请稍后重试。'));
         if (!await refreshSession({ flow: true }) || schoolUser() !== account) throw new Error('账号验证状态未确认，请重试。');
@@ -398,18 +775,19 @@
       }
       const identity = state.identityGeneration;
       const owner = state.session.user.id;
-      progress('正在检查 PDF…');
+      progress('正在检查 PDF…', 'inspect');
       const inspection = await api('/api/print/inspect', { pdf: state.pdf });
       if (!inspection.ok) throw new Error(errorText(inspection, '文件检查失败，请稍后重试。'));
       if (!Number.isInteger(inspection.data?.pages) || !inspection.data?.inspection_token) throw new Error('没有收到有效的文件检查结果，请重试。');
       if (identity !== state.identityGeneration || schoolUser() !== account) throw new Error('登录状态已变化，请重新提交。');
       state.pages = inspection.data.pages;
-      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner };
-      progress('正在提交打印…'); render();
+      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options };
+      state.receiptDoc = { name: state.file?.name || '', pages: state.pages, options: state.intent.options };
+      progress('正在提交打印…', 'send'); render();
       dispatchStarted = true;
       const result = await api('/api/print/jobs', {
         pdf: state.pdf, password, inspection_token: inspection.data.inspection_token,
-        idempotency_key: state.intent.key,
+        idempotency_key: state.intent.key, options: state.intent.options,
       }, 165000);
       if (result.ok && result.data?.job && result.data.job.idempotency_key === state.intent.key &&
           ['submitted', 'processing', 'unknown', 'failed', 'rejected'].includes(result.data.job.state)) {
@@ -435,12 +813,28 @@
       password = null;
       clearPassword();
       state.busy = false;
-      progress(); render();
+      progress();
+      if (!state.receipt) reconcileOptions();
+      render();
       state.polls = 0; schedulePoll();
       loadJobs().catch(() => {});
       if (!state.receipt && !ui['form-error'].hidden) ui['school-password'].focus();
     }
   }
+
+  const previewFailure = () => showError('file-error', '这一页暂时无法预览，请重新选择文件。');
+  const pdfPreview = new window.MaxcoursePdfPreview(ui['preview-canvas'], ui['page-stage'], info => {
+    state.previewReady = info.ready;
+    state.previewRendering = info.rendering;
+    state.previewPage = info.page;
+    state.previewZoom = info.zoom;
+    if (state.file && info.pages) state.pages = info.pages;
+    if (state.file && info.ready) { state.drawn = true; syncFaces(); }
+    ui['page-stage'].setAttribute('aria-busy', String(info.rendering));
+    ui['preview-loading'].hidden = state.drawn && !info.error;
+    ui['preview-loading'].textContent = info.error || '正在生成预览…';
+    render();
+  });
 
   ui['submit-form'].addEventListener('submit', submit);
   ui['go-print'].addEventListener('click', openAccount);
@@ -457,21 +851,80 @@
   });
   ui['pick-btn'].addEventListener('click', () => ui['file-input'].click());
   ui['replace-file'].addEventListener('click', () => ui['file-input'].click());
-  const previewFailure = () => showError('file-error', '这一页暂时无法预览，请重新选择文件。');
-  ui['page-prev'].addEventListener('click', () => pdfPreview.setPage(state.previewPage - 1).catch(previewFailure));
-  ui['page-next'].addEventListener('click', () => pdfPreview.setPage(state.previewPage + 1).catch(previewFailure));
-  ui['page-current'].addEventListener('change', () => pdfPreview.setPage(ui['page-current'].value).catch(previewFailure));
-  ui['page-current'].addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); pdfPreview.setPage(ui['page-current'].value).catch(previewFailure); } });
-  ui['preview-zoom'].addEventListener('change', () => pdfPreview.setZoom(ui['preview-zoom'].value).catch(previewFailure));
+  ui.dropzone.addEventListener('click', event => {
+    if (!event.target.closest('button, input') && !ui['pick-btn'].disabled) ui['file-input'].click();
+  });
+  ui['page-prev'].addEventListener('click', () => goToPage(state.previewPage - (duplex(activeOptions()) ? 2 : 1)));
+  ui['page-next'].addEventListener('click', () => goToPage(state.previewPage + (duplex(activeOptions()) ? 2 : 1)));
+  ui['page-current'].addEventListener('change', () => goToPage(ui['page-current'].value));
+  ui['page-current'].addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); goToPage(ui['page-current'].value); } });
+  ui['flip-sheet'].addEventListener('click', () => { clearTimeout(state.demoTimer); setFlipped(!state.flipped); render(); });
+  ui['zoom-in'].addEventListener('click', () => zoomTo(ZOOMS[ZOOMS.indexOf(state.previewZoom) + 1]));
+  ui['zoom-out'].addEventListener('click', () => zoomTo(ZOOMS[ZOOMS.indexOf(state.previewZoom) - 1]));
+  ui['zoom-fit'].addEventListener('click', () => zoomTo('fit'));
+  for (const input of radios('color')) input.addEventListener('change', () => { if (input.checked) setOptions({ color: input.value }); });
+  for (const input of radios('sides-mode')) input.addEventListener('change', () => {
+    if (input.checked) setOptions({ sides: input.value === 'two' ? sidesFor(state.edge) : 'one-sided' });
+  });
+  for (const input of radios('edge')) input.addEventListener('change', () => {
+    if (!input.checked) return;
+    state.edge = input.value;
+    if (duplex()) setOptions({ sides: sidesFor(state.edge) }); else render();
+  });
+  ui['copies-dec'].addEventListener('click', () => setOptions({ copies: state.options.copies - 1 }));
+  ui['copies-inc'].addEventListener('click', () => setOptions({ copies: state.options.copies + 1 }));
+  ui.copies.addEventListener('input', () => { state.copiesTyping = true; });
+  const commitCopies = () => { state.copiesTyping = false; setOptions({ copies: ui.copies.value }); };
+  ui.copies.addEventListener('change', commitCopies);
+  ui.copies.addEventListener('blur', () => { if (state.copiesTyping) commitCopies(); });
+  ui.copies.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commitCopies(); } });
   ui['file-input'].addEventListener('change', () => selectFiles(ui['file-input'].files));
-  ui['doc-remove'].addEventListener('click', () => { if (!state.busy && !state.intent) { clearFile(); render(); ui['pick-btn'].focus(); } });
-  for (const event of ['dragenter', 'dragover']) ui.dropzone.addEventListener(event, e => {
-    e.preventDefault(); if (!state.busy) ui.dropzone.classList.add('dragover');
+  ui['doc-remove'].addEventListener('click', () => {
+    if (state.busy || state.intent) return;
+    clearFile();
+    morph(render).then(() => ui['pick-btn'].focus());
   });
-  for (const event of ['dragleave', 'drop']) ui.dropzone.addEventListener(event, e => {
-    e.preventDefault(); ui.dropzone.classList.remove('dragover');
-    if (event === 'drop') selectFiles(e.dataTransfer?.files);
+
+  // Dropping anywhere on the page selects the file instead of navigating away from it.
+  const carriesFiles = event => Array.from(event.dataTransfer?.types || []).includes('Files');
+  window.addEventListener('dragover', event => { if (carriesFiles(event)) event.preventDefault(); });
+  window.addEventListener('drop', event => {
+    if (!carriesFiles(event)) return;
+    event.preventDefault();
+    state.dragDepth = 0;
+    ui.dropzone.classList.remove('dragover');
+    if (!document.querySelector('dialog[open]')) selectFiles(event.dataTransfer.files);
   });
+  ui.dropzone.addEventListener('dragenter', event => {
+    event.preventDefault();
+    state.dragDepth++;
+    if (!state.busy) ui.dropzone.classList.add('dragover');
+  });
+  ui.dropzone.addEventListener('dragleave', () => {
+    state.dragDepth = Math.max(0, state.dragDepth - 1);
+    if (!state.dragDepth) ui.dropzone.classList.remove('dragover');
+  });
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    ui.dropzone.addEventListener('pointermove', event => {
+      if (calm()) return;
+      const box = ui.dropzone.getBoundingClientRect();
+      const x = (event.clientX - box.left) / box.width - .5;
+      const y = (event.clientY - box.top) / box.height - .5;
+      ui['drop-visual'].style.setProperty('--ry', (x * 16).toFixed(2) + 'deg');
+      ui['drop-visual'].style.setProperty('--rx', (-y * 12).toFixed(2) + 'deg');
+    });
+    ui.dropzone.addEventListener('pointerleave', () => {
+      ui['drop-visual'].style.setProperty('--ry', '0deg');
+      ui['drop-visual'].style.setProperty('--rx', '0deg');
+    });
+  }
+  document.addEventListener('keydown', event => {
+    if (!state.drawn || state.receipt || document.querySelector('dialog[open]') || event.altKey || event.metaKey || event.ctrlKey) return;
+    if (event.target.closest('input, select, textarea, button, a, [contenteditable]')) return;
+    if (event.key === 'ArrowLeft' && !ui['page-prev'].disabled) { event.preventDefault(); ui['page-prev'].click(); }
+    if (event.key === 'ArrowRight' && !ui['page-next'].disabled) { event.preventDefault(); ui['page-next'].click(); }
+  });
+
   ui['password-toggle'].addEventListener('click', () => {
     const visible = ui['school-password'].type === 'password';
     ui['school-password'].type = visible ? 'text' : 'password';
@@ -489,17 +942,17 @@
   ui['receipt-query'].addEventListener('click', () => queryReceipt());
   ui['receipt-retry'].addEventListener('click', () => {
     if (state.busy || !state.intent || !state.pdf) return;
-    stopPolling(); state.receipt = null; render();
+    stopPolling(); state.receipt = null; state.receiptTone = ''; render();
     openAccount();
     showError('form-error', '将沿用原任务编号。请输入密码后继续。');
     ui['school-password'].focus();
   });
   ui['new-print'].addEventListener('click', () => {
     const failed = ['failed', 'rejected'].includes(state.receipt?.state);
-    stopPolling(); state.intent = state.receipt = null;
+    stopPolling(); state.intent = state.receipt = state.receiptDoc = null; state.receiptTone = '';
     if (!failed) clearFile();
-    clearPassword(); showError('form-error'); render();
-    (state.file ? ui['go-print'] : ui['pick-btn']).focus();
+    clearPassword(); showError('form-error'); reconcileOptions();
+    morph(render).then(() => (state.file ? ui['go-print'] : ui['pick-btn']).focus());
   });
   ui['jobs-refresh'].addEventListener('click', async () => {
     ui['jobs-refresh'].disabled = true;
@@ -509,6 +962,7 @@
   ui['help-open'].addEventListener('click', () => ui['help-dialog'].showModal());
   ui['help-close'].addEventListener('click', () => ui['help-dialog'].close());
   ui['help-dialog'].addEventListener('click', event => { if (event.target === ui['help-dialog']) ui['help-dialog'].close(); });
+  window.addEventListener('scroll', () => ui.topbar.classList.toggle('is-scrolled', window.scrollY > 4), { passive: true });
   window.addEventListener('offline', render);
   window.addEventListener('online', () => refreshSession());
   window.addEventListener('beforeunload', event => {
@@ -516,21 +970,6 @@
   });
   window.addEventListener('pagehide', clearPassword);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !state.busy) refreshSession(); });
-  const pdfPreview = new window.MaxcoursePdfPreview(ui['preview-canvas'], ui['page-stage'], info => {
-    state.previewReady = info.ready;
-    state.previewRendering = info.rendering;
-    state.previewPage = info.page;
-    if (state.file && info.pages) state.pages = info.pages;
-    ui['page-current'].value = info.page;
-    ui['page-current'].max = info.pages || 1;
-    ui['page-total'].textContent = '/ ' + info.pages;
-    ui['preview-zoom'].value = info.zoom;
-    ui['page-stage'].setAttribute('aria-busy', String(info.rendering));
-    ui['preview-canvas'].hidden = !info.ready;
-    ui['preview-loading'].hidden = info.ready;
-    ui['preview-loading'].textContent = info.error || '正在生成预览…';
-    render();
-  });
   render();
   refreshSession().then(() => loadJobs()).catch(() => {});
   setInterval(() => { if (!document.hidden && !state.busy) refreshSession(); }, 60000);

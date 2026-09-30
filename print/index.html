@@ -2,143 +2,303 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="MAXCOURSE 校园打印：上传 PDF，查看打印预览，使用学校账号提交并刷卡取件。">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="MAXCOURSE 校园打印：上传 PDF，预览并选择颜色、单双面与份数，使用学校账号提交后刷卡取件。">
+<meta name="theme-color" content="#f4f3ef">
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
 <link href="print.css" rel="stylesheet">
 </head>
 <body>
-<header class="site-header">
-  <div class="header-inner wrap">
-    <a class="wordmark" href="/" aria-label="MAXCOURSE 首页"><span class="brand-square" aria-hidden="true">M</span> MAXCOURSE</a>
-    <a class="home-link" href="/">返回首页 <span aria-hidden="true">↗</span></a>
-  </div>
-</header>
-<main class="wrap">
-  <div class="page-heading">
-    <div><h1 id="page-title">校园打印</h1><p id="page-description">先上传文件，预览确认后再提交。</p></div>
-    <div class="service-status" id="service-status" role="status">
-      <span class="service-dot" id="service-dot" aria-hidden="true"></span><span id="service-text">正在连接打印服务</span>
-      <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
+<div class="ambient" aria-hidden="true"><span></span><span></span></div>
+
+<header class="topbar" id="topbar">
+  <div class="topbar-inner wrap">
+    <a class="brand" href="/" aria-label="返回 MAXCOURSE 首页">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span class="brand-name">MAXCOURSE</span>
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-page">校园打印</span>
+    </a>
+    <div class="topbar-actions">
+      <div class="service-status" id="service-status" role="status" data-state="connecting">
+        <span class="service-dot" id="service-dot" aria-hidden="true"></span>
+        <span class="service-text" id="service-text">正在连接打印服务</span>
+        <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
+      </div>
+      <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="打印须知">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7M12 16.9v.1"/></svg>
+        <span>打印须知</span>
+      </button>
     </div>
   </div>
-  <ol class="flow-steps" aria-label="打印流程">
-    <li id="step-upload" aria-current="step"><span>1</span> 上传文档</li>
-    <li id="step-preview"><span>2</span> 打印预览</li>
-    <li id="step-submit"><span>3</span> 确认提交</li>
-  </ol>
+</header>
+
+<main class="wrap page">
+  <div class="intro">
+    <div class="intro-copy">
+      <h1 id="page-title">校园打印</h1>
+      <p id="page-description">先上传文件，预览确认后再提交。</p>
+    </div>
+    <ol class="stepper" id="stepper" data-step="1" aria-label="打印流程">
+      <li id="step-upload" aria-current="step"><span class="step-index">01</span><span class="step-name">上传文档</span></li>
+      <li id="step-preview"><span class="step-index">02</span><span class="step-name">预览与设置</span></li>
+      <li id="step-submit"><span class="step-index">03</span><span class="step-name">确认提交</span></li>
+    </ol>
+  </div>
+
   <form class="workspace" id="submit-form" method="post" action="/api/print/jobs" novalidate>
     <p class="file-error" id="file-error" role="alert" hidden></p>
     <div id="workspace-fields">
       <section class="upload-stage" id="upload-stage" aria-labelledby="upload-title">
         <div class="dropzone" id="dropzone">
-          <span class="upload-badge" aria-hidden="true">PDF</span>
-          <h2 id="upload-title">上传需要打印的文件</h2>
-          <p>将 PDF 拖到这里，或从设备中选择</p>
-          <button class="btn btn-primary pick-btn" id="pick-btn" type="button">选择 PDF <span aria-hidden="true">↑</span></button>
+          <div class="drop-visual" id="drop-visual" aria-hidden="true">
+            <div class="drop-tilt">
+              <span class="drop-sheet back-2"></span>
+              <span class="drop-sheet back-1"></span>
+              <span class="drop-sheet front">
+                <span class="sheet-line w70"></span><span class="sheet-line w90"></span><span class="sheet-line w55"></span>
+                <span class="sheet-line w80"></span><span class="sheet-line w40"></span>
+                <span class="sheet-tag">PDF</span>
+              </span>
+            </div>
+          </div>
+          <h2 id="upload-title"><span class="title-idle">拖入 PDF，开始打印</span><span class="title-drag" aria-hidden="true">松开，即可预览</span></h2>
+          <p class="drop-sub">或从设备中选择文件，预览前无需登录</p>
+          <button class="btn btn-primary pick-btn" id="pick-btn" type="button">
+            <span>选择 PDF</span>
+            <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5"/></svg></span>
+          </button>
           <p class="dz-hint" id="limits-hint">最大 10 MB · 最多 50 页</p>
           <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
         </div>
-        <p class="upload-foot">无需先登录，选好文件即可预览。</p>
+        <ul class="capability-row" id="capability-row" aria-label="打印规格"></ul>
       </section>
 
       <section class="preview-workspace" id="doc-panel" aria-labelledby="preview-title" hidden>
         <div class="preview-main">
           <header class="file-bar">
-            <span class="file-type" aria-hidden="true">PDF</span>
+            <span class="file-icon" aria-hidden="true">PDF</span>
             <div class="file-info"><h2 id="doc-name"></h2><p id="doc-sub"></p></div>
             <button class="text-btn" id="replace-file" type="button">更换文件</button>
-            <button class="icon-btn" id="doc-remove" type="button" aria-label="移除文件">×</button>
+            <button class="icon-btn" id="doc-remove" type="button" aria-label="移除文件">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
+            </button>
           </header>
-          <div class="preview-toolbar">
-            <h3 id="preview-title">打印预览</h3>
-            <div class="page-controls">
-              <button class="icon-btn" id="page-prev" type="button" aria-label="上一页" disabled>‹</button>
-              <label class="sr-only" for="page-current">页码</label><input id="page-current" type="number" value="1" min="1" max="1" inputmode="numeric" disabled>
-              <span id="page-total">/ 0</span>
-              <button class="icon-btn" id="page-next" type="button" aria-label="下一页" disabled>›</button>
+          <h3 class="sr-only" id="preview-title">打印预览</h3>
+          <div class="stage-shell">
+            <div class="page-stage" id="page-stage" aria-busy="true">
+              <div class="sheet-wrap" id="sheet-wrap" data-copies="1">
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <div class="sheet is-loading" id="sheet" data-flip="none">
+                  <div class="face face-front">
+                    <canvas id="preview-canvas" role="img" aria-label="文档预览"></canvas>
+                    <canvas class="tint" id="preview-tint" aria-hidden="true"></canvas>
+                    <span class="scan" aria-hidden="true"></span>
+                  </div>
+                  <div class="face face-back" aria-hidden="true">
+                    <canvas id="back-canvas"></canvas>
+                    <canvas class="tint" id="back-tint"></canvas>
+                    <span class="scan"></span>
+                    <span class="blank-note" id="blank-note" hidden>背面空白</span>
+                  </div>
+                </div>
+                <span class="copies-badge" id="copies-badge" aria-hidden="true">× 1</span>
+              </div>
             </div>
-            <label class="sr-only" for="preview-zoom">预览缩放</label>
-            <select id="preview-zoom" aria-label="预览缩放" disabled><option value="fit">适合页面</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select>
-          </div>
-          <div class="page-stage" id="page-stage" aria-busy="true">
             <p class="preview-loading" id="preview-loading" role="status">正在生成预览…</p>
-            <canvas id="preview-canvas" role="img" aria-label="文档预览" hidden></canvas>
+            <div class="doc-progress" id="doc-progress" hidden><span></span></div>
+            <span class="stage-label" id="preview-caption">黑白预览 · A4</span>
+            <a class="stage-link" id="doc-open" target="_blank" rel="noopener">打开原文件 <span aria-hidden="true">↗</span></a>
+            <div class="preview-dock" role="toolbar" aria-label="预览控制">
+              <div class="dock-group">
+                <button class="dock-btn" id="page-prev" type="button" aria-label="上一页" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>
+                </button>
+                <label class="sr-only" for="page-current">页码</label>
+                <input id="page-current" type="number" value="1" min="1" max="1" inputmode="numeric" disabled>
+                <span class="page-total" id="page-total">/ 0</span>
+                <button class="dock-btn" id="page-next" type="button" aria-label="下一页" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
+                </button>
+              </div>
+              <div class="dock-group flip-group" id="flip-group" hidden>
+                <span class="dock-sep" aria-hidden="true"></span>
+                <button class="dock-btn flip-btn" id="flip-sheet" type="button" aria-pressed="false" aria-label="翻面查看">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 13-5.1M19.5 12a7.5 7.5 0 0 1-13 5.1"/><path d="M17.8 3.6v3.6h-3.6M6.2 20.4v-3.6h3.6"/></svg>
+                  <span id="sheet-caption">正面</span>
+                </button>
+              </div>
+              <span class="dock-sep" aria-hidden="true"></span>
+              <div class="dock-group">
+                <button class="dock-btn" id="zoom-out" type="button" aria-label="缩小预览" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
+                </button>
+                <button class="zoom-label" id="zoom-fit" type="button" aria-label="适合页面" disabled>适合</button>
+                <button class="dock-btn" id="zoom-in" type="button" aria-label="放大预览" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="doc-progress" id="doc-progress" hidden><span></span></div>
-          <div class="preview-caption"><span id="preview-caption">按 A4 纸张适配，黑白预览</span><a id="doc-open" target="_blank" rel="noopener">打开原文件 ↗</a></div>
         </div>
 
-        <aside class="print-settings" aria-labelledby="output-title">
-          <h2 id="output-title">打印设置</h2>
-          <p class="settings-intro">当前校园队列支持以下规格</p>
-          <dl class="settings-list">
-            <div><dt>纸张大小</dt><dd>A4 <small>210 × 297 mm</small></dd></div>
-            <div><dt>打印颜色</dt><dd>黑白</dd></div>
-            <div><dt>单双面</dt><dd>单面</dd></div>
-            <div><dt>打印份数</dt><dd>1 份</dd></div>
-            <div><dt>打印范围</dt><dd id="range-summary">全部页面</dd></div>
-          </dl>
-          <div class="print-total"><span>本次打印</span><strong id="print-total">正在检查页数</strong><span id="cap-pages" hidden></span></div>
-          <p class="cost-note">取件时按学校标准计费。</p>
-          <button class="btn btn-primary go-print" id="go-print" type="button" disabled>确认打印 <span aria-hidden="true">→</span></button>
-          <p class="go-print-note" id="go-print-note">预览完成后继续。</p>
-          <p class="settings-help">需要彩色、双面或多份？<a href="/print-setup/index.html">使用电脑打印配置 ↗</a></p>
-        </aside>
+        <div class="side">
+          <aside class="print-settings" aria-labelledby="output-title">
+            <div class="settings-head">
+              <h2 id="output-title">打印设置</h2>
+              <span class="settings-paper">A4 · 210 × 297 mm</span>
+            </div>
+
+            <div class="setting">
+              <div class="setting-head"><span class="setting-label" id="color-label">颜色</span><span class="setting-note" id="color-note"></span></div>
+              <div class="segmented" role="radiogroup" aria-labelledby="color-label">
+                <label class="seg"><input type="radio" name="color" value="grayscale" checked><span class="seg-text"><i class="swatch swatch-mono" aria-hidden="true"></i>黑白</span></label>
+                <label class="seg"><input type="radio" name="color" value="color"><span class="seg-text"><i class="swatch swatch-color" aria-hidden="true"></i>彩色</span></label>
+                <span class="seg-thumb" aria-hidden="true"></span>
+              </div>
+            </div>
+
+            <div class="setting">
+              <div class="setting-head"><span class="setting-label" id="sides-label">单双面</span><span class="setting-note" id="sides-note"></span></div>
+              <div class="segmented" role="radiogroup" aria-labelledby="sides-label">
+                <label class="seg"><input type="radio" name="sides-mode" value="one" checked><span class="seg-text">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="3.5" width="11" height="17" rx="1.6"/></svg>单面</span></label>
+                <label class="seg"><input type="radio" name="sides-mode" value="two"><span class="seg-text">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="6" width="11" height="14.5" rx="1.6"/><path d="M8.5 3.5h9.4a1.6 1.6 0 0 1 1.6 1.6v12.4"/></svg>双面</span></label>
+                <span class="seg-thumb" aria-hidden="true"></span>
+              </div>
+              <div class="reveal" id="edge-setting" data-open="false" inert>
+                <div class="reveal-inner">
+                  <div class="segmented segmented-sub" role="radiogroup" aria-label="翻页方式">
+                    <label class="seg"><input type="radio" name="edge" value="long" checked><span class="seg-text">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="11" height="17" rx="1.6"/><path class="edge" d="M4.5 5.5v13"/></svg>长边翻页</span></label>
+                    <label class="seg"><input type="radio" name="edge" value="short"><span class="seg-text">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6" width="11" height="15" rx="1.6"/><path class="edge" d="M5 3.5h14"/></svg>短边翻页</span></label>
+                    <span class="seg-thumb" aria-hidden="true"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting">
+              <div class="setting-head"><label class="setting-label" for="copies">份数</label><span class="setting-note" id="copies-note"></span></div>
+              <div class="copies-input">
+                <button type="button" id="copies-dec" aria-label="减少一份">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
+                </button>
+                <input id="copies" type="number" min="1" max="20" value="1" inputmode="numeric">
+                <button type="button" id="copies-inc" aria-label="增加一份">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="setting setting-static">
+              <span class="setting-label">打印范围</span><span id="range-summary">全部页面</span>
+            </div>
+          </aside>
+
+          <div class="checkout" id="checkout">
+            <div class="total">
+              <div class="total-figure"><strong id="print-total-sheets" data-value="0">0</strong><span>张 A4</span></div>
+              <p class="total-detail" id="print-total">正在检查页数</p>
+            </div>
+            <p class="cost-note" id="cost-note">刷卡取件时按学校标准计费。</p>
+            <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
+              <span>确认打印</span>
+              <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+            </button>
+            <p class="go-print-note" id="go-print-note">预览完成后继续。</p>
+          </div>
+          <p class="settings-help">需要装订或其他纸张？<a href="/print-setup/index.html">使用电脑打印配置 <span aria-hidden="true">↗</span></a></p>
+        </div>
       </section>
     </div>
-      <dialog class="col-account account-dialog" id="account-dialog" aria-labelledby="account-title" aria-describedby="confirm-name">
-        <header class="panel-heading">
-          <span class="step-number" aria-hidden="true">3</span>
-          <h2 id="account-title">确认提交</h2>
-          <button class="account-back" id="account-back" type="button" aria-label="返回预览">← 返回预览</button>
-        </header>
-        <div class="account-body">
-          <div class="confirm-document"><span>本次文档</span><p id="confirm-name"></p><small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small></div>
-          <p class="account-service" id="account-service" role="status" hidden>打印服务未连接，暂时无法提交。</p>
-          <div class="field">
-            <label for="school-username">学号</label>
-            <input id="school-username" aria-describedby="form-error" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="输入学校账号">
+
+    <dialog class="sheet-dialog account-dialog" id="account-dialog" aria-labelledby="account-title" aria-describedby="confirm-name">
+      <header class="dialog-head">
+        <div><p class="dialog-step">步骤 3 / 3</p><h2 id="account-title">确认提交</h2></div>
+        <button class="text-btn account-back" id="account-back" type="button" aria-label="返回预览">返回预览</button>
+      </header>
+      <div class="account-body">
+        <div class="confirm-document">
+          <div class="thumb-frame" id="thumb-frame" aria-hidden="true"><canvas id="confirm-thumb"></canvas><span class="thumb-scan"></span></div>
+          <div class="confirm-info">
+            <span class="confirm-kicker">本次文档</span>
+            <p id="confirm-name"></p>
+            <small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small>
           </div>
-          <div class="field">
-            <label for="school-password">密码</label>
-            <div class="password-wrap">
-              <input id="school-password" aria-describedby="password-hint form-error" name="password" type="password" autocomplete="off" placeholder="输入学校密码">
-              <button class="password-toggle" id="password-toggle" type="button" aria-label="显示密码" aria-pressed="false">
-                <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m3 3 18 18M10 6.2c.6-.1 1.3-.2 2-.2 6 0 10 6 10 6a19 19 0 0 1-3 3M6 7.5A22 22 0 0 0 2 12s4 6 10 6c1.7 0 3.3-.5 4.7-1.2M10 10a3 3 0 0 0 4 4"/></svg>
-              </button>
-            </div>
-            <p class="field-hint" id="password-hint">仅用于本次验证与打印，不保存密码。</p>
-          </div>
-          <p class="form-error" id="form-error" role="alert" hidden></p>
-          <p class="progress-text" id="progress-text" role="status" hidden></p>
-          <button class="btn btn-primary submit-btn" id="submit-btn" type="submit" disabled><span id="submit-label">提交打印</span><span class="submit-arrow" aria-hidden="true">↗</span></button>
-          <p class="submit-note">提交成功后，请到打印点刷卡取件。</p>
         </div>
-      </dialog>
+        <p class="account-service" id="account-service" role="status" hidden>打印服务未连接，暂时无法提交。</p>
+        <div class="collapse account-fields" id="account-fields">
+          <div class="collapse-inner">
+            <div class="field">
+              <label for="school-username">学号</label>
+              <input id="school-username" aria-describedby="form-error" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="输入学校账号">
+            </div>
+            <div class="field">
+              <label for="school-password">密码</label>
+              <div class="password-wrap">
+                <input id="school-password" aria-describedby="password-hint form-error" name="password" type="password" autocomplete="off" placeholder="输入学校密码">
+                <button class="password-toggle" id="password-toggle" type="button" aria-label="显示密码" aria-pressed="false">
+                  <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 3.5 17 17M10 6.2c.6-.1 1.3-.2 2-.2 6 0 9.5 6 9.5 6a18 18 0 0 1-2.8 3.3M6.3 7.6A18 18 0 0 0 2.5 12s3.5 6 9.5 6c1.7 0 3.2-.5 4.5-1.1M10 10a2.8 2.8 0 0 0 4 4"/></svg>
+                </button>
+              </div>
+              <p class="field-hint" id="password-hint">仅用于本次验证与打印，不保存密码。</p>
+            </div>
+          </div>
+        </div>
+        <div class="collapse submit-progress">
+          <div class="collapse-inner">
+            <ol class="submit-steps" id="submit-steps" aria-label="提交进度">
+              <li data-step="auth"><span class="step-mark" aria-hidden="true"></span>验证学校账号</li>
+              <li data-step="inspect"><span class="step-mark" aria-hidden="true"></span>检查 PDF 文件</li>
+              <li data-step="send"><span class="step-mark" aria-hidden="true"></span>送往学校打印队列</li>
+            </ol>
+          </div>
+        </div>
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <p class="sr-only" id="progress-text" role="status" hidden></p>
+        <button class="btn btn-primary submit-btn" id="submit-btn" type="submit" disabled>
+          <span id="submit-label">提交打印</span>
+          <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8.5 7H17v8.5"/></svg></span>
+        </button>
+        <p class="submit-note">提交成功后，请到打印点刷卡取件。</p>
+      </div>
+    </dialog>
 
     <section class="receipt" id="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden>
-      <p class="receipt-kicker">打印回执</p>
-      <div class="receipt-content">
-        <div class="receipt-icon" id="receipt-icon" aria-hidden="true"></div>
-        <h2 class="receipt-title" id="receipt-title"></h2>
-        <p class="receipt-message" id="receipt-message"></p>
-        <p class="receipt-meta" id="receipt-meta"></p>
-        <div class="receipt-actions">
-          <button class="btn btn-outline" id="receipt-query" type="button">查询任务状态</button>
-          <button class="btn btn-outline" id="receipt-retry" type="button" hidden>继续同一任务</button>
-          <button class="btn btn-primary" id="new-print" type="button" hidden>打印另一份</button>
-        </div>
+      <div class="printer" aria-hidden="true"><span class="printer-slot"></span><span class="printer-led"></span></div>
+      <div class="ticket-clip">
+        <article class="ticket">
+          <div class="receipt-icon" id="receipt-icon" aria-hidden="true"></div>
+          <p class="receipt-kicker">打印回执</p>
+          <h2 class="receipt-title" id="receipt-title"></h2>
+          <p class="receipt-message" id="receipt-message"></p>
+          <dl class="receipt-details" id="receipt-details"></dl>
+          <p class="receipt-meta" id="receipt-meta"></p>
+        </article>
+      </div>
+      <div class="receipt-actions">
+        <button class="btn btn-quiet" id="receipt-query" type="button">查询任务状态</button>
+        <button class="btn btn-quiet" id="receipt-retry" type="button" hidden>继续同一任务</button>
+        <button class="btn btn-primary" id="new-print" type="button" hidden>打印另一份</button>
       </div>
       <p class="receipt-foot">请以学校打印机上的待取任务为准。</p>
     </section>
   </form>
 
   <details class="history" id="history" hidden>
-    <summary><span>最近打印 <span class="jobs-count" id="jobs-count"></span></span><span class="history-caption">HISTORY <span aria-hidden="true">＋</span></span></summary>
+    <summary>
+      <span>最近打印 <span class="jobs-count" id="jobs-count"></span></span>
+      <svg class="history-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>
+    </summary>
     <div class="history-body">
       <div class="history-bar"><p>仅展示本人近 24 小时的任务</p><button class="text-btn" id="jobs-refresh" type="button">刷新</button></div>
       <ul class="jobs-list" id="jobs-list"></ul>
@@ -147,19 +307,24 @@
   </details>
 
   <footer class="page-footer">
-    <p><span class="footer-index" aria-hidden="true">↳</span> 刷卡取件时，按学校标准计费。</p>
-    <nav class="footer-links" aria-label="打印帮助">
-      <button class="link-btn" id="help-open" type="button">打印须知</button>
-      <a href="/print-setup/index.html">电脑打印配置 <span aria-hidden="true">↗</span></a>
-    </nav>
+    <p>刷卡取件时，按学校标准计费。</p>
+    <a href="/print-setup/index.html">电脑打印配置 <span aria-hidden="true">↗</span></a>
   </footer>
 </main>
 
-<dialog class="help-dialog" id="help-dialog" aria-labelledby="help-title">
-  <header class="help-head"><div><p class="panel-caption">BEFORE YOU PRINT</p><h2 id="help-title">打印须知</h2></div><button class="dialog-close" id="help-close" type="button" aria-label="关闭打印须知">×</button></header>
-  <section class="help-sec"><h3>取件与费用</h3><p>提交后请到学校打印点刷卡选择任务，实际出纸与费用以学校系统为准。</p></section>
-  <section class="help-sec"><h3>文件与隐私</h3><p>支持 10 MB 内、50 页内的 PDF，输出为 A4、黑白、单面、单份。密码不写入本站持久存储，临时文件处理后清理。</p></section>
-  <section class="help-sec"><h3>提交结果待确认</h3><p>先查询记录或到打印机查看待取任务，避免重复提交。</p></section>
+<dialog class="sheet-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
+  <header class="dialog-head">
+    <div><p class="dialog-step">打印前请阅读</p><h2 id="help-title">打印须知</h2></div>
+    <button class="icon-btn" id="help-close" type="button" aria-label="关闭打印须知">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
+    </button>
+  </header>
+  <div class="help-body">
+    <section class="help-sec"><span class="help-index">01</span><div><h3>取件与费用</h3><p>提交后请到学校打印点刷卡选择任务，实际出纸与费用以学校系统为准。彩色页按学校彩色标准计费。</p></div></section>
+    <section class="help-sec"><span class="help-index">02</span><div><h3>文件与规格</h3><p>支持 10 MB 内、50 页内的 PDF，输出 A4。可选黑白或彩色、单面或双面，最多 20 份；单次最多 200 面。设备未开放的选项会显示为不可用。</p></div></section>
+    <section class="help-sec"><span class="help-index">03</span><div><h3>隐私</h3><p>预览在浏览器本地生成。密码不写入本站持久存储，临时文件处理后清理。</p></div></section>
+    <section class="help-sec"><span class="help-index">04</span><div><h3>提交结果待确认</h3><p>先查询记录或到打印机查看待取任务，避免重复提交。</p></div></section>
+  </div>
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
