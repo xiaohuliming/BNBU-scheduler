@@ -7,6 +7,7 @@
     'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
     'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'drop-sub', 'file-kind', 'checkout',
+    'intro-view', 'start-print', 'intro-help',
     'school-username', 'school-password', 'password-toggle', 'form-error',
     'progress-text', 'submit-btn', 'submit-label', 'submit-steps', 'account-fields', 'receipt', 'receipt-icon',
     'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-details', 'receipt-query', 'receipt-retry',
@@ -36,7 +37,9 @@
     checking: false, retry: false, jobQuery: false,
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
     faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, flipped: false,
-    step: '', copiesTyping: false, converting: false, converted: false, sweepTimer: null, demoTimer: null, dragDepth: 0,
+    step: '', copiesTyping: false, converting: false, converted: false,
+    // The introduction comes first; the workspace lives at #start so Back returns to it.
+    view: location.hash === '#start' ? 'work' : 'intro', sweepTimer: null, demoTimer: null, dragDepth: 0,
   };
   const labels = { submitted: '待刷卡取件', processing: '正在提交', unknown: '结果待确认',
     failed: '未提交', rejected: '账号验证失败' };
@@ -231,6 +234,21 @@
     }
     ui['workspace-fields'].hidden = !!state.receipt;
     ui.receipt.hidden = !state.receipt;
+    document.body.dataset.view = state.view;
+    ui['intro-view'].hidden = state.view !== 'intro';
+    ui['submit-form'].hidden = state.view !== 'work';
+  }
+
+  function showView(view, push = false) {
+    if (state.view === view) return Promise.resolve();
+    if (view === 'intro' && state.busy) {
+      // A submission in flight keeps the workspace on screen.
+      history.pushState(null, '', '#start');
+      return Promise.resolve();
+    }
+    if (view === 'intro') closeAccount();
+    if (push) history.pushState(null, '', view === 'work' ? '#start' : location.pathname + location.search);
+    return morph(() => { state.view = view; render(); window.scrollTo({ top: 0, behavior: 'instant' }); });
   }
 
   function note(id, text, warn = false) {
@@ -492,6 +510,7 @@
   async function selectFiles(files) {
     if (state.busy || state.receipt || state.intent || !files?.length) return;
     files = Array.from(files); // FileList is live and clearing the input empties it.
+    if (state.view !== 'work') { history.pushState(null, '', '#start'); state.view = 'work'; }
     const fromUpload = !state.file;
     clearFile();
     showError('form-error');
@@ -971,6 +990,9 @@
     finally { ui['jobs-refresh'].disabled = false; }
   });
   ui['help-open'].addEventListener('click', () => ui['help-dialog'].showModal());
+  ui['intro-help'].addEventListener('click', () => ui['help-dialog'].showModal());
+  ui['start-print'].addEventListener('click', () => showView('work', true).then(() => ui['pick-btn'].focus({ preventScroll: true })));
+  window.addEventListener('popstate', () => showView(location.hash === '#start' ? 'work' : 'intro'));
   ui['help-close'].addEventListener('click', () => ui['help-dialog'].close());
   ui['help-dialog'].addEventListener('click', event => { if (event.target === ui['help-dialog']) ui['help-dialog'].close(); });
   window.addEventListener('scroll', () => ui.topbar.classList.toggle('is-scrolled', window.scrollY > 4), { passive: true });
