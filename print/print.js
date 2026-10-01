@@ -550,7 +550,7 @@
       if (convert) {
         ui['preview-loading'].textContent = '正在转换为 PDF…';
         announce('正在转换为 PDF…');
-        const result = await api('/api/print/convert', { document: data, name: file.name }, 410000);
+        const result = await api('/api/print/convert', { document: data, name: file.name }, 630000);
         if (generation !== state.fileGeneration) return;
         if (!result.ok || typeof result.data?.pdf !== 'string') {
           throw Object.assign(new Error(errorText(result, '这份文件无法转换，请导出为 PDF 后再试。')), { shown: true });
@@ -821,7 +821,7 @@
       const identity = state.identityGeneration;
       const owner = state.session.user.id;
       progress('正在检查 PDF…', 'inspect');
-      const inspection = await api('/api/print/inspect', { pdf: state.pdf }, 175000);
+      const inspection = await api('/api/print/inspect', { pdf: state.pdf }, 300000);
       if (!inspection.ok) throw new Error(errorText(inspection, '文件检查失败，请稍后重试。'));
       if (!Number.isInteger(inspection.data?.pages) || !inspection.data?.inspection_token) throw new Error('没有收到有效的文件检查结果，请重试。');
       if (identity !== state.identityGeneration || schoolUser() !== account) throw new Error('登录状态已变化，请重新提交。');
@@ -837,7 +837,7 @@
         pdf: state.pdf, password, inspection_token: inspection.data.inspection_token,
         idempotency_key: state.intent.key, options: state.intent.options,
         ...(bulkApproved ? { bulk_confirmation: { sha256: inspection.data.sha256, pages: state.pages, options: state.intent.options } } : {}),
-      }, 410000);
+      }, 630000);
       if (result.ok && result.data?.job && result.data.job.idempotency_key === state.intent.key &&
           ['submitted', 'processing', 'unknown', 'failed', 'rejected'].includes(result.data.job.state)) {
         acceptedResponse = true;
