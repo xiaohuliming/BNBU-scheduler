@@ -1,110 +1,45 @@
 #!/bin/bash
-# =============================================================
-#  UIC 图书馆打印机一键配置 (macOS)
-#  https://www.bnbscheduler.top/print-setup/
-#  by Sirus · Contact: xiaohulimings@gmail.com
-# =============================================================
-#
-# 这个脚本调用 macOS 自带的 lpadmin 添加 UIC 图书馆共享 SMB 打印机.
-# - 不修改任何系统级配置 (CUPS 用户级队列)
-# - 不需要 sudo / 管理员密码
-# - 可以随时卸载: lpadmin -x UICPrinter
-
-set -e
-
+# MAXCOURSE printing: use the reachable campus queue or open the remote portal.
+# No school credentials are collected by this installer.
+set -euo pipefail
 PRINTER_NAME="UICPrinter"
-DEVICE_URI="smb://172.16.244.66/DP"
-DESCRIPTION="UIC打印机"
-LOCATION="UIC 图书馆 (PaperCut · Find Me)"
-PPD="drv:///sample.drv/generic.ppd"
+SERVER_IP="172.16.244.66"
+DEVICE_URI="smb://${SERVER_IP}/DP"
+PORTAL="https://www.bnbscheduler.top/print/"
+MODE="${1:-auto}"
+case "$MODE" in auto|--direct|--web) ;; *) printf 'Usage: bash uic-print.command [--direct|--web]\n' >&2; exit 2 ;; esac
 
-clear
-echo "============================================"
-echo "  UIC 图书馆打印机配置 (macOS)"
-echo "  www.bnbscheduler.top  ·  by Sirus"
-echo "============================================"
-echo ""
-echo "目标:     ${DESCRIPTION}"
-echo "地址:     ${DEVICE_URI}"
-echo "驱动:     Generic PostScript Printer"
-echo ""
+open_portal() {
+    printf '\n打开 MAXCOURSE 网页打印：%s\n' "$PORTAL"
+    printf '选择文件、预览，再填写本人学校账号和密码，提交后刷卡取件。\n'
+    printf '可使用校园 Wi-Fi、手机热点或校外网络提交。\n'
+    /usr/bin/open "$PORTAL"
+}
 
-# 1. 测试连通 (仅警告, 不阻断)
-echo "[1/2] 测试与打印服务器的连通 (1.5s)..."
-if /sbin/ping -c 1 -t 2 172.16.244.66 >/dev/null 2>&1; then
-    echo "   OK"
-else
-    echo "   警告: ping 不通 172.16.244.66"
-    echo "         可能没连校园 Wi-Fi 或开了代理 / VPN."
-    echo "         打印机仍会被添加, 但实际打印时会失败."
-fi
-echo ""
-
-# 2. 已存在则先移除 (含旧版命名, idempotent)
-for OLD in "${PRINTER_NAME}" "UIC_图书馆打印" "UIC_Library_Print"; do
-    if lpstat -p "${OLD}" >/dev/null 2>&1; then
-        echo "检测到已存在的 ${OLD}, 先移除..."
-        # 顺手把队列里 stuck 的任务取消掉, 避免 CUPS 留状态导致下次不弹账号框
-        cancel -a "${OLD}" 2>/dev/null || true
-        lpadmin -x "${OLD}" 2>/dev/null || true
+printf 'MAXCOURSE 校园打印配置\n\n'
+if [[ "$MODE" == '--web' ]]; then open_portal; exit 0; fi
+printf '检查学校打印队列 TCP 445…\n'
+if ! /usr/bin/nc -z -G 3 "$SERVER_IP" 445 >/dev/null 2>&1; then
+    printf '当前网络无法直连学校打印队列。学生 Wi-Fi 与打印网络可能隔离。\n'
+    if [[ "$MODE" == '--direct' ]]; then
+        printf '请使用可以访问学校队列的有线网络，或打开 %s\n' "$PORTAL" >&2
+        exit 1
     fi
-done
-
-# 清掉钥匙串里 172.16.244.66 的旧条目 (如果之前输错账号被记住了, 会让 macOS
-# 死活不再弹认证框). 没条目就静默, 有就清掉, 下次打印才会重新弹框.
-security delete-internet-password -s 172.16.244.66 >/dev/null 2>&1 || true
-security delete-internet-password -l 172.16.244.66 >/dev/null 2>&1 || true
-
-# 3. 添加打印机
-echo "[2/2] 正在添加打印机..."
-if lpadmin -p "${PRINTER_NAME}" \
-    -L "${LOCATION}" \
-    -D "${DESCRIPTION}" \
-    -v "${DEVICE_URI}" \
-    -m "${PPD}" \
-    -o printer-is-shared=false \
-    -E
-then
-    # 关键: 用 negotiate (跟系统设置 GUI 手动添加时一样). 这个值让 SMB 后端
-    # 做交互式认证, 提交打印就"立即弹"登录框. 而 username,password 是 CUPS
-    # 层认证, 任务会挂起等你手动点刷新补凭据 (体验差, 已弃用).
-    lpadmin -p "${PRINTER_NAME}" -o auth-info-required=negotiate 2>/dev/null || true
-    cupsenable "${PRINTER_NAME}" 2>/dev/null || true
-    cupsaccept "${PRINTER_NAME}" 2>/dev/null || true
-    echo "   OK (已设置: 打印时会自动弹账号密码框)"
-else
-    echo ""
-    echo "添加失败. 试着检查:"
-    echo "  - 你的账户是否在 lpadmin 组里 (绝大多数 Mac 都是)"
-    echo "  - PPD 路径是否变了 (打 'ls /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/PrintCore.framework/Resources/' 看看)"
-    echo ""
-    echo "(按 Return 关闭)"
-    read
-    exit 1
+    open_portal
+    exit 0
 fi
 
-echo ""
-echo "--------------------------------------------"
-echo "完成! 打开 '系统设置 -> 打印机与扫描仪'"
-echo "应能看到一台叫 '${DESCRIPTION}' 的设备."
-echo ""
-echo "第一次打印:"
-echo "  1. 任意 App 按 Cmd+P, 选这台打印机, 点打印"
-echo "  2. 系统弹账号窗口:"
-echo "       账号: 先试单纯学号 (如 t12345678),"
-echo "             不行改成 UIC\\t12345678"
-echo "       密码: iSpace 密码"
-echo "       勾'记住此密码'"
-echo "  3. 走到图书馆任意 Toshiba e-STUDIO 前刷学生证 release"
-echo ""
-echo "想要卸载这台打印机, 在终端跑:"
-echo "   lpadmin -x ${PRINTER_NAME}"
-echo "(或者直接在'系统设置 -> 打印机与扫描仪'里删除)"
-echo ""
-echo "--------------------------------------------"
-echo "工具来自 www.bnbscheduler.top/print-setup"
-echo "作者 Sirus · 反馈 xiaohulimings@gmail.com"
-echo "--------------------------------------------"
-echo ""
-echo "(按 Return 关闭此窗口)"
-read
+printf '队列可以连接，配置系统打印机…\n'
+# Update this queue in place. Existing jobs, other printers and keychain entries stay intact.
+if ! /usr/sbin/lpadmin -p "$PRINTER_NAME" -D 'UIC打印机' \
+    -L '学校刷卡取件队列' -v "$DEVICE_URI" -m 'drv:///sample.drv/generic.ppd' \
+    -o printer-is-shared=false -o auth-info-required=negotiate -E; then
+    printf '系统打印机配置未完成。请检查打印机配置权限或驱动。\n'
+    if [[ "$MODE" == '--direct' ]]; then exit 1; fi
+    open_portal
+    exit 0
+fi
+printf '\n已配置 UIC打印机。可在 App 中按 ⌘P 选择它。\n'
+printf '系统要求认证时填写本人学校账号和学校密码，再到打印机刷卡取件。\n'
+printf '这台系统打印机仅在当前网络能访问学校队列时可用。换到隔离的 Wi-Fi 或校外网络，请使用网页打印。\n'
+printf '网页入口：%s\n' "$PORTAL"
