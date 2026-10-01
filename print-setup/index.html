@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>校园打印一键配置 · MAXCOURSE</title>
     <link rel="icon" href="/favicon.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="tailwind.static.css?v=20261001" />
+    <link href="/vendor/fonts.css" rel="stylesheet" />
     <style>
         :root {
             --ink: #101820;
@@ -340,6 +340,16 @@
             font-size: 0.95rem;
             line-height: 1.7;
         }
+
+        .print-entry { padding: 1.5rem; border: 2px solid var(--ink); background: var(--lime); box-shadow: 5px 5px 0 var(--ink); }
+        .print-entry h2 { margin: .7rem 0; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 900; line-height: 1.35; }
+        .print-entry p { margin: .75rem 0; line-height: 1.75; }
+        .print-entry .btn-primary { border-radius: 0; margin-top: .5rem; min-height: 48px; }
+        .print-status { font-weight: 700; }
+        .print-limits { font-size: .875rem; }
+        .connection-note { padding: 1.25rem; border: 1px solid var(--ink); }
+        .connection-note p { margin-top: .6rem; line-height: 1.7; }
+        button:focus-visible, a:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
     </style>
 </head>
 <body>
@@ -352,35 +362,35 @@
 
         <!-- Hero -->
         <section class="panel p-6 md:p-10">
-            <div class="kicker">Set up campus printing in two clicks</div>
+            <div class="kicker">Campus printing / Web & Desktop</div>
             <div class="mt-3"><span class="accent-bar"></span></div>
             <h1 class="mt-4 text-4xl md:text-6xl font-black tracking-[-0.06em] text-[#101820]">校园打印一键配置</h1>
             <p class="mt-3 text-base md:text-lg text-black/65 leading-7">
-                自动把 UIC 图书馆的共享打印机 (<span class="mono">172.16.244.66 / DP</span>, Toshiba e-STUDIO 457) 加进你的电脑。
+                网页打印可在校园 Wi-Fi、手机热点和校外网络提交。下面的脚本会检测连接，学校队列可达时配置系统打印机，否则打开网页打印。
             </p>
         </section>
 
-        <!-- Outage notice: 2026-09 campus network rebuild blocked Wi-Fi → print server -->
-        <section class="outage-banner" role="alert">
-            <div class="outage-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z" />
-                    <path d="M12 9v4" />
-                    <path d="M12 17h.01" />
-                </svg>
-                <span>本功能暂时无法使用</span>
-            </div>
-            <p>由于学校网络升级，校园 Wi-Fi 到打印服务器的端口尚未被防火墙放行，一键配置目前无法使用（装好了也打不出来）。</p>
-            <p><strong>如何打印</strong>：① 去图书馆用公用电脑直接打；② 或给自己的电脑插网线（有线网络不受影响）。学校放行后本页会恢复更新。</p>
+        <section class="print-entry mt-6" aria-labelledby="web-print-title">
+            <div class="kicker">MAXCOURSE / REMOTE PRINTING</div>
+            <h2 id="web-print-title">先选文件，打印时再填学校账号。</h2>
+            <p>网页提交后由 MAXCOURSE 送到学校打印队列，提交成功后到图书馆刷卡取件，不需要安装打印机驱动。</p>
+            <a class="btn-primary" id="web-print-link" href="/print/">打开网页打印 ↗</a>
+            <p class="print-status" id="web-print-status" role="status">正在检查网页打印服务…</p>
+            <p class="print-limits" id="web-print-limits">每个文件最多 50 MB、300 页，可选黑白、彩色、单双面和 1 至 100 份。</p>
+        </section>
+        <section class="connection-note mt-6">
+            <strong>系统打印机与网页打印如何选择？</strong>
+            <p>想继续在 App 里按 ⌘P 或 Ctrl+P，电脑需要能够直连学校打印队列。学生 Wi-Fi 与打印网络可能隔离，插入网线后也要以 TCP 445 检查结果为准。</p>
+            <p>网页打印只在网页里提交，不会添加为系统打印机。脚本检测到队列不可达时，直接打开上方网页入口。</p>
         </section>
 
         <!-- Method picker: three mutually-exclusive install methods -->
         <section class="mt-6">
             <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
-                    <div class="kicker mb-1">三种安装方式 · 任选其一</div>
+                    <div class="kicker mb-1">电脑直连配置 · 三种方式任选其一</div>
                     <p class="text-sm md:text-base text-black/65 leading-7">
-                        三种方式装好的是<strong>同一台打印机</strong>，<strong>挑一种做完就行，不用三种都做</strong>。
+                        队列可达时，命令行和下载脚本配置同一台系统打印机。纯手动步骤仅用于学校队列可达的网络。
                     </p>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -405,7 +415,7 @@
                 <span class="method-badge">方式一</span>
                 <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">命令行一行搞定</h2>
             </div>
-            <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，粘进终端回车，几秒装好。不下载文件、不触发安全拦截、不需要管理员密码 —— 最省事的方式。</p>
+            <p class="mt-2 text-sm text-black/60 leading-7">复制一行命令，在终端回车。脚本先检查学校队列；可达时配置系统打印机，不可达时打开网页打印。Windows 安装学校驱动时可能需要管理员确认。</p>
 
             <!-- macOS terminal one-liner -->
             <div id="mac-terminal-block" class="mt-5 rounded-2xl border-2 border-[var(--accent)] bg-white p-5">
@@ -414,7 +424,7 @@
                     Spotlight 搜 "终端"（或 <code>⌘ + 空格</code> 输 "Terminal"），把下面这一行<strong>粘进去回车</strong>。
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2 items-stretch">
-                    <code id="mac-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">curl -fsSL https://www.bnbscheduler.top/print-setup/uic-print.command | bash</code>
+                    <code id="mac-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">curl -fsSL https://www.bnbscheduler.top/print-setup/uic-print.command?v=20261001 | bash</code>
                     <button id="mac-terminal-copy" class="btn-ghost" type="button">复制</button>
                 </div>
             </div>
@@ -426,43 +436,43 @@
                     开始菜单搜 "PowerShell"（或按 <code>Win + X</code> → 选"终端"），把下面这一行<strong>粘进去回车</strong>。
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2 items-stretch">
-                    <code id="win-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">irm https://www.bnbscheduler.top/print-setup/uic-print.ps1 | iex</code>
+                    <code id="win-terminal-cmd" class="mono flex-1 min-w-0 text-xs md:text-sm bg-black/5 rounded-lg px-3 py-2 leading-6 break-all">irm https://www.bnbscheduler.top/print-setup/uic-print.ps1?v=20261001 | iex</code>
                     <button id="win-terminal-copy" class="btn-ghost" type="button">复制</button>
                 </div>
             </div>
 
             <div class="step-warn mt-5">
-                <strong>Windows 必须现在就连着校园 Wi-Fi 跑这条命令</strong>（macOS 离线也能装，到校园再打印即可）。
+                <strong>先检查队列，避免装好却打不出来。</strong> 校园 Wi-Fi、网线和 VPN 是否能直连，均以脚本的 TCP 445 检查为准；不可达时使用网页打印。
             </div>
 
             <div class="mt-5 rounded-2xl border border-black/10 bg-[#f4efe6] p-5">
                 <div class="kicker mb-2">装好之后 · 第一次打印</div>
                 <ol class="list-decimal pl-5 space-y-1 text-sm text-black/75 leading-7">
-                    <li><strong>连着校园 Wi-Fi、关掉代理 / VPN</strong> 才能提交（内网地址，离线会失败）</li>
-                    <li>任意 App 按 <code>⌘ + P</code> / <code>Ctrl + P</code>，打印机选 <code>UIC打印机</code>，点打印</li>
-                    <li>提交后会<strong>自动弹账号框</strong>。万一没弹、任务停在"保留以进行认证"，就到"打印机与扫描仪"双击这台打印机，<strong>点任务右边圆圈刷新按钮</strong>手动触发。</li>
+                    <li><strong>下列步骤适用于脚本已配置系统打印机的情况。</strong> 如果脚本打开的是网页，按网页上传、预览、填写账号并提交即可。</li>
+                    <li>任意 App 按 <code>⌘ + P</code> / <code>Ctrl + P</code>，Mac 选择 <code>UIC打印机</code>，Windows 选择学校 <code>DP</code> 队列，再点打印</li>
+                    <li>系统需要认证时输入本人学校账号。Mac 任务如果停在"保留以进行认证"，就到"打印机与扫描仪"双击这台打印机，<strong>点任务右边圆圈刷新按钮</strong>手动触发。</li>
                     <li class="text-[#b45309]"><strong>账号框里"名称"默认是你的 Mac 用户名，一定要删掉改成你的学号</strong> <code>t12345678</code>（被打回再改 <code>UIC\t12345678</code>）；密码是 iSpace 密码，勾"记住"。</li>
-                    <li><strong>等任务传输完成</strong>（电脑上进度条跑完），它才会出现在打印机的 release 列表里 —— 然后到图书馆任意 Toshiba e-STUDIO 前<strong>刷学生证</strong>选中它才出纸（PaperCut Find Me）</li>
+                    <li><strong>等任务传输完成</strong>（电脑上进度条跑完），它才会出现在打印机的 release 列表里 —— 然后到图书馆支持学校刷卡队列的打印机 前<strong>刷学生证</strong>选中它才出纸（PaperCut Find Me）</li>
                 </ol>
             </div>
         </section>
 
         <!-- Reminders -->
         <section class="mt-8">
-            <div class="kicker mb-4">动手前，5 条必读</div>
+            <div class="kicker mb-4">电脑直连时的 5 条须知</div>
             <div class="grid gap-3 md:grid-cols-2">
                 <div class="reminder-card">
                     <div class="reminder-num">1</div>
                     <div>
-                        <div class="font-bold">必须在校园 Wi-Fi 下</div>
-                        <div class="text-sm text-black/65 mt-0.5">服务器地址 <code class="code">172.16.244.66</code> 是内网，外网完全访问不到。</div>
+                        <div class="font-bold">系统打印机需要队列可达</div>
+                        <div class="text-sm text-black/65 mt-0.5">学校队列是内网地址。普通 Wi-Fi 和校外网络可直接用网页打印。</div>
                     </div>
                 </div>
                 <div class="reminder-card">
                     <div class="reminder-num">2</div>
                     <div>
-                        <div class="font-bold">关掉所有代理 / VPN</div>
-                        <div class="text-sm text-black/65 mt-0.5">Clash / Surge / V2Ray 任何一个开着，发往 172.16.x 的流量都会被拦走。</div>
+                        <div class="font-bold">网页打印保留正常上网连接</div>
+                        <div class="text-sm text-black/65 mt-0.5">网页打印只需访问本站。电脑直连时，检查内网路由和 TCP 445，无需一律关闭所有代理。</div>
                     </div>
                 </div>
                 <div class="reminder-card">
@@ -498,11 +508,11 @@
                 <span class="method-badge">方式二</span>
                 <h2 class="text-2xl md:text-3xl font-black tracking-[-0.04em]">下载脚本运行</h2>
             </div>
-            <p class="mt-2 text-sm text-black/60">下载一个文件双击跑。比命令行多几步（要过系统的安全拦截），但全程图形界面。</p>
+            <p class="mt-2 text-sm text-black/60">下载后运行，脚本会根据连接结果配置系统打印机或打开网页。下面的系统配置步骤只适用于脚本提示队列可达的情况。</p>
 
             <div class="mt-5 flex flex-wrap gap-3 items-center">
-                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print-mac.zip" download="UIC打印机.zip">
-                    <span id="primary-label">下载并安装</span>
+                <a id="primary-download" class="btn-primary" href="/print-setup/uic-print-mac.zip?v=20261001" download="UIC打印机.zip">
+                    <span id="primary-label">下载配置脚本</span>
                     <span id="primary-filename" class="mono text-xs ml-1 opacity-75">UIC打印机.zip</span>
                 </a>
             </div>
@@ -513,7 +523,7 @@
                     <div class="step-num">1</div>
                     <div class="step-body">
                         <strong>下载并自动解压。</strong>
-                        点上面那个黑色"下载并安装"按钮，浏览器会下到 <code>UIC打印机.zip</code>，macOS 会自动解压出一个 <code>uic-print.command</code> 文件（在你的 <code>下载</code> 文件夹）。
+                        点上面那个黑色"下载配置脚本"按钮，浏览器会下到 <code>UIC打印机.zip</code>，macOS 会自动解压出一个 <code>uic-print.command</code> 文件（在你的 <code>下载</code> 文件夹）。
                     </div>
                 </div>
                 <div class="step">
@@ -540,8 +550,8 @@
                                  alt="隐私与安全性 仍然打开按钮"
                                  data-shot-fallback="隐私与安全性 → 仍然打开">
                         </figure>
-                        <span class="block mt-3">放行后会再弹一次对话框，这次有 <strong>打开</strong> 按钮，点它。Terminal 自动打开并跑脚本，看到 <code>完成! 打开 '系统设置 → 打印机与扫描仪'...</code> 这行就成了。</span>
-                        <span class="block mt-3 text-sm text-black/55">脚本内容可以提前用文本编辑器查看，<strong>不要求 sudo / 管理员密码</strong>，全程只调用 macOS 自带的 <code>lpadmin</code>。</span>
+                        <span class="block mt-3">放行后会再弹一次对话框，这次有 <strong>打开</strong> 按钮，点它。Terminal 自动打开并跑脚本，按脚本结果继续：显示“已配置 UIC打印机”就用系统打印窗口；打开网页就直接上传文件。</span>
+                        <span class="block mt-3 text-sm text-black/55">脚本内容可以提前用文本编辑器查看，<strong>不要求 sudo / 管理员密码</strong>，仅使用 macOS 自带的连接检查、打印机配置和浏览器打开功能。</span>
                     </div>
                 </div>
                 <div class="step">
@@ -559,12 +569,12 @@
                 <div class="step">
                     <div class="step-num">5</div>
                     <div class="step-body">
-                        <strong>第一次打印（必须在校园网内发起）。</strong>
+                        <strong>系统打印机首次提交，需要学校队列可达。</strong>
                         <div class="step-warn">
-                            <strong>提交打印任务时必须连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
-                            打印机地址是内网 <code>172.16.244.66</code>，离开校园网 / 开了代理 → 数据走不到服务器 → 任务直接提交失败。
+                            <strong>提交时需要可以访问学校队列的网络。</strong>
+                            学生 Wi-Fi 可能隔离打印网络。无法访问队列时，请使用 <a href="/print/">网页打印</a>，无需重新安装打印机。
                         </div>
-                        随便用任何 App 按 <code>⌘ + P</code>，打印机选 <code>UIC打印机</code>，点打印。提交后会<strong>自动弹账号框</strong>。
+                        用 App 按 <code>⌘ + P</code>，选择 <code>UIC打印机</code>，再点打印。提交后会<strong>自动弹账号框</strong>。
                         <div class="step-warn mt-2">
                             万一没自动弹、任务停在"<strong>保留以进行认证</strong>"：到"打印机与扫描仪"双击这台打印机看队列，<strong>点任务右边圆圈刷新按钮</strong>手动触发。
                         </div>
@@ -596,13 +606,13 @@
                     <div class="step-num">1</div>
                     <div class="step-body">
                         <strong>下载脚本。</strong>
-                        点上面那个黑色"下载并安装"按钮，浏览器会下到一个 <code>UIC打印机.bat</code>。
+                        点上面那个黑色"下载配置脚本"按钮，浏览器会下到一个 <code>UIC打印机.bat</code>。
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-num">2</div>
                     <div class="step-body">
-                        <strong>右键 → 以管理员身份运行。</strong>
+                        <strong>双击运行。</strong> 如果 Windows 安装学校驱动时要求管理员权限，再按系统提示确认。
                         Windows Defender 可能弹"是否运行"，点 <strong>更多信息 → 仍要运行</strong>（脚本内容你可以提前用记事本打开看，只有两条命令：测试网络 + 加打印机）。
                     </div>
                 </div>
@@ -623,10 +633,10 @@
                 <div class="step">
                     <div class="step-num">5</div>
                     <div class="step-body">
-                        <strong>第一次打印（必须在校园网内发起）。</strong>
+                        <strong>系统打印机首次提交，需要学校队列可达。</strong>
                         <div class="step-warn">
-                            <strong>提交打印任务时必须连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
-                            打印机地址是内网 <code>172.16.244.66</code>，离开校园网 / 开了代理 → 数据走不到服务器 → 任务直接提交失败。
+                            <strong>提交时需要可以访问学校队列的网络。</strong>
+                            学生 Wi-Fi 可能隔离打印网络。无法访问队列时，请使用 <a href="/print/">网页打印</a>，无需重新安装打印机。
                         </div>
                         任意 App 按 <code>Ctrl + P</code>，打印机选刚才那台，点打印，Windows 会弹凭据窗口：
                         <ul class="mt-2 list-disc pl-5 space-y-1">
@@ -640,7 +650,7 @@
                     <div class="step-num">6</div>
                     <div class="step-body">
                         <strong>等传输完成，再去图书馆刷卡取件。</strong>
-                        先等打印进度条跑完（任务传完才进 release 队列），再到任意 Toshiba e-STUDIO 前刷学生证 release 你的任务。
+                        先等打印进度条跑完（任务传完才进 release 队列），再到支持学校刷卡队列的打印机 前刷学生证 release 你的任务。
                     </div>
                 </div>
             </div>
@@ -725,10 +735,10 @@
                 <div class="step">
                     <div class="step-num">5</div>
                     <div class="step-body">
-                        <strong>第一次打印（必须在校园网内发起）。</strong>
+                        <strong>系统打印机首次提交，需要学校队列可达。</strong>
                         <div class="step-warn">
-                            <strong>提交打印任务时必须连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
-                            打印机地址是内网 <code>172.16.244.66</code>，离开校园网 / 开了代理 → 数据走不到服务器 → 任务直接提交失败。
+                            <strong>提交时需要可以访问学校队列的网络。</strong>
+                            学生 Wi-Fi 可能隔离打印网络。无法访问队列时，请使用 <a href="/print/">网页打印</a>，无需重新安装打印机。
                         </div>
                         任意 App 按 <code>⌘ + P</code>，打印机选刚才那台，点打印。提交后会<strong>自动弹账号框</strong>。
                         <div class="step-warn mt-2">
@@ -751,7 +761,7 @@
                     <div class="step-num">6</div>
                     <div class="step-body">
                         <strong>等传输完成，再去图书馆刷卡取件。</strong>
-                        先等打印进度条跑完（任务传完才进 release 队列），再到任意 Toshiba e-STUDIO 前刷学生证 release 任务才会出纸。
+                        先等打印进度条跑完（任务传完才进 release 队列），再到支持学校刷卡队列的打印机 前刷学生证 release 任务才会出纸。
                     </div>
                 </div>
             </div>
@@ -763,7 +773,7 @@
                     <div class="step-body">
                         <strong>按 <code>Win + R</code> 打开"运行"（先确保在校园网内）。</strong>
                         <div class="step-warn">
-                            <strong>这一步开始就要连着 UIC 校园 Wi-Fi、关闭代理 / VPN。</strong>
+                            <strong>手动配置前，先确认学校队列 TCP 445 可以连接。</strong>
                             <code>172.16.244.66</code> 是内网地址，出了校园 / 走代理就连不上。
                         </div>
                         在输入框输入下面这一行，回车：
@@ -815,7 +825,7 @@
                     <div class="step-num">6</div>
                     <div class="step-body">
                         <strong>等传输完成，再去图书馆刷卡取件。</strong>
-                        先等打印进度条跑完（任务传完才进 release 队列），再到任意 Toshiba e-STUDIO 前刷学生证 release 任务才会出纸。
+                        先等打印进度条跑完（任务传完才进 release 队列），再到支持学校刷卡队列的打印机 前刷学生证 release 任务才会出纸。
                     </div>
                 </div>
             </div>
@@ -825,118 +835,22 @@
         <section class="panel p-6 md:p-8 mt-5">
             <div class="kicker">关于驱动</div>
             <p class="mt-3 text-sm text-black/70 leading-7">
-                这个配置默认用系统通用 PostScript 驱动 —— <strong>纯文字 / PDF / 一般图文文档完全够用</strong>。如果要打非常吃驱动的东西（特殊纸张、装订排版、海报级图像），到 Toshiba 官网下载 <code>Toshiba e-STUDIO 457 macOS / Windows 驱动</code> 装好后，在"打印机与扫描仪"里把对应打印机的"驱动"切换过去就行，已配置的地址不用动。
+                Mac 直连使用系统通用 PostScript 驱动，Windows 使用学校共享队列的驱动。网页打印不需要电脑安装学校打印机驱动。
             </p>
         </section>
 
         <!-- Troubleshooting -->
         <section class="panel p-6 md:p-10 mt-8">
             <div class="kicker">打不出来怎么办</div>
-            <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">先按这个清单查一遍</h2>
-
+            <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-[-0.04em]">按当前提交方式检查</h2>
             <div class="mt-6">
-                <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 第一次打印账号填错了（比如忘改 Mac 用户名），现在死活不弹账号框，刷新按钮也按不出，删了重装也没用</div>
-                    <div class="text-black/75">
-                        CUPS 把"已尝试认证"的状态卡住了，普通的删除重装清不掉。按这个顺序救：<br>
-                        1. 终端跑 <code>cancel -a</code> 清掉所有 stuck 任务；<br>
-                        2. 打开<strong>钥匙串访问</strong>搜 <code>172.16.244.66</code>，删掉所有条目（或终端 <code>security delete-internet-password -s 172.16.244.66</code>）；<br>
-                        3. <code>lpadmin -x UICPrinter</code> 删队列；<br>
-                        4. 还不行就开<strong>核选项</strong>：系统设置 → 打印机与扫描仪 → 按住 Control 单击左侧列表 → 选"<strong>重置打印系统...</strong>"，所有打印机和队列一锅端清空；<br>
-                        5. 重新跑安装命令，这次账号框里<strong>记得改成学号</strong>（不是默认填的 Mac 用户名）。<br>
-                        新版脚本已经把第 1、2、3 步做成自动了，重跑安装即可。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 提交打印后没弹账号框</div>
-                    <div class="text-black/75">
-                        新版脚本用 <code>negotiate</code> 认证，提交即弹（跟手动添加一样）。如果你装的是旧版脚本（任务静默失败、或停在"保留以进行认证"不弹框），<strong>重新跑一遍命令行 / 脚本</strong>即可。手动补：<code>lpadmin -p UICPrinter -o auth-info-required=negotiate</code>。任务停在"保留以进行认证"时也可以直接点任务右边圆圈刷新按钮触发账号框。记得把"名称"从 Mac 用户名改成学号。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">ping 172.16.244.66 没反应 / 脚本第一步就失败</div>
-                    <div class="text-black/75">
-                        没连校园 Wi-Fi，或者开了代理 / VPN。先关掉所有代理软件，重连 UIC 的 Wi-Fi（不是 eduroam，确认连的是校内 SSID），再试一次。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">打印机加上了，但打印出来全是乱码 / 排版错乱</div>
-                    <div class="text-black/75">
-                        通用 PostScript 驱动跟你的文档不兼容。装一份 Toshiba e-STUDIO 457 的官方驱动，在"打印机与扫描仪"里把驱动切过去。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">电脑显示已提交，机器上找不到我的任务</div>
-                    <div class="text-black/75">
-                        账号填错了（PaperCut 把任务记到了别人头上），或者第一次输账号时没勾"记住"，每次提交用了不同账号。打开<strong>钥匙串访问 (Mac) / 凭据管理器 (Win)</strong>删掉 <code>172.16.244.66</code> 的记录，下次重新认证。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 双击 .command 弹"Apple 无法验证"且只有"完成 / 移到废纸篓"</div>
-                    <div class="text-black/75">
-                        macOS Sequoia 把"右键 → 打开"那条快捷通道取消了。需要按这套流程：点 <strong>完成</strong> → 打开"系统设置 → 隐私与安全性" → 滑到下方 <strong>安全性</strong> 区，会看到刚刚被阻止的文件 → 点 <strong>仍然打开</strong> → 再回去双击 .command 这次会有"打开"按钮可点。<br>
-                        或者直接用本页"<strong>终端一行搞定</strong>"那段命令，完全绕开这个流程。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">macOS 脚本跑完但"打印机与扫描仪"里没出现</div>
-                    <div class="text-black/75">
-                        完全退出"系统设置"App 再打开（macOS UI 有时不实时刷新打印机列表）。或者打开"终端"运行 <code>lpstat -p</code>，能看到 <code>UICPrinter</code> 就说明已经加上了，只是 UI 显示有延迟。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">Windows 报"找不到网络路径 / 0x80070035"</div>
-                    <div class="text-black/75">
-                        系统禁用了 SMB 客户端。<code>控制面板 → 程序 → 启用或关闭 Windows 功能</code>，勾上 <strong>SMB 1.0/CIFS File Sharing Support</strong>（仅勾"客户端"子项就够，不要勾服务器）。重启后再跑脚本。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">我人在校外，想用 AnyConnect VPN / Tailscale subnet 远程装打印机</div>
-                    <div class="text-black/75">
-                        TCP 能通，但 <code>Add-Printer</code> 装不上。<strong>跟 VPN/隧道无关</strong>，是 Windows 的 PrintNightmare 补丁不让从远端打印服务器自动下载驱动（校内 Wi-Fi 上也一样拦）。推荐顺序：① <strong>先装 Toshiba e-STUDIO 457 官方驱动</strong>（toshibatec.com），本地有驱动后再跑脚本，无需服务器下载；② Win+R 输 <code>\\172.16.244.66</code> 在网络共享窗口里双击 DP 打印机，图形界面有时能过；③ 等回校园再装最稳。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">Windows 打印队列里任务显示 <code>Printing</code> → <code>Error</code>，不弹账号框</div>
-                    <div class="text-black/75">
-                        SMB 凭据没缓存（或缓存的账号错了），spooler 静默失败。修法：管理员 PowerShell（或普通 PowerShell 也行）跑下面这条把凭据存进 Windows 凭据管理器，然后取消队列里那个 Error 任务、重新打印：<br>
-                        <code class="block mt-1 mono text-xs">cmdkey /add:172.16.244.66 /user:UIC\你的学号 /pass:iSpace密码</code>
-                        <strong>用户名必须带 UIC\ 前缀。</strong> 之前缓存错了想清掉先跑 <code>cmdkey /delete:172.16.244.66</code> 再加。新版安装脚本会在装完后主动让你输一次 → 自动 cmdkey → 跳过这步。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">Windows 报"需要提供其他用户凭据" / "credential required"</div>
-                    <div class="text-black/75">
-                        Windows 没缓存 \\172.16.244.66 的账号。<strong>新版 PowerShell 脚本会自动检测并弹账号框</strong>，按提示输 UIC 账号 + iSpace 密码就行。如果你用的是 .bat 或手动 Win+R，先打开"文件资源管理器"地址栏输 <code>\\172.16.244.66</code>，弹凭据框时勾"记住"，再去加打印机。手动存：<code>cmdkey /add:172.16.244.66 /user:UIC\t12345678 /pass:你的密码</code>
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">Windows 报 <code>Operation could not complete 0x00000040</code> / <code>The specified network name is no longer available</code> / 通用的 <code>An error occurred while performing the specified operation</code>（能浏览 \\172.16.244.66 看到打印机，但加不上）</div>
-                    <div class="text-black/75">
-                        这是 <strong>PrintNightmare 安全补丁</strong>（2021 年后默认开启）拦掉了从打印服务器自动下载驱动这一步。三步走，从易到难任选其一：
-                        <ol class="mt-2 list-decimal pl-5 space-y-1.5">
-                            <li><strong>先装 Toshiba 官方驱动，再加打印机</strong>（最干净）。去 <a class="underline" href="https://www.toshibatec.com/support_download/" target="_blank" rel="noopener">Toshiba TEC 下载中心</a> 搜 <strong>e-STUDIO 457</strong> 的 Windows 驱动，装好后再跑命令行 / 脚本。本地有驱动后 Add-Printer 不用再去服务器下载，绕过整套拦截。</li>
-                            <li><strong>用管理员权限重试</strong>。右键开始菜单 → <strong>终端 (管理员)</strong>，再跑 <code>irm ... | iex</code> 那一行。能解决部分组策略下的拦截。</li>
-                            <li><strong>临时放开 Point and Print 限制</strong>（有安全代价，谨慎）。管理员 PowerShell 跑：<br>
-                                <code class="block mt-1 text-xs">Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Value 0 -Type DWord</code>
-                                然后重启 Print Spooler：<code>Restart-Service Spooler</code>，再跑安装命令。装完务必把那个值改回 <code>1</code>。
-                            </li>
-                        </ol>
-                        装完试打印还有问题，把电脑带去图书馆 IT 台让人帮忙看一眼。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">提示"凭据无效"反复重输</div>
-                    <div class="text-black/75">
-                        你的电脑没有自动识别 UIC 域。把账号从 <code>t12345678</code> 改成 <code>UIC\t12345678</code> 再试。`UIC\` 是 Active Directory 的域名前缀，反斜杠不是斜杠。
-                    </div>
-                </div>
-                <div class="trouble-row">
-                    <div class="trouble-symptom">以上都试过还不行</div>
-                    <div class="text-black/75">
-                        到图书馆服务台问 IT，或者来找我。本工具只是把官方配置打包成一键安装，底层流程跟人工添加是完全一样的。
-                    </div>
-                </div>
+                <div class="trouble-row"><div class="trouble-symptom">脚本打开了网页，系统里没有新增打印机</div><div class="text-black/75">这是当前网络无法访问学校队列时的结果。在网页选择文件、确认预览、输入本人学校账号并提交。校园 Wi-Fi 或校外网络不需要安装直连打印机。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">希望继续在 App 里按 ⌘P 或 Ctrl+P</div><div class="text-black/75">先使用能够访问学校队列的网络，再运行脚本。Mac 显示 UIC打印机，Windows 显示学校 DP 共享队列。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">系统打印机任务停在等待认证</div><div class="text-black/75">确认学校队列可达，再在系统任务窗口重新认证。Mac 用本人学校账号，Windows 可用 UIC\学号。仅处理这台打印机的任务；也可以改用网页打印。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">网页提示打印服务未连接</div><div class="text-black/75">可以先选择 PDF 生成本地预览，服务恢复后再提交。Word 等文件需要服务在线才能转换。不要通过重复新建任务来判断是否恢复。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">任务显示结果待确认，或打印机找不到任务</div><div class="text-black/75">先查看网页任务记录和本人刷卡列表，核对账号与任务时间。结果待确认时先查询，避免重复提交。网站回执确认的是学校队列接收，实际取件需本人刷卡。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">Windows 能看到学校共享，但无法安装驱动</div><div class="text-black/75">按 Windows 的错误提示确认权限和学校提供的签名驱动，或直接使用网页打印。网页提交不需要电脑安装学校驱动。</div></div>
+                <div class="trouble-row"><div class="trouble-symptom">版式或内容不符合预期</div><div class="text-black/75">提交前检查预览。Word 等文件转换后字体和分页可能变化，必要时先从原 App 导出 PDF，再用网页打印。</div></div>
             </div>
         </section>
 
@@ -944,7 +858,7 @@
         <section class="panel p-6 md:p-8 mt-5">
             <div class="kicker">隐私说明</div>
             <p class="mt-3 text-sm text-black/70 leading-7">
-                这个页面只做两件事：① 给你一个配置文件下载；② 告诉你怎么用。<strong>不收集</strong>你的 UIC 账号、密码、学号、任何登录凭据。配置文件里也<strong>不包含</strong>任何账号信息，账号是你的电脑直接跟 PaperCut 通信时输入的，全程经过你的本地系统，跟这个网站没有任何关联。打印计费照常按你的 PaperCut 账户记。
+                安装脚本不收集或缓存学校账号密码。网页提交时通过 HTTPS 填写本人学校账号与密码，校园打印服务不把文档和密码写入任务数据库，临时文件处理后清理。
             </p>
         </section>
 
@@ -1024,13 +938,13 @@
         const FILES = {
             mac: {
                 label: 'macOS',
-                file: '/print-setup/uic-print-mac.zip',
+                file: '/print-setup/uic-print-mac.zip?v=20261001',
                 downloadAs: 'UIC打印机.zip',
                 hint: '(.zip · 内含 .command 脚本)',
             },
             windows: {
                 label: 'Windows',
-                file: '/print-setup/uic-print.bat',
+                file: '/print-setup/uic-print.bat?v=20261001',
                 downloadAs: 'UIC打印机.bat',
                 hint: '(.bat · 一键脚本)',
             },
@@ -1045,7 +959,7 @@
         const osButtons = document.querySelectorAll('[data-os]');
         const primary = document.getElementById('primary-download');
         const primaryLabel = document.getElementById('primary-label');
-        if (primaryLabel) primaryLabel.textContent = '下载并安装';
+        if (primaryLabel) primaryLabel.textContent = '下载配置脚本';
 
         const setOS = (os) => {
             const filesKey = os === 'mac' ? 'mac' : 'windows';
@@ -1085,6 +999,27 @@
                 }
             });
         };
+
+        // Advertise the live service and limits without inventing availability.
+        (async () => {
+            const status = document.getElementById('web-print-status');
+            const limits = document.getElementById('web-print-limits');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+            try {
+                const response = await fetch('/api/print/session', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+                if (!response.ok) throw new Error('session');
+                const data = await response.json();
+                const service = data.service;
+                status.textContent = service?.enabled && service.ready && !service.demo
+                    ? service.busy ? '打印服务正在处理其他任务，稍后可以提交。' : '网页打印已连接，可以提交。'
+                    : '打印服务暂未就绪，可以先进入网页预览，恢复后再提交。';
+                if (service?.online && data.limits?.max_bytes && data.limits?.max_pages && data.capabilities?.copies?.max) {
+                    limits.textContent = `每个文件最多 ${Math.round(data.limits.max_bytes / 1048576)} MB、${data.limits.max_pages} 页，可选黑白、彩色、单双面和 1 至 ${data.capabilities.copies.max} 份。`;
+                }
+            } catch (_) { status.textContent = '暂时无法查询打印服务状态，请到网页打印查看。'; }
+            finally { clearTimeout(timeout); }
+        })();
         wireCopy('mac-terminal-copy', 'mac-terminal-cmd');
         wireCopy('win-terminal-copy', 'win-terminal-cmd');
 
