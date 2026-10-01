@@ -1,6 +1,9 @@
 """Installer branch checks without modifying the host's printers or keychain."""
 from pathlib import Path
 import os
+import re
+import html
+import shutil
 import plistlib
 import subprocess
 import tempfile
@@ -62,6 +65,19 @@ class PrintSetupScriptsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(calls[-1], 'open:' + PORTAL)
         self.assertIn('系统打印机配置未完成', result.stdout)
+
+    @unittest.skipUnless(shutil.which('zsh'), 'Requires the macOS default shell')
+    def test_copied_mac_command_executes_in_zsh_without_url_globbing(self):
+        page = (ROOT / 'print-setup/index.html').read_text()
+        command = html.unescape(re.search(r'<code id="mac-terminal-cmd"[^>]*>(.*?)</code>', page).group(1))
+        with tempfile.TemporaryDirectory() as name:
+            folder = Path(name)
+            curl = folder / 'curl'
+            curl.write_text("#!/bin/sh\ncat <<'SCRIPT'\nprintf '%s\\n' 'download-executed'\nSCRIPT\n")
+            curl.chmod(0o755)
+            result = subprocess.run(['zsh', '-f', '-c', command], env={**os.environ, 'PATH': str(folder)+os.pathsep+os.environ['PATH']}, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), 'download-executed')
 
     def test_downloaded_zip_contains_current_executable_installer(self):
         with zipfile.ZipFile(ROOT / 'print-setup/uic-print-mac.zip') as archive:
