@@ -18,11 +18,11 @@
     'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
     'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
     'cost-note', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
-    'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs',
+    'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs', 'bulk-confirm', 'bulk-check', 'bulk-label',
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
   const DEFAULT_OPTIONS = Object.freeze({ color: 'grayscale', sides: 'one-sided', copies: 1 });
-  const COPIES_LIMIT = 20;
+  const COPIES_LIMIT = 100;
   const ZOOMS = ['fit', '1', '1.5', '2'];
   const STEPS = ['auth', 'inspect', 'send'];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -65,7 +65,7 @@
   const copiesCap = () => {
     const cap = !featuresKnown() ? COPIES_LIMIT :
       supports('copies') ? (state.session.capabilities?.copies?.max || COPIES_LIMIT) : 1;
-    const impressions = state.session?.limits?.max_impressions || 200;
+    const impressions = state.session?.limits?.max_impressions || 30000;
     return state.pages ? Math.max(1, Math.min(cap, Math.floor(impressions / state.pages))) : cap;
   };
   const unsupported = (options = state.options) => [
@@ -79,6 +79,7 @@
     options.copies + ' 份',
   ];
   const sheetsFor = (pages, options) => (duplex(options) ? Math.ceil(pages / 2) : pages) * options.copies;
+  const needsBulk = (pages, options) => pages * options.copies > (state.session?.limits?.bulk_confirmation_threshold || 200);
   const previewed = () => !!state.pdf && state.drawn;
   const canConvert = () => ready() && (state.session?.service?.features || []).includes('convert');
   const fileSize = bytes => bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
@@ -262,6 +263,13 @@
     ui['copies-dec'].disabled = frozen || options.copies <= 1;
     ui['copies-inc'].disabled = frozen || options.copies >= cap;
     const pages = state.pages || 0;
+    const bulkKey = JSON.stringify([state.fileGeneration, pages, options]);
+    if (ui['bulk-check'].dataset.key !== bulkKey) ui['bulk-check'].checked = false;
+    ui['bulk-check'].dataset.key = bulkKey;
+    ui['bulk-check'].disabled = locked;
+    ui['bulk-confirm'].hidden = !needsBulk(pages, options);
+    ui['bulk-label'].textContent = `我确认打印 ${pages} 页 × ${options.copies} 份，共 ${pages * options.copies} 面，预计用纸 ${sheetsFor(pages, options)} 张。`;
+    ui['limits-hint'].textContent = `最大 ${Math.round((state.session?.limits?.max_bytes || 52428800) / 1048576)} MB · 最多 ${state.session?.limits?.max_pages || 300} 页`;
     if (!supports('color')) note('color-note', '设备暂不支持彩色', true);
     else note('color-note', options.color === 'color' ? '按彩色标准计费' : '');
     if (!supports('duplex')) note('sides-note', '设备暂不支持双面', true);
@@ -471,6 +479,7 @@
   function openAccount() {
     if (state.busy || state.reading || state.receipt || !previewed()) return;
     clearPassword();
+    ui['bulk-check'].checked = false;
     showError('form-error');
     drawThumb();
     render();
@@ -509,13 +518,13 @@
     showError('form-error');
     if (files.length !== 1) { showError('file-error', '每次选择一个文件。'); render(); return; }
     const file = files[0];
-    const maxBytes = state.session?.limits?.max_bytes || 10485760;
+    const maxBytes = state.session?.limits?.max_bytes || 52428800;
     const convert = CONVERTIBLE.test(file.name);
     if ((!convert && !/\.pdf$/i.test(file.name)) || !file.size) {
       showError('file-error', '暂不支持这种文件，请选择 PDF、Word、PPT、Excel 或图片。'); render(); return;
     }
     if (file.size > maxBytes) {
-      showError('file-error', '文件超过 10 MB，请压缩后再试。'); render(); return;
+      showError('file-error', `文件超过 ${Math.round(maxBytes / 1048576)} MB，请压缩后再试。`); render(); return;
     }
     if (convert && !canConvert()) {
       showError('file-error', ready() ? '当前设备暂不支持转换，请先导出为 PDF。' : '打印服务未连接，暂时无法转换，请先导出为 PDF。');
@@ -541,7 +550,7 @@
       if (convert) {
         ui['preview-loading'].textContent = '正在转换为 PDF…';
         announce('正在转换为 PDF…');
-        const result = await api('/api/print/convert', { document: data, name: file.name }, 150000);
+        const result = await api('/api/print/convert', { document: data, name: file.name }, 410000);
         if (generation !== state.fileGeneration) return;
         if (!result.ok || typeof result.data?.pdf !== 'string') {
           throw Object.assign(new Error(errorText(result, '这份文件无法转换，请导出为 PDF 后再试。')), { shown: true });
@@ -553,7 +562,7 @@
         render();
       }
       if (atob(data.slice(0, 8)).slice(0, 5) !== '%PDF-') throw new Error('signature');
-      const inspected = await pdfPreview.load(pdfFile, state.session?.limits?.max_pages || 50);
+      const inspected = await pdfPreview.load(pdfFile, state.session?.limits?.max_pages || 300);
       if (generation !== state.fileGeneration) return;
       state.pages = inspected.pages;
       state.pdf = data;
@@ -768,6 +777,12 @@
     ui['school-password'].removeAttribute('aria-invalid');
     if (!state.pdf) { showError('file-error', '先选择一份需要打印的 PDF。'); ui['pick-btn'].focus(); return; }
     if (!ui['account-dialog'].open) { openAccount(); return; }
+    const confirmedPages = state.pages;
+    const confirmedOptions = JSON.stringify(activeOptions());
+    const bulkApproved = ui['bulk-check'].checked;
+    if (needsBulk(state.pages, activeOptions()) && !bulkApproved) {
+      showError('form-error', '请先确认本次打印总量。'); ui['bulk-check'].focus(); return;
+    }
     const account = username();
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(account)) {
       showError('form-error', '请输入正确的学校账号。');
@@ -806,11 +821,14 @@
       const identity = state.identityGeneration;
       const owner = state.session.user.id;
       progress('正在检查 PDF…', 'inspect');
-      const inspection = await api('/api/print/inspect', { pdf: state.pdf });
+      const inspection = await api('/api/print/inspect', { pdf: state.pdf }, 175000);
       if (!inspection.ok) throw new Error(errorText(inspection, '文件检查失败，请稍后重试。'));
       if (!Number.isInteger(inspection.data?.pages) || !inspection.data?.inspection_token) throw new Error('没有收到有效的文件检查结果，请重试。');
       if (identity !== state.identityGeneration || schoolUser() !== account) throw new Error('登录状态已变化，请重新提交。');
       state.pages = inspection.data.pages;
+      if (needsBulk(state.pages, options) && (!bulkApproved || confirmedPages !== state.pages || confirmedOptions !== JSON.stringify(options))) {
+        throw new Error('打印总量已变化，请重新确认后提交。');
+      }
       if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options };
       state.receiptDoc = { name: state.file?.name || '', pages: state.pages, options: state.intent.options };
       progress('正在提交打印…', 'send'); render();
@@ -818,7 +836,8 @@
       const result = await api('/api/print/jobs', {
         pdf: state.pdf, password, inspection_token: inspection.data.inspection_token,
         idempotency_key: state.intent.key, options: state.intent.options,
-      }, 165000);
+        ...(bulkApproved ? { bulk_confirmation: { sha256: inspection.data.sha256, pages: state.pages, options: state.intent.options } } : {}),
+      }, 410000);
       if (result.ok && result.data?.job && result.data.job.idempotency_key === state.intent.key &&
           ['submitted', 'processing', 'unknown', 'failed', 'rejected'].includes(result.data.job.state)) {
         acceptedResponse = true;
