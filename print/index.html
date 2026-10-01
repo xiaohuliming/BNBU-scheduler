@@ -34,7 +34,7 @@
         <span class="service-text" id="service-text">连接中</span>
         <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
       </div>
-      <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="打印须知">
+      <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="常见问题">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7M12 16.9v.1"/></svg>
       </button>
     </div>
@@ -46,76 +46,47 @@
   <p class="sr-only" id="page-description">先上传文件，预览确认后再提交。</p>
 
   <section class="intro-view" id="intro-view" aria-labelledby="intro-title">
-    <div class="hero">
-      <div class="hero-copy">
-        <p class="hero-eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>校园打印 · 刷卡取件</p>
-        <h2 class="hero-title" id="intro-title">在网页上打印，<br>到打印点取件。</h2>
-        <p class="hero-sub">上传文件，预览确认，送往学校打印队列。</p>
-        <div class="hero-actions">
-          <button class="btn btn-primary btn-lg" id="start-print" type="button">
-            <span>开始打印</span>
-            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
-          </button>
-          <button class="btn btn-quiet btn-lg" id="intro-help" type="button">打印须知</button>
-        </div>
-        <ul class="hero-formats" aria-label="支持的文件">
-          <li>PDF</li><li>Word</li><li>PPT</li><li>Excel</li><li>图片</li>
-        </ul>
-      </div>
-      <div class="hero-scene" aria-hidden="true">
-        <div class="scene-sheet">
-          <div class="scene-page">
-            <div class="scene-layer">
-              <span class="scene-bar"></span>
-              <span class="scene-line w90"></span><span class="scene-line w70"></span>
-              <span class="scene-art"></span>
-              <span class="scene-line w80"></span><span class="scene-line w55"></span>
-              <span class="scene-bars"><i></i><i></i><i></i><i></i><i></i></span>
+    <div class="proof">
+      <span class="proof-note proof-note-left" aria-hidden="true">MAXCOURSE PRINT — PROOF 01</span>
+      <span class="proof-note proof-note-right" aria-hidden="true">A4 210 × 297 mm</span>
+      <span class="reg reg-top" aria-hidden="true"></span>
+      <span class="reg reg-bottom" aria-hidden="true"></span>
+      <span class="reg reg-left" aria-hidden="true"></span>
+      <span class="reg reg-right" aria-hidden="true"></span>
+      <div class="proof-sheet">
+        <span class="crop crop-tl" aria-hidden="true"></span><span class="crop crop-tr" aria-hidden="true"></span>
+        <span class="crop crop-bl" aria-hidden="true"></span><span class="crop crop-br" aria-hidden="true"></span>
+        <div class="proof-page">
+          <div class="proof-content">
+            <header class="proof-head"><span>MAXCOURSE</span><span>校园打印服务</span></header>
+            <h2 class="proof-title" id="intro-title">校园打印</h2>
+            <p class="proof-lead">在这里交文件，确认好版面，再去图书馆的打印机刷学生证取。Word、PPT 这类文件会先帮你转成 PDF。</p>
+            <dl class="proof-specs">
+              <div><dt>可以打印</dt><dd>PDF、Word、PPT、Excel、图片</dd></div>
+              <div><dt>文件</dt><dd>10 MB 以内，最多 50 页</dd></div>
+              <div><dt>纸张</dt><dd>A4</dd></div>
+              <div><dt>颜色</dt><dd>黑白，或彩色（另计费）</dd></div>
+              <div><dt>单双面</dt><dd>单面；双面可选长边或短边翻页</dd></div>
+              <div><dt>份数</dt><dd>一次最多 20 份</dd></div>
+              <div><dt>取件</dt><dd>图书馆东芝打印机，刷学生证</dd></div>
+            </dl>
+            <div class="proof-actions">
+              <button class="btn btn-primary btn-lg" id="start-print" type="button">
+                <span>开始打印</span>
+                <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              </button>
+              <button class="text-btn" id="intro-help" type="button">常见问题</button>
             </div>
-            <div class="scene-layer scene-mono">
-              <span class="scene-bar"></span>
-              <span class="scene-line w90"></span><span class="scene-line w70"></span>
-              <span class="scene-art"></span>
-              <span class="scene-line w80"></span><span class="scene-line w55"></span>
-              <span class="scene-bars"><i></i><i></i><i></i><i></i><i></i></span>
-            </div>
-            <span class="scene-scan"></span>
+            <footer class="proof-foot"><span>文件和密码只用于这次打印，不会保存。</span><span>1 / 1</span></footer>
           </div>
+          <span class="print-head" aria-hidden="true"></span>
         </div>
-        <span class="scene-chip chip-a"><i class="chip-swatch"></i>彩色</span>
-        <span class="scene-chip chip-b"><svg viewBox="0 0 24 24"><rect x="4.5" y="6" width="11" height="14.5" rx="1.6"/><path d="M8.5 3.5h9.4a1.6 1.6 0 0 1 1.6 1.6v12.4"/></svg>双面 · 长边</span>
-        <span class="scene-chip chip-c">× 2 份</span>
-        <div class="scene-receipt">
-          <span class="scene-check"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-          <span><strong>已提交</strong><small>到打印点刷卡</small></span>
-        </div>
+      </div>
+      <div class="color-bar" aria-hidden="true">
+        <i class="c"></i><i class="m"></i><i class="y"></i><i class="k"></i><i class="k75"></i><i class="k50"></i><i class="k25"></i>
+        <span>C M Y K</span>
       </div>
     </div>
-
-    <ul class="features">
-      <li>
-        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3.5H7.5A1.5 1.5 0 0 0 6 5v14a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V7.5L14 3.5Z"/><path d="M14 3.5v4h4M9 12.5h6M9 16h4"/></svg></span>
-        <h3>多种格式</h3><p>PDF、Word、PPT、Excel 与图片</p>
-      </li>
-      <li>
-        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.8"/></svg></span>
-        <h3>真实预览</h3><p>按 A4 呈现，彩色与双面即时可见</p>
-      </li>
-      <li>
-        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 7h9M17.5 7h2M4.5 17h3M11.5 17h8"/><circle cx="15.5" cy="7" r="2"/><circle cx="9.5" cy="17" r="2"/></svg></span>
-        <h3>灵活设置</h3><p>黑白或彩色、单双面、最多 20 份</p>
-      </li>
-      <li>
-        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
-        <h3>安全私密</h3><p>不保存密码与文件，处理后即清理</p>
-      </li>
-    </ul>
-
-    <ol class="steps-row" aria-label="打印步骤">
-      <li><span class="step-num">01</span><h3>上传文件</h3><p>拖入或选择，无需登录</p></li>
-      <li><span class="step-num">02</span><h3>预览设置</h3><p>核对版式，选择打印方式</p></li>
-      <li><span class="step-num">03</span><h3>刷卡取件</h3><p>到打印点刷学生证出纸</p></li>
-    </ol>
   </section>
 
   <form class="workspace" id="submit-form" method="post" action="/api/print/jobs" novalidate>
@@ -155,6 +126,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
             </button>
           </header>
+          <div class="ink-bar" id="ink-bar" aria-hidden="true"><i class="c"></i><i class="m"></i><i class="y"></i><i class="k"></i></div>
           <div class="stage-meta">
             <a class="stage-link" id="doc-open" target="_blank" rel="noopener" aria-label="在新标签页打开 PDF">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 5.5h5v5M18.5 5.5 11 13M10 7H6.5A1.5 1.5 0 0 0 5 8.5v9A1.5 1.5 0 0 0 6.5 19h9a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
@@ -181,6 +153,7 @@
                 </div>
               </div>
               <span class="copies-badge" id="copies-badge" aria-hidden="true">× 1</span>
+              <span class="sheet-marks" aria-hidden="true"></span>
             </div>
           </div>
           <p class="preview-loading" id="preview-loading" role="status">正在生成预览…</p>
@@ -390,15 +363,16 @@
 
 <dialog class="sheet-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
   <header class="dialog-head">
-    <h2 id="help-title">打印须知</h2>
-    <button class="icon-btn" id="help-close" type="button" aria-label="关闭打印须知">
+    <h2 id="help-title">常见问题</h2>
+    <button class="icon-btn" id="help-close" type="button" aria-label="关闭常见问题">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
     </button>
   </header>
   <div class="help-body">
-    <section class="help-sec"><span class="help-index">01</span><div><h3>取件</h3><p>提交后到打印点刷卡取件，费用以学校系统为准，彩色按彩色计费。</p></div></section>
-    <section class="help-sec"><span class="help-index">02</span><div><h3>文件</h3><p>PDF、Word、PPT、Excel 或图片，10 MB、50 页以内。非 PDF 会先转换，请核对预览。</p></div></section>
-    <section class="help-sec"><span class="help-index">03</span><div><h3>隐私</h3><p>不保存密码与文件，处理完即清理。</p></div></section>
+    <section class="help-sec"><h3>在哪里取？</h3><p>图书馆的东芝打印机。刷学生证，在待打印列表里选这份文件。</p></section>
+    <section class="help-sec"><h3>多少钱？</h3><p>按学校打印标准，在打印机上扣费。彩色页按彩色价格算。</p></section>
+    <section class="help-sec"><h3>Word 打出来会变样吗？</h3><p>转换后的字体可能和你电脑上不同，提交前看一眼预览。要是不放心，先在电脑上导出 PDF。</p></section>
+    <section class="help-sec"><h3>密码会被保存吗？</h3><p>不会。密码只用来提交这一次，文件处理完就删掉。</p></section>
   </div>
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>

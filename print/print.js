@@ -7,7 +7,7 @@
     'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
     'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'drop-sub', 'file-kind', 'checkout',
-    'intro-view', 'start-print', 'intro-help',
+    'intro-view', 'start-print', 'intro-help', 'ink-bar',
     'school-username', 'school-password', 'password-toggle', 'form-error',
     'progress-text', 'submit-btn', 'submit-label', 'submit-steps', 'account-fields', 'receipt', 'receipt-icon',
     'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-details', 'receipt-query', 'receipt-retry',
@@ -292,6 +292,7 @@
     const blankBack = two && state.previewPage + 1 > pages;
     ui.sheet.dataset.flip = two ? edge : 'none';
     ui.sheet.classList.toggle('is-color', options.color === 'color');
+    ui['ink-bar'].classList.toggle('is-color', options.color === 'color');
     ui.sheet.classList.toggle('is-flipped', two && state.flipped);
     ui.sheet.classList.toggle('is-loading', !state.drawn);
     ui['sheet-wrap'].dataset.copies = String(Math.min(options.copies, 5));
