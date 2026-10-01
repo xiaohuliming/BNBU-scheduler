@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="MAXCOURSE 校园打印：上传 PDF，预览并选择颜色、单双面与份数，使用学校账号提交后刷卡取件。">
-<meta name="theme-color" content="#f4f3ef">
+<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
@@ -42,16 +44,16 @@
       <p id="page-description">先上传文件，预览确认后再提交。</p>
     </div>
     <ol class="stepper" id="stepper" data-step="1" aria-label="打印流程">
-      <li id="step-upload" aria-current="step"><span class="step-index">01</span><span class="step-name">上传文档</span></li>
-      <li id="step-preview"><span class="step-index">02</span><span class="step-name">预览与设置</span></li>
-      <li id="step-submit"><span class="step-index">03</span><span class="step-name">确认提交</span></li>
+      <li id="step-upload" aria-current="step"><span class="step-index">1</span><span class="step-name">上传文档</span></li>
+      <li id="step-preview"><span class="step-index">2</span><span class="step-name">预览与设置</span></li>
+      <li id="step-submit"><span class="step-index">3</span><span class="step-name">确认提交</span></li>
     </ol>
   </div>
 
   <form class="workspace" id="submit-form" method="post" action="/api/print/jobs" novalidate>
     <p class="file-error" id="file-error" role="alert" hidden></p>
     <div id="workspace-fields">
-      <section class="upload-stage" id="upload-stage" aria-labelledby="upload-title">
+      <section class="card upload-stage" id="upload-stage" aria-labelledby="upload-title">
         <div class="dropzone" id="dropzone">
           <div class="drop-visual" id="drop-visual" aria-hidden="true">
             <div class="drop-tilt">
@@ -68,7 +70,7 @@
           <p class="drop-sub">或从设备中选择文件，预览前无需登录</p>
           <button class="btn btn-primary pick-btn" id="pick-btn" type="button">
             <span>选择 PDF</span>
-            <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5"/></svg></span>
+            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5"/></svg></span>
           </button>
           <p class="dz-hint" id="limits-hint">最大 10 MB · 最多 50 页</p>
           <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
@@ -77,7 +79,7 @@
       </section>
 
       <section class="preview-workspace" id="doc-panel" aria-labelledby="preview-title" hidden>
-        <div class="preview-main">
+        <div class="card preview-main">
           <header class="file-bar">
             <span class="file-icon" aria-hidden="true">PDF</span>
             <div class="file-info"><h2 id="doc-name"></h2><p id="doc-sub"></p></div>
@@ -148,7 +150,7 @@
         </div>
 
         <div class="side">
-          <aside class="print-settings" aria-labelledby="output-title">
+          <aside class="card print-settings" aria-labelledby="output-title">
             <div class="settings-head">
               <h2 id="output-title">打印设置</h2>
               <span class="settings-paper">A4 · 210 × 297 mm</span>
@@ -203,7 +205,7 @@
             </div>
           </aside>
 
-          <div class="checkout" id="checkout">
+          <div class="card checkout" id="checkout">
             <div class="total">
               <div class="total-figure"><strong id="print-total-sheets" data-value="0">0</strong><span>张 A4</span></div>
               <p class="total-detail" id="print-total">正在检查页数</p>
@@ -211,7 +213,7 @@
             <p class="cost-note" id="cost-note">刷卡取件时按学校标准计费。</p>
             <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
               <span>确认打印</span>
-              <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
             </button>
             <p class="go-print-note" id="go-print-note">预览完成后继续。</p>
           </div>
@@ -267,7 +269,7 @@
         <p class="sr-only" id="progress-text" role="status" hidden></p>
         <button class="btn btn-primary submit-btn" id="submit-btn" type="submit" disabled>
           <span id="submit-label">提交打印</span>
-          <span class="btn-orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8.5 7H17v8.5"/></svg></span>
+          <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8.5 7H17v8.5"/></svg></span>
         </button>
         <p class="submit-note">提交成功后，请到打印点刷卡取件。</p>
       </div>
@@ -294,7 +296,7 @@
     </section>
   </form>
 
-  <details class="history" id="history" hidden>
+  <details class="card history" id="history" hidden>
     <summary>
       <span>最近打印 <span class="jobs-count" id="jobs-count"></span></span>
       <svg class="history-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>
