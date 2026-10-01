@@ -8,7 +8,7 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css" rel="stylesheet">
+<link href="print.css?v=limits-20261001" rel="stylesheet">
 </head>
 <body>
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
@@ -69,7 +69,7 @@
             <span>选择文件</span>
             <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5"/></svg></span>
           </button>
-          <p class="dz-hint" id="limits-hint">最大 10 MB · 最多 50 页</p>
+          <p class="dz-hint" id="limits-hint">最大 50 MB · 最多 300 页</p>
           <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
         </div>
         <ul class="capability-row" id="capability-row" aria-label="打印规格"></ul>
@@ -190,7 +190,7 @@
                 <button type="button" id="copies-dec" aria-label="减少一份">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
                 </button>
-                <input id="copies" type="number" min="1" max="20" value="1" inputmode="numeric">
+                <input id="copies" type="number" min="1" max="100" value="1" inputmode="numeric">
                 <button type="button" id="copies-inc" aria-label="增加一份">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
                 </button>
@@ -233,6 +233,7 @@
             <small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small>
           </div>
         </div>
+        <label class="bulk-confirm" id="bulk-confirm" hidden><input type="checkbox" id="bulk-check"><span id="bulk-label"></span></label>
         <p class="account-service" id="account-service" role="status" hidden>打印服务未连接，暂时无法提交。</p>
         <div class="collapse account-fields" id="account-fields">
           <div class="collapse-inner">
@@ -328,6 +329,6 @@
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
 <script src="pdf-preview.js" defer></script>
-<script src="print.js" defer></script>
+<script src="print.js?v=limits-20261001" defer></script>
 </body>
 </html>

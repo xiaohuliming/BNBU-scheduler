@@ -569,3 +569,7 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
   }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+.bulk-confirm { display: flex; gap: 10px; align-items: flex-start; padding: 14px; margin: 0 0 18px; border: 1px solid var(--ink); font-size: 13px; line-height: 1.7; cursor: pointer; }
+.bulk-confirm[hidden] { display: none; }
+.bulk-confirm input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ink); }
