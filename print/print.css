@@ -717,13 +717,13 @@ body[data-view="intro"] .stepper { opacity: 0; pointer-events: none; }
 }
 .proof-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 11px; border-bottom: 1.5px solid #1c1c1e; font-size: 11.5px; color: #4a4945; }
 .proof-head span:first-child { font: 700 11px/1.5 var(--brand); letter-spacing: .24em; color: #1c1c1e; }
-.proof-title { margin: 30px 0 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
-.proof-lead { margin: 14px 0 0; font-size: 14.5px; line-height: 1.8; color: #4a4945; }
-.proof-specs { margin: 24px 0 0; border-top: 1px solid rgba(28, 28, 30, .14); }
-.proof-specs div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; padding: 8px 0; border-bottom: 1px solid rgba(28, 28, 30, .08); font-size: 13.5px; }
+.proof-title { margin: 44px 0 0; font-size: 56px; line-height: 1.05; font-weight: 700; letter-spacing: -.03em; }
+.proof-lead { margin: 16px 0 0; font-size: 16px; line-height: 1.7; color: #4a4945; }
+.proof-specs { margin: auto 0 0; border-top: 1px solid rgba(28, 28, 30, .14); }
+.proof-specs div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; padding: 11px 0; border-bottom: 1px solid rgba(28, 28, 30, .08); font-size: 14px; }
 .proof-specs dt { color: #8a8984; }
 .proof-specs dd { margin: 0; text-wrap: pretty; }
-.proof-actions { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 22px; }
+.proof-actions { display: flex; align-items: center; gap: 10px; padding-top: 28px; }
 .proof-page .btn-primary { background: #1c1c1e; color: #fff; box-shadow: 0 8px 20px -12px rgba(0, 0, 0, .6); }
 .proof-page .text-btn { color: #4a4945; }
 .proof-page .text-btn:hover { background: rgba(28, 28, 30, .06); }
@@ -768,8 +768,9 @@ body[data-view="intro"] .stepper { opacity: 0; pointer-events: none; }
   .proof { width: 100%; padding: 30px 22px 58px; }
   .proof-sheet { width: 100%; aspect-ratio: auto; }
   .proof-content { padding: 28px 24px 20px; }
-  .proof-title { margin-top: 22px; font-size: 36px; }
-  .proof-specs div { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+  .proof-title { margin-top: 28px; font-size: 42px; }
+  .proof-specs { margin-top: 64px; }
+  .proof-specs div { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; }
   .proof-actions { padding-top: 24px; }
   .proof-note, .reg-left, .reg-right { display: none; }
   .crop { width: 18px; height: 18px; }
