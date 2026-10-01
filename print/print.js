@@ -6,7 +6,7 @@
   const ui = Object.fromEntries([
     'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
-    'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'capability-row',
+    'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'drop-sub', 'file-kind', 'checkout',
     'school-username', 'school-password', 'password-toggle', 'form-error',
     'progress-text', 'submit-btn', 'submit-label', 'submit-steps', 'account-fields', 'receipt', 'receipt-icon',
     'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-details', 'receipt-query', 'receipt-retry',
@@ -14,10 +14,10 @@
     'help-open', 'help-close', 'help-dialog', 'announce',
     'go-print', 'go-print-note', 'account-dialog', 'account-back', 'confirm-name', 'account-service',
     'confirm-thumb', 'thumb-frame', 'upload-stage', 'preview-canvas', 'preview-tint', 'back-canvas', 'back-tint',
-    'blank-note', 'sheet', 'sheet-wrap', 'copies-badge', 'page-stage', 'preview-loading', 'preview-caption',
+    'blank-note', 'sheet', 'sheet-wrap', 'copies-badge', 'page-stage', 'preview-loading',
     'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
-    'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
-    'cost-note', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
+    'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'print-total', 'print-total-sheets',
+    'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'tile-gray', 'tile-color',
     'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs',
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
@@ -26,14 +26,17 @@
   const ZOOMS = ['fit', '1', '1.5', '2'];
   const STEPS = ['auth', 'inspect', 'send'];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  // Office documents and images are converted to PDF by the print service before preview.
+  const CONVERTIBLE = /\.(docx?|odt|rtf|pptx?|odp|xlsx?|ods|jpe?g|png)$/i;
+  const CONVERT_ACCEPT = '.pdf,.doc,.docx,.odt,.rtf,.ppt,.pptx,.odp,.xls,.xlsx,.ods,.jpg,.jpeg,.png';
   const state = {
     session: null, sessionGeneration: 0, identityGeneration: 0, fileGeneration: 0,
     file: null, fileURL: null, pdf: null, pages: null, busy: false, reading: false,
     intent: null, receipt: null, receiptTone: '', receiptDoc: null, jobs: [], pollTimer: null, polls: 0,
     checking: false, retry: false, jobQuery: false,
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
-    faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
-    step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0,
+    faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, flipped: false,
+    step: '', copiesTyping: false, converting: false, converted: false, sweepTimer: null, demoTimer: null, dragDepth: 0,
   };
   const labels = { submitted: '待刷卡取件', processing: '正在提交', unknown: '结果待确认',
     failed: '未提交', rejected: '账号验证失败' };
@@ -55,7 +58,6 @@
 
   // Output options. Until the service reports its features, every option stays previewable.
   const duplex = (options = state.options) => options.sides !== 'one-sided';
-  const sidesFor = edge => edge === 'short' ? 'two-sided-short-edge' : 'two-sided-long-edge';
   const activeOptions = () => state.intent?.options || state.options;
   const featuresKnown = () => state.session?.service?.online === true;
   const supports = feature => !featuresKnown() || (state.session.service.features || []).includes(feature);
@@ -77,6 +79,8 @@
   ];
   const sheetsFor = (pages, options) => (duplex(options) ? Math.ceil(pages / 2) : pages) * options.copies;
   const previewed = () => !!state.pdf && state.drawn;
+  const fileSize = bytes => bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
+  const canConvert = () => ready() && (state.session?.service?.features || []).includes('convert');
 
   async function api(path, body, timeout = 60000) {
     const controller = new AbortController();
@@ -168,13 +172,13 @@
 
   function render() {
     const service = state.session?.service;
-    let status = '正在连接打印服务';
+    let status = '连接中';
     let tone = 'connecting';
-    if (!navigator.onLine) { status = '网络已断开'; tone = 'offline'; }
-    else if (service?.demo) { status = '未连接真实打印设备'; tone = 'offline'; }
-    else if (service?.busy) { status = '正在处理其他任务'; tone = 'busy'; }
-    else if (ready()) { status = '打印服务已连接'; tone = 'online'; }
-    else if (!state.checking) { status = '打印服务未连接'; tone = 'offline'; }
+    if (!navigator.onLine) { status = '离线'; tone = 'offline'; }
+    else if (service?.demo) { status = '未连接'; tone = 'offline'; }
+    else if (service?.busy) { status = '设备忙'; tone = 'busy'; }
+    else if (ready()) { status = '已连接'; tone = 'online'; }
+    else if (!state.checking) { status = '未连接'; tone = 'offline'; }
     ui['service-text'].textContent = status;
     ui['service-status'].dataset.state = tone;
     ui['service-dot'].className = 'service-dot ' + tone;
@@ -192,8 +196,9 @@
     ui['password-toggle'].disabled = locked;
     ui['go-print'].disabled = locked || state.reading || !previewed();
     const missing = unsupported(options);
-    ui['go-print-note'].textContent = state.reading || (state.file && !state.drawn) ? '正在生成预览…' :
-      !previewed() ? '预览完成后继续。' : missing.length ? `当前设备暂不支持${missing.join('、')}` : '下一步填写学校账号。';
+    ui['go-print-note'].textContent = state.converting ? '正在转换为 PDF…' : state.reading || (state.file && !state.drawn) ? '正在生成预览…' :
+      previewed() && missing.length ? `当前设备暂不支持${missing.join('、')}` : '';
+    ui['go-print-note'].hidden = !ui['go-print-note'].textContent;
     ui['account-back'].disabled = state.busy;
     ui['account-dialog'].classList.toggle('is-busy', state.busy);
     ui['account-fields'].inert = state.busy;
@@ -215,13 +220,14 @@
     });
     renderSettings(locked, options);
     renderPreview(locked, options);
-    renderCapabilities();
+    renderFormats();
     ui['doc-panel'].hidden = !state.file;
     ui['doc-progress'].hidden = !state.reading && !state.busy && !state.previewRendering;
     if (state.file) {
       ui['doc-name'].textContent = state.file.name;
-      ui['doc-sub'].textContent = state.reading ? '正在读取文件…' :
-        ((state.file.size / 1048576).toFixed(2) + ' MB' + (state.pages ? ' · ' + state.pages + ' 页' : ' · PDF'));
+      ui['file-kind'].textContent = (state.file.name.split('.').pop() || 'PDF').slice(0, 4).toUpperCase();
+      ui['doc-sub'].textContent = state.converting ? '正在转换为 PDF…' : state.reading ? '正在读取文件…' :
+        [fileSize(state.file.size), state.pages && state.pages + ' 页', state.converted && '已转为 PDF'].filter(Boolean).join(' · ');
     }
     ui['workspace-fields'].hidden = !!state.receipt;
     ui.receipt.hidden = !state.receipt;
@@ -239,17 +245,10 @@
       input.checked = input.value === options.color;
       input.disabled = frozen || (input.value === 'color' && !supports('color'));
     }
-    for (const input of radios('sides-mode')) {
-      input.checked = (input.value === 'two') === two;
-      input.disabled = frozen || (input.value === 'two' && !supports('duplex'));
+    for (const input of radios('sides')) {
+      input.checked = input.value === options.sides;
+      input.disabled = frozen || (input.value !== 'one-sided' && !supports('duplex'));
     }
-    const edge = two ? (options.sides === 'two-sided-short-edge' ? 'short' : 'long') : state.edge;
-    for (const input of radios('edge')) {
-      input.checked = input.value === edge;
-      input.disabled = frozen;
-    }
-    ui['edge-setting'].dataset.open = String(two);
-    ui['edge-setting'].inert = !two;
     const cap = copiesCap();
     if (!state.copiesTyping) ui.copies.value = String(options.copies);
     ui.copies.max = String(cap);
@@ -258,15 +257,13 @@
     ui['copies-inc'].disabled = frozen || options.copies >= cap;
     const pages = state.pages || 0;
     if (!supports('color')) note('color-note', '设备暂不支持彩色', true);
-    else note('color-note', options.color === 'color' ? '按彩色标准计费' : '');
-    if (!supports('duplex')) note('sides-note', '设备暂不支持双面', true);
-    else note('sides-note', two && pages ? `每份 ${Math.ceil(pages / 2)} 张纸` : '');
+    else note('color-note', options.color === 'color' ? '按彩色计费' : '');
+    note('sides-note', supports('duplex') ? '' : '设备暂不支持双面', true);
     if (!supports('copies')) note('copies-note', '设备暂不支持多份', true);
     else note('copies-note', pages && cap < COPIES_LIMIT ? `最多 ${cap} 份` : '');
     tweenNumber(ui['print-total-sheets'], pages ? sheetsFor(pages, options) : 0);
-    ui['print-total'].textContent = pages ? `${pages} 页 × ${options.copies} 份 · 共 ${pages * options.copies} 面` : '正在检查页数';
-    ui['cost-note'].textContent = options.color === 'color' ? '彩色按学校彩色标准计费，刷卡取件时扣费。' : '刷卡取件时按学校标准计费。';
-    ui['range-summary'].textContent = pages ? `全部 ${pages} 页` : '全部页面';
+    ui['print-total'].textContent = pages ? `${pages} 页 × ${options.copies} 份` : '';
+    ui.checkout.classList.toggle('is-empty', !pages);
     ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options)].filter(Boolean).join(' · ');
   }
 
@@ -299,24 +296,12 @@
     ui['zoom-in'].disabled = idle || zoom >= ZOOMS.length - 1;
     ui['zoom-fit'].disabled = idle;
     ui['zoom-fit'].textContent = state.previewZoom === 'fit' ? '适合' : Math.round(Number(state.previewZoom) * 100) + '%';
-    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', 'A4',
-      ...(two ? [edge === 'short' ? '短边翻页' : '长边翻页'] : [])].join(' · ');
   }
 
-  function renderCapabilities() {
-    const cap = state.session?.capabilities?.copies?.max || COPIES_LIMIT;
-    const items = featuresKnown()
-      ? ['A4 纸张', supports('color') ? '黑白 / 彩色' : '黑白', supports('duplex') ? '单面 / 双面' : '单面', supports('copies') ? `最多 ${cap} 份` : '单份']
-      : ['A4 纸张', 'PDF 格式', '浏览器本地预览'];
-    const key = items.join('|');
-    if (ui['capability-row'].dataset.items === key) return;
-    ui['capability-row'].dataset.items = key;
-    ui['capability-row'].replaceChildren(...items.map((text, index) => {
-      const item = document.createElement('li');
-      item.textContent = text;
-      item.style.animationDelay = (index * 60) + 'ms';
-      return item;
-    }));
+  function renderFormats() {
+    const convert = canConvert();
+    ui['drop-sub'].textContent = convert ? 'PDF、Word、PPT、Excel 或图片' : 'PDF 文件';
+    ui['file-input'].accept = convert ? CONVERT_ACCEPT : '.pdf,application/pdf';
   }
 
   // Options change the preview itself: colour sweeps in, duplex flips, copies stack up.
@@ -401,6 +386,16 @@
     if (source.width) target.getContext('2d', { alpha: false }).drawImage(source, 0, 0);
   }
 
+  // The colour options show the current page itself, in grey and in colour.
+  function drawTiles(source) {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    for (const tile of [ui['tile-gray'], ui['tile-color']]) {
+      tile.width = Math.round(40 * ratio);
+      tile.height = Math.round(56 * ratio);
+      tile.getContext('2d').drawImage(source, 0, 0, tile.width, tile.height);
+    }
+  }
+
   function syncFaces() {
     const canvas = ui['preview-canvas'];
     if (!state.drawn || !canvas.width) return Promise.resolve();
@@ -409,6 +404,7 @@
     if (key === state.faceKey) return state.facePromise || Promise.resolve();
     state.faceKey = key;
     copyInto(canvas, ui['preview-tint']);
+    drawTiles(canvas);
     if (!two) return (state.facePromise = Promise.resolve());
     const back = Number(canvas.dataset.page) + 1;
     state.facePromise = pdfPreview.drawInto(ui['back-canvas'], back <= state.pages ? back : 0)
@@ -481,7 +477,7 @@
     state.fileGeneration++;
     if (state.fileURL) URL.revokeObjectURL(state.fileURL);
     state.file = state.fileURL = state.pdf = state.pages = null;
-    state.reading = state.drawn = state.flipped = false;
+    state.reading = state.drawn = state.flipped = state.converting = state.converted = false;
     state.faceKey = '';
     state.facePromise = null;
     clearTimeout(state.demoTimer);
@@ -499,47 +495,69 @@
     const fromUpload = !state.file;
     clearFile();
     showError('form-error');
-    if (files.length !== 1) { showError('file-error', '每次选择一份 PDF。'); render(); return; }
+    if (files.length !== 1) { showError('file-error', '每次选择一个文件。'); render(); return; }
     const file = files[0];
     const maxBytes = state.session?.limits?.max_bytes || 10485760;
-    if (!/\.pdf$/i.test(file.name) || !file.size) {
-      showError('file-error', '请选择有效的 PDF 文件。'); render(); return;
+    const convert = CONVERTIBLE.test(file.name);
+    if ((!convert && !/\.pdf$/i.test(file.name)) || !file.size) {
+      showError('file-error', '暂不支持这种文件，请选择 PDF、Word、PPT、Excel 或图片。'); render(); return;
     }
     if (file.size > maxBytes) {
-      showError('file-error', '文件超过 10 MB，请压缩 PDF 后再试。'); render(); return;
+      showError('file-error', '文件超过 10 MB，请压缩后再试。'); render(); return;
+    }
+    if (convert && !canConvert()) {
+      showError('file-error', ready() ? '当前设备暂不支持转换，请先导出为 PDF。' : '打印服务未连接，暂时无法转换，请先导出为 PDF。');
+      render(); return;
     }
     state.file = file;
     state.reading = true;
+    state.converting = convert;
     const generation = state.fileGeneration;
     // The empty upload sheet grows into the preview page while the PDF parses.
     const reveal = () => { render(); pdfPreview.reserve(); };
     if (fromUpload) await morph(reveal); else reveal();
     if (generation !== state.fileGeneration) return;
     try {
-      const data = await new Promise((resolve, reject) => {
+      let data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(',')[1]);
         reader.onerror = () => reject(new Error('read'));
         reader.readAsDataURL(file);
       });
       if (generation !== state.fileGeneration) return;
+      let pdfFile = file;
+      if (convert) {
+        ui['preview-loading'].textContent = '正在转换为 PDF…';
+        announce('正在转换为 PDF…');
+        const result = await api('/api/print/convert', { document: data, name: file.name }, 150000);
+        if (generation !== state.fileGeneration) return;
+        if (!result.ok || typeof result.data?.pdf !== 'string') {
+          throw Object.assign(new Error(errorText(result, '这份文件无法转换，请导出为 PDF 后再试。')), { shown: true });
+        }
+        data = result.data.pdf;
+        pdfFile = new File([Uint8Array.from(atob(data), c => c.charCodeAt(0))], file.name.replace(/\.[^.]+$/, '') + '.pdf', { type: 'application/pdf' });
+        state.converting = false;
+        state.converted = true;
+        render();
+      }
       if (atob(data.slice(0, 8)).slice(0, 5) !== '%PDF-') throw new Error('signature');
-      const inspected = await pdfPreview.load(file, state.session?.limits?.max_pages || 50);
+      const inspected = await pdfPreview.load(pdfFile, state.session?.limits?.max_pages || 50);
       if (generation !== state.fileGeneration) return;
       state.pages = inspected.pages;
       state.pdf = data;
       applyOptions({ ...state.options }); // Re-check the copy cap for this page count.
       // The browser opens the local blob, never an uploaded public URL.
-      state.fileURL = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
+      state.fileURL = URL.createObjectURL(new Blob([pdfFile], { type: 'application/pdf' }));
       ui['doc-open'].href = state.fileURL;
       announce(`已生成预览，共 ${state.pages} 页。`);
       window.scrollTo({ top: 0, behavior: 'instant' });
     } catch (error) {
       if (generation !== state.fileGeneration) return;
       clearFile();
-      showError('file-error', error.message && /页|加密|无法读取|预览组件/.test(error.message) ? error.message : '无法生成这份 PDF 的预览，请重新选择或导出文件。');
+      showError('file-error', error.shown || /页|加密|无法读取|预览组件/.test(error.message || '') ? error.message :
+        error instanceof TypeError || error.name === 'AbortError' ? '连接中断，请重新选择文件。' : '无法生成这份文件的预览，请重新选择或导出为 PDF。');
     } finally {
-      if (generation === state.fileGeneration) state.reading = false;
+      if (generation === state.fileGeneration) state.reading = state.converting = false;
       render();
     }
   }
@@ -644,7 +662,7 @@
     state.receiptTone = tone;
     if (tone !== previousTone) {
       // A new outcome prints a fresh ticket.
-      ui.receipt.className = 'receipt is-' + tone;
+      ui.receipt.className = 'canvas receipt is-' + tone;
       ui['receipt-icon'].innerHTML = ICONS[tone];
       ui.receipt.hidden = false;
       void ui.receipt.offsetWidth;
@@ -652,7 +670,7 @@
     }
     ui['receipt-title'].textContent = success ? '文件已提交，去刷卡取件吧' :
       job.state === 'processing' ? '正在送往学校队列' : failed ? '这次没有提交成功' : '提交结果待确认';
-    ui['receipt-message'].textContent = success ? '到学校打印点刷卡，在待打印列表中选择这份文件。' :
+    ui['receipt-message'].textContent = success ? '到打印点刷卡，选择这份文件即可。' :
       failed ? (job.message || '请检查账号或文件后重试。') :
       '请先查询任务状态，或在打印机上查看待取任务，避免重复提交。';
     const doc = state.receiptDoc;
@@ -832,7 +850,7 @@
     if (state.file && info.ready) { state.drawn = true; syncFaces(); }
     ui['page-stage'].setAttribute('aria-busy', String(info.rendering));
     ui['preview-loading'].hidden = state.drawn && !info.error;
-    ui['preview-loading'].textContent = info.error || '正在生成预览…';
+    ui['preview-loading'].textContent = info.error || (state.converting ? '正在转换为 PDF…' : '正在生成预览…');
     render();
   });
 
@@ -863,14 +881,7 @@
   ui['zoom-out'].addEventListener('click', () => zoomTo(ZOOMS[ZOOMS.indexOf(state.previewZoom) - 1]));
   ui['zoom-fit'].addEventListener('click', () => zoomTo('fit'));
   for (const input of radios('color')) input.addEventListener('change', () => { if (input.checked) setOptions({ color: input.value }); });
-  for (const input of radios('sides-mode')) input.addEventListener('change', () => {
-    if (input.checked) setOptions({ sides: input.value === 'two' ? sidesFor(state.edge) : 'one-sided' });
-  });
-  for (const input of radios('edge')) input.addEventListener('change', () => {
-    if (!input.checked) return;
-    state.edge = input.value;
-    if (duplex()) setOptions({ sides: sidesFor(state.edge) }); else render();
-  });
+  for (const input of radios('sides')) input.addEventListener('change', () => { if (input.checked) setOptions({ sides: input.value }); });
   ui['copies-dec'].addEventListener('click', () => setOptions({ copies: state.options.copies - 1 }));
   ui['copies-inc'].addEventListener('click', () => setOptions({ copies: state.options.copies + 1 }));
   ui.copies.addEventListener('input', () => { state.copiesTyping = true; });
