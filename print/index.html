@@ -3,93 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="MAXCOURSE 校园打印：上传 PDF、Word、PPT、Excel 或图片，预览后提交，刷卡取件。">
-<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="MAXCOURSE 校园打印：上传 PDF、Word、PPT、Excel 或图片，预览后提交，到打印机刷卡取件。">
+<meta name="theme-color" content="#f4efe6">
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
 <link href="print.css" rel="stylesheet">
 </head>
 <body>
-<div class="ambient" aria-hidden="true"></div>
+<div class="ambient" aria-hidden="true"><span></span><span></span></div>
 
 <header class="topbar" id="topbar">
   <div class="topbar-inner wrap">
     <a class="brand" href="/" aria-label="返回 MAXCOURSE 首页">
-      <span class="brand-mark" aria-hidden="true">M</span>
-      <span class="brand-name">MAXCOURSE</span>
-      <span class="brand-divider" aria-hidden="true"></span>
-      <span class="brand-page">校园打印</span>
+      <span class="brand-word">Maxcourse</span>
+      <span class="brand-sub">Campus Toolkit</span>
     </a>
-    <ol class="stepper" id="stepper" data-step="1" aria-label="打印流程">
-      <li id="step-upload" aria-current="step"><span class="step-index">1</span><span class="step-name">上传</span></li>
-      <li id="step-preview"><span class="step-index">2</span><span class="step-name">设置</span></li>
-      <li id="step-submit"><span class="step-index">3</span><span class="step-name">提交</span></li>
-    </ol>
     <div class="topbar-actions">
       <div class="service-status" id="service-status" role="status" data-state="connecting">
         <span class="service-dot" id="service-dot" aria-hidden="true"></span>
-        <span class="service-text" id="service-text">连接中</span>
+        <span class="service-text" id="service-text">正在连接打印服务</span>
         <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
       </div>
-      <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="常见问题">
+      <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="打印须知">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7M12 16.9v.1"/></svg>
+        <span>打印须知</span>
       </button>
     </div>
   </div>
 </header>
 
 <main class="wrap page">
-  <h1 class="sr-only" id="page-title">校园打印</h1>
-  <p class="sr-only" id="page-description">先上传文件，预览确认后再提交。</p>
-
-  <section class="intro-view" id="intro-view" aria-labelledby="intro-title">
-    <div class="proof">
-      <span class="proof-note proof-note-left" aria-hidden="true">MAXCOURSE PRINT — PROOF 01</span>
-      <span class="proof-note proof-note-right" aria-hidden="true">A4 210 × 297 mm</span>
-      <span class="reg reg-top" aria-hidden="true"></span>
-      <span class="reg reg-bottom" aria-hidden="true"></span>
-      <span class="reg reg-left" aria-hidden="true"></span>
-      <span class="reg reg-right" aria-hidden="true"></span>
-      <div class="proof-sheet">
-        <span class="crop crop-tl" aria-hidden="true"></span><span class="crop crop-tr" aria-hidden="true"></span>
-        <span class="crop crop-bl" aria-hidden="true"></span><span class="crop crop-br" aria-hidden="true"></span>
-        <div class="proof-page">
-          <div class="proof-content">
-            <header class="proof-head"><span>MAXCOURSE</span><span>A4</span></header>
-            <h2 class="proof-title" id="intro-title">校园打印</h2>
-            <p class="proof-lead">传上文件，到图书馆刷学生证取。</p>
-            <dl class="proof-specs">
-              <div><dt>文件</dt><dd>PDF、Word、PPT、Excel、图片</dd></div>
-              <div><dt>选项</dt><dd>黑白或彩色，单双面，最多 20 份</dd></div>
-              <div><dt>取件</dt><dd>图书馆东芝打印机</dd></div>
-            </dl>
-            <div class="proof-actions">
-              <button class="btn btn-primary btn-lg" id="start-print" type="button">
-                <span>开始打印</span>
-                <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
-              </button>
-              <button class="text-btn" id="intro-help" type="button">常见问题</button>
-            </div>
-            <footer class="proof-foot"><span>不保存文件和密码</span><span>1 / 1</span></footer>
-          </div>
-          <span class="print-head" aria-hidden="true"></span>
-        </div>
-      </div>
-      <div class="color-bar" aria-hidden="true">
-        <i class="c"></i><i class="m"></i><i class="y"></i><i class="k"></i><i class="k75"></i><i class="k50"></i><i class="k25"></i>
-        <span>C M Y K</span>
-      </div>
+  <div class="intro">
+    <div class="intro-copy">
+      <p class="kicker"><span class="kicker-num">VIII.</span> Campus Printing</p>
+      <h1 id="page-title">校园打印</h1>
+      <p id="page-description">上传文件，预览后提交。</p>
     </div>
-  </section>
+    <ol class="stepper" id="stepper" data-step="1" aria-label="打印流程">
+      <li id="step-upload" aria-current="step"><span class="step-index">1</span><span class="step-name">上传文档</span></li>
+      <li id="step-preview"><span class="step-index">2</span><span class="step-name">预览与设置</span></li>
+      <li id="step-submit"><span class="step-index">3</span><span class="step-name">确认提交</span></li>
+    </ol>
+  </div>
 
   <form class="workspace" id="submit-form" method="post" action="/api/print/jobs" novalidate>
     <p class="file-error" id="file-error" role="alert" hidden></p>
-    <div class="workspace-fields" id="workspace-fields">
-
-      <section class="canvas upload-stage" id="upload-stage" aria-labelledby="upload-title">
+    <div id="workspace-fields">
+      <section class="card upload-stage" id="upload-stage" aria-labelledby="upload-title">
         <div class="dropzone" id="dropzone">
           <div class="drop-visual" id="drop-visual" aria-hidden="true">
             <div class="drop-tilt">
@@ -98,6 +59,7 @@
               <span class="drop-sheet front">
                 <span class="sheet-line w70"></span><span class="sheet-line w90"></span><span class="sheet-line w55"></span>
                 <span class="sheet-line w80"></span><span class="sheet-line w40"></span>
+                <span class="sheet-tag">PDF</span>
               </span>
             </div>
           </div>
@@ -107,178 +69,166 @@
             <span>选择文件</span>
             <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 18.5v-13M6.5 11 12 5.5l5.5 5.5"/></svg></span>
           </button>
-          <p class="dz-hint" id="limits-hint">10 MB 以内</p>
+          <p class="dz-hint" id="limits-hint">最大 10 MB · 最多 50 页</p>
           <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
         </div>
+        <ul class="capability-row" id="capability-row" aria-label="打印规格"></ul>
       </section>
 
       <section class="preview-workspace" id="doc-panel" aria-labelledby="preview-title" hidden>
-        <div class="canvas stage-shell">
-          <header class="doc-chip">
+        <div class="card preview-main">
+          <header class="file-bar">
             <span class="file-icon" id="file-kind" aria-hidden="true">PDF</span>
             <div class="file-info"><h2 id="doc-name"></h2><p id="doc-sub"></p></div>
-            <button class="text-btn" id="replace-file" type="button">更换</button>
+            <button class="text-btn" id="replace-file" type="button">更换文件</button>
             <button class="icon-btn" id="doc-remove" type="button" aria-label="移除文件">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
             </button>
           </header>
-          <div class="ink-bar" id="ink-bar" aria-hidden="true"><i class="c"></i><i class="m"></i><i class="y"></i><i class="k"></i></div>
-          <div class="stage-meta">
-            <a class="stage-link" id="doc-open" target="_blank" rel="noopener" aria-label="在新标签页打开 PDF">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 5.5h5v5M18.5 5.5 11 13M10 7H6.5A1.5 1.5 0 0 0 5 8.5v9A1.5 1.5 0 0 0 6.5 19h9a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
-            </a>
-          </div>
           <h3 class="sr-only" id="preview-title">打印预览</h3>
-          <div class="page-stage" id="page-stage" aria-busy="true">
-            <div class="sheet-wrap" id="sheet-wrap" data-copies="1">
-              <span class="ghost" aria-hidden="true"></span>
-              <span class="ghost" aria-hidden="true"></span>
-              <span class="ghost" aria-hidden="true"></span>
-              <span class="ghost" aria-hidden="true"></span>
-              <div class="sheet is-loading" id="sheet" data-flip="none">
-                <div class="face face-front">
-                  <canvas id="preview-canvas" role="img" aria-label="文档预览"></canvas>
-                  <canvas class="tint" id="preview-tint" aria-hidden="true"></canvas>
-                  <span class="scan" aria-hidden="true"></span>
+          <div class="stage-shell">
+            <div class="page-stage" id="page-stage" aria-busy="true">
+              <div class="sheet-wrap" id="sheet-wrap" data-copies="1">
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <span class="ghost" aria-hidden="true"></span>
+                <div class="sheet is-loading" id="sheet" data-flip="none">
+                  <div class="face face-front">
+                    <canvas id="preview-canvas" role="img" aria-label="文档预览"></canvas>
+                    <canvas class="tint" id="preview-tint" aria-hidden="true"></canvas>
+                    <span class="scan" aria-hidden="true"></span>
+                  </div>
+                  <div class="face face-back" aria-hidden="true">
+                    <canvas id="back-canvas"></canvas>
+                    <canvas class="tint" id="back-tint"></canvas>
+                    <span class="scan"></span>
+                    <span class="blank-note" id="blank-note" hidden>背面空白</span>
+                  </div>
                 </div>
-                <div class="face face-back" aria-hidden="true">
-                  <canvas id="back-canvas"></canvas>
-                  <canvas class="tint" id="back-tint"></canvas>
-                  <span class="scan"></span>
-                  <span class="blank-note" id="blank-note" hidden>背面空白</span>
-                </div>
+                <span class="copies-badge" id="copies-badge" aria-hidden="true">× 1</span>
               </div>
-              <span class="copies-badge" id="copies-badge" aria-hidden="true">× 1</span>
-              <span class="sheet-marks" aria-hidden="true"></span>
             </div>
-          </div>
-          <p class="preview-loading" id="preview-loading" role="status">正在生成预览…</p>
-          <div class="doc-progress" id="doc-progress" hidden><span></span></div>
-          <div class="preview-dock" role="toolbar" aria-label="预览控制">
-            <div class="dock-group">
-              <button class="dock-btn" id="page-prev" type="button" aria-label="上一页" disabled>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>
-              </button>
-              <label class="sr-only" for="page-current">页码</label>
-              <input id="page-current" type="number" value="1" min="1" max="1" inputmode="numeric" disabled>
-              <span class="page-total" id="page-total">/ 0</span>
-              <button class="dock-btn" id="page-next" type="button" aria-label="下一页" disabled>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
-              </button>
-            </div>
-            <div class="dock-group flip-group" id="flip-group" hidden>
+            <p class="preview-loading" id="preview-loading" role="status">正在生成预览…</p>
+            <div class="doc-progress" id="doc-progress" hidden><span></span></div>
+            <span class="stage-label" id="preview-caption">黑白预览 · A4</span>
+            <a class="stage-link" id="doc-open" target="_blank" rel="noopener">打开原文件 <span aria-hidden="true">↗</span></a>
+            <div class="preview-dock" role="toolbar" aria-label="预览控制">
+              <div class="dock-group">
+                <button class="dock-btn" id="page-prev" type="button" aria-label="上一页" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>
+                </button>
+                <label class="sr-only" for="page-current">页码</label>
+                <input id="page-current" type="number" value="1" min="1" max="1" inputmode="numeric" disabled>
+                <span class="page-total" id="page-total">/ 0</span>
+                <button class="dock-btn" id="page-next" type="button" aria-label="下一页" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
+                </button>
+              </div>
+              <div class="dock-group flip-group" id="flip-group" hidden>
+                <span class="dock-sep" aria-hidden="true"></span>
+                <button class="dock-btn flip-btn" id="flip-sheet" type="button" aria-pressed="false" aria-label="翻面查看">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 13-5.1M19.5 12a7.5 7.5 0 0 1-13 5.1"/><path d="M17.8 3.6v3.6h-3.6M6.2 20.4v-3.6h3.6"/></svg>
+                  <span id="sheet-caption">正面</span>
+                </button>
+              </div>
               <span class="dock-sep" aria-hidden="true"></span>
-              <button class="dock-btn flip-btn" id="flip-sheet" type="button" aria-pressed="false" aria-label="翻面查看">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 13-5.1M19.5 12a7.5 7.5 0 0 1-13 5.1"/><path d="M17.8 3.6v3.6h-3.6M6.2 20.4v-3.6h3.6"/></svg>
-                <span id="sheet-caption">正面</span>
-              </button>
-            </div>
-            <span class="dock-sep" aria-hidden="true"></span>
-            <div class="dock-group">
-              <button class="dock-btn" id="zoom-out" type="button" aria-label="缩小预览" disabled>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
-              </button>
-              <button class="zoom-label" id="zoom-fit" type="button" aria-label="适合页面" disabled>适合</button>
-              <button class="dock-btn" id="zoom-in" type="button" aria-label="放大预览" disabled>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
-              </button>
+              <div class="dock-group">
+                <button class="dock-btn" id="zoom-out" type="button" aria-label="缩小预览" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
+                </button>
+                <button class="zoom-label" id="zoom-fit" type="button" aria-label="适合页面" disabled>适合</button>
+                <button class="dock-btn" id="zoom-in" type="button" aria-label="放大预览" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <aside class="inspector print-settings" aria-labelledby="output-title">
-          <div class="inspector-head"><h2 id="output-title">打印设置</h2><span class="settings-paper">A4</span></div>
-
-          <section class="option-group">
-            <div class="group-head"><span class="group-label" id="color-label">颜色</span><span class="setting-note" id="color-note"></span></div>
-            <div class="tiles" role="radiogroup" aria-labelledby="color-label">
-              <label class="tile">
-                <input type="radio" name="color" value="grayscale" aria-label="黑白" checked>
-                <span class="tile-body">
-                  <span class="tile-art"><span class="mini-page"><canvas class="tile-thumb is-gray" id="tile-gray"></canvas></span></span>
-                  <span class="tile-name">黑白</span>
-                </span>
-                <span class="tile-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-              </label>
-              <label class="tile">
-                <input type="radio" name="color" value="color" aria-label="彩色">
-                <span class="tile-body">
-                  <span class="tile-art"><span class="mini-page"><canvas class="tile-thumb" id="tile-color"></canvas><i class="mini-hue" aria-hidden="true"></i></span></span>
-                  <span class="tile-name">彩色</span>
-                </span>
-                <span class="tile-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-              </label>
+        <div class="side">
+          <aside class="card print-settings" aria-labelledby="output-title">
+            <div class="settings-head">
+              <h2 id="output-title">打印设置</h2>
+              <span class="settings-paper">A4 · 210 × 297 mm</span>
             </div>
-          </section>
 
-          <section class="option-group">
-            <div class="group-head"><span class="group-label" id="sides-label">单双面</span><span class="setting-note" id="sides-note"></span></div>
-            <div class="tiles tiles-3" role="radiogroup" aria-labelledby="sides-label">
-              <label class="tile" data-flip="none">
-                <input type="radio" name="sides" value="one-sided" aria-label="单面" checked>
-                <span class="tile-body">
-                  <span class="tile-art"><span class="mini-sheet"><span class="mini-face"></span><span class="mini-face mini-back"></span></span></span>
-                  <span class="tile-name">单面</span>
-                </span>
-                <span class="tile-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-              </label>
-              <label class="tile" data-flip="long">
-                <input type="radio" name="sides" value="two-sided-long-edge" aria-label="双面长边翻页">
-                <span class="tile-body">
-                  <span class="tile-art"><span class="mini-sheet"><span class="mini-face"></span><span class="mini-face mini-back"></span></span><i class="mini-edge" aria-hidden="true"></i></span>
-                  <span class="tile-name">双面 · 长边</span>
-                </span>
-                <span class="tile-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-              </label>
-              <label class="tile" data-flip="short">
-                <input type="radio" name="sides" value="two-sided-short-edge" aria-label="双面短边翻页">
-                <span class="tile-body">
-                  <span class="tile-art"><span class="mini-sheet"><span class="mini-face"></span><span class="mini-face mini-back"></span></span><i class="mini-edge" aria-hidden="true"></i></span>
-                  <span class="tile-name">双面 · 短边</span>
-                </span>
-                <span class="tile-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span>
-              </label>
+            <div class="setting">
+              <div class="setting-head"><span class="setting-label" id="color-label">颜色</span><span class="setting-note" id="color-note"></span></div>
+              <div class="segmented" role="radiogroup" aria-labelledby="color-label">
+                <label class="seg"><input type="radio" name="color" value="grayscale" checked><span class="seg-text"><i class="swatch swatch-mono" aria-hidden="true"></i>黑白</span></label>
+                <label class="seg"><input type="radio" name="color" value="color"><span class="seg-text"><i class="swatch swatch-color" aria-hidden="true"></i>彩色</span></label>
+                <span class="seg-thumb" aria-hidden="true"></span>
+              </div>
             </div>
-          </section>
 
-          <section class="option-group">
-            <div class="group-head"><label class="group-label" for="copies">份数</label><span class="setting-note" id="copies-note"></span></div>
-            <div class="copies-input">
-              <button type="button" id="copies-dec" aria-label="减少一份">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
-              </button>
-              <div class="copies-value"><input id="copies" type="number" min="1" max="20" value="1" inputmode="numeric"><span aria-hidden="true">份</span></div>
-              <button type="button" id="copies-inc" aria-label="增加一份">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
-              </button>
+            <div class="setting">
+              <div class="setting-head"><span class="setting-label" id="sides-label">单双面</span><span class="setting-note" id="sides-note"></span></div>
+              <div class="segmented" role="radiogroup" aria-labelledby="sides-label">
+                <label class="seg"><input type="radio" name="sides-mode" value="one" checked><span class="seg-text">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="3.5" width="11" height="17" rx="1.6"/></svg>单面</span></label>
+                <label class="seg"><input type="radio" name="sides-mode" value="two"><span class="seg-text">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="6" width="11" height="14.5" rx="1.6"/><path d="M8.5 3.5h9.4a1.6 1.6 0 0 1 1.6 1.6v12.4"/></svg>双面</span></label>
+                <span class="seg-thumb" aria-hidden="true"></span>
+              </div>
+              <div class="reveal" id="edge-setting" data-open="false" inert>
+                <div class="reveal-inner">
+                  <div class="segmented segmented-sub" role="radiogroup" aria-label="翻页方式">
+                    <label class="seg"><input type="radio" name="edge" value="long" checked><span class="seg-text">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="11" height="17" rx="1.6"/><path class="edge" d="M4.5 5.5v13"/></svg>长边翻页</span></label>
+                    <label class="seg"><input type="radio" name="edge" value="short"><span class="seg-text">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6" width="11" height="15" rx="1.6"/><path class="edge" d="M5 3.5h14"/></svg>短边翻页</span></label>
+                    <span class="seg-thumb" aria-hidden="true"></span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </section>
 
-        </aside>
+            <div class="setting">
+              <div class="setting-head"><label class="setting-label" for="copies">份数</label><span class="setting-note" id="copies-note"></span></div>
+              <div class="copies-input">
+                <button type="button" id="copies-dec" aria-label="减少一份">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11"/></svg>
+                </button>
+                <input id="copies" type="number" min="1" max="20" value="1" inputmode="numeric">
+                <button type="button" id="copies-inc" aria-label="增加一份">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11M12 6.5v11"/></svg>
+                </button>
+              </div>
+            </div>
 
-        <div class="inspector-foot checkout" id="checkout">
-          <div class="total">
-            <div class="total-figure"><strong id="print-total-sheets" data-value="0">0</strong><span>张 A4</span></div>
-            <p class="total-detail" id="print-total">正在检查页数</p>
+            <div class="setting setting-static">
+              <span class="setting-label">打印范围</span><span id="range-summary">全部页面</span>
+            </div>
+          </aside>
+
+          <div class="card checkout" id="checkout">
+            <div class="total">
+              <div class="total-figure"><strong id="print-total-sheets" data-value="0">0</strong><span>张 A4</span></div>
+              <p class="total-detail" id="print-total">正在检查页数</p>
+            </div>
+            <p class="cost-note" id="cost-note">刷卡取件时按学校标准计费。</p>
+            <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
+              <span>确认打印</span>
+              <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+            </button>
+            <p class="go-print-note" id="go-print-note">预览完成后继续。</p>
           </div>
-          <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
-            <span>确认打印</span>
-            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
-          </button>
-          <p class="go-print-note" id="go-print-note"></p>
+          <p class="settings-help">需要装订或其他纸张？<a href="/print-setup/index.html">使用电脑打印配置 <span aria-hidden="true">↗</span></a></p>
         </div>
       </section>
     </div>
 
     <dialog class="sheet-dialog account-dialog" id="account-dialog" aria-labelledby="account-title" aria-describedby="confirm-name">
       <header class="dialog-head">
-        <h2 id="account-title">确认提交</h2>
+        <div><p class="dialog-step">步骤 3 / 3</p><h2 id="account-title">确认提交</h2></div>
         <button class="text-btn account-back" id="account-back" type="button" aria-label="返回预览">返回预览</button>
       </header>
       <div class="account-body">
         <div class="confirm-document">
           <div class="thumb-frame" id="thumb-frame" aria-hidden="true"><canvas id="confirm-thumb"></canvas><span class="thumb-scan"></span></div>
           <div class="confirm-info">
+            <span class="confirm-kicker">本次文档</span>
             <p id="confirm-name"></p>
             <small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small>
           </div>
@@ -299,7 +249,7 @@
                   <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 3.5 17 17M10 6.2c.6-.1 1.3-.2 2-.2 6 0 9.5 6 9.5 6a18 18 0 0 1-2.8 3.3M6.3 7.6A18 18 0 0 0 2.5 12s3.5 6 9.5 6c1.7 0 3.2-.5 4.5-1.1M10 10a2.8 2.8 0 0 0 4 4"/></svg>
                 </button>
               </div>
-              <p class="field-hint" id="password-hint">仅用于本次打印，不会保存</p>
+              <p class="field-hint" id="password-hint">仅用于本次验证与打印，不保存密码。</p>
             </div>
           </div>
         </div>
@@ -318,14 +268,16 @@
           <span id="submit-label">提交打印</span>
           <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8.5 7H17v8.5"/></svg></span>
         </button>
+        <p class="submit-note">提交成功后，请到打印点刷卡取件。</p>
       </div>
     </dialog>
 
-    <section class="canvas receipt" id="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden>
+    <section class="receipt" id="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden>
       <div class="printer" aria-hidden="true"><span class="printer-slot"></span><span class="printer-led"></span></div>
       <div class="ticket-clip">
         <article class="ticket">
           <div class="receipt-icon" id="receipt-icon" aria-hidden="true"></div>
+          <p class="receipt-kicker">打印回执</p>
           <h2 class="receipt-title" id="receipt-title"></h2>
           <p class="receipt-message" id="receipt-message"></p>
           <dl class="receipt-details" id="receipt-details"></dl>
@@ -337,38 +289,40 @@
         <button class="btn btn-quiet" id="receipt-retry" type="button" hidden>继续同一任务</button>
         <button class="btn btn-primary" id="new-print" type="button" hidden>打印另一份</button>
       </div>
+      <p class="receipt-foot">请以学校打印机上的待取任务为准。</p>
     </section>
   </form>
 
-  <details class="history" id="history" hidden>
+  <details class="card history" id="history" hidden>
     <summary>
       <span>最近打印 <span class="jobs-count" id="jobs-count"></span></span>
       <svg class="history-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>
     </summary>
     <div class="history-body">
-      <div class="history-bar"><p>近 24 小时</p><button class="text-btn" id="jobs-refresh" type="button">刷新</button></div>
+      <div class="history-bar"><p>仅展示本人近 24 小时的任务</p><button class="text-btn" id="jobs-refresh" type="button">刷新</button></div>
       <ul class="jobs-list" id="jobs-list"></ul>
       <p class="jobs-empty" id="jobs-empty">暂无打印记录。</p>
     </div>
   </details>
 
   <footer class="page-footer">
+    <p>刷卡取件时，按学校标准计费。</p>
     <a href="/print-setup/index.html">电脑打印配置 <span aria-hidden="true">↗</span></a>
   </footer>
 </main>
 
 <dialog class="sheet-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
   <header class="dialog-head">
-    <h2 id="help-title">常见问题</h2>
-    <button class="icon-btn" id="help-close" type="button" aria-label="关闭常见问题">
+    <div><p class="dialog-step">FAQ</p><h2 id="help-title">打印须知</h2></div>
+    <button class="icon-btn" id="help-close" type="button" aria-label="关闭打印须知">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
     </button>
   </header>
   <div class="help-body">
-    <section class="help-sec"><h3>在哪里取？</h3><p>图书馆东芝打印机，刷学生证。</p></section>
-    <section class="help-sec"><h3>多少钱？</h3><p>按学校标准扣费，彩色另计。</p></section>
-    <section class="help-sec"><h3>Word 会变样吗？</h3><p>字体可能不同，提交前看一眼预览。</p></section>
-    <section class="help-sec"><h3>会保存密码吗？</h3><p>不会，文件处理完也会删除。</p></section>
+    <section class="help-sec"><span class="help-index">01</span><div><h3>在哪里取？</h3><p>图书馆东芝打印机，刷学生证。</p></div></section>
+    <section class="help-sec"><span class="help-index">02</span><div><h3>多少钱？</h3><p>按学校标准扣费，彩色另计。</p></div></section>
+    <section class="help-sec"><span class="help-index">03</span><div><h3>Word 会变样吗？</h3><p>字体可能不同，提交前看一眼预览。</p></div></section>
+    <section class="help-sec"><span class="help-index">04</span><div><h3>会保存密码吗？</h3><p>不会，文件处理完也会删除。</p></div></section>
   </div>
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
