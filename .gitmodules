@@ -1,0 +1,3 @@
+[submodule "campus_print"]
+	path = campus_print
+	url = ../maxcourse-print.git

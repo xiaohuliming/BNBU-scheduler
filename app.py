@@ -32,7 +32,14 @@ from ispace_credentials import (
 )
 from mail_digest import register_mail_brief, init_tables as init_mail_brief_tables, clear_session as clear_mail_digest_session
 from media_dl import media_dl_bp
-from campus_print import create_print_blueprint
+try:
+    from campus_print import create_print_blueprint
+except ImportError as exc:
+    # Campus printing ships in the private campus_print submodule. Only its
+    # absence is tolerated; a broken dependency inside it must still fail.
+    if exc.name != 'campus_print':
+        raise
+    create_print_blueprint = None
 from sms_lab import create_sms_lab_blueprint, init_sms_lab_tables
 from site_analytics import create_analytics_blueprint
 from campus_agent import AGENT_PATHS, init_agent_tables, register_campus_agent
@@ -1406,7 +1413,8 @@ def _resolve_course_refs(codes, catalog, enrichment):
 
 mail_brief_service = register_mail_brief(app, get_db)
 app.register_blueprint(media_dl_bp)
-app.register_blueprint(create_print_blueprint(lambda: DB_PATH))
+if create_print_blueprint is not None:
+    app.register_blueprint(create_print_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
     **antiscrape_stats, 'humanVerified': human_verification.stats['verified'],
