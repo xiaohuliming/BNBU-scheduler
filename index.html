@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2877623564-390328+12027406">
+<html lang="en" data-compiled-sum="1474037480-391021+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2877623564-390328+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=1474037480-391021+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2877623564-390328+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=1474037480-391021+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -4077,6 +4077,7 @@
                 description: 'macOS 的认证弹窗经常弹不出来，连着 WiFi 却上不了网。命令行工具自动找到登录页并完成认证（支持深澜 Srun），可后台常驻、掉线自动重连。',
                 href: 'https://github.com/ahpasserby/schoolWIFIConnector',
                 badge: '@ahpasserby',
+                studentContribution: true,
                 Icon: Wifi,
                 accent: 'bg-[#eab308]',
                 external: true,
@@ -4125,8 +4126,16 @@
                                     <p className="mt-4 min-h-[3.5rem] text-sm leading-6 text-black/58">
                                         {tool.description}
                                     </p>
-                                    <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820]">
-                                        {tool.cta || '打开工具'} {internal ? <ArrowRight className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+                                    <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+                                        <div className="inline-flex items-center gap-2 rounded-full bg-[#101820] px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-[#d6ff62] group-hover:text-[#101820]">
+                                            {tool.cta || '打开工具'} {internal ? <ArrowRight className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+                                        </div>
+                                        {tool.studentContribution && (
+                                            <span className="ml-auto inline-flex items-center gap-1.5 pb-1 text-xs font-medium text-[#6f6a62]" title="由同学贡献的工具">
+                                                <span aria-hidden="true"><Users className="w-3.5 h-3.5" /></span>
+                                                同学贡献
+                                            </span>
+                                        )}
                                     </div>
                                 </React.Fragment>
                             );
