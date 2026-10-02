@@ -75,6 +75,7 @@ At runtime `app.py` loads the `.npz` + node maps once (numpy/scipy only — no n
 ### Standalone sub-projects (not wired into Flask)
 
 - **`eatwhat/`** — its own scraper (`crawler_25doer.py`) + cleaner (`clean_data.py`) producing `food_25doer.db` and CSVs consumed by `eatwhat/index.html`.
+- **`campus_print/`** — the web-print backend (`/api/print/*`) is a **private git submodule**; run `git submodule update --init campus_print` and its tests with `./venv/bin/python -m unittest discover -s campus_print/tests`. Without it `app.py` still starts and `/print/` reports the service as unavailable. Keep its internals out of this public repo — the local pre-push hook refuses to push the pre-split history.
 - **`print-setup/`** — one-click campus-printing installers fetched via `irm | iex` (PowerShell) and `curl | bash` (macOS). Note: `app.py` registers `.ps1` and `.command` as `text/plain; charset=utf-8` specifically so their embedded Chinese doesn't get mangled by PowerShell 5.1's default Windows-1252 decoding.
 
 ### Email reminders
