@@ -26,7 +26,7 @@
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
   const DEFAULT_OPTIONS = Object.freeze({ color: 'grayscale', sides: 'one-sided', copies: 1 });
   const PRIVACY_KEY = 'maxcourse.print.privacy';
-  const PRIVACY_VERSION = '2026-10-03.1';
+  const PRIVACY_VERSION = '2026-10-03.2';
   const COPIES_LIMIT = 100;
   const ZOOMS = ['fit', '1', '1.5', '2'];
   const STEPS = ['auth', 'inspect', 'send'];
