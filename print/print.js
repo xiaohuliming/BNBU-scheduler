@@ -6,7 +6,7 @@
   const ui = Object.fromEntries([
     'privacy-notice', 'privacy-title', 'print-workspace', 'privacy-open', 'privacy-check',
     'privacy-accept', 'privacy-choice', 'privacy-review', 'privacy-return', 'privacy-revoke',
-    'privacy-storage-note', 'help-privacy',
+    'privacy-storage-note', 'privacy-close', 'privacy-scroll', 'help-privacy',
     'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
     'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'capability-row', 'drop-sub', 'file-kind',
@@ -974,17 +974,26 @@
 
   // A versioned acknowledgement stores no credentials, filenames or document data.
   function privacyScreen(show, review = false, focus = true) {
-    ui['privacy-notice'].hidden = !show;
-    ui['print-workspace'].hidden = show;
-    ui['print-workspace'].inert = show;
-    ui['service-status'].hidden = show;
-    ui['help-open'].hidden = show;
-    ui['privacy-open'].hidden = show;
+    const dialog = ui['privacy-notice'];
+    ui['print-workspace'].inert = show || !state.privacyAccepted;
+    ui['service-status'].hidden = !state.privacyAccepted;
+    ui['help-open'].hidden = !state.privacyAccepted;
+    ui['privacy-open'].hidden = !state.privacyAccepted;
     ui['privacy-choice'].hidden = review;
     ui['privacy-review'].hidden = !review;
+    const closeLabel = review ? '关闭隐私告知并返回打印' : '暂不使用并返回首页';
+    ui['privacy-close'].setAttribute('aria-label', closeLabel);
+    ui['privacy-close'].title = closeLabel;
+    if (show) {
+      // Initial HTML is visible before JavaScript; upgrade it to a native modal.
+      if (dialog.open && !dialog.matches(':modal')) dialog.close();
+      if (!dialog.open) dialog.showModal();
+      ui['privacy-scroll'].scrollTop = 0;
+    } else if (dialog.open) dialog.close();
+    document.body.classList.remove('privacy-pending');
+    document.body.classList.toggle('privacy-modal-open', show);
     if (focus) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      (show ? ui['privacy-title'] : review ? ui['privacy-open'] : ui['pick-btn']).focus();
+      (show ? ui['privacy-title'] : review ? ui['privacy-open'] : ui['pick-btn']).focus({preventScroll: true});
     }
   }
 
@@ -1017,6 +1026,17 @@
   ui['privacy-open'].addEventListener('click', reviewPrivacy);
   ui['help-privacy'].addEventListener('click', reviewPrivacy);
   ui['privacy-return'].addEventListener('click', () => { if (state.privacyAccepted) privacyScreen(false, true); });
+  const dismissPrivacy = () => {
+    if (state.privacyAccepted) privacyScreen(false, true);
+    else window.location.assign('/');
+  };
+  ui['privacy-close'].addEventListener('click', dismissPrivacy);
+  ui['privacy-notice'].addEventListener('cancel', event => { event.preventDefault(); dismissPrivacy(); });
+  ui['privacy-notice'].addEventListener('click', event => {
+    if (event.target !== ui['privacy-notice']) return;
+    const bounds = ui['privacy-notice'].getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dismissPrivacy();
+  });
   ui['privacy-revoke'].addEventListener('click', () => {
     if (state.busy || state.reading || state.balanceQuerying || state.jobQuery) return;
     state.privacyAccepted = false;
@@ -1177,5 +1197,6 @@
   try {
     if (localStorage.getItem(PRIVACY_KEY) === PRIVACY_VERSION) enterPrinting(false, false);
   } catch (_) { storageNote('浏览器无法记住确认，下次进入时会再次显示告知。本次仍可继续打印。'); }
+  if (!state.privacyAccepted) privacyScreen(true);
   setInterval(() => { if (!document.hidden && !state.busy) refreshSession(); }, 60000);
 })();

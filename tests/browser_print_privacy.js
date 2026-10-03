@@ -7,7 +7,8 @@ async page => {
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/**', route => {
     const request = route.request(), path = new URL(request.url()).pathname;
-    requests.push({path, method: request.method()});
+    // Returning home may send normal visit analytics, unrelated to printing.
+    if (path.startsWith('/api/print/') || path === '/api/login/ispace') requests.push({path, method: request.method()});
     const data = path === '/api/print/session' ? {
       csrf_token: 'privacy-test-only', user: null,
       service: {enabled: true, ready: true, online: true, busy: false, demo: false, features: ['color', 'duplex', 'copies', 'convert', 'balance']},
@@ -19,11 +20,17 @@ async page => {
   await page.evaluate(() => {localStorage.clear(); sessionStorage.clear();});
   await page.goto(origin + '/print/');
   await page.locator('#privacy-title').waitFor();
-  assert(await page.locator('#print-workspace').isHidden(), 'Workspace flashed before acknowledgement');
+  assert(await page.locator('#privacy-notice').evaluate(node => node.matches(':modal')), 'First-use notice is not a native modal');
   assert(await page.locator('#print-workspace').evaluate(node => node.inert), 'Workspace was not inert');
   assert(!await page.locator('#privacy-check').isChecked(), 'Acknowledgement was preselected');
   assert(await page.locator('#privacy-accept').isDisabled(), 'Unchecked acknowledgement could continue');
   assert(requests.length === 0, 'Print APIs started before acknowledgement');
+  await page.locator('#pick-btn').evaluate(node => node.focus());
+  assert(await page.locator('#privacy-notice').evaluate(node => node.contains(document.activeElement)), 'Background stole focus from native modal');
+  for (let index = 0; index < 12; index++) {
+    await page.keyboard.press('Tab');
+    assert(await page.evaluate(() => !document.activeElement.closest('#print-workspace, #topbar')), 'Keyboard escaped to background controls');
+  }
   await page.evaluate(() => {
     window.dispatchEvent(new Event('online'));
     document.dispatchEvent(new Event('visibilitychange'));
@@ -40,16 +47,23 @@ async page => {
   assert(requests.length === 0, 'A hidden control, drop or lifecycle event bypassed acknowledgement');
 
   await page.setViewportSize({width: 1440, height: 1000});
-  await page.screenshot({path: 'output/print-privacy-desktop.png', fullPage: true});
-  for (const width of [390, 320]) {
-    await page.setViewportSize({width, height: 844});
+  await page.locator('#privacy-title').focus();
+  await page.locator('#privacy-scroll').evaluate(node => {node.scrollTop = 0;});
+  await page.screenshot({path: 'output/print-privacy-desktop.png'});
+  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+    await page.setViewportSize({width, height});
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Privacy page has mobile horizontal overflow');
-    await page.locator('#privacy-choice').scrollIntoViewIfNeeded();
+    assert(await page.locator('#privacy-notice').evaluate(node => node.scrollWidth <= node.clientWidth), 'Dialog clipped horizontal overflow');
+    assert(await page.locator('#privacy-accept').evaluate(node => {const box = node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight;}), 'Modal choices left the viewport');
+    assert(await page.locator('#privacy-scroll').evaluate(node => node.scrollHeight > node.clientHeight), 'Notice body is not independently scrollable');
+    await page.locator('#privacy-scroll').evaluate(node => {node.scrollTop = node.scrollHeight;});
+    await page.getByRole('heading', {name: '公开源码，欢迎查看'}).scrollIntoViewIfNeeded();
     assert(await page.locator('#privacy-accept').isVisible(), 'Mobile continue action inaccessible');
+    assert(await page.locator('#privacy-accept').evaluate(node => {const box = node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight;}), 'Scrolling moved modal choices off screen');
   }
   await page.setViewportSize({width: 390, height: 844});
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({path: 'output/print-privacy-mobile.png', fullPage: true});
+  await page.locator('#privacy-scroll').evaluate(node => {node.scrollTop = 0;});
+  await page.screenshot({path: 'output/print-privacy-mobile.png'});
   await page.locator('#privacy-check').focus();
   await page.keyboard.press('Space');
   assert(await page.locator('#privacy-accept').isEnabled(), 'Keyboard acknowledgement failed');
@@ -71,11 +85,21 @@ async page => {
   await page.locator('#privacy-open').click();
   assert(await page.locator('#privacy-review').isVisible(), 'Cannot review notice after entry');
   assert(await page.locator('#privacy-choice').isHidden(), 'Review incorrectly asked for repeat consent');
+  await page.keyboard.press('Escape');
+  assert(await page.locator('#privacy-notice').isHidden() && await page.locator('#doc-name').textContent() === 'print-portal.pdf', 'Review Escape lost document or left printing');
+  await page.locator('#privacy-open').click();
+  await page.locator('#privacy-close').click();
+  assert(await page.locator('#privacy-notice').isHidden(), 'Review close did not return to printing');
+  await page.locator('#privacy-open').click();
+  await page.mouse.click(2, 2);
+  assert(await page.locator('#privacy-notice').isHidden(), 'Review backdrop did not close');
+  await page.locator('#privacy-open').click();
   await page.locator('#privacy-return').click();
   assert(await page.locator('#doc-name').textContent() === 'print-portal.pdf', 'Review lost selected document');
   await page.locator('#privacy-open').click();
   await page.locator('#privacy-revoke').click();
   assert(await page.locator('#privacy-choice').isVisible(), 'Withdrawal did not restore gate');
+  assert(await page.locator('#privacy-notice').evaluate(node => node.matches(':modal')), 'Withdrawal lost modal protection');
   assert(await page.locator('#school-password').inputValue() === '' && await page.locator('#school-username').inputValue() === '', 'Withdrawal retained credentials');
   assert(await page.locator('#file-input').inputValue() === '' && await page.locator('#doc-open').getAttribute('href') === null, 'Withdrawal retained local file');
   assert(await page.locator('#doc-name').textContent() === '' && await page.locator('#confirm-name').textContent() === '', 'Withdrawal retained document names');
@@ -93,6 +117,14 @@ async page => {
   await page.goto(origin + '/print/');
   assert(await page.locator('#privacy-notice').isVisible() && await page.locator('#privacy-accept').isDisabled(), 'Old version bypassed updated notice');
   assert(requests.length === beforeVersion, 'Old version triggered printing APIs');
+  await page.keyboard.press('Escape');
+  await page.waitForURL(origin + '/');
+  assert(new URL(page.url()).pathname === '/', 'First-use Escape bypassed notice instead of leaving');
+  await page.goto(origin + '/print/');
+  await page.locator('#privacy-close').click();
+  await page.waitForURL(origin + '/');
+  assert(new URL(page.url()).pathname === '/', 'First-use close bypassed notice');
+  await page.goto(origin + '/print/');
   await page.getByRole('link', {name: '暂不使用', exact: true}).click();
   assert(new URL(page.url()).pathname === '/', 'Declining did not leave printing');
 
@@ -109,6 +141,6 @@ async page => {
   assert(await page.locator('#privacy-notice').isVisible(), 'Storage unavailable consent should last only this page');
   assert(!requests.some(request => request.method !== 'GET'), 'Privacy checks transmitted credentials or a print job');
   assert(!errors.length, errors.join('\n'));
-  return {passed: 10, firstVisit: true, keyboard: true, mobile: [390, 320], acknowledgementOnlyPersistence: true,
+  return {passed: 13, firstVisit: true, nativeModal: true, focusProtection: true, pinnedChoices: true, keyboard: true, viewports: [[390, 844], [320, 568], [844, 390]], acknowledgementOnlyPersistence: true,
     withdrawal: true, versionChange: true, storageUnavailable: true, printMutations: 0};
 }
