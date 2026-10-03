@@ -19,11 +19,13 @@ async page => {
       rules: ['DOMAIN,ispace.bnbu.edu.cn,校园资源', 'MATCH,DIRECT']};
     try {await route.fulfill({status, contentType: 'text/plain', headers: {'Subscription-Userinfo': 'expire=' + Math.floor(Date.now()/1000+86400)}, body: route.request().method() === 'HEAD' ? '' : JSON.stringify(payload)});} catch (_) { /* Expected when an obsolete request is cancelled. */ }
   });
+  await page.route('**/api/campus-connect/status',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({available:true,capacity:10,used:1,remaining:9,test_days:60,device_limit:2,user:null,csrf_token:'synthetic-csrf',subscription:null})}));
   await page.goto(origin + '/campus-connect/');
+  await page.locator('.existing').evaluate(node=>{node.open=true;});
   assert(calls.length === 0, 'Page requested a private subscription before user action');
   assert(await page.locator('#result').isHidden(), 'Connection result fabricated before validation');
   assert(await page.locator('#validate').isDisabled(), 'Empty subscription accepted');
-  assert(await page.locator('input[type=password]').count() === 0, 'Portal requested a school password');
+  assert(await page.locator('#school-dialog').isHidden(), 'School password requested before applying');
   for (const value of [valid.replace('www.bnbscheduler.top','evil.example'), valid.replace('https:','http:'), valid+'?share=1', valid.replace('https://','https://user:password@')]) {
     await page.locator('#subscription').fill(value);
     await page.locator('#validate').click();

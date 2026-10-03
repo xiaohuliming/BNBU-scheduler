@@ -1,8 +1,13 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>隐私与安全说明 · MAXCOURSE</title><link rel="stylesheet" href="/site-info/info.css"><script defer src="/site-info/analytics.js?v=1" data-page="privacy"></script></head><body>
 <header><a href="/">MAXCOURSE</a><nav><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">开源代码 ↗</a></nav></header>
-<main><p class='meta'>更新日期：2026 年 9 月 25 日</p><h1>隐私与安全说明</h1>
+<main><p class='meta'>更新日期：2026 年 10 月 4 日</p><h1>隐私与安全说明</h1>
 <p>MAXCOURSE 是由 SIrus. 维护的校园工具网站，并非学校官方产品，学校也未向本项目开放官方接口。查课程、排课、找空教室、看校园资料，不登录 iSpace 也能用，无需提供校园账号。</p>
 <div class='note'><strong>非必要不要把自己的学号和密码给任何第三方，包括 MAXCOURSE。</strong><p>用不用校园账号相关功能，由你自己决定。</p></div>
+<h2>校园连接的申请与设备会话</h2>
+<p>校园连接通过本人已验证的学校账号申请，每个学校账号一份 60 天测试订阅，重复申请不会延长期限。当前最多保留 10 份有效个人订阅，每份提供两个独立设备链接。申请前需要主动确认规则，申请记录、期限与独立访问凭据用于管理服务。</p>
+<p>身份验证会登录或创建 MAXCOURSE 账号并保存学校账号关联，学校密码只用于当次验证，不保存，不同步 DDL 或启动邮件读取。访问学校资源时仍需本人学校账号登录。节点使用独立凭据，不读取内部 HTTPS 页面内容，可能保留必要连接错误信息。</p>
+<p>在线限制按设备凭据和公网出口会话判定，公网出口信息仅在活动会话中使用。每个设备链接同时允许一个公网出口，网页多条连接归入同一设备。Shadowrocket、Clash 等通用客户端不提供硬件设备 ID，同一公网 IP 下共享同一凭据的额外物理设备无法精确区分。</p>
+<p>你可在校园连接页面分别重置两个设备的链接，旧链接失效并断开对应会话。订阅到期或撤销后停止访问。需要撤销整份订阅、查询、更正或删除申请记录，可联系维护者。访问范围由当前开放的校园资源白名单决定，不代表学校官方 VPN 的全部访问范围。</p>
 <h2>校园打印的账号与文件</h2>
 <p>校园打印会先显示单独的使用告知，由你主动确认后进入。浏览器只保存告知版本，告知更新后需要重新确认。可从打印页的「隐私与权益」撤回本浏览器的确认，停止后续打印处理并清除页面中的文件和凭据。撤回不等于注销账号，也不会取消已经进入学校队列的任务。</p>
 <p>打印入口的学校身份验证会登录或创建 MAXCOURSE 账号，并保存学号关联以区分本人任务。本打印流程不保存学校密码，不同步 DDL，不启动邮箱读取或 AI 摘要，也不会改变你已有的其他功能设置。密码经 HTTPS 传递，用于学校身份验证、PaperCut 余额查询和提交打印。</p>
