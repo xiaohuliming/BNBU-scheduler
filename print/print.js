@@ -214,7 +214,7 @@
     ui['dropzone'].hidden = !!state.file;
     ui['upload-stage'].hidden = !!state.file;
     setText(ui['page-title'], state.receipt ? '提交结果' : state.file ? '打印预览' : '校园打印');
-    const description = state.receipt ? '到打印点刷卡取件。' : state.file ? '核对版面，选好打印方式。' : '';
+    const description = state.receipt ? '到打印点刷卡取件。' : '';
     ui['page-description'].hidden = !description;
     setText(ui['page-description'], description);
     const step = state.receipt || ui['account-dialog'].open ? 3 : state.file ? 2 : 1;
