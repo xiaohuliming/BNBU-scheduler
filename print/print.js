@@ -18,7 +18,7 @@
     'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
     'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
     'cost-note', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
-    'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs', 'bulk-confirm', 'bulk-check', 'bulk-label',
+    'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs', 'bulk-confirm', 'bulk-check', 'bulk-label', 'balance-panel', 'balance-query', 'balance-value', 'balance-status', 'receipt-balance',
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
   const DEFAULT_OPTIONS = Object.freeze({ color: 'grayscale', sides: 'one-sided', copies: 1 });
@@ -34,6 +34,7 @@
     file: null, fileURL: null, pdf: null, pages: null, busy: false, reading: false,
     intent: null, receipt: null, receiptTone: '', receiptDoc: null, jobs: [], pollTimer: null, polls: 0,
     checking: false, retry: false, jobQuery: false,
+    balance: null, balanceQuerying: false, balanceGeneration: 0, balanceMessage: '',
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
     faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
     step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0, converting: false, converted: false,
@@ -55,6 +56,8 @@
   const ready = () => navigator.onLine && state.session?.service?.ready === true &&
     state.session.service.enabled === true && !state.session.service.busy && !state.session.service.demo;
   const calm = () => reduceMotion.matches;
+  const balanceAvailable = () => state.session?.service?.enabled && state.session.service.online &&
+    (state.session.service.features || []).includes('balance');
 
   // Output options. Until the service reports its features, every option stays previewable.
   const duplex = (options = state.options) => options.sides !== 'one-sided';
@@ -186,7 +189,7 @@
     ui['service-dot'].className = 'service-dot ' + tone;
     ui['service-refresh'].hidden = ready() || state.busy;
     ui['service-refresh'].disabled = state.checking;
-    const locked = state.busy || !!state.receipt;
+    const locked = state.busy || state.balanceQuerying || !!state.receipt;
     const options = activeOptions();
     ui['submit-form'].setAttribute('aria-busy', String(state.busy));
     ui['pick-btn'].disabled = locked || !!state.intent;
@@ -206,7 +209,7 @@
     ui['account-service'].hidden = ready();
     ui['account-service'].textContent = service?.busy ? '设备正在处理其他任务，请稍后提交。' : '打印服务未连接，暂时无法提交。';
     ui['confirm-name'].textContent = state.file?.name || '';
-    ui['submit-btn'].disabled = state.busy || state.reading || !previewed() || !ready();
+    ui['submit-btn'].disabled = state.busy || state.balanceQuerying || state.reading || !previewed() || !ready();
     ui['submit-btn'].setAttribute('aria-describedby', 'service-text form-error');
     ui['dropzone'].hidden = !!state.file;
     ui['upload-stage'].hidden = !!state.file;
@@ -223,6 +226,7 @@
     renderSettings(locked, options);
     renderPreview(locked, options);
     renderCapabilities();
+    renderBalance();
     ui['doc-panel'].hidden = !state.file;
     ui['doc-progress'].hidden = !state.reading && !state.busy && !state.previewRendering;
     if (state.file) {
@@ -233,6 +237,71 @@
     }
     ui['workspace-fields'].hidden = !!state.receipt;
     ui.receipt.hidden = !state.receipt;
+  }
+
+  function renderBalance() {
+    const current = state.balance && state.balance.username === username() && state.balance.owner === state.session?.user?.id;
+    ui['balance-panel'].hidden = !balanceAvailable() && !current && !state.balanceMessage;
+    ui['balance-query'].disabled = state.busy || state.balanceQuerying || !balanceAvailable();
+    ui['balance-query'].textContent = state.balanceQuerying ? '正在查询…' : current ? '刷新余额' : '查询余额';
+    ui['balance-value'].textContent = current ? state.balance.display : '待查询';
+    ui['balance-status'].textContent = state.balanceQuerying ? '正在登录 PaperCut 读取余额，不会提交打印任务。' :
+      state.balanceMessage || (current ? `更新于 ${new Date(state.balance.checked_at * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : '填写学校账号和密码后查询。');
+    ui['receipt-balance'].hidden = !state.receipt || (!current && !state.balanceMessage);
+    ui['receipt-balance'].textContent = current ? `查询时 PaperCut 余额 ${state.balance.display}，实际扣费以刷卡取件时为准。` :
+      state.balanceMessage ? `PaperCut 余额未能读取：${state.balanceMessage}` : '';
+  }
+
+  async function verifySchoolAccount(account, password) {
+    if (state.intent && state.intent.username !== account) throw new Error('账号已变更，不能重试原任务。请先核对学校队列。');
+    if (schoolUser() !== account) {
+      const login = await api('/api/login/ispace', { username: account, password });
+      if (!login.ok) throw new Error(errorText(login, '账号验证暂时不可用，请稍后重试。'));
+      if (!await refreshSession({ flow: true }) || schoolUser() !== account) throw new Error('账号验证状态未确认，请重试。');
+    }
+    if (state.intent && state.intent.owner !== state.session?.user?.id) throw new Error('登录账号与原任务不同，请先核对学校队列。');
+  }
+
+  async function lookupBalance(account, password, generation = state.balanceGeneration) {
+    const identity = state.identityGeneration;
+    const owner = state.session?.user?.id;
+    const result = await api('/api/print/balance', { password }, 40000);
+    if (generation !== state.balanceGeneration || identity !== state.identityGeneration || username() !== account) return;
+    const balance = result.data?.balance;
+    if (!result.ok) throw new Error(errorText(result, '暂时无法读取 PaperCut 余额。'));
+    if (!balance || balance.username !== account || typeof balance.display !== 'string' || !Number.isInteger(balance.checked_at)) {
+      throw new Error('没有收到有效的余额，请稍后再查。');
+    }
+    state.balance = { ...balance, owner };
+    state.balanceMessage = '';
+    renderBalance();
+  }
+
+  async function queryBalance() {
+    if (state.busy || state.balanceQuerying || !balanceAvailable()) return;
+    const account = username();
+    let password = ui['school-password'].value;
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(account) || !password || password.length > 512 || /[\r\n\0]/.test(password)) {
+      state.balanceMessage = '请先填写本人学校账号和密码。'; renderBalance(); return;
+    }
+    const generation = ++state.balanceGeneration;
+    state.balance = null;
+    state.balanceMessage = '';
+    state.balanceQuerying = true;
+    state.sessionGeneration++;
+    render();
+    try {
+      if (!await refreshSession({ flow: true }) || !balanceAvailable()) throw new Error('余额查询服务暂未连接。');
+      await verifySchoolAccount(account, password);
+      if (generation !== state.balanceGeneration || username() !== account) return;
+      await lookupBalance(account, password, generation);
+    } catch (error) {
+      if (generation === state.balanceGeneration) state.balanceMessage = error.name === 'AbortError' || error instanceof TypeError ?
+        '余额查询连接中断，请稍后再查。' : error.message;
+    } finally {
+      password = null;
+      if (generation === state.balanceGeneration) { state.balanceQuerying = false; render(); }
+    }
   }
 
   function note(id, text, warn = false) {
@@ -586,7 +655,7 @@
   }
 
   async function refreshSession({ flow = false } = {}) {
-    if (state.busy && !flow) return false;
+    if ((state.busy || state.balanceQuerying) && !flow) return false;
     const generation = ++state.sessionGeneration;
     state.checking = true;
     render();
@@ -597,6 +666,8 @@
       const previous = state.session?.user?.id ?? null;
       const next = result.data.user?.id ?? null;
       if (previous !== next) {
+        state.balance = null;
+        state.balanceMessage = '';
         state.identityGeneration++;
         state.jobs = [];
         renderJobs();
@@ -773,7 +844,7 @@
 
   async function submit(event) {
     event.preventDefault();
-    if (state.busy || state.reading || state.receipt || !previewed()) return;
+    if (state.busy || state.balanceQuerying || state.reading || state.receipt || !previewed()) return;
     showError('file-error'); showError('form-error');
     ui['school-username'].removeAttribute('aria-invalid');
     ui['school-password'].removeAttribute('aria-invalid');
@@ -808,17 +879,16 @@
       const options = state.intent?.options || { ...state.options };
       const missing = unsupported(options);
       if (missing.length) throw new Error(`当前打印设备暂不支持${missing.join('、')}，请返回调整打印设置。`);
-      if (state.intent && state.intent.username !== account) {
-        throw new Error('账号已变更，不能重试原任务。请先核对学校队列。');
-      }
-      if (schoolUser() !== account) {
-        progress('正在验证学校账号…', 'auth');
-        const login = await api('/api/login/ispace', { username: account, password });
-        if (!login.ok) throw new Error(errorText(login, '账号验证暂时不可用，请稍后重试。'));
-        if (!await refreshSession({ flow: true }) || schoolUser() !== account) throw new Error('账号验证状态未确认，请重试。');
-      }
-      if (state.intent && state.intent.owner !== state.session?.user?.id) {
-        throw new Error('登录账号与原任务不同，请先核对学校队列。');
+      progress('正在验证学校账号…', 'auth');
+      await verifySchoolAccount(account, password);
+      if (balanceAvailable()) {
+        progress('正在读取 PaperCut 余额…', 'auth');
+        try { await lookupBalance(account, password); }
+        catch (error) {
+          state.balance = null;
+          state.balanceMessage = typeof error.message === 'string' && error.name !== 'AbortError' && !(error instanceof TypeError)
+            ? error.message : '余额暂时无法查询，本次打印继续提交。';
+        }
       }
       const identity = state.identityGeneration;
       const owner = state.session.user.id;
@@ -889,12 +959,15 @@
 
   ui['submit-form'].addEventListener('submit', submit);
   ui['go-print'].addEventListener('click', openAccount);
+  ui['balance-query'].addEventListener('click', queryBalance);
   ui['account-back'].addEventListener('click', () => closeAccount());
   ui['account-dialog'].addEventListener('cancel', event => {
     if (state.busy) event.preventDefault();
     else clearPassword();
   });
-  ui['account-dialog'].addEventListener('close', () => { clearPassword(); render(); });
+  ui['account-dialog'].addEventListener('close', () => {
+    clearPassword(); state.balanceGeneration++; state.balanceQuerying = false; render();
+  });
   ui['account-dialog'].addEventListener('click', event => {
     if (event.target !== ui['account-dialog']) return;
     const bounds = ui['account-dialog'].getBoundingClientRect();
@@ -983,7 +1056,8 @@
     ui['password-toggle'].setAttribute('aria-label', visible ? '隐藏密码' : '显示密码');
   });
   ui['school-username'].addEventListener('input', () => {
-    clearPassword(); showError('form-error'); renderJobs();
+    state.balance = null; state.balanceMessage = ''; state.balanceGeneration++;
+    clearPassword(); showError('form-error'); render(); renderJobs();
     ui['school-username'].removeAttribute('aria-invalid');
   });
   ui['school-password'].addEventListener('input', () => {
