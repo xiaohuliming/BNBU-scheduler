@@ -8,9 +8,9 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css?v=privacy-20261003" rel="stylesheet">
+<link href="print.css?v=privacy-modal-20261003" rel="stylesheet">
 </head>
-<body>
+<body class="privacy-pending">
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
 
 <header class="topbar" id="topbar">
@@ -34,47 +34,47 @@
   </div>
 </header>
 
-<main class="wrap privacy-page" id="privacy-notice" aria-labelledby="privacy-title">
-  <div class="privacy-heading">
-    <p class="kicker">VIII. Campus Printing / Before you print</p>
-    <span class="privacy-edition">使用告知 · 2026.10.03</span>
-  </div>
-  <div class="privacy-layout">
+<dialog class="privacy-dialog" id="privacy-notice" aria-labelledby="privacy-title" aria-describedby="privacy-lead" open>
+  <header class="privacy-dialog-head">
+    <div><p class="kicker">Privacy / 隐私与权益</p><h2 id="privacy-title" tabindex="-1">打印前，请先知情。</h2></div>
+    <div class="privacy-head-actions"><span class="privacy-edition">2026.10.03</span><button class="icon-btn" id="privacy-close" type="button" aria-label="暂不使用并返回首页" title="暂不使用并返回首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></div>
+  </header>
+  <div class="privacy-scroll" id="privacy-scroll" tabindex="0" role="region" aria-label="隐私告知正文">
     <div class="privacy-intro">
-      <span class="privacy-tag">账号 · 文件 · 你的选择</span>
-      <h1 id="privacy-title" tabindex="-1">打印前，<br>请先知情。</h1>
-      <p class="privacy-lead">MAXCOURSE 是学生维护的校园工具，<strong>并非学校官方服务</strong>。使用打印功能前，请了解你的信息会怎样处理。</p>
+      <p class="privacy-lead" id="privacy-lead">MAXCOURSE 是学生维护的校园工具，<strong>并非学校官方服务</strong>。使用打印功能前，请了解你的信息会怎样处理。</p>
       <div class="privacy-facts"><span>密码不由打印流程保存</span><span>提交后，到学校刷卡取件</span></div>
       <p class="privacy-intro-note">是否使用，由你决定。拒绝不会影响使用 MAXCOURSE 的其他公开工具。</p>
     </div>
     <div class="privacy-sections">
       <section class="privacy-section"><span class="privacy-index">01</span><div>
-        <h2>账号用于什么</h2>
+        <h3>账号用于什么</h3>
         <p>学校密码经 HTTPS 传递，用于学校身份验证、PaperCut 余额查询和提交打印。本打印流程不保存密码，不同步 DDL，不启动邮件读取或 AI 摘要。</p>
         <p>验证时会登录或创建 MAXCOURSE 账号，并保存关联的学号，用来区分本人任务。已有账号的其他功能设置不会因打印而改变。</p>
       </div></section>
       <section class="privacy-section"><span class="privacy-index">02</span><div>
-        <h2>文件经过哪里</h2>
+        <h3>文件经过哪里</h3>
         <p>PDF 在浏览器中预览；Office 文档和图片会在选择后上传转换。提交时，文件经 MAXCOURSE 服务器和校园执行设备送入学校打印队列。</p>
         <p>我们的临时文件在处理结束后删除，任务记录保留 24 小时，不包含文件内容、密码或余额。学校队列的文件留存由学校管理。请避免上传不适合交给第三方处理的材料。</p>
       </div></section>
       <section class="privacy-section"><span class="privacy-index">03</span><div>
-        <h2>你可以拒绝，也可以退出</h2>
+        <h3>你可以拒绝，也可以退出</h3>
         <p>确认前不会开启文件处理或账号验证。之后可随时从「隐私与权益」撤回本浏览器的确认，停止后续打印处理，并清除页面中的文件和凭据；已提交到学校的任务不会因此取消。</p>
         <p>学号关联和 MAXCOURSE 账号需在首页「设置」中分别解绑或注销。查询、更正、删除信息或反馈问题，可<a href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者</a>。历史备份无法保证立即清除。</p>
       </div></section>
       <section class="privacy-section"><span class="privacy-index">04</span><div>
-        <h2>费用与取件</h2>
+        <h3>费用与取件</h3>
         <p>页面费用为估算，余额为查询时的快照，实际扣费以学校打印机为准。提交成功表示文件进入待取队列，仍需到打印点刷卡释放。</p>
         <p>确认告知不意味着放弃你的相关权益。<a href="/privacy/" target="_blank" rel="noopener noreferrer">阅读完整隐私说明 ↗</a> · <a href="/print-setup/index.html" target="_blank" rel="noopener noreferrer">其他打印方式 ↗</a></p>
       </div></section>
       <section class="privacy-section"><span class="privacy-index">05</span><div>
-        <h2>公开源码，欢迎查看</h2>
+        <h3>公开源码，欢迎查看</h3>
         <p>MAXCOURSE 主项目已开源，你可以随时在 <a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">GitHub 查看公开源码与更新记录 ↗</a>，也欢迎提出问题和建议。</p>
         <p>公开内容包括页面与主站代码，校园打印执行后端目前未公开。</p>
       </div></section>
     </div>
+    <p class="privacy-site-note">网站仍会处理必要的会话 Cookie、访问统计及服务日志，详情见完整隐私说明。</p>
   </div>
+  <footer class="privacy-dialog-foot">
   <div class="privacy-choice" id="privacy-choice">
     <div class="privacy-ack">
       <label for="privacy-check"><input id="privacy-check" type="checkbox"><span>我已阅读，愿意使用上述打印服务。</span></label>
@@ -90,10 +90,11 @@
     <div class="privacy-actions"><button class="btn btn-quiet" id="privacy-revoke" type="button">撤回确认</button><button class="btn btn-primary" id="privacy-return" type="button">返回打印</button></div>
   </div>
   <p class="privacy-storage-note" id="privacy-storage-note" role="status" hidden></p>
-  <p class="privacy-site-note">网站仍会处理必要的会话 Cookie、访问统计及服务日志，详情见完整隐私说明。</p>
-</main>
+  <noscript><p class="privacy-storage-note">需启用 JavaScript 才能确认并使用打印。你仍可阅读告知或暂不使用。</p></noscript>
+  </footer>
+</dialog>
 
-<main class="wrap page" id="print-workspace" hidden inert>
+<main class="wrap page" id="print-workspace" inert>
   <div class="intro">
     <div class="intro-copy">
       <p class="kicker"><span class="kicker-num">VIII.</span> Campus Printing</p>
@@ -397,9 +398,8 @@
   </div>
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
-<noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
 <script src="pdf-preview.js" defer></script>
 <script src="pricing.js?v=cost-20261003" defer></script>
-<script src="print.js?v=privacy-20261003b" defer></script>
+<script src="print.js?v=privacy-modal-20261003" defer></script>
 </body>
 </html>
