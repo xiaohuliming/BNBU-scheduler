@@ -17,7 +17,7 @@
     'blank-note', 'sheet', 'sheet-wrap', 'copies-badge', 'page-stage', 'preview-loading', 'preview-caption',
     'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
     'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
-    'cost-note', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
+    'cost-note', 'estimated-cost', 'confirm-cost', 'receipt-cost', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
     'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs', 'bulk-confirm', 'bulk-check', 'bulk-label', 'balance-panel', 'balance-query', 'balance-value', 'balance-status', 'receipt-balance',
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
@@ -349,7 +349,13 @@
     else note('copies-note', pages && cap < COPIES_LIMIT ? `最多 ${cap} 份` : '');
     tweenNumber(ui['print-total-sheets'], pages ? sheetsFor(pages, options) : 0);
     ui['print-total'].textContent = pages ? `${pages} 页 × ${options.copies} 份 · 共 ${pages * options.copies} 面` : '正在检查页数';
-    ui['cost-note'].textContent = options.color === 'color' ? '彩色按学校彩色标准计费，刷卡取件时扣费。' : '刷卡取件时按学校标准计费。';
+    const cost = window.MaxcoursePrintPricing?.estimate(pages, options);
+    ui['estimated-cost'].textContent = cost?.display || (pages ? '暂无法估算' : '待选文档');
+    ui['cost-note'].textContent = cost?.note || '依据学校公开价目表估算，实际以刷卡结算为准。';
+    ui['confirm-cost'].textContent = cost ? `估算费用 ${cost.display} · 实际以刷卡结算为准` : '';
+    const receiptCost = state.receiptDoc && window.MaxcoursePrintPricing?.estimate(state.receiptDoc.pages, state.receiptDoc.options);
+    ui['receipt-cost'].hidden = !state.receipt || !receiptCost;
+    ui['receipt-cost'].textContent = receiptCost ? `本次估算费用 ${receiptCost.display}，实际扣费以学校系统为准。` : '';
     ui['range-summary'].textContent = pages ? `全部 ${pages} 页` : '全部页面';
     ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options)].filter(Boolean).join(' · ');
   }
