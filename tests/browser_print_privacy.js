@@ -2,7 +2,7 @@ async page => {
   const origin = new URL(page.url()).origin;
   if (new URL(origin).hostname !== '127.0.0.1') throw new Error('Use an isolated local application.');
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
-  const key = 'maxcourse.print.privacy', version = '2026-10-03.1';
+  const key = 'maxcourse.print.privacy', version = '2026-10-03.2';
   const requests = [], errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/**', route => {
