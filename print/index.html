@@ -8,7 +8,7 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css?v=limits-20261001" rel="stylesheet">
+<link href="print.css?v=balance-20261003" rel="stylesheet">
 </head>
 <body>
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
@@ -252,6 +252,11 @@
               </div>
               <p class="field-hint" id="password-hint">仅用于本次验证与打印，不保存密码。</p>
             </div>
+            <div class="balance-panel" id="balance-panel" aria-labelledby="balance-label" hidden>
+              <div class="balance-heading"><span id="balance-label">PaperCut 余额</span><button type="button" class="text-btn" id="balance-query">查询余额</button></div>
+              <strong class="balance-value" id="balance-value">待查询</strong>
+              <p class="field-hint" id="balance-status" role="status">填写学校账号和密码后查询。</p>
+            </div>
           </div>
         </div>
         <div class="collapse submit-progress">
@@ -283,6 +288,7 @@
           <p class="receipt-message" id="receipt-message"></p>
           <dl class="receipt-details" id="receipt-details"></dl>
           <p class="receipt-meta" id="receipt-meta"></p>
+          <p class="receipt-balance" id="receipt-balance" hidden></p>
         </article>
       </div>
       <div class="receipt-actions">
@@ -329,6 +335,6 @@
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
 <script src="pdf-preview.js" defer></script>
-<script src="print.js?v=copy-20261003" defer></script>
+<script src="print.js?v=balance-20261003" defer></script>
 </body>
 </html>

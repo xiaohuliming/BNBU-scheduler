@@ -573,3 +573,9 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
 .bulk-confirm { display: flex; gap: 10px; align-items: flex-start; padding: 14px; margin: 0 0 18px; border: 1px solid var(--ink); font-size: 13px; line-height: 1.7; cursor: pointer; }
 .bulk-confirm[hidden] { display: none; }
 .bulk-confirm input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ink); }
+
+.balance-panel { margin-top: 20px; padding-top: 16px; border-top: 2px solid var(--ink); }
+.balance-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; }
+.balance-heading button { min-height: 44px; }
+.balance-value { overflow-wrap: anywhere; display: block; margin: 4px 0 8px; font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.receipt-balance { margin: 16px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
