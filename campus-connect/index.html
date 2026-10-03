@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="MAXCOURSE 校园连接：了解试用范围，验证私人订阅地址，接入 Shadowrocket、FlClash、Clash Verge Rev 与 Stash。">
+  <meta name="theme-color" content="#f4efe6">
+  <title>校园连接 · MAXCOURSE</title>
+  <link rel="icon" href="/favicon.png">
+  <link rel="stylesheet" href="/vendor/fonts.css">
+  <link rel="stylesheet" href="/campus-connect/connect.css?v=20261004-1">
+  <script defer src="/campus-connect/connect.js?v=20261004-1"></script>
+</head>
+<body>
+  <a class="skip-link" href="#connect-form">跳到客户端接入</a>
+  <header class="topbar"><a class="brand" href="/">Maxcourse<span>Campus Toolkit</span></a><a class="back-link" href="/">返回 MAXCOURSE ↗</a></header>
+  <main class="wrap">
+    <div class="page-heading"><div><p class="kicker">Toolbox / Campus Access</p><h1>校园连接</h1><p class="lead">校外访问已开放的校园资源。</p></div><span class="trial-badge">小范围试用 · 按人开通</span></div>
+    <div class="layout">
+      <section class="card connector" aria-labelledby="connect-title">
+        <div class="section-head"><h2 id="connect-title">连接你的客户端</h2></div>
+        <fieldset class="client-choice"><legend>选择使用的软件</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span>Shadowrocket<small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span>Clash 系列<small>FlClash / Verge Rev</small></span></label><label><input type="radio" name="client" value="stash"><span>Stash<small>iOS / macOS</small></span></label></div></fieldset>
+        <form id="connect-form" method="post" action="#" novalidate>
+          <label class="field-label" for="subscription">你的私人订阅地址</label>
+          <div class="input-row"><input id="subscription" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴维护者发给你的 HTTPS 订阅地址" aria-describedby="subscription-hint form-error"><button id="clear-key" class="clear-button" type="button" aria-label="清除私人订阅地址">清除</button></div>
+          <p class="field-hint" id="subscription-hint">本页仅临时使用这个地址，不写入浏览器本地存储。请勿公开或共用订阅链接。没有凭据？<a href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者申请试用</a>。</p>
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <button id="validate" class="button primary" type="submit" disabled>验证订阅并继续 <span aria-hidden="true">→</span></button>
+        </form>
+        <div id="result" class="result" hidden aria-labelledby="result-title">
+          <div class="result-heading"><span class="valid-mark" aria-hidden="true">✓</span><h3 id="result-title" tabindex="-1">订阅可用</h3></div>
+          <p class="field-hint" id="expiry-note">有效期以发放信息为准，到期或撤销后将无法继续使用。</p>
+          <div class="import-step"><span class="step-number">1</span><div><h4>添加校园节点</h4><p id="import-hint"></p><button id="copy-subscription" type="button" class="button primary">复制订阅地址</button></div></div>
+          <div class="import-step"><span class="step-number">2</span><div><h4>保留现有上网配置</h4><p id="merge-hint"></p><button id="merge" type="button" class="button">下载校园合并片段</button><p class="field-hint" id="merge-note">合并校园规则时保留原有最终规则，使用配置分流模式。</p></div></div>
+          <div class="import-step"><span class="step-number">3</span><div><h4>打开学校服务验证</h4><p>导入只代表客户端拿到了配置。连接后打开学校页面，使用本人学校账号登录。</p><div class="resource-links"><a href="https://ispace.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">打开 iSpace ↗</a><a href="https://papercut.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">打开 PaperCut ↗</a></div></div></div>
+          <details class="full-config"><summary>备用：下载完整试用配置</summary><p>完整配置只包含校园节点，其他流量使用 DIRECT。它会替换当前激活的规则，请先备份已有配置。</p><a class="button" id="download-full" download rel="noreferrer">下载完整配置</a></details>
+        </div>
+        <noscript><p class="error">请启用 JavaScript 验证订阅。你仍可阅读试用范围或联系维护者。</p></noscript>
+      </section>
+      <aside class="overview" aria-labelledby="scope-title">
+        <section class="card resources"><div class="section-head"><h2 id="scope-title">已开放资源</h2></div>
+          <ul class="resource-list"><li><strong>iSpace</strong><span>课程与作业页面</span></li><li><strong>PaperCut</strong><span>学校打印账户页面</span></li><li><strong>学校打印队列</strong><span>电脑端直接访问</span></li></ul>
+          <p class="scope-note">当前提供这些服务的 TCP 访问。其他校内资源尚未开放，学校账号权限仍由学校验证。</p>
+          <a class="text-link" href="/print/">只需要打印？打开校园打印 ↗</a>
+        </section>
+        <section class="card invitation"><h2>还没有试用凭据？</h2><p>试用凭据由维护者单独发放，每人独立、可到期、可撤销。当前没有自助注册入口。</p><a class="button" href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者申请试用 ↗</a></section>
+        <p class="privacy-note">MAXCOURSE 是学生维护的工具，并非学校官方 VPN。校园连接使用独立凭据，不需要在这里填写学校密码。<a href="/privacy/" target="_blank" rel="noopener noreferrer">隐私说明 ↗</a></p>
+      </aside>
+    </div>
+    <footer class="page-footer"><span>Campus access, with your own credentials.</span><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">MAXCOURSE 开源项目 ↗</a></footer>
+  </main>
+  <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
+</body>
+</html>
