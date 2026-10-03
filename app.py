@@ -23,7 +23,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
-from crawler import fetch_timeline
+from crawler import fetch_timeline, verify_credentials
 from ispace_credentials import (
     ISpaceCredentialError,
     decrypt_ispace_password,
@@ -2119,8 +2119,12 @@ def login_ispace():
     if error:
         return jsonify({"error": error}), 400
     
-    # 1. Verify with iSpace
-    result = fetch_timeline(username, password)
+    # Printing needs an authenticated owner, not calendar or mailbox access.
+    print_only = (request.get_json(silent=True) or {}).get('purpose') == 'print'
+    if print_only:
+        result = [] if verify_credentials(username, password) else {"error": "Login failed"}
+    else:
+        result = fetch_timeline(username, password)
     if isinstance(result, dict) and "error" in result:
         return jsonify({"error": "iSpace login failed: " + result["error"]}), 401
         
@@ -2177,7 +2181,7 @@ def login_ispace():
         user_id = c.lastrowid
         
     # 4. Sync DDLs to Todos
-    sync_stats = sync_ispace_todos_for_user(conn, user_id, ddls)
+    sync_stats = None if print_only else sync_ispace_todos_for_user(conn, user_id, ddls)
 
     conn.commit()
     conn.close()
@@ -2187,15 +2191,17 @@ def login_ispace():
     # a bound self-chosen name is a password identity on the shared side.
     local_username = user['username'] if user else username
     set_authenticated_session(user_id, local_username, display_name)
-    mail_brief_service.start(user_id, username, password)
+    if not print_only:
+        mail_brief_service.start(user_id, username, password)
 
     resp = jsonify({
         "success": True,
         "user": {"id": user_id, "username": local_username, "ispace_username": username, "display_name": display_name},
         "sync": sync_stats,
     })
-    sso_bridge.set_sso_cookie(resp, sso_bridge.issue_shared_token(
-        local_username, ispace=(local_username == username)))
+    if not print_only:
+        sso_bridge.set_sso_cookie(resp, sso_bridge.issue_shared_token(
+            local_username, ispace=(local_username == username)))
     return resp
 
 @app.route('/api/user/bind/ispace', methods=['POST'])

@@ -93,6 +93,60 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .ghost-btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
 
 /* Chapter opening, set like an entry in the home page contents */
+.privacy-page { padding-block: 28px 40px; }
+.privacy-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--ink); }
+.privacy-heading .kicker { margin: 0; }
+.privacy-edition { font: 12px/1.4 var(--mono); color: var(--muted); white-space: nowrap; }
+.privacy-layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: clamp(32px, 5vw, 80px); padding-block: 34px; }
+.privacy-intro { padding-top: 7px; }
+.privacy-tag { display: inline-block; padding: 5px 10px; border: 2px solid var(--ink); background: var(--signal); font-size: 12px; font-weight: 700; }
+.privacy-intro h1 { margin-block: 24px 20px; font-size: clamp(38px, 4.4vw, 62px); line-height: 1.25; letter-spacing: -.03em; }
+.privacy-intro h1:focus { outline: none; }
+.privacy-lead { max-width: 350px; margin: 0; font-size: 15px; line-height: 1.9; }
+.privacy-facts { display: grid; gap: 10px; margin-block: 28px 22px; font-size: 13px; font-weight: 700; }
+.privacy-facts span { display: flex; align-items: center; gap: 9px; }
+.privacy-facts span::before { content: ''; width: 9px; height: 9px; border: 1.5px solid var(--ink); background: var(--signal); }
+.privacy-intro-note { max-width: 330px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.privacy-sections { border: var(--bw) solid var(--ink); background: var(--sheet); box-shadow: var(--hard); }
+.privacy-section { display: grid; grid-template-columns: 27px minmax(0, 1fr); gap: 14px; padding: 22px 24px; }
+.privacy-section + .privacy-section { border-top: 1px solid var(--ink); }
+.privacy-index { font: 600 12px/26px var(--mono); color: var(--muted); }
+.privacy-section h2 { margin: 0 0 8px; font: 700 19px/1.4 var(--serif); }
+.privacy-section p { margin: 7px 0 0; font-size: 13px; line-height: 1.85; color: var(--ink-2); }
+.privacy-section a { text-underline-offset: 3px; }
+.privacy-section a:hover { background: var(--signal); }
+.privacy-choice { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; border: var(--bw) solid var(--ink); background: var(--sheet); box-shadow: var(--hard-sm); }
+.privacy-ack label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 15px; font-weight: 700; }
+.privacy-ack input { flex: none; width: 21px; height: 21px; margin: 2px 0 0; accent-color: var(--ink); cursor: pointer; }
+.privacy-ack p { max-width: 530px; margin: 8px 0 0 33px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.privacy-actions { display: flex; flex: none; gap: 12px; }
+.privacy-actions .btn { padding-inline: 18px; font-size: 14px; }
+#privacy-accept:disabled { opacity: .55; box-shadow: none; }
+#privacy-review > p { max-width: 600px; margin: 0; font-size: 13px; }
+.privacy-site-note, .privacy-storage-note { margin: 18px 0 0; font-size: 12px; line-height: 1.8; color: var(--muted); }
+.privacy-storage-note { color: var(--warn); }
+@media (max-width: 900px) {
+  .privacy-layout { gap: 30px; grid-template-columns: minmax(0, .75fr) minmax(0, 1.3fr); }
+  .privacy-choice { align-items: flex-start; flex-direction: column; }
+  .privacy-actions { align-self: flex-end; }
+}
+@media (max-width: 640px) {
+  .privacy-page { width: calc(100% - 32px); padding-top: 20px; }
+  .privacy-heading { flex-wrap: wrap; gap: 8px; }
+  .privacy-heading .kicker { font-size: 13px; }
+  .privacy-edition { font-size: 11px; }
+  .privacy-layout { grid-template-columns: 1fr; gap: 24px; padding-block: 22px 26px; }
+  .privacy-intro h1 { margin-block: 18px 14px; font-size: 40px; }
+  .privacy-lead { max-width: none; font-size: 14px; }
+  .privacy-facts { gap: 8px; margin-block: 18px 12px; }
+  .privacy-intro-note { max-width: none; margin-bottom: 0; }
+  .privacy-section { gap: 9px; padding: 18px 16px; grid-template-columns: 23px minmax(0, 1fr); }
+  .privacy-section h2 { font-size: 18px; }
+  .privacy-choice { padding: 18px 16px; gap: 20px; }
+  .privacy-ack label { font-size: 14px; }
+  .privacy-actions { width: 100%; flex-wrap: wrap; }
+  .privacy-actions .btn { flex: 1; padding-inline: 12px; min-height: 48px; }
+}
 .page { padding-bottom: 56px; }
 .intro {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;

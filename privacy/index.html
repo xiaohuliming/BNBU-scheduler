@@ -3,6 +3,11 @@
 <main><p class='meta'>更新日期：2026 年 9 月 25 日</p><h1>隐私与安全说明</h1>
 <p>MAXCOURSE 是由 SIrus. 维护的校园工具网站，并非学校官方产品，学校也未向本项目开放官方接口。查课程、排课、找空教室、看校园资料，不登录 iSpace 也能用，无需提供校园账号。</p>
 <div class='note'><strong>非必要不要把自己的学号和密码给任何第三方，包括 MAXCOURSE。</strong><p>用不用校园账号相关功能，由你自己决定。</p></div>
+<h2>校园打印的账号与文件</h2>
+<p>校园打印会先显示单独的使用告知，由你主动确认后进入。浏览器只保存告知版本，告知更新后需要重新确认。可从打印页的「隐私与权益」撤回本浏览器的确认，停止后续打印处理并清除页面中的文件和凭据。撤回不等于注销账号，也不会取消已经进入学校队列的任务。</p>
+<p>打印入口的学校身份验证会登录或创建 MAXCOURSE 账号，并保存学号关联以区分本人任务。本打印流程不保存学校密码，不同步 DDL，不启动邮箱读取或 AI 摘要，也不会改变你已有的其他功能设置。密码经 HTTPS 传递，用于学校身份验证、PaperCut 余额查询和提交打印。</p>
+<p>PDF 预览在浏览器完成，Office 文档和图片会在选择后上传转换。提交文件经 MAXCOURSE 服务器和校园执行设备进入学校打印队列，我们的临时文件在处理完成后删除。打印任务记录保留 24 小时，不包含文件内容、密码或余额。学校队列的留存与收费由学校管理。页面金额为估算，余额为查询时的快照，实际以学校打印机为准。</p>
+<p>你可以拒绝使用打印，改用其他打印方式。校园账号关联可在首页设置中解绑，MAXCOURSE 账号可在设置中注销。需要查询、更正、删除相关信息或反馈问题，请联系下方维护者。历史备份无法保证立即清除，详见下面的解绑说明。阅读并确认告知不意味着放弃你的相关权益。</p>
 <h2>密码和账号标识怎么处理</h2>
 <p>你在 iSpace 登录、绑定或手动同步时填的密码，会通过 HTTPS 发到项目服务器，再交给学校系统。处理时密码短暂在内存里，完成后就不留了。一次登录不会自动把密码写进数据库。不过绑定会保存一个校园账号标识，用来关联你的校园账号和 MAXCOURSE 账号。不存密码和不存账号标识是两件事。</p>
 <p>只有你主动打开 DDL 自动同步，密码才会加密保存在服务器上。后台管理界面没有明文展示接口，但服务器持有解密密钥，自动同步或恢复邮箱会话时会解密使用。万一服务器被入侵，也存在密码泄露的风险。不想把密码留在服务器，就别开自动同步，每次用的时候手动填。关掉自动同步，或者解绑 iSpace，在线业务库里的密码密文会被删掉。这个可选的加密保存功能以前就有，历史实现也能在 GitHub 查看。</p>
@@ -24,5 +29,5 @@
 <p><a href="/stats/index.html">公开数据看板</a>只提供聚合数字，不展示个人访问明细、账号标识或具体访问者。未接入统计时的访问无法补回，历史数字不等于完整访问人数。</p>
 <h2>其他必要数据和提醒</h2>
 <p>为了账号、待办、评价、限流和服务维护，项目还会处理账号标识、你主动保存的数据和必要访问日志。HTTP 访问日志可能包含 IP、时间、路径和状态码。不要在公开评论、问题反馈或聊天里贴密码、邮箱登录链接、Cookie、验证码或其他敏感信息。学校系统入口请以学校官网或 ITSC 发布的为准。开发者不会通过微信或 GitHub 向你索取校园密码。别因为源码公开或者认识开发者，就放松对凭据的保护。</p>
-<section class="contact"><h2>开发者与联系</h2><dl><dt>开发者</dt><dd>SIrus.</dd><dt>微信</dt><dd>ToDoHacambiado</dd><dt>学号</dt><dd>t330025032</dd><dt>个人博客</dt><dd><a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></dd><dt>项目仓库</dt><dd><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">BNBU-scheduler ↗</a></dd></dl><p class="meta">以上信息由开发者主动公开，用于说明项目维护者身份，不代表学校授权或背书。反馈安全问题时请先描述现象，不要发送任何账号密码。</p></section>
+<section class="contact" id="contact"><h2>开发者与联系</h2><dl><dt>开发者</dt><dd>SIrus.</dd><dt>微信</dt><dd>ToDoHacambiado</dd><dt>学号</dt><dd>t330025032</dd><dt>个人博客</dt><dd><a href="https://f0xy.me/" target="_blank" rel="noopener noreferrer">f0xy.me ↗</a></dd><dt>项目仓库</dt><dd><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">BNBU-scheduler ↗</a></dd></dl><p class="meta">以上信息由开发者主动公开，用于说明项目维护者身份，不代表学校授权或背书。反馈安全问题时请先描述现象，不要发送任何账号密码。</p></section>
 </main><footer><nav><a href="/stats/index.html">数据看板</a><a href="/">返回首页</a><a href="/changelog/">更新日志</a><a href="https://github.com/xiaohuliming/BNBU-scheduler/issues" target="_blank" rel="noopener noreferrer">问题反馈 ↗</a></nav></footer></body></html>
