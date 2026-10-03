@@ -24,6 +24,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 from maximize_credits import load_timetable, maximize_credits, fmt_meeting, parse_schedule
 from crawler import fetch_timeline, verify_credentials
+from campus_connect_api import create_campus_connect_blueprint
 from ispace_credentials import (
     ISpaceCredentialError,
     decrypt_ispace_password,
@@ -876,6 +877,7 @@ def build_todo_reminder_email(user_row, todo_row, reminder_hours, unsubscribe_ur
 
 def set_authenticated_session(user_id, username, display_name):
     session.pop('account_csrf', None)
+    session.pop('campus_connect_csrf', None)
     clear_mail_digest_session()
     session.permanent = True
     session['user_id'] = user_id
@@ -1416,6 +1418,7 @@ app.register_blueprint(media_dl_bp)
 if create_print_blueprint is not None:
     app.register_blueprint(create_print_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_sms_lab_blueprint(lambda: DB_PATH))
+app.register_blueprint(create_campus_connect_blueprint(lambda: DB_PATH))
 app.register_blueprint(create_analytics_blueprint(lambda: DB_PATH, lambda: {
     **antiscrape_stats, 'humanVerified': human_verification.stats['verified'],
     'humanChallenges': human_verification.stats['challenges'],
@@ -2124,8 +2127,8 @@ def login_ispace():
     if error:
         return jsonify({"error": error}), 400
     
-    # Printing needs an authenticated owner, not calendar or mailbox access.
-    print_only = (request.get_json(silent=True) or {}).get('purpose') == 'print'
+    # These flows need identity without calendar or mailbox access.
+    print_only = (request.get_json(silent=True) or {}).get('purpose') in ('print', 'campus-connect')
     if print_only:
         result = [] if verify_credentials(username, password) else {"error": "Login failed"}
     else:

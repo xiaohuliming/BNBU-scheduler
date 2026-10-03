@@ -1,55 +1,37 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="referrer" content="no-referrer">
-  <meta name="description" content="MAXCOURSE 校园连接：了解试用范围，验证私人订阅地址，接入 Shadowrocket、FlClash、Clash Verge Rev 与 Stash。">
-  <meta name="theme-color" content="#f4efe6">
-  <title>校园连接 · MAXCOURSE</title>
-  <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/vendor/fonts.css">
-  <link rel="stylesheet" href="/campus-connect/connect.css?v=20261004-1">
-  <script defer src="/campus-connect/connect.js?v=20261004-1"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#e9edf3">
+<meta name="description" content="MAXCOURSE 校园连接：验证学校账号，申请领取60天测试订阅。限10份有效个人订阅，每份两个设备链接。">
+<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/campus-connect/connect.css?v=claim-20261004"><script defer src="/campus-connect/connect.js?v=claim-20261004"></script>
 </head>
 <body>
-  <a class="skip-link" href="#connect-form">跳到客户端接入</a>
-  <header class="topbar"><a class="brand" href="/">Maxcourse<span>Campus Toolkit</span></a><a class="back-link" href="/">返回 MAXCOURSE ↗</a></header>
-  <main class="wrap">
-    <div class="page-heading"><div><p class="kicker">Toolbox / Campus Access</p><h1>校园连接</h1><p class="lead">校外访问已开放的校园资源。</p></div><span class="trial-badge">小范围试用 · 按人开通</span></div>
-    <div class="layout">
-      <section class="card connector" aria-labelledby="connect-title">
-        <div class="section-head"><h2 id="connect-title">连接你的客户端</h2></div>
-        <fieldset class="client-choice"><legend>选择使用的软件</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span>Shadowrocket<small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span>Clash 系列<small>FlClash / Verge Rev</small></span></label><label><input type="radio" name="client" value="stash"><span>Stash<small>iOS / macOS</small></span></label></div></fieldset>
-        <form id="connect-form" method="post" action="#" novalidate>
-          <label class="field-label" for="subscription">你的私人订阅地址</label>
-          <div class="input-row"><input id="subscription" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴维护者发给你的 HTTPS 订阅地址" aria-describedby="subscription-hint form-error"><button id="clear-key" class="clear-button" type="button" aria-label="清除私人订阅地址">清除</button></div>
-          <p class="field-hint" id="subscription-hint">本页仅临时使用这个地址，不写入浏览器本地存储。请勿公开或共用订阅链接。没有凭据？<a href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者申请试用</a>。</p>
-          <p id="form-error" class="error" role="alert" hidden></p>
-          <button id="validate" class="button primary" type="submit" disabled>验证订阅并继续 <span aria-hidden="true">→</span></button>
-        </form>
-        <div id="result" class="result" hidden aria-labelledby="result-title">
-          <div class="result-heading"><span class="valid-mark" aria-hidden="true">✓</span><h3 id="result-title" tabindex="-1">订阅可用</h3></div>
-          <p class="field-hint" id="expiry-note">有效期以发放信息为准，到期或撤销后将无法继续使用。</p>
-          <div class="import-step"><span class="step-number">1</span><div><h4>添加校园节点</h4><p id="import-hint"></p><button id="copy-subscription" type="button" class="button primary">复制订阅地址</button></div></div>
-          <div class="import-step"><span class="step-number">2</span><div><h4>保留现有上网配置</h4><p id="merge-hint"></p><button id="merge" type="button" class="button">下载校园合并片段</button><p class="field-hint" id="merge-note">合并校园规则时保留原有最终规则，使用配置分流模式。</p></div></div>
-          <div class="import-step"><span class="step-number">3</span><div><h4>打开学校服务验证</h4><p>导入只代表客户端拿到了配置。连接后打开学校页面，使用本人学校账号登录。</p><div class="resource-links"><a href="https://ispace.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">打开 iSpace ↗</a><a href="https://papercut.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">打开 PaperCut ↗</a></div></div></div>
-          <details class="full-config"><summary>备用：下载完整试用配置</summary><p>完整配置只包含校园节点，其他流量使用 DIRECT。它会替换当前激活的规则，请先备份已有配置。</p><a class="button" id="download-full" download rel="noreferrer">下载完整配置</a></details>
-        </div>
-        <noscript><p class="error">请启用 JavaScript 验证订阅。你仍可阅读试用范围或联系维护者。</p></noscript>
+<a class="skip-link" href="#application">跳到申请领取</a>
+<main class="window">
+  <header class="window-bar"><div class="traffic" aria-hidden="true"><i></i><i></i><i></i></div><span>MAXCOURSE · 校园连接</span><a href="/">返回首页 ↗</a></header>
+  <div class="window-layout">
+    <aside class="sidebar"><a class="brand" href="/">Maxcourse<span>Campus Toolkit</span></a><p class="sidebar-caption">校园工具</p><nav aria-label="校园连接导航"><a class="active" href="#application">申请领取 <span>60 天</span></a><a href="#devices-panel">我的设备</a><a href="#setup">客户端接入</a><a href="/print/">校园打印 ↗</a></nav><div class="scope-card"><span class="eyebrow">当前开放</span><ul><li>iSpace</li><li>PaperCut</li><li>电脑端学校打印队列</li></ul><p>当前仅提供这些服务的 TCP 访问，其他校内资源尚未开放。</p></div><a class="sidebar-help" href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者 ↗</a></aside>
+    <div class="content">
+      <header class="page-heading"><div><p class="eyebrow">Campus Access</p><h1>申请校园连接</h1><p class="lead">领取个人测试订阅，连接已开放的校园资源。</p></div><span class="badge">申请领取</span></header>
+      <section class="panel application" id="application" aria-labelledby="apply-title">
+        <div class="panel-heading"><h2 id="apply-title">60 天测试订阅</h2><span id="quota-label" class="quota">正在读取名额…</span></div>
+        <div class="metrics"><div><strong>60<span>天</span></strong><p>首次领取起计算</p></div><div><strong>10<span>份</span></strong><p>有效个人订阅上限</p></div><div><strong>2<span>个</span></strong><p>独立设备链接</p></div></div>
+        <div class="identity-row"><span id="identity">正在读取登录状态…</span><button id="login-open" class="button secondary" type="button">验证学校账号</button></div>
+        <label class="consent"><input id="consent" type="checkbox"><span>我已了解测试规则和信息处理方式，使用本人账号申请，不共用订阅。</span></label>
+        <details class="terms"><summary>查看申请规则与信息处理说明</summary><p>每个已验证学校账号领取一份测试订阅，有效期为首次领取起 60 天。重复点击不会延长期限，过期或撤销后需联系维护者。最多同时保留 10 份有效个人订阅。</p><p>验证会登录或创建 MAXCOURSE 账号并关联学校账号，不保存学校密码，不同步 DDL 或启动邮件读取。订阅凭据与期限用于提供和管理访问；连接会话中的公网出口信息仅用于在线限制，不读取内部 HTTPS 页面内容。</p><p>每份订阅提供设备 1、设备 2 两个独立链接，每个链接同时只允许一个公网出口会话。网页的多条连接会合并计入同一设备。通用客户端不提供硬件设备 ID，同一公网 IP 下共享同一凭据的额外物理设备无法精确区分。</p><p>MAXCOURSE 并非学校官方 VPN，学校资源仍需本人学校账号登录。<a href="/privacy/" target="_blank" rel="noopener noreferrer">完整隐私说明 ↗</a></p></details>
+        <div class="apply-actions"><button id="claim" class="button primary" type="button" disabled>申请领取 60 天订阅 →</button><button id="refresh-status" class="button quiet" type="button">刷新状态</button></div>
+        <p id="claim-message" class="status-note" role="status"></p><p id="account-error" class="error" role="alert" hidden></p>
       </section>
-      <aside class="overview" aria-labelledby="scope-title">
-        <section class="card resources"><div class="section-head"><h2 id="scope-title">已开放资源</h2></div>
-          <ul class="resource-list"><li><strong>iSpace</strong><span>课程与作业页面</span></li><li><strong>PaperCut</strong><span>学校打印账户页面</span></li><li><strong>学校打印队列</strong><span>电脑端直接访问</span></li></ul>
-          <p class="scope-note">当前提供这些服务的 TCP 访问。其他校内资源尚未开放，学校账号权限仍由学校验证。</p>
-          <a class="text-link" href="/print/">只需要打印？打开校园打印 ↗</a>
-        </section>
-        <section class="card invitation"><h2>还没有试用凭据？</h2><p>试用凭据由维护者单独发放，每人独立、可到期、可撤销。当前没有自助注册入口。</p><a class="button" href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者申请试用 ↗</a></section>
-        <p class="privacy-note">MAXCOURSE 是学生维护的工具，并非学校官方 VPN。校园连接使用独立凭据，不需要在这里填写学校密码。<a href="/privacy/" target="_blank" rel="noopener noreferrer">隐私说明 ↗</a></p>
-      </aside>
+      <section class="panel" id="devices-panel" aria-labelledby="devices-title"><div class="panel-heading"><h2 id="devices-title">我的设备</h2><span id="account-expiry" class="muted">领取后显示有效期</span></div><p id="devices-empty" class="muted">申请后可获取设备 1 和设备 2 的专属订阅链接。</p><div id="devices" class="devices" hidden></div><p class="small-note">每台设备使用各自的链接。切换公网网络前先断开旧连接；需要重新绑定时可重置对应设备，旧链接会失效。</p></section>
+      <section class="panel connector" id="setup" aria-labelledby="connect-title"><div class="panel-heading"><h2 id="connect-title">客户端接入</h2><span class="muted">保留现有上网节点</span></div>
+        <fieldset class="client-choice"><legend>选择软件</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span>Shadowrocket<small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span>Clash 系列<small>FlClash / Verge Rev</small></span></label><label><input type="radio" name="client" value="stash"><span>Stash<small>iOS / macOS</small></span></label></div></fieldset>
+        <details class="existing"><summary>已有私人订阅地址？手动验证</summary><form id="connect-form" method="post" action="#" novalidate><label class="field-label" for="subscription">私人订阅地址</label><div class="input-row"><input id="subscription" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴你的 HTTPS 订阅地址"><button id="clear-key" class="clear-button" type="button">清除</button></div><p class="field-hint">地址只保留在本页内存，不写入浏览器本地存储。</p><p id="form-error" class="error" role="alert" hidden></p><button id="validate" class="button secondary" type="submit" disabled>验证订阅并继续 →</button></form></details>
+        <div id="result" class="result" hidden aria-labelledby="result-title"><h3 id="result-title" tabindex="-1">订阅可用</h3><p class="field-hint" id="expiry-note"></p><div class="import-step"><span>1</span><div><h4>添加校园节点</h4><p id="import-hint"></p><button id="copy-subscription" class="button primary" type="button">复制订阅地址</button></div></div><div class="import-step"><span>2</span><div><h4>合并校园分流规则</h4><p id="merge-hint"></p><button id="merge" class="button secondary" type="button">下载校园合并片段</button><p class="field-hint">保留原有最终规则，使用配置分流模式。</p></div></div><div class="import-step"><span>3</span><div><h4>连接后验证学校资源</h4><p>拿到配置不代表客户端已经连接，请使用本人学校账号登录学校页面。</p><div class="resource-links"><a href="https://ispace.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">iSpace ↗</a><a href="https://papercut.bnbu.edu.cn/" target="_blank" rel="noopener noreferrer">PaperCut ↗</a></div></div></div><details class="full-config"><summary>备用：下载完整测试配置</summary><p>完整配置只包含校园节点，其他流量使用 DIRECT，会替换当前激活规则。请先备份原有配置。</p><a class="button secondary" id="download-full" download rel="noreferrer">下载完整配置</a></details></div>
+      </section><footer class="page-footer"><a href="/privacy/">隐私与权益</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">MAXCOURSE 开源项目 ↗</a></footer>
     </div>
-    <footer class="page-footer"><span>Campus access, with your own credentials.</span><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">MAXCOURSE 开源项目 ↗</a></footer>
-  </main>
-  <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
-</body>
-</html>
+  </div>
+</main>
+<dialog id="school-dialog" class="dialog" aria-labelledby="school-title"><header><div class="traffic" aria-hidden="true"><i></i><i></i><i></i></div><button id="login-close" class="icon-button" type="button" aria-label="关闭学校验证">×</button></header><div class="dialog-body"><h2 id="school-title">验证本人学校账号</h2><p class="muted">仅验证身份，不同步 DDL 或读取邮件，密码不会保存。</p><form id="school-form" method="post" action="#" novalidate><label for="school-username">学校账号</label><input id="school-username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="输入学号"><label for="school-password">学校密码</label><input id="school-password" type="password" autocomplete="off" placeholder="输入学校密码"><p id="login-error" class="error" role="alert" hidden></p><button id="login-submit" class="button primary" type="submit">验证并继续</button></form></div></dialog>
+<dialog id="reset-dialog" class="dialog" aria-labelledby="reset-title"><div class="dialog-body"><h2 id="reset-title">重置设备链接？</h2><p>旧链接将失效并断开对应设备。重新导入新链接后可继续使用，订阅有效期不会延长。</p><p id="reset-error" class="error" role="alert" hidden></p><div class="apply-actions"><button id="reset-confirm" class="button primary" type="button">重置此设备</button><button id="reset-cancel" class="button secondary" type="button">取消</button></div></div></dialog>
+<p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p><noscript><p class="error">申请与导入需要启用 JavaScript。</p></noscript>
+</body></html>

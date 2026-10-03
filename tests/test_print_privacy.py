@@ -48,6 +48,15 @@ class PrintPrivacyTests(unittest.TestCase):
             self.assertEqual(session['user_id'], user[0])
             self.assertNotIn('synthetic-only', str(dict(session)))
 
+    def test_campus_application_login_does_not_read_calendar_or_mail(self):
+        credentials = {**self.credentials, 'purpose': 'campus-connect'}
+        with self.authenticate() as verify, mock.patch.object(application, 'fetch_timeline') as timeline, mock.patch.object(application.mail_brief_service, 'start') as mail:
+            response = self.client.post('/api/login/ispace', json=credentials)
+        self.assertEqual(response.status_code, 200)
+        verify.assert_called_once()
+        timeline.assert_not_called()
+        mail.assert_not_called()
+
     def test_failed_print_validation_cannot_create_or_login_an_owner(self):
         with self.authenticate(False), mock.patch.object(application.mail_brief_service, 'start') as mail:
             response = self.client.post('/api/login/ispace', json=self.credentials)

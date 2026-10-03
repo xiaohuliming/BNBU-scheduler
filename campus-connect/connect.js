@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const origin = 'https://www.bnbscheduler.top';
-  const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null };
+  const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
   const selected = () => document.querySelector('input[name="client"]:checked').value;
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
   const path = suffix => '/campus-connect/subscriptions/' + state.token + '.' + suffix;
@@ -68,6 +68,7 @@
       const response = await fetch(path(formats().subscription), { method: 'HEAD', credentials: 'omit', cache: 'no-store', redirect: 'error', signal: controller.signal });
       if (generation !== state.generation) return;
       if (!response.ok) throw new Error(response.status === 404 ? '订阅不可用，可能已到期或撤销。请核对地址或联系维护者。' : '订阅服务暂时不可用，请稍后重试。');
+      state.nodeName = response.headers.get("X-Campus-Node-Name") || "MAXCOURSE Campus";
       renderClient();
       $('result').hidden = false;
       const expiry = /(?:^|;)\s*expire=(\d+)/.exec(response.headers.get('Subscription-Userinfo') || '');
@@ -97,7 +98,7 @@
     $('merge').disabled = true;
     try {
       if (selected() === 'shadowrocket') {
-        const lines = rules.map(rule => rule.replace('校园资源', 'MAXCOURSE Campus'));
+        const lines = rules.map(rule => rule.replace('校园资源', state.nodeName));
         download('# Merge into your existing Shadowrocket profile; keep its final rule.\n[Rule]\n' + lines.join('\n') + '\n\n[Host]\npapercut.bnbu.edu.cn = 172.16.244.61\n', 'Shadowrocket-campus-merge.conf');
       } else {
         const controller = new AbortController(); state.controller = controller;
@@ -127,5 +128,91 @@
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
-  renderClient();
+  const account = { data: null, busy: false, loginBusy: false, generation: 0, timer: null, resetTarget: null };
+  function accountError(message = '') { $('account-error').textContent = message; $('account-error').hidden = !message; }
+  async function accountAPI(path, body) {
+    const response = await fetch('/api/campus-connect/' + path, {method: body ? 'POST' : 'GET', credentials:'same-origin',cache:'no-store',headers:body ? {'Content-Type':'application/json','X-Campus-CSRF':account.data?.csrf_token || ''} : {},...(body ? {body:JSON.stringify(body)} : {})});
+    const data=await response.json();
+    if(!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '申请服务暂时不可用。');
+    return data;
+  }
+  function renderAccount() {
+    const data=account.data, user=data?.user, own=data?.subscription;
+    $('quota-label').textContent = data?.available ? '已领取 '+data.used+' / '+data.capacity : '名额暂时不可读取';
+    $('identity').textContent = user?.verified ? '学校身份已验证 · '+user.display_name : '请先验证本人学校账号';
+    $('login-open').textContent = user?.verified ? '切换验证账号' : '验证学校账号';
+    $('login-open').disabled=account.busy;
+    $('claim').textContent = own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : '申请领取 60 天订阅 →';
+    const canClaim=data?.available && (!own?.claimed || own.active) && (own?.claimed || $('consent').checked) && (own?.claimed || own?.active || data.remaining>0);
+    $('claim').disabled=account.busy || !canClaim;
+    $('consent').disabled=account.busy;
+    $('refresh-status').disabled=account.busy;
+    $('devices').replaceChildren();
+    $('devices').hidden=!(own?.claimed && own.active && own.devices?.length);
+    $('devices-empty').hidden=!$('devices').hidden;
+    $('devices-empty').textContent = own?.claimed && !own.active ? '这份测试订阅已结束或撤销，请联系维护者。' : '申请后可获取设备 1 和设备 2 的专属订阅链接。';
+    $('account-expiry').textContent = own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '领取后显示有效期';
+    if(own?.claimed && own.active) {
+      for(const device of own.devices) {
+        const card=document.createElement('article'); card.className='device-card';
+        const title=document.createElement('h3');title.textContent='设备 '+device.slot;
+        const status=document.createElement('p');status.className='device-state';status.textContent=own.synced ? (device.online ? '在线 · 使用本设备的独立链接' : '空闲 · 可导入客户端') : '配置生效中，通常一分钟内完成';
+        const actions=document.createElement('div');actions.className='device-actions';
+        const use=document.createElement('button');use.className='button primary';use.type='button';use.textContent='接入此设备';use.disabled=account.busy || !own.synced;
+        use.addEventListener('click',async()=>{ $('subscription').value=device.subscription_url; reset(); await validate({preventDefault(){}}); $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); });
+        const resetButton=document.createElement('button');resetButton.className='device-reset';resetButton.type='button';resetButton.textContent='重置链接';resetButton.disabled=account.busy;
+        resetButton.addEventListener('click',()=>{account.resetTarget={slot:device.slot,user:user.id};$('reset-title').textContent='重置设备 '+device.slot+' 的链接？';$('reset-error').hidden=true;$('reset-dialog').showModal();});
+        actions.append(use,resetButton);card.append(title,status,actions);$('devices').append(card);
+      }
+      $('claim-message').textContent=own.synced ? '已领取。每台设备选择各自的链接，普通上网继续使用原有配置。' : '申请已保存，节点配置正在生效。请稍候，页面会自动刷新状态。';
+    } else if(data?.available && data.remaining===0) $('claim-message').textContent='10 个有效订阅名额已满。已有订阅仍可查看和使用。';
+    else $('claim-message').textContent='每个学校账号领取一份，重复申请不会延长有效期。';
+  }
+  async function refreshAccount() {
+    const generation=++account.generation;
+    try {const data=await accountAPI('status');if(generation!==account.generation)return;if(account.data?.user?.id && account.data.user.id!==data.user?.id){$('subscription').value='';reset();}account.data=data;accountError();}
+    catch(error){if(generation!==account.generation)return;account.data={available:false,user:null,subscription:null};accountError(error.message);}
+    renderAccount();
+    clearTimeout(account.timer);
+    if(account.data?.subscription?.claimed && account.data.subscription.active) account.timer=setTimeout(()=>{if(!document.hidden&&!account.busy)refreshAccount();},account.data.subscription.synced?15000:3000);
+  }
+  function openLogin() { $('school-password').value='';$('login-error').hidden=true;if(!$('school-dialog').open)$('school-dialog').showModal();$('school-username').focus(); }
+  $('login-open').addEventListener('click',openLogin);
+  $('login-close').addEventListener('click',()=>{if(!account.loginBusy)$('school-dialog').close();});
+  $('school-dialog').addEventListener('cancel',event=>{if(account.loginBusy)event.preventDefault();});
+  $('school-dialog').addEventListener('close',()=>{$('school-password').value='';});
+  $('school-form').addEventListener('submit',async event=>{
+    event.preventDefault();if(account.loginBusy)return;
+    const username=$('school-username').value.trim();let password=$('school-password').value;
+    if(!username||!password){$('login-error').textContent='请填写本人学校账号和密码。';$('login-error').hidden=false;return;}
+    account.loginBusy=true;$('login-submit').disabled=true;$('login-close').disabled=true;$('login-error').hidden=true;
+    try {
+      const response=await fetch('/api/login/ispace',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,purpose:'campus-connect'})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error || '学校身份验证失败。');
+      $('school-dialog').close();reset();await refreshAccount();notice('学校身份已验证，可继续申请');
+    } catch(error){$('login-error').textContent=error.message;$('login-error').hidden=false;}
+    finally{password=null;$('school-password').value='';account.loginBusy=false;$('login-submit').disabled=false;$('login-close').disabled=false;}
+  });
+  $('consent').addEventListener('change',renderAccount);
+  $('refresh-status').addEventListener('click',refreshAccount);
+  $('claim').addEventListener('click',async()=>{
+    if(account.busy)return;
+    if(!account.data?.user?.verified){openLogin();return;}
+    if(account.data.subscription?.claimed){$('devices-panel').scrollIntoView({behavior:'smooth'});return;}
+    account.busy=true;accountError();renderAccount();
+    try {const data=await accountAPI('claim',{consent:$('consent').checked});account.data={...account.data,...data};notice('测试订阅已领取');}
+    catch(error){accountError(error.message);}
+    finally{account.busy=false;renderAccount();refreshAccount();}
+  });
+  $('reset-cancel').addEventListener('click',()=>{if(!account.busy)$('reset-dialog').close();});
+  $('reset-dialog').addEventListener('cancel',event=>{if(account.busy)event.preventDefault();});
+  $('reset-confirm').addEventListener('click',async()=>{
+    if(account.busy||!account.resetTarget||account.resetTarget.user!==account.data?.user?.id)return;
+    account.busy=true;$('reset-confirm').disabled=true;$('reset-cancel').disabled=true;$('reset-error').hidden=true;
+    try{const data=await accountAPI('reset-device',{slot:account.resetTarget.slot});account.data={...account.data,...data};reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
+    catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
+    finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
+  });
+  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('school-password').value='';account.data=null;account.resetTarget=null;$('devices').replaceChildren();});
+  renderClient();refreshAccount();
 })();
