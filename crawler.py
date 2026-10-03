@@ -90,6 +90,12 @@ def get_sesskey(session):
             
     return None
 
+def verify_credentials(username, password):
+    """Authenticate for printing without fetching calendar or email data."""
+    with requests.Session() as school_session:
+        return login(school_session, username, password)
+
+
 def fetch_timeline(username, password):
     session = requests.Session()
     

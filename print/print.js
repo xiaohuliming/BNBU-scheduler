@@ -4,6 +4,9 @@
 (() => {
   const $ = id => document.getElementById(id);
   const ui = Object.fromEntries([
+    'privacy-notice', 'privacy-title', 'print-workspace', 'privacy-open', 'privacy-check',
+    'privacy-accept', 'privacy-choice', 'privacy-review', 'privacy-return', 'privacy-revoke',
+    'privacy-storage-note', 'help-privacy',
     'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
     'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'capability-row', 'drop-sub', 'file-kind',
@@ -22,6 +25,8 @@
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
   const DEFAULT_OPTIONS = Object.freeze({ color: 'grayscale', sides: 'one-sided', copies: 1 });
+  const PRIVACY_KEY = 'maxcourse.print.privacy';
+  const PRIVACY_VERSION = '2026-10-03.1';
   const COPIES_LIMIT = 100;
   const ZOOMS = ['fit', '1', '1.5', '2'];
   const STEPS = ['auth', 'inspect', 'send'];
@@ -30,6 +35,7 @@
   const CONVERTIBLE = /\.(docx?|odt|rtf|pptx?|odp|xlsx?|ods|jpe?g|png)$/i;
   const CONVERT_ACCEPT = '.pdf,.doc,.docx,.odt,.rtf,.ppt,.pptx,.odp,.xls,.xlsx,.ods,.jpg,.jpeg,.png';
   const state = {
+    privacyAccepted: false,
     session: null, sessionGeneration: 0, identityGeneration: 0, fileGeneration: 0,
     file: null, fileURL: null, pdf: null, pages: null, busy: false, reading: false,
     intent: null, receipt: null, receiptTone: '', receiptDoc: null, jobs: [], pollTimer: null, polls: 0,
@@ -53,7 +59,7 @@
     ui[target].textContent = text;
     ui[target].hidden = !text;
   };
-  const ready = () => navigator.onLine && state.session?.service?.ready === true &&
+  const ready = () => state.privacyAccepted && navigator.onLine && state.session?.service?.ready === true &&
     state.session.service.enabled === true && !state.session.service.busy && !state.session.service.demo;
   const calm = () => reduceMotion.matches;
   const balanceAvailable = () => state.session?.service?.enabled && state.session.service.online &&
@@ -88,6 +94,7 @@
   const fileSize = bytes => bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
 
   async function api(path, body, timeout = 60000) {
+    if (!state.privacyAccepted) throw new Error('请先阅读并确认打印隐私告知。');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     const headers = {};
@@ -189,7 +196,8 @@
     ui['service-dot'].className = 'service-dot ' + tone;
     ui['service-refresh'].hidden = ready() || state.busy;
     ui['service-refresh'].disabled = state.checking;
-    const locked = state.busy || state.balanceQuerying || !!state.receipt;
+    ui['privacy-open'].disabled = state.busy || state.reading || state.balanceQuerying || state.jobQuery;
+    const locked = !state.privacyAccepted || state.busy || state.balanceQuerying || !!state.receipt;
     const options = activeOptions();
     ui['submit-form'].setAttribute('aria-busy', String(state.busy));
     ui['pick-btn'].disabled = locked || !!state.intent;
@@ -255,7 +263,7 @@
   async function verifySchoolAccount(account, password) {
     if (state.intent && state.intent.username !== account) throw new Error('账号已变更，不能重试原任务。请先核对学校队列。');
     if (schoolUser() !== account) {
-      const login = await api('/api/login/ispace', { username: account, password });
+      const login = await api('/api/login/ispace', { username: account, password, purpose: 'print' });
       if (!login.ok) throw new Error(errorText(login, '账号验证暂时不可用，请稍后重试。'));
       if (!await refreshSession({ flow: true }) || schoolUser() !== account) throw new Error('账号验证状态未确认，请重试。');
     }
@@ -278,7 +286,7 @@
   }
 
   async function queryBalance() {
-    if (state.busy || state.balanceQuerying || !balanceAvailable()) return;
+    if (!state.privacyAccepted || state.busy || state.balanceQuerying || !balanceAvailable()) return;
     const account = username();
     let password = ui['school-password'].value;
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(account) || !password || password.length > 512 || /[\r\n\0]/.test(password)) {
@@ -554,7 +562,7 @@
   }
 
   function openAccount() {
-    if (state.busy || state.reading || state.receipt || !previewed()) return;
+    if (!state.privacyAccepted || state.busy || state.reading || state.receipt || !previewed()) return;
     clearPassword();
     ui['bulk-check'].checked = false;
     showError('form-error');
@@ -588,7 +596,7 @@
   }
 
   async function selectFiles(files) {
-    if (state.busy || state.receipt || state.intent || !files?.length) return;
+    if (!state.privacyAccepted || state.busy || state.receipt || state.intent || !files?.length) return;
     files = Array.from(files); // FileList is live and clearing the input empties it.
     const fromUpload = !state.file;
     clearFile();
@@ -661,6 +669,7 @@
   }
 
   async function refreshSession({ flow = false } = {}) {
+    if (!state.privacyAccepted) return false;
     if ((state.busy || state.balanceQuerying) && !flow) return false;
     const generation = ++state.sessionGeneration;
     state.checking = true;
@@ -729,7 +738,7 @@
   }
 
   async function loadJobs() {
-    if (!state.session?.user) return [];
+    if (!state.privacyAccepted || !state.session?.user) return [];
     const generation = state.identityGeneration;
     const result = await api('/api/print/jobs', undefined, 15000);
     if (generation !== state.identityGeneration) return [];
@@ -850,7 +859,7 @@
 
   async function submit(event) {
     event.preventDefault();
-    if (state.busy || state.balanceQuerying || state.reading || state.receipt || !previewed()) return;
+    if (!state.privacyAccepted || state.busy || state.balanceQuerying || state.reading || state.receipt || !previewed()) return;
     showError('file-error'); showError('form-error');
     ui['school-username'].removeAttribute('aria-invalid');
     ui['school-password'].removeAttribute('aria-invalid');
@@ -961,6 +970,69 @@
     ui['preview-loading'].hidden = state.drawn && !info.error;
     ui['preview-loading'].textContent = info.error || (state.converting ? '正在转换为 PDF…' : '正在生成预览…');
     render();
+  });
+
+  // A versioned acknowledgement stores no credentials, filenames or document data.
+  function privacyScreen(show, review = false, focus = true) {
+    ui['privacy-notice'].hidden = !show;
+    ui['print-workspace'].hidden = show;
+    ui['print-workspace'].inert = show;
+    ui['service-status'].hidden = show;
+    ui['help-open'].hidden = show;
+    ui['privacy-open'].hidden = show;
+    ui['privacy-choice'].hidden = review;
+    ui['privacy-review'].hidden = !review;
+    if (focus) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      (show ? ui['privacy-title'] : review ? ui['privacy-open'] : ui['pick-btn']).focus();
+    }
+  }
+
+  function storageNote(text = '') {
+    ui['privacy-storage-note'].textContent = text;
+    ui['privacy-storage-note'].hidden = !text;
+  }
+
+  function enterPrinting(remember = false, focus = true) {
+    if (state.privacyAccepted) return;
+    state.privacyAccepted = true;
+    if (remember) {
+      try { localStorage.setItem(PRIVACY_KEY, PRIVACY_VERSION); storageNote(); }
+      catch (_) { storageNote('浏览器无法记住确认，下次进入时会再次显示告知。本次仍可继续打印。'); }
+    }
+    render();
+    privacyScreen(false, false, focus);
+    refreshSession().then(() => loadJobs()).catch(() => {});
+  }
+
+  function reviewPrivacy() {
+    if (!state.privacyAccepted || state.busy || state.reading || state.balanceQuerying || state.jobQuery) return;
+    closeAccount(true);
+    ui['help-dialog'].close();
+    privacyScreen(true, true);
+  }
+
+  ui['privacy-check'].addEventListener('change', () => { ui['privacy-accept'].disabled = !ui['privacy-check'].checked; });
+  ui['privacy-accept'].addEventListener('click', () => { if (ui['privacy-check'].checked) enterPrinting(true); });
+  ui['privacy-open'].addEventListener('click', reviewPrivacy);
+  ui['help-privacy'].addEventListener('click', reviewPrivacy);
+  ui['privacy-return'].addEventListener('click', () => { if (state.privacyAccepted) privacyScreen(false, true); });
+  ui['privacy-revoke'].addEventListener('click', () => {
+    if (state.busy || state.reading || state.balanceQuerying || state.jobQuery) return;
+    state.privacyAccepted = false;
+    state.sessionGeneration++; state.identityGeneration++; state.balanceGeneration++;
+    stopPolling(); clearPassword(); clearFile();
+    state.session = state.balance = state.intent = state.receipt = state.receiptDoc = null;
+    state.jobs = []; state.balanceMessage = ''; state.checking = false;
+    ui['school-username'].value = '';
+    for (const id of ['doc-name', 'doc-sub', 'confirm-name', 'receipt-title', 'receipt-message', 'receipt-meta', 'receipt-details']) ui[id].textContent = '';
+    for (const canvas of ui['print-workspace'].querySelectorAll('canvas')) { canvas.width = 0; canvas.height = 0; }
+    ui['preview-canvas'].setAttribute('aria-label', '文档预览');
+    ui['privacy-check'].checked = false;
+    ui['privacy-accept'].disabled = true;
+    try { localStorage.removeItem(PRIVACY_KEY); storageNote('已撤回本浏览器的确认。已提交的学校任务仍需自行核对，账号解绑或注销请前往首页设置。'); }
+    catch (_) { storageNote('本页面已停止打印处理。浏览器无法删除确认记录，请清除此站点的本地存储，确保下次进入也显示告知。'); }
+    render(); renderJobs(); privacyScreen(true);
   });
 
   ui['submit-form'].addEventListener('submit', submit);
@@ -1102,6 +1174,8 @@
   window.addEventListener('pagehide', clearPassword);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !state.busy) refreshSession(); });
   render();
-  refreshSession().then(() => loadJobs()).catch(() => {});
+  try {
+    if (localStorage.getItem(PRIVACY_KEY) === PRIVACY_VERSION) enterPrinting(false, false);
+  } catch (_) { storageNote('浏览器无法记住确认，下次进入时会再次显示告知。本次仍可继续打印。'); }
   setInterval(() => { if (!document.hidden && !state.busy) refreshSession(); }, 60000);
 })();
