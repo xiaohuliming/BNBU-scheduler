@@ -371,10 +371,10 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
 .field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
 .field input {
   width: 100%; height: 48px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 0; outline: none; background: #fff; font-size: 15px;
-  transition: box-shadow .15s var(--ease), transform .15s var(--ease);
+  transition: box-shadow .15s var(--ease);
 }
 .field input::placeholder { color: var(--faint); }
-.field input:focus { box-shadow: 4px 4px 0 var(--ink); transform: translate(-2px, -2px); }
+.field input:focus { box-shadow: 4px 4px 0 var(--ink); }
 .field input:disabled { background: var(--paper-2); color: var(--muted); }
 .field input[aria-invalid="true"] { border-color: var(--danger); box-shadow: 4px 4px 0 var(--danger); animation: shake .4s var(--ease); }
 .password-wrap { position: relative; }
@@ -579,3 +579,10 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
 .balance-heading button { min-height: 44px; }
 .balance-value { overflow-wrap: anywhere; display: block; margin: 4px 0 8px; font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .receipt-balance { margin: 16px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+
+.cost-estimate { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 12px 0 0; font-size: 13px; font-weight: 600; }
+.cost-estimate strong { font-size: 21px; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.pricing-source { display: inline-block; margin: 0 0 14px; color: var(--muted); font-size: 11.5px; text-underline-offset: 3px; }
+.confirm-cost { display: block; margin-top: 7px; font-weight: 700 !important; color: var(--ink); }
+.receipt-cost { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+@media (max-width: 640px) { .checkout .cost-note { display: block; } }

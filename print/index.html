@@ -8,7 +8,7 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css?v=balance-20261003" rel="stylesheet">
+<link href="print.css?v=cost-20261003" rel="stylesheet">
 </head>
 <body>
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
@@ -207,7 +207,9 @@
               <div class="total-figure"><strong id="print-total-sheets" data-value="0">0</strong><span>张 A4</span></div>
               <p class="total-detail" id="print-total">正在检查页数</p>
             </div>
-            <p class="cost-note" id="cost-note">刷卡取件时按学校标准计费。</p>
+            <div class="cost-estimate" aria-labelledby="cost-label"><span id="cost-label">估算费用</span><strong id="estimated-cost">待选文档</strong></div>
+            <p class="cost-note" id="cost-note">依据学校公开价目表估算，实际以刷卡结算为准。</p>
+            <a class="pricing-source" href="https://itsc.bnbu.edu.cn/IT_Services/Printing.htm" target="_blank" rel="noopener">学校价目表 · 2024-08-30 ↗</a>
             <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
               <span>确认打印</span>
               <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
@@ -231,6 +233,7 @@
             <span class="confirm-kicker">本次文档</span>
             <p id="confirm-name"></p>
             <small id="confirm-specs">A4 · 黑白 · 单面 · 1 份</small>
+            <small class="confirm-cost" id="confirm-cost"></small>
           </div>
         </div>
         <label class="bulk-confirm" id="bulk-confirm" hidden><input type="checkbox" id="bulk-check"><span id="bulk-label"></span></label>
@@ -289,6 +292,7 @@
           <dl class="receipt-details" id="receipt-details"></dl>
           <p class="receipt-meta" id="receipt-meta"></p>
           <p class="receipt-balance" id="receipt-balance" hidden></p>
+          <p class="receipt-cost" id="receipt-cost" hidden></p>
         </article>
       </div>
       <div class="receipt-actions">
@@ -335,6 +339,7 @@
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <noscript><p class="noscript-note">此页面需要启用 JavaScript 才能提交打印。</p></noscript>
 <script src="pdf-preview.js" defer></script>
-<script src="print.js?v=balance-20261003" defer></script>
+<script src="pricing.js?v=cost-20261003" defer></script>
+<script src="print.js?v=cost-20261003" defer></script>
 </body>
 </html>

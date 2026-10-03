@@ -1,0 +1,24 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const context = { window: {} };
+vm.runInNewContext(fs.readFileSync('print/pricing.js','utf8'), context);
+const {estimate} = context.window.MaxcoursePrintPricing;
+const one = copies => ({color:'grayscale',sides:'one-sided',copies});
+const two = copies => ({color:'grayscale',sides:'two-sided-long-edge',copies});
+assert.equal(estimate(1,one(1)).display,'￥0.20');
+assert.equal(estimate(10,one(3)).max_cents,600);
+assert.equal(estimate(2,two(1)).display,'￥0.36');
+assert.equal(estimate(4,two(3)).max_cents,216);
+assert.equal(estimate(3,two(2)).min_cents,108);
+assert.equal(estimate(3,two(2)).max_cents,144); // Round each copy's odd final sheet separately.
+assert.equal(estimate(2,{...one(3),color:'color'}).display,'￥10.80');
+assert.equal(estimate(2,{...two(1),color:'color'}).display,'￥3.60');
+assert.equal(estimate(3,{...two(2),color:'color'}).min_cents,1080);
+assert.equal(estimate(3,{...two(2),color:'color'}).max_cents,1440);
+assert.match(estimate(2,{...one(1),color:'color'}).note,/全部彩页/);
+assert.match(estimate(3,two(1)).note,/规则未公开/);
+assert.equal(estimate(300,{...one(100),color:'color'}).max_cents,5400000);
+for (const pages of [null,0,-1,1.5,NaN]) assert.equal(estimate(pages,one(1)),null);
+for (const options of [{...one(1),copies:0},{...one(1),copies:'2'},{...one(1),color:'invalid'},{...one(1),sides:'invalid'}]) assert.equal(estimate(2,options),null);
+console.log('PASS: published-rate arithmetic, copy boundaries, odd-sheet ranges, colour assumptions, invalid values');
