@@ -1432,6 +1432,11 @@ def print_portal():
     return send_from_directory(os.path.join(APP_ROOT, 'print'), 'index.html')
 
 
+@app.route('/campus-connect/')
+def campus_connect_portal():
+    return send_from_directory(os.path.join(APP_ROOT, 'campus-connect'), 'index.html')
+
+
 @app.route('/api/course/<path:code>', methods=['GET'])
 def get_course_detail(code):
     code = (code or '').strip().upper()
