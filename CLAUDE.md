@@ -22,6 +22,14 @@ MAXCOURSE (production: https://www.bnbscheduler.top) is a campus toolkit web app
 
 `requirements.txt` lists the runtime deps: Flask, pandas, openpyxl, requests, beautifulsoup4, **numpy + scipy** (SkillPath PPR recommender, `/api/recommend`), and **pypdf** (transcript parsing `/api/parse-transcript` + the offline catalog build). `yt-dlp` is an **optional** dep imported lazily in `media_dl/ytdlp.py` (YouTube/Douyin/etc. resolution fails until it's installed). `pdfplumber` and `xlrd` are **build-time-only** (data-regeneration scripts) and are deliberately not in `requirements.txt` / not on the server. The committed `venv/` holds the local deps. Tests set `MAXCOURSE_SECRET_KEY` themselves and use a throwaway temp DB, so they need no server or real data.
 
+## Update log
+
+- Every product update, including features, bug fixes, and visible copy changes, must add or update an entry at the top of `changelog/index.html`. Keep entries newest first and use the actual change date. Combine related changes into one entry rather than logging every edit or commit.
+- Write a short Chinese title and 1 to 3 concise Chinese bullets about what users can now do or what became easier. A little wit is welcome, such as "更新日志坐到前排了". Keep it restrained and specific; avoid release-note jargon, exaggerated promises, technical checklists, and emoji piles.
+- Describe only implemented changes. Do not claim deployment, measured speedups, or successful real-world use without evidence. Never include credentials, private student data, or internal operational details.
+- Keep `/changelog/` reachable from the homepage title area and the announcement banner on mobile and by keyboard. Present the banner as one clickable update note plus a close button, without a separate details action. For important announcements, update both the `UpdateNotice` copy and `NOTICE_VERSION`; routine changes only need a log entry.
+- After editing homepage JSX, run `node precompile.js` and verify the touched UI before reporting completion.
+
 ## Architecture
 
 ### Backend: one monolithic Flask app (`app.py`, ~2700 lines)
