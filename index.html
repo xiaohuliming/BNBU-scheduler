@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2694109213-391306+12027406">
+<html lang="en" data-compiled-sum="2494118370-391436+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2694109213-391306+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2494118370-391436+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2694109213-391306+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2494118370-391436+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -5254,12 +5254,12 @@
                         <div className="flex items-center gap-2 sm:gap-3">
                             <a
                                 href="/changelog/"
-                                className="flex-1 min-w-0 min-h-11 flex items-center justify-center gap-2 sm:gap-3 px-2 font-black text-xs sm:text-sm leading-5 hover:bg-black hover:text-[#ff4fd8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black transition-colors"
+                                className="group flex-1 min-w-0 min-h-11 flex items-center justify-center gap-2 sm:gap-3 px-2 font-black text-xs sm:text-sm leading-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                                 title="查看完整更新日志"
                             >
                                 <span className="shrink-0">更新小记</span>
                                 <span className="min-w-0">更新日志坐到前排了</span>
-                                <span aria-hidden="true" className="shrink-0">→</span>
+                                <span aria-hidden="true" className="shrink-0 inline-flex w-8 h-8 items-center justify-center group-hover:bg-black group-hover:text-[#ff4fd8] group-focus-visible:bg-black group-focus-visible:text-[#ff4fd8] transition-colors">→</span>
                             </a>
                             <button
                                 onClick={dismiss}
