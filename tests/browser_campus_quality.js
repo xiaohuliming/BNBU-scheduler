@@ -13,6 +13,7 @@ async page=>{
  const before=reads;
  await page.evaluate(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
  await page.locator('.subscription-card').waitFor();assert(reads>before,'Restored page did not refresh');
+ await page.locator('input[name=client][value=shadowrocket]').check();
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Denied for test');}},configurable:true}));
  await page.getByRole('button',{name:'复制订阅',exact:true}).click();await page.locator('#import-dialog').waitFor();
  assert(await page.locator('#import-title').innerText()==='复制订阅','Copy fallback not focused on copying');
