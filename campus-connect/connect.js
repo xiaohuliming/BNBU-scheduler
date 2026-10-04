@@ -26,7 +26,7 @@
   const selected = () => document.querySelector('input[name="client"]:checked').value;
   const subscriptionActive = own => Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
-  const path = suffix => '/campus-connect/subscriptions/' + state.token + '.' + suffix;
+  const path = suffix => subscriptionPath(state.token,suffix);
   const publicURL = suffix => origin + path(suffix);
   const rules = [
     'DOMAIN-SUFFIX,bnbscheduler.top,DIRECT',
@@ -62,7 +62,7 @@
     const url = new URL(value.trim());
     const accepted = new Set(['www.bnbscheduler.top', 'bnbscheduler.top']);
     if (url.protocol !== 'https:' || !accepted.has(url.hostname) || url.port || url.username || url.password || url.search || url.hash) throw new Error('请粘贴维护者发放的 MAXCOURSE HTTPS 订阅地址。');
-    const match = url.pathname.match(/^\/campus-connect\/subscriptions\/([A-Za-z0-9_-]{43})\.(yaml|txt|conf)$/);
+    const match = url.pathname.match(/^\/campus-connect\/subscriptions\/([A-Za-z0-9_-]{43})(?:\.(yaml|txt|conf)|\/MAXCOURSE-campus\.conf)$/);
     if (!match) throw new Error('订阅地址格式不正确，请复制完整的私人订阅链接。');
     return match[1];
   }
@@ -80,7 +80,7 @@
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
     $('full-hint').textContent=shadowrocket
-      ? '确认添加后，在“配置”页选用 MAXCOURSE Campus。首页全局路由选“配置”，选择校园节点并开启连接。'
+      ? '确认添加后，在“配置”页选用刚添加的 MAXCOURSE-campus.conf。首页全局路由选“配置”，选择校园节点并开启连接。'
       : '确认添加后，选用 MAXCOURSE Campus 配置，启用“规则”模式，选择校园节点并开启连接。';
     $('merge-hint').textContent = shadowrocket
       ? '将片段中的分流规则放到当前规则最前面，并合并 Host 项。校园规则使用 MAXCOURSE Campus 节点，保留原有最终规则。片段用于合并，请勿作为完整配置导入。'
@@ -208,7 +208,8 @@
     $('import-switch').open=false;$('import-manual').open=false;
     for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
   }
-  function subscriptionFor(token,suffix) {return origin+'/campus-connect/subscriptions/'+token+'.'+suffix;}
+  function subscriptionPath(token,suffix) {return '/campus-connect/subscriptions/'+token+(suffix==='conf'?'/MAXCOURSE-campus.conf':'.'+suffix);}
+  function subscriptionFor(token,suffix) {return origin+subscriptionPath(token,suffix);}
   function nativeURL(client,token,complete=false) {
     const url=subscriptionFor(token,client==='shadowrocket'?(complete?'conf':'txt'):'yaml');
     if(client==='shadowrocket' && complete)return 'shadowrocket://config/add/'+url;

@@ -36,9 +36,11 @@ async page => {
     assert(await page.locator('#form-error').isVisible(), 'Malformed or foreign subscription accepted');
   }
   assert(calls.length === 0, 'Invalid URL sent credentials to a server');
-  await page.locator('#subscription').fill(valid);
-  await page.locator('#validate').click();
-  await page.locator('#result').waitFor();
+  for(const address of [valid.replace('.txt','.conf'),valid.replace('.txt','/MAXCOURSE-campus.conf'),valid]){
+    await page.locator('#subscription').fill(address);
+    await page.locator('#validate').click();
+    await page.locator('#result').waitFor();
+  }
   await page.locator('.guide-detail').evaluate(node=>{node.open=true;});
   assert(calls.at(-1).method === 'HEAD', 'Validation unnecessarily fetched node passwords');
   assert((await page.locator('#expiry-note').innerText()).includes('试用有效至'), 'Expiry header not displayed');
