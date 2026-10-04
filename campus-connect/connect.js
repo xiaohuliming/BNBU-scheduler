@@ -13,7 +13,8 @@
   const publicURL = suffix => origin + path(suffix);
   const rules = [
     'DOMAIN,papercut.bnbu.edu.cn,校园资源', 'DOMAIN,ispace.bnbu.edu.cn,校园资源',
-    ...['172.16.244.61','192.168.111.251','172.16.244.66','172.16.242.60','61.143.62.109'].map(ip => 'IP-CIDR,' + ip + '/32,校园资源,no-resolve'),
+    'DOMAIN,lrcs.bnbu.edu.cn,校园资源', 'DOMAIN,ctv24.bnbu.edu.cn,校园资源',
+    ...['172.16.244.61','192.168.111.251','172.16.244.66','172.16.242.60','61.143.62.109','10.101.24.90','61.143.62.70','172.16.242.112','172.31.12.111'].map(ip => 'IP-CIDR,' + ip + '/32,校园资源,no-resolve'),
   ];
   function notice(message) {
     $('feedback').textContent = message;
@@ -106,7 +107,7 @@
     try {
       if (selected() === 'shadowrocket') {
         const lines = rules.map(rule => rule.replace('校园资源', state.nodeName));
-        download('# Merge into your existing Shadowrocket profile; keep its final rule.\n[Rule]\n' + lines.join('\n') + '\n\n[Host]\npapercut.bnbu.edu.cn = 172.16.244.61\n', 'Shadowrocket-campus-merge.conf');
+        download('# Merge into your existing Shadowrocket profile; keep its final rule.\n[Rule]\n' + lines.join('\n') + '\n\n[Host]\npapercut.bnbu.edu.cn = 172.16.244.61\nlrcs.bnbu.edu.cn = 10.101.24.90\nctv24.bnbu.edu.cn = 172.16.242.112\n', 'Shadowrocket-campus-merge.conf');
       } else {
         const controller = new AbortController(); state.controller = controller;
         const timer = setTimeout(() => controller.abort(), 12000);
