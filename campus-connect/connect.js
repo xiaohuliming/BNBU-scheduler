@@ -51,10 +51,10 @@
   }
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
-    $('client-guide').textContent=shadowrocket ? '添加订阅后，合并校园分流规则。' : '可导入校园配置，或合并片段保留原有上网节点。';
+    $('client-guide').textContent=shadowrocket ? '导入节点 → 合并校园规则 → 连接并验证' : '导入校园配置 → 启用规则模式 → 验证访问';
     $('import-hint').textContent = shadowrocket
-      ? '在 Shadowrocket 中添加订阅，粘贴下方地址，更新后找到 MAXCOURSE Campus 节点。添加订阅会保留现有节点。'
-      : '在客户端中选择添加订阅或从 URL 导入，粘贴下方地址。FlClash、Clash Verge Rev 与 Stash 使用 YAML 格式。';
+      ? '在 Shadowrocket 中添加订阅，更新后找到 MAXCOURSE Campus 节点。随后完成下方校园规则配置。'
+      : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
     $('merge-hint').textContent = shadowrocket
       ? '将片段中的校园规则放到当前规则最前面，并合并 Host 项。使用刚添加的 MAXCOURSE Campus 节点，不修改原有最终规则。片段用于合并，请勿作为完整配置导入。'
       : '下载含校园节点与规则的合并片段，将其中的节点、分组、Host 和校园规则合并到现有配置。保留原有上网节点与最终规则，请勿把片段当成完整配置导入。';
@@ -167,6 +167,12 @@
     document.querySelector('.import-tabs').hidden=copying;
     $('show-native').setAttribute('aria-pressed',String(!qr));$('show-qr').setAttribute('aria-pressed',String(qr));
     $('native-pane').hidden=qr||copying;$('qr-pane').hidden=!qr;
+    const shadowrocket=(qr?$('qr-format').value:formats().subscription)==='txt';
+    $('import-warning').textContent=shadowrocket
+      ? 'Shadowrocket 导入的是节点。继续配置校园规则，再开启连接。'
+      : '导入后启用规则模式。完整校园配置会让其他流量直连，请先保留原配置。';
+    $('qr-next-step').textContent=shadowrocket ? '扫码添加节点后，还需配置校园规则。' : '扫码导入配置后，启用规则模式。';
+    $('import-guide-link').textContent=shadowrocket ? '下一步：配置校园规则 →' : '查看连接与验证步骤 →';
     $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
     $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
     for(const link of document.querySelectorAll('[data-import-client]'))link.href=nativeURL(link.dataset.importClient,importToken);
@@ -209,7 +215,18 @@
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
   });
-  $('import-guide-link').addEventListener('click',()=>{importReturnTarget=null;closeImport();if(state.token)$('result').hidden=false;$('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+  $('import-guide-link').addEventListener('click',event=>{
+    event.preventDefault();
+    if(!$('qr-pane').hidden && $('qr-format').value==='yaml' && selected()==='shadowrocket')document.querySelector('input[name="client"][value="clash"]').checked=true;
+    if(!$('qr-pane').hidden && $('qr-format').value==='txt')document.querySelector('input[name="client"][value="shadowrocket"]').checked=true;
+    renderClient();importReturnTarget=null;closeImport();
+    if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
+    if(state.token){
+      const generation=state.generation;$('result').hidden=false;document.querySelector('.guide-detail').open=true;
+      requestAnimationFrame(()=>{if(generation===state.generation&&!document.hidden&&!$('result').hidden)$('result-title').focus({preventScroll:true});});
+    }
+    $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  });
   for(const link of document.querySelectorAll('[data-import-client]'))link.addEventListener('click',()=>{
     document.querySelector('input[name="client"][value="'+link.dataset.importClient+'"]').checked=true;renderClient();renderImport('native');
     $('import-feedback').textContent='已请求打开 '+clients[link.dataset.importClient]+'，请在客户端确认导入。';
@@ -292,8 +309,8 @@
     else if(!active) $('claim-message').textContent='每个账号领取一次。';
     const node=data?.node;
     $('node-status').dataset.state=node?.status || 'unknown';
-    $('node-status').textContent=node?.status==='ready' ? '就绪' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
-    $('node-note').textContent=node?.status==='ready' ? '服务端转发通道已连接。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
+    $('node-status').textContent=node?.status==='ready' ? '服务端就绪' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
+    $('node-note').textContent=node?.status==='ready' ? '客户端连接后，用下方入口验证。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
   }
   async function refreshAccount() {
     const generation=++account.generation;
