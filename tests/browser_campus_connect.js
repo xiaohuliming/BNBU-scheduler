@@ -25,7 +25,7 @@ async page => {
   assert(calls.length === 0, 'Page requested a private subscription before user action');
   assert(await page.locator('#result').isHidden(), 'Connection result fabricated before validation');
   assert(await page.locator('#validate').isDisabled(), 'Empty subscription accepted');
-  assert(await page.locator('#school-dialog').isHidden(), 'School password requested before applying');
+  assert(await page.locator('#login-dialog').isHidden(), 'School password requested before applying');
   for (const value of [valid.replace('www.bnbscheduler.top','evil.example'), valid.replace('https:','http:'), valid+'?share=1', valid.replace('https://','https://user:password@')]) {
     await page.locator('#subscription').fill(value);
     await page.locator('#validate').click();

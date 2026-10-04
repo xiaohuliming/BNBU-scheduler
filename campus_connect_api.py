@@ -1,8 +1,7 @@
-"""Session-bound school identity and campus subscription applications."""
+"""MAXCOURSE account-bound campus subscription applications."""
 import hashlib
 import hmac
 import os
-import re
 import secrets
 import sqlite3
 from urllib.parse import urlsplit
@@ -35,14 +34,12 @@ def create_campus_connect_blueprint(db_path):
         if not uid:return None
         with sqlite3.connect(db_path()) as db:
             db.row_factory=sqlite3.Row
-            row=db.execute('SELECT id,username,ispace_username,display_name FROM users WHERE id=?',(uid,)).fetchone()
+            row=db.execute('SELECT id,username,display_name FROM users WHERE id=?',(uid,)).fetchone()
         if not row:return None
-        school=(row['ispace_username'] or '').strip().lower()
-        return {'id':row['id'],'display_name':row['display_name'] or row['username'],
-                'verified':bool(re.fullmatch(r'[a-z0-9][a-z0-9._-]{0,63}',school)),'school':school}
+        return {'id':row['id'],'display_name':row['display_name'] or row['username']}
 
     def subject(who,secret):
-        return hmac.new(secret.encode(),('school:'+who['school']).encode(),hashlib.sha256).hexdigest()
+        return hmac.new(secret.encode(),('account:'+str(who['id'])).encode(),hashlib.sha256).hexdigest()
 
     def csrf(who):
         uid=who['id'] if who else None
@@ -61,10 +58,10 @@ def create_campus_connect_blueprint(db_path):
     @bp.get('/status')
     def status():
         who=user(); secret,manager=config()
-        base={'user':{k:who[k] for k in ('id','display_name','verified')} if who else None,'csrf_token':csrf(who)}
+        base={'user':who,'csrf_token':csrf(who)}
         if not secret:
             return jsonify({**base,'available':False,'error':'订阅申请服务暂时不可用。'}),503
-        key=subject(who,secret) if who and who['verified'] else None
+        key=subject(who,secret) if who else None
         try:
             code,data=manager.call('status'+('?subject='+key if key else ''))
             if code!=200:raise ValueError('Manager unavailable')
@@ -75,8 +72,8 @@ def create_campus_connect_blueprint(db_path):
     def mutate(operation):
         request.max_content_length=4096
         who=user();secret,manager=config()
-        if not who or not who['verified']:
-            return jsonify({'error':'请先验证本人学校账号。','code':'school_login_required'}),401
+        if not who:
+            return jsonify({'error':'请先登录 MAXCOURSE 账号。','code':'login_required'}),401
         origin=request.headers.get('Origin')
         if origin and urlsplit(origin).netloc != request.host:
             return jsonify({'error':'请求来源无效。'}),403
