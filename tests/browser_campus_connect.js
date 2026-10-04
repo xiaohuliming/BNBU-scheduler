@@ -35,6 +35,7 @@ async page => {
   await page.locator('#subscription').fill(valid);
   await page.locator('#validate').click();
   await page.locator('#result').waitFor();
+  await page.locator('.guide-detail').evaluate(node=>{node.open=true;});
   assert(calls.at(-1).method === 'HEAD', 'Validation unnecessarily fetched node passwords');
   assert((await page.locator('#expiry-note').innerText()).includes('试用有效至'), 'Expiry header not displayed');
   await page.locator('#copy-subscription').click();
@@ -72,6 +73,7 @@ async page => {
     await page.setViewportSize({width,height:900});
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Horizontal overflow at '+width);
   }
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(() => {document.activeElement?.blur(); window.scrollTo(0,0);});
   await page.evaluate(() => document.fonts.ready);
