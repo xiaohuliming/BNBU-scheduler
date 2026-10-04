@@ -51,6 +51,8 @@ async page => {
   assert(await page.locator('#own-client').evaluate(node => node===document.activeElement), 'Automatic status refresh removed keyboard focus');
   await page.locator('input[name=client][value=stash]').check();
   assert(await page.locator('#own-client').inputValue()==='stash', 'Subscription selector did not follow the guide');
+  assert(await page.locator('#client-download').getAttribute('href')==='https://stash.ws/zh/download', 'Stash macOS users are sent to the iOS App Store');
+  assert(!(await page.locator('#client-store').innerText()).includes('App Store'), 'Stash download guidance excludes the separate Mac distribution');
   await page.getByRole('button',{name:'二维码',exact:true}).click();
   await page.locator('#subscription-qr svg').waitFor();
   assert(await page.locator('#qr-format').inputValue()==='yaml', 'QR default differs from selected client');

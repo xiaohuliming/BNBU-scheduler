@@ -13,7 +13,7 @@
     shadowrocket:'https://apps.apple.com/us/app/shadowrocket/id932747118',
     clash:'https://github.com/clash-verge-rev/clash-verge-rev/releases',
     flclash:'https://github.com/chen08209/FlClash/releases',
-    stash:'https://apps.apple.com/us/app/stash-rule-based-proxy/id1596063349',
+    stash:'https://stash.ws/zh/download',
   };
   const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
   const selected = () => document.querySelector('input[name="client"]:checked').value;
@@ -63,7 +63,7 @@
     if($('own-client'))$('own-client').value=selected();
     $('client-download').href=clientDownloads[selected()];
     $('client-download').setAttribute('aria-label','前往 '+clients[selected()]+' 官方下载页面');
-    $('client-store').textContent=selected()==='shadowrocket'||selected()==='stash'?'App Store · 付费应用':'GitHub · 免费开源';
+    $('client-store').textContent=shadowrocket?'App Store · 付费应用':selected()==='stash'?'官方站点 · 付费应用':'GitHub · 免费开源';
     $('client-guide').textContent=shadowrocket ? '导入节点并合并分流规则' : '导入完整配置或合并片段';
     $('client-mode').textContent=shadowrocket ? '使用「配置」模式' : '使用「规则」模式';
     if(!routingChoiceExplicit)$('routing-mode').value=shadowrocket?'merge':'full';
