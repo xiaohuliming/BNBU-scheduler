@@ -26,6 +26,10 @@ async page => {
  await page.route('**/campus-connect/subscriptions/**',route=>route.fulfill({status:200,headers:{'X-Campus-Node-Name':'MAXCOURSE Campus','Subscription-Userinfo':'expire='+Math.floor(Date.now()/1000+60*86400)},body:''}));
  await page.goto(origin+'/campus-connect/');
  await page.locator('#quota-label').filter({hasText:'1 / 10'}).waitFor();
+ assert(await page.locator('#node-status').innerText()==='服务端就绪','Server readiness mistaken for client connectivity');
+ assert(await page.locator('.node-logo').evaluate(n=>n.complete&&n.naturalWidth>0),'Site logo did not load');
+ assert((await page.locator('.resource-chips a').allTextContents()).join(' ').includes('AutoLab'),'Campus-only test entry missing');
+ assert(!(await page.locator('.resource-chips').innerText()).includes('iSpace'),'Public iSpace used as campus access proof');
  assert(!await page.locator('#consent').isChecked(),'Consent preselected');assert(!await page.locator('#claim').isDisabled(),'Guest cannot reach login');assert(await page.locator('#login-dialog').isHidden(),'Password requested on entry');
  await page.locator('#consent').check();await page.locator('#claim').click();await page.locator('#login-dialog').waitFor();
  await page.locator('#login-username').fill('synthetic-school');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-submit').click();
@@ -43,7 +47,10 @@ async page => {
   assert(decodeURIComponent(link.search.slice(link.search.indexOf('url=')+4))===url(tokenA,'yaml'),'Clash Verge URL must be last parameter');
  }
  assert(await page.locator('.import-warning').isVisible(),'Full configuration warning missing');
- await page.locator('#import-close').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
+ await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
+ assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Next step leaves setup instructions collapsed');
+ assert((await page.locator('#merge-hint').innerText()).includes('Host'),'Shadowrocket next step lost host rules');
+ await page.waitForFunction(()=>document.activeElement===document.getElementById('result-title'));
  assert(await page.locator('#import-url').inputValue()==='','Closed modal retained link');
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();
  await page.addScriptTag({path:'tests/vendor/jsqr.js'});
@@ -56,7 +63,9 @@ async page => {
  await page.locator('#copy-import').click();assert(await page.evaluate(()=>window.__copiedForTest)===url(tokenA,'yaml'),'Modal copied wrong format');
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Fixture denial');}},configurable:true}));
  await page.locator('#copy-import').click();assert((await page.locator('#import-feedback').innerText()).includes('长按'),'Clipboard denial has no fallback');
- await page.locator('#import-close').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
+ await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
+ assert((await page.locator('#import-hint').innerText()).includes('规则模式'),'YAML QR led to node-only instructions');
+ await page.locator('input[value=shadowrocket]').check();
  assert(!await page.locator('#subscription-qr svg').count(),'QR retained after close');
  await page.getByRole('button',{name:'重置订阅',exact:true}).click();await page.locator('#reset-confirm').click();await page.locator('#reset-dialog').waitFor({state:'hidden'});
  assert(resets===1,'Reset not applied');assert(await page.locator('#result').isHidden(),'Old import result retained after reset');
