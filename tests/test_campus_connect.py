@@ -55,12 +55,17 @@ class CampusConnectTests(unittest.TestCase):
         expected=hmac.new(b'fake-internal-secret',b'school:synthetic-school',hashlib.sha256).hexdigest()
         self.assertEqual(self.manager.calls[-1],('claim',{'subject':expected,'consent':True}))
 
-    def test_quota_error_propagates_and_invalid_reset_is_denied(self):
+    def test_quota_error_propagates_and_reset_has_no_device_slots(self):
         token=self.login();self.manager.fail=True
         response=self.client.post('/api/campus-connect/claim',json={'consent':True},headers={'X-Campus-CSRF':token})
         self.assertEqual(response.status_code,409)
-        for slot in [0,3,True,'1']:
-            self.assertEqual(self.client.post('/api/campus-connect/reset-device',json={'slot':slot},headers={'X-Campus-CSRF':token}).status_code,400)
+        self.manager.fail=False
+        self.assertEqual(self.client.post('/api/campus-connect/reset-subscription',json={},headers={'X-Campus-CSRF':token}).status_code,200)
+        self.assertEqual(self.manager.calls[-1][0],'reset')
+        self.assertNotIn('slot',self.manager.calls[-1][1])
+        self.assertEqual(self.client.post('/api/campus-connect/reset-subscription',json={'slot':1},headers={'X-Campus-CSRF':token}).status_code,400)
+        self.assertEqual(self.client.post('/api/campus-connect/reset-subscription',json={}).status_code,403)
+        self.assertEqual(self.client.post('/api/campus-connect/reset-device',json={'slot':1},headers={'X-Campus-CSRF':token}).status_code,409)
 
     def test_changed_session_invalidates_previous_csrf(self):
         token=self.login()

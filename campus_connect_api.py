@@ -89,9 +89,8 @@ def create_campus_connect_blueprint(db_path):
         if operation=='claim':
             if body.get('consent') is not True:return jsonify({'error':'请先确认申请规则与信息处理说明。'}),400
             payload['consent']=True
-        else:
-            if type(body.get('slot')) is not int or body['slot'] not in (1,2):return jsonify({'error':'设备编号无效。'}),400
-            payload['slot']=body['slot']
+        elif 'slot' in body:
+            return jsonify({'error':'请重置整份订阅，无需指定设备。'}),400
         try:
             code,data=manager.call(operation,payload)
             return jsonify(data),code
@@ -101,7 +100,11 @@ def create_campus_connect_blueprint(db_path):
     @bp.post('/claim')
     def claim():return mutate('claim')
 
+    @bp.post('/reset-subscription')
+    def reset_subscription():return mutate('reset')
+
     @bp.post('/reset-device')
-    def reset_device():return mutate('reset')
+    def legacy_reset():
+        return jsonify({'error':'设备链接已合并，请刷新页面后重置统一订阅。'}),409
 
     return bp
