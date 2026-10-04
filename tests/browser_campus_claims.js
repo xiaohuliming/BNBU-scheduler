@@ -26,7 +26,7 @@ async page => {
  await page.route('**/campus-connect/subscriptions/**',route=>route.fulfill({status:200,headers:{'X-Campus-Node-Name':'MAXCOURSE Campus','Subscription-Userinfo':'expire='+Math.floor(Date.now()/1000+60*86400)},body:''}));
  await page.goto(origin+'/campus-connect/');
  await page.locator('#quota-label').filter({hasText:'1 / 10'}).waitFor();
- assert(await page.locator('#claim').isDisabled(),'Consent preselected');assert(await page.locator('#login-dialog').isHidden(),'Password requested on entry');
+ assert(!await page.locator('#consent').isChecked(),'Consent preselected');assert(!await page.locator('#claim').isDisabled(),'Guest cannot reach login');assert(await page.locator('#login-dialog').isHidden(),'Password requested on entry');
  await page.locator('#consent').check();await page.locator('#claim').click();await page.locator('#login-dialog').waitFor();
  await page.locator('#login-username').fill('synthetic-school');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-submit').click();
  await page.locator('#login-dialog').waitFor({state:'hidden'});assert(await page.locator('#login-password').inputValue()==='','Password retained');
@@ -63,7 +63,7 @@ async page => {
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();assert(await decode()===url(tokenC),'Reset retained old QR credential');
  own.active=false;await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#import-dialog').waitFor({state:'hidden'});assert(!await page.locator('#subscription-qr svg').count(),'Revocation retained QR');
  own.active=true;node='unavailable';await page.locator('#refresh-status').click();await page.locator('#node-status').filter({hasText:'暂不可用'}).waitFor();
- node='ready';await page.locator('#refresh-status').click();await page.locator('#node-status').filter({hasText:'正常'}).waitFor();
+ node='ready';await page.locator('#refresh-status').click();await page.locator('#node-status').filter({hasText:'就绪'}).waitFor();
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Overflow at '+width);}
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.setViewportSize({width:1440,height:1000});await page.evaluate(()=>{document.activeElement?.blur();scrollTo(0,0);});await page.waitForTimeout(3600);await page.screenshot({path:'output/campus-portal-desktop.png',fullPage:true});
