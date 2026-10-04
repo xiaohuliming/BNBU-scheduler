@@ -64,13 +64,16 @@
     $('client-download').href=clientDownloads[selected()];
     $('client-download').setAttribute('aria-label','前往 '+clients[selected()]+' 官方下载页面');
     $('client-store').textContent=shadowrocket?'App Store · 付费应用':selected()==='stash'?'官方站点 · 付费应用':'GitHub · 免费开源';
-    $('client-guide').textContent=shadowrocket ? '导入节点并合并分流规则' : '导入完整配置或合并片段';
+    $('client-guide').textContent='添加校园配置，或保留原代理。';
     $('client-mode').textContent=shadowrocket ? '使用「配置」模式' : '使用「规则」模式';
-    if(!routingChoiceExplicit)$('routing-mode').value=shadowrocket?'merge':'full';
+    if(!routingChoiceExplicit)$('routing-mode').value='full';
     renderRouting();
     $('import-hint').textContent = shadowrocket
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
+    $('full-hint').textContent=shadowrocket
+      ? '确认添加后，在“配置”页选用 MAXCOURSE Campus。首页全局路由选“配置”，选择校园节点并开启连接。'
+      : '确认添加后，选用 MAXCOURSE Campus 配置，启用“规则”模式，选择校园节点并开启连接。';
     $('merge-hint').textContent = shadowrocket
       ? '将片段中的分流规则放到当前规则最前面，并合并 Host 项。校园规则使用 MAXCOURSE Campus 节点，保留原有最终规则。片段用于合并，请勿作为完整配置导入。'
       : '下载含校园节点与规则的合并片段，将其中的节点、分组、Host 和校园规则合并到现有配置。保留原有上网节点与最终规则，请勿把片段当成完整配置导入。';
@@ -194,7 +197,7 @@
     const target=importReturnTarget;importReturnTarget=null;
     if(target)requestAnimationFrame(()=>{const element=document.querySelector(target);if(element&&!element.disabled&&element.getClientRects().length)element.focus({preventScroll:true});});
     $('import-url').value='';$('subscription-qr').replaceChildren();
-    $('import-switch').open=false;
+    $('import-switch').open=false;$('import-manual').open=false;
     for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
   }
   function subscriptionFor(token,suffix) {return origin+'/campus-connect/subscriptions/'+token+'.'+suffix;}
@@ -223,18 +226,21 @@
     document.querySelector('.import-tabs').hidden=copying;
     $('show-native').setAttribute('aria-pressed',String(!qr));$('show-qr').setAttribute('aria-pressed',String(qr));
     $('native-pane').hidden=qr||copying;$('qr-pane').hidden=!qr;
-    const shadowrocket=(qr?$('qr-format').value:formats().subscription)==='txt';
-    $('import-warning').textContent=shadowrocket
-      ? '导入节点后合并分流规则，全局路由选“配置”，保留原默认上网节点。'
-      : '导入后启用规则模式。完整校园配置会让其他流量直连，请先保留原配置。';
-    $('qr-next-step').textContent=shadowrocket ? '扫码添加节点后合并分流规则，全局路由选“配置”。' : '扫码导入配置后，启用规则模式。';
-    $('import-guide-link').textContent=shadowrocket ? '下一步：配置校园规则 →' : '查看连接与验证步骤 →';
-    $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
-    $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
+    const suffix=qr?$('qr-format').value:copying?formats().subscription:formats().complete;
+    const nodeOnly=suffix==='txt';
+    $('import-manual').open=qr||copying;
+    $('import-manual').querySelector('summary').textContent=copying?'手动复制订阅地址':qr?'订阅地址':'无法打开客户端？手动添加';
+    $('import-merge-link').hidden=qr||copying;
+    $('import-warning').textContent='启用此配置后，普通网站直连。需要原代理，请选择“保留原上网配置”。';
+    $('qr-next-step').textContent=nodeOnly ? '扫码添加节点后，继续合并校园规则。' : '扫码添加后，选用校园配置并启用规则模式。普通网站直连。';
+    $('import-guide-link').textContent=nodeOnly ? '下一步：合并校园规则 →' : '下一步：启用校园配置 →';
+    $('import-guide-link').dataset.mode=nodeOnly?'merge':'full';
+    $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'添加校园配置';
+    $('import-url').value=subscriptionFor(importToken,suffix);
     $('import-client').value=selected();
     for(const link of document.querySelectorAll('[data-import-client]')){
       const current=link.dataset.importClient===selected();link.hidden=!current;
-      if(current)link.href=nativeURL(selected(),importToken);
+      if(current)link.href=nativeURL(selected(),importToken,true);
       else link.removeAttribute('href');
     }
     $('subscription-qr').replaceChildren();$('subscription-qr').removeAttribute('aria-busy');
@@ -252,7 +258,7 @@
   }
   function showImport(token,mode,source) {
     importToken=token;importSource=source;$('qr-format').value=formats().subscription;
-    $('import-feedback').textContent='未打开客户端？复制链接手动添加。';renderImport(mode);
+    $('import-feedback').textContent='';renderImport(mode);
     if(!$('import-dialog').open)$('import-dialog').showModal();
   }
   async function prepareOwn(mode) {
@@ -285,18 +291,25 @@
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
   });
-  $('import-guide-link').addEventListener('click',event=>{
-    event.preventDefault();
-    if(!$('qr-pane').hidden && $('qr-format').value==='yaml' && selected()==='shadowrocket')document.querySelector('input[name="client"][value="clash"]').checked=true;
-    if(!$('qr-pane').hidden && $('qr-format').value==='txt')document.querySelector('input[name="client"][value="shadowrocket"]').checked=true;
-    renderClient();importReturnTarget=null;closeImport();
+  function openImportGuide(mode) {
+    renderClient();routingChoiceExplicit=true;$('routing-mode').value=mode;renderRouting();
+    importReturnTarget=null;closeImport();
     if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
     if(state.token){
-      const generation=state.generation;$('result').hidden=false;document.querySelector('.guide-detail').open=true;
+      const generation=state.generation;$('result').hidden=false;
+      document.querySelector('.guide-detail').open=mode==='merge';
+      document.querySelector('.full-config').open=mode==='full';
       requestAnimationFrame(()=>{if(generation===state.generation&&!document.hidden&&!$('result').hidden)$('result-title').focus({preventScroll:true});});
     }
-    $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    ($('result').hidden?$('setup'):$('result')).scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  }
+  $('import-guide-link').addEventListener('click',event=>{
+    event.preventDefault();
+    if(!$('qr-pane').hidden && $('qr-format').value==='yaml' && selected()==='shadowrocket')chooseClient('clash');
+    if(!$('qr-pane').hidden && $('qr-format').value==='txt')chooseClient('shadowrocket');
+    openImportGuide($('import-guide-link').dataset.mode);
   });
+  $('import-merge-link').addEventListener('click',event=>{event.preventDefault();openImportGuide('merge');});
   for(const link of document.querySelectorAll('[data-import-client]'))link.addEventListener('click',()=>{
     document.querySelector('input[name="client"][value="'+link.dataset.importClient+'"]').checked=true;renderClient();renderImport('native');
     $('import-feedback').textContent='已请求打开 '+clients[link.dataset.importClient]+'，请在客户端确认导入。';

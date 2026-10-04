@@ -255,6 +255,15 @@ details p{margin:10px 0;font-size:.8125rem;line-height:1.85}
 .import-switch .field-label{margin-top:8px}
 .import-switch select{margin-bottom:12px}
 .import-warning{margin:22px 0 18px;padding:12px 14px;border:1px solid #cfbf8e;border-radius:9px;background:#f7efcf;color:#665634;font-size:.75rem;line-height:1.85}
+.import-alternative{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;text-decoration:none;font-size:.8125rem;font-weight:600}
+.import-alternative small{display:block;margin-top:4px;color:var(--muted);font-size:.6875rem;font-weight:450}
+.import-alternative>span:last-child{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:6px;transition:background .15s,color .15s}
+.import-alternative:hover>span:last-child{background:var(--ink);color:var(--surface)}
+#import-feedback:empty{display:none}
+.import-manual{margin-top:18px;color:var(--muted);font-size:.75rem}
+.import-manual summary{min-height:44px;align-content:center;cursor:pointer}
+.import-manual .field-label{margin-top:8px}
+.result{scroll-margin-top:24px}
 .subscription-qr{display:flex;justify-content:center;width:min(244px,100%);margin:22px auto;padding:15px;border:1px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink)}
 .subscription-qr svg{display:block;width:100%;height:auto}
 .text-link{display:inline-flex;align-items:center;min-height:44px;color:var(--muted);font-size:.75rem}
