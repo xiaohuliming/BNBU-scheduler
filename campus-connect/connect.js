@@ -354,7 +354,7 @@
     const epoch=lifecycleEpoch;account.busy=true;accountError();renderAccount();
     try {const data=await accountAPI('claim',{consent:$('consent').checked});if(epoch!==lifecycleEpoch)return;account.data={...account.data,...data};notice('测试订阅已领取');}
     catch(error){accountError(error.message);}
-    finally{account.busy=false;renderAccount();refreshAccount();}
+    finally{account.busy=false;if(epoch===lifecycleEpoch){renderAccount();refreshAccount();}}
   });
   $('reset-cancel').addEventListener('click',()=>{if(!account.busy)$('reset-dialog').close();});
   $('reset-dialog').addEventListener('close',()=>requestAnimationFrame(()=>{const button=document.querySelector('.subscription-reset');if(button&&!button.disabled&&button.getClientRects().length)button.focus({preventScroll:true});}));
@@ -364,7 +364,7 @@
     const epoch=lifecycleEpoch;account.busy=true;$('reset-confirm').disabled=true;$('reset-cancel').disabled=true;$('reset-error').hidden=true;
     try{const data=await accountAPI('reset-subscription',{});if(epoch!==lifecycleEpoch)return;account.data={...account.data,...data};$('subscription').value='';reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
-    finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
+    finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;if(epoch===lifecycleEpoch){renderAccount();refreshAccount();}}
   });
   window.addEventListener('pagehide',()=>{lifecycleEpoch++;account.generation++;for(const request of pendingJSONRequests)request.abort();pendingJSONRequests.clear();clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
