@@ -156,6 +156,7 @@
     const target=importReturnTarget;importReturnTarget=null;
     if(target)requestAnimationFrame(()=>{const element=document.querySelector(target);if(element&&!element.disabled&&element.getClientRects().length)element.focus({preventScroll:true});});
     $('import-url').value='';$('subscription-qr').replaceChildren();
+    $('import-switch').open=false;
     for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
   }
   function subscriptionFor(token,suffix) {return origin+'/campus-connect/subscriptions/'+token+'.'+suffix;}
@@ -192,7 +193,12 @@
     $('import-guide-link').textContent=shadowrocket ? '下一步：配置校园规则 →' : '查看连接与验证步骤 →';
     $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
     $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
-    for(const link of document.querySelectorAll('[data-import-client]'))link.href=nativeURL(link.dataset.importClient,importToken);
+    $('import-client').value=selected();
+    for(const link of document.querySelectorAll('[data-import-client]')){
+      const current=link.dataset.importClient===selected();link.hidden=!current;
+      if(current)link.href=nativeURL(selected(),importToken);
+      else link.removeAttribute('href');
+    }
     $('subscription-qr').replaceChildren();$('subscription-qr').removeAttribute('aria-busy');
     if(qr) {
       $('subscription-qr').setAttribute('aria-busy','true');$('subscription-qr').textContent='二维码准备中…';
@@ -227,6 +233,7 @@
   $('import-dialog').addEventListener('close',closeImport);
   $('show-native').addEventListener('click',()=>renderImport('native'));
   $('show-qr').addEventListener('click',()=>renderImport('qr'));
+  $('import-client').addEventListener('change',()=>{chooseClient($('import-client').value);renderImport('native');});
   $('qr-format').addEventListener('change',()=>renderImport('qr'));
   $('copy-import').addEventListener('click',async()=>{
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}

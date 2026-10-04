@@ -18,6 +18,13 @@ async page => {
   await page.locator('#setup-start').click();
   await page.locator('#import-dialog').waitFor();
   assert((await page.locator('#import-url').inputValue()).endsWith('.yaml'), 'Setup entry imports a different client format');
+  assert(await page.locator('[data-import-client=clash]').isVisible(), 'Selected client is absent from import');
+  assert(await page.locator('[data-import-client]:visible').count()===1, 'Import does not focus the selected client');
+  await page.locator('#import-switch summary').click();
+  await page.locator('#import-client').selectOption('stash');
+  assert(await page.locator('#own-client').inputValue()==='stash', 'Import client switch does not update the subscription selector');
+  assert((await page.locator('[data-import-client=stash]').getAttribute('href')).startsWith('stash://'), 'Import client switch retained the old scheme');
+  await page.locator('#import-client').selectOption('clash');
   await page.locator('#import-close').click();
   await page.waitForFunction(()=>document.activeElement?.id==='setup-start');
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();

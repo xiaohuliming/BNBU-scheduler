@@ -42,12 +42,19 @@ async page => {
  await page.locator('#refresh-status').click();assert(claims===1,'Refresh renewed subscription');
  await page.getByRole('button',{name:'复制订阅',exact:true}).click();assert(await page.evaluate(()=>window.__copiedForTest)===url(tokenA),'Wrong copied subscription');
  await page.getByRole('button',{name:'一键导入',exact:true}).click();await page.locator('#import-dialog').waitFor();
- const links=await page.locator('[data-import-client]').evaluateAll(nodes=>Object.fromEntries(nodes.map(n=>[n.dataset.importClient,n.href])));
- assert(atob(links.shadowrocket.slice('shadowrocket://add/sub://'.length).split('?')[0])===url(tokenA),'Wrong Shadowrocket URI');
+ assert(await page.locator('[data-import-client]:visible').count()===1,'Import asks the user to choose a client again');
+ const shadowrocket=await page.locator('[data-import-client=shadowrocket]').getAttribute('href');
+ assert(atob(shadowrocket.slice('shadowrocket://add/sub://'.length).split('?')[0])===url(tokenA),'Wrong Shadowrocket URI');
+ assert(!await page.locator('#import-switch').evaluate(node=>node.open),'Alternate clients clutter the main import step');
+ await page.locator('#import-switch summary').click();
  for(const [client,scheme] of [['clash','clash-verge:'],['flclash','flclash:'],['stash','stash:']]){
-  const link=new URL(links[client]);assert(link.protocol===scheme&&link.hostname==='install-config','Wrong client scheme '+client);assert(link.searchParams.get('url')===url(tokenA,'yaml'),'Wrong imported format '+client);
+  await page.locator('#import-client').selectOption(client);
+  assert(await page.locator('[data-import-client]:visible').count()===1,'Switching client duplicated the primary action');
+  const link=new URL(await page.locator('[data-import-client='+client+']').getAttribute('href'));assert(link.protocol===scheme&&link.hostname==='install-config','Wrong client scheme '+client);assert(link.searchParams.get('url')===url(tokenA,'yaml'),'Wrong imported format '+client);
   assert(decodeURIComponent(link.search.slice(link.search.indexOf('url=')+4))===url(tokenA,'yaml'),'Clash Verge URL must be last parameter');
+  assert(await page.locator('[data-import-client=shadowrocket]').getAttribute('href')===null,'Hidden client retains private URL');
  }
+ await page.locator('#import-client').selectOption('shadowrocket');
  assert(await page.locator('.import-warning').isVisible(),'Full configuration warning missing');
  await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
  assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Next step leaves setup instructions collapsed');
