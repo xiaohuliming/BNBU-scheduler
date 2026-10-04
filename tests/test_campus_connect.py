@@ -38,22 +38,44 @@ class CampusConnectTests(unittest.TestCase):
         self.assertEqual(self.manager.calls[-1],('status',None))
         self.assertEqual(response.headers['Cache-Control'],'no-store')
 
-    def test_claim_requires_verified_school_csrf_origin_and_consent(self):
+    def test_claim_requires_site_login_csrf_origin_and_consent(self):
         self.assertEqual(self.client.post('/api/campus-connect/claim',json={'consent':True}).status_code,401)
-        token=self.login(2)
-        self.assertEqual(self.client.post('/api/campus-connect/claim',json={'consent':True},headers={'X-Campus-CSRF':token}).status_code,401)
         token=self.login()
         for data,headers,expected in [({'consent':True},{},403),({'consent':True},{'X-Campus-CSRF':token,'Origin':'https://evil.example'},403),({'consent':False},{'X-Campus-CSRF':token},400)]:
             before=len(self.manager.calls)
             response=self.client.post('/api/campus-connect/claim',json=data,headers=headers)
             self.assertEqual(response.status_code,expected);self.assertEqual(len(self.manager.calls),before)
 
-    def test_subject_is_derived_from_verified_binding_not_client_input(self):
+    def test_subject_is_derived_from_site_account_not_client_input(self):
         token=self.login()
         response=self.client.post('/api/campus-connect/claim',json={'consent':True,'subject':'attacker-selected'},headers={'X-Campus-CSRF':token})
         self.assertEqual(response.status_code,200)
-        expected=hmac.new(b'fake-internal-secret',b'school:synthetic-school',hashlib.sha256).hexdigest()
+        expected=hmac.new(b'fake-internal-secret',b'account:1',hashlib.sha256).hexdigest()
         self.assertEqual(self.manager.calls[-1],('claim',{'subject':expected,'consent':True}))
+
+    def test_account_without_school_binding_can_claim_and_reset(self):
+        token=self.login(2)
+        status=self.client.get('/api/campus-connect/status').json
+        self.assertEqual(status['user'],{'id':2,'display_name':'Unverified'})
+        expected=hmac.new(b'fake-internal-secret',b'account:2',hashlib.sha256).hexdigest()
+        response=self.client.post('/api/campus-connect/claim',json={'consent':True,'subject':'attacker','user_id':1},headers={'X-Campus-CSRF':token})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(self.manager.calls[-1],('claim',{'subject':expected,'consent':True}))
+        self.assertEqual(self.client.post('/api/campus-connect/reset-subscription',json={},headers={'X-Campus-CSRF':token}).status_code,200)
+        self.assertEqual(self.manager.calls[-1],('reset',{'subject':expected}))
+
+    def test_school_binding_changes_do_not_change_subscription_identity(self):
+        self.login()
+        first=self.manager.calls[-1]
+        with sqlite3.connect(self.db) as db:db.execute('UPDATE users SET ispace_username=NULL, username="renamed" WHERE id=1')
+        self.client.get('/api/campus-connect/status')
+        self.assertEqual(self.manager.calls[-1],first)
+
+    def test_deleted_account_session_cannot_claim(self):
+        token=self.login()
+        with sqlite3.connect(self.db) as db:db.execute('DELETE FROM users WHERE id=1')
+        self.assertIsNone(self.client.get('/api/campus-connect/status').json['user'])
+        self.assertEqual(self.client.post('/api/campus-connect/claim',json={'consent':True},headers={'X-Campus-CSRF':token}).status_code,401)
 
     def test_quota_error_propagates_and_reset_has_no_device_slots(self):
         token=self.login();self.manager.fail=True

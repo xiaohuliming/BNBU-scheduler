@@ -1,7 +1,7 @@
 async page => {
  const origin=new URL(page.url()).origin;if(new URL(origin).hostname!=='127.0.0.1')throw new Error('Local tests only');
  const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};const errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
- let user=null,own=null,used=1,claims=0,logins=0,resets=0,node='ready';
+ let user=null,own=null,used=1,claims=0,logins=0,resets=0,registers=0,node='ready';
  const tokenA='A'.repeat(43),tokenC='C'.repeat(43);
  const url=(t,format='txt')=>'https://www.bnbscheduler.top/campus-connect/subscriptions/'+t+'.'+format;
  const status=()=>({available:true,user,csrf_token:'fixture-csrf',capacity:10,used,remaining:10-used,test_days:60,device_limit:2,subscription:own,node:{name:'MAXCOURSE Campus',status:node,checked_at:Math.floor(Date.now()/1000)}});
@@ -10,8 +10,9 @@ async page => {
   const p=new URL(route.request().url()).pathname;
   const send=(body,code=200)=>route.fulfill({status:code,contentType:'application/json',body:JSON.stringify(body)});
   if(p==='/api/campus-connect/status')return send(status());
-  if(p==='/api/login/ispace'){
-   logins++;assert(route.request().postDataJSON().purpose==='campus-connect','Login read unrelated data');user={id:9,display_name:'synthetic-owner',verified:true};return send({success:true});
+  if(p==='/api/register'){registers++;return send({success:true});}
+  if(p==='/api/login'){
+   logins++;const body=route.request().postDataJSON();assert(!('purpose' in body),'Local login sent school purpose');user={id:body.username==='synthetic-new'?10:9,display_name:'synthetic-owner'};return send({success:true});
   }
   if(p==='/api/campus-connect/claim'){
    claims++;assert(route.request().headers()['x-campus-csrf']==='fixture-csrf','Missing CSRF');assert(route.request().postDataJSON().consent===true,'Consent omitted');
@@ -25,10 +26,10 @@ async page => {
  await page.route('**/campus-connect/subscriptions/**',route=>route.fulfill({status:200,headers:{'X-Campus-Node-Name':'MAXCOURSE Campus','Subscription-Userinfo':'expire='+Math.floor(Date.now()/1000+60*86400)},body:''}));
  await page.goto(origin+'/campus-connect/');
  await page.locator('#quota-label').filter({hasText:'1 / 10'}).waitFor();
- assert(await page.locator('#claim').isDisabled(),'Consent preselected');assert(await page.locator('#school-dialog').isHidden(),'Password requested on entry');
- await page.locator('#consent').check();await page.locator('#claim').click();await page.locator('#school-dialog').waitFor();
- await page.locator('#school-username').fill('synthetic-school');await page.locator('#school-password').fill('synthetic-password');await page.locator('#login-submit').click();
- await page.locator('#school-dialog').waitFor({state:'hidden'});assert(await page.locator('#school-password').inputValue()==='','Password retained');
+ assert(await page.locator('#claim').isDisabled(),'Consent preselected');assert(await page.locator('#login-dialog').isHidden(),'Password requested on entry');
+ await page.locator('#consent').check();await page.locator('#claim').click();await page.locator('#login-dialog').waitFor();
+ await page.locator('#login-username').fill('synthetic-school');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-submit').click();
+ await page.locator('#login-dialog').waitFor({state:'hidden'});assert(await page.locator('#login-password').inputValue()==='','Password retained');
  await page.locator('#claim').click();await page.locator('.subscription-card').waitFor();
  assert(await page.locator('.subscription-card').count()===1,'More than one subscription shown');assert(await page.locator('#application').isHidden(),'Claim form still dominates claimed view');
  assert((await page.locator('.subscription-metrics').innerText()).includes('1 / 2'),'Online count missing');assert(claims===1&&logins===1,'Unexpected account requests');
@@ -69,8 +70,12 @@ async page => {
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'output/campus-portal-mobile.png',fullPage:true});
  const color=await page.getByRole('button',{name:'一键导入',exact:true}).evaluate(n=>getComputedStyle(n).backgroundColor);assert(color==='rgb(213, 197, 236)','Pastel palette missing');
  assert(await page.evaluate(t=>!JSON.stringify(Object.entries(localStorage)).includes(t)&&!JSON.stringify(Object.entries(sessionStorage)).includes(t),tokenC),'Credential persisted');
+ await page.locator('#login-open').click();await page.locator('#auth-toggle').click();
+ await page.locator('#login-username').fill('synthetic-new');await page.locator('#login-password').fill('synthetic-new-password');await page.locator('#login-submit').click();await page.locator('#login-dialog').waitFor({state:'hidden'});
+ assert(registers===1&&logins===2,'Registration did not log into site account');assert(await page.locator('#login-password').inputValue()==='','Registration retained password');
  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));assert(await page.locator('#import-url').inputValue()==='','Exit retained private link');
  own=null;used=10;await page.locator('#refresh-status').click();await page.locator('#quota-label').filter({hasText:'10 / 10'}).waitFor();assert(await page.locator('#claim').isDisabled(),'Full quota accepted claim');
+ assert(!requests.some(url=>new URL(url).pathname.includes('/ispace')),'Portal requested school validation');
  assert(requests.every(url=>new URL(url).origin===origin),'Page sent credential to an external service');assert(!errors.length,errors.join('\n'));
- return{claimFlow:true,singleSubscription:true,privateLocalQR:true,qrDecoded:true,fourClientSchemes:true,clipboardFallback:true,reset:true,revocationCleanup:true,realNodeStates:true,pastelPalette:true,mobile:true,nativeAppsLaunched:0};
+ return{claimFlow:true,siteAccountLogin:true,siteRegistration:true,schoolRequests:0,singleSubscription:true,privateLocalQR:true,qrDecoded:true,fourClientSchemes:true,clipboardFallback:true,reset:true,revocationCleanup:true,realNodeStates:true,pastelPalette:true,mobile:true,nativeAppsLaunched:0};
 }

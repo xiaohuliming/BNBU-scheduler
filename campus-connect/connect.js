@@ -194,7 +194,7 @@
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
-  const account = { data: null, busy: false, loginBusy: false, generation: 0, timer: null, resetTarget: null };
+  const account = { data: null, busy: false, loginBusy: false, authMode: 'login', generation: 0, timer: null, resetTarget: null };
   function accountError(message = '') { $('account-error').textContent = message; $('account-error').hidden = !message; }
   async function accountAPI(path, body) {
     const response = await fetch('/api/campus-connect/' + path, {method: body ? 'POST' : 'GET', credentials:'same-origin',cache:'no-store',headers:body ? {'Content-Type':'application/json','X-Campus-CSRF':account.data?.csrf_token || ''} : {},...(body ? {body:JSON.stringify(body)} : {})});
@@ -206,8 +206,8 @@
     const data=account.data, user=data?.user, own=data?.subscription;
     const active=Boolean(own?.claimed && own.active && own.subscription_url);
     $('quota-label').textContent=data?.available ? '测试名额 '+data.used+' / '+data.capacity : '名额暂时不可读取';
-    $('identity').textContent=user?.verified ? '学校身份已验证 · '+user.display_name : '尚未验证学校账号';
-    $('login-open').textContent=user?.verified ? '切换账号' : '验证学校账号';
+    $('identity').textContent=user ? '已登录 · '+user.display_name : '尚未登录';
+    $('login-open').textContent=user ? '切换账号' : '登录';
     $('login-open').disabled=account.busy;
     $('claim').textContent=own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : '申请领取 60 天订阅 →';
     const canClaim=data?.available && (!own?.claimed || own.active) && (own?.claimed || $('consent').checked) && (own?.claimed || own?.active || data.remaining>0);
@@ -226,7 +226,7 @@
       const note=document.createElement('p');note.textContent='这份测试订阅已到期或撤销，请联系维护者。';$('subscription-empty').append(note);
     }
     if(!own?.claimed && $('subscription-empty').innerHTML!==emptyMarkup)$('subscription-empty').innerHTML=emptyMarkup;
-    $('account-expiry').textContent=own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个学校账号一份。';
+    $('account-expiry').textContent=own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个 MAXCOURSE 账号一份。';
     $('account-expiry').hidden=active;
     if(active && changed) {
       const card=document.createElement('article');card.className='subscription-card';
@@ -261,28 +261,45 @@
     clearTimeout(account.timer);
     account.timer=setTimeout(()=>{if(!document.hidden&&!account.busy)refreshAccount();},account.data?.subscription?.claimed && !account.data.subscription.synced ? 3000 : 15000);
   }
-  function openLogin() { $('school-password').value='';$('login-error').hidden=true;if(!$('school-dialog').open)$('school-dialog').showModal();$('school-username').focus(); }
+  function renderLogin() {
+    const register=account.authMode==='register';
+    $('login-title').textContent=register?'注册 MAXCOURSE':'登录 MAXCOURSE';
+    $('login-submit').textContent=account.loginBusy ? '请稍候…' : register?'注册并登录':'登录';
+    $('auth-toggle').textContent=register?'已有账号？登录':'没有账号？注册';
+    $('login-password').autocomplete=register?'new-password':'current-password';
+    for(const id of ['login-submit','login-close','auth-toggle','login-username','login-password'])$(id).disabled=account.loginBusy;
+  }
+  function openLogin() {
+    account.authMode='login';$('login-password').value='';$('login-error').hidden=true;renderLogin();
+    if(!$('login-dialog').open)$('login-dialog').showModal();$('login-username').focus();
+  }
+  const loginErrors={'Invalid credentials':'用户名或密码不正确。','Username already exists':'用户名已存在，请登录或换一个用户名。','Username and password required':'请填写用户名和密码。','Username or password is too long':'用户名或密码过长。'};
+  async function siteAuth(endpoint,username,password) {
+    const response=await fetch('/api/'+endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const data=await response.json();if(!response.ok)throw new Error(loginErrors[data.error] || data.error || '暂时无法登录，请稍后重试。');
+  }
   $('login-open').addEventListener('click',openLogin);
-  $('login-close').addEventListener('click',()=>{if(!account.loginBusy)$('school-dialog').close();});
-  $('school-dialog').addEventListener('cancel',event=>{if(account.loginBusy)event.preventDefault();});
-  $('school-dialog').addEventListener('close',()=>{$('school-password').value='';});
-  $('school-form').addEventListener('submit',async event=>{
+  $('auth-toggle').addEventListener('click',()=>{if(account.loginBusy)return;account.authMode=account.authMode==='login'?'register':'login';$('login-password').value='';$('login-error').hidden=true;renderLogin();});
+  $('login-close').addEventListener('click',()=>{if(!account.loginBusy)$('login-dialog').close();});
+  $('login-dialog').addEventListener('cancel',event=>{if(account.loginBusy)event.preventDefault();});
+  $('login-dialog').addEventListener('close',()=>{$('login-password').value='';});
+  $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();if(account.loginBusy)return;
-    const username=$('school-username').value.trim();let password=$('school-password').value;
-    if(!username||!password){$('login-error').textContent='请填写本人学校账号和密码。';$('login-error').hidden=false;return;}
-    account.loginBusy=true;$('login-submit').disabled=true;$('login-close').disabled=true;$('login-error').hidden=true;
+    const username=$('login-username').value.trim();let password=$('login-password').value;
+    if(!username||!password){$('login-error').textContent='请填写用户名和密码。';$('login-error').hidden=false;return;}
+    account.loginBusy=true;renderLogin();$('login-error').hidden=true;
     try {
-      const response=await fetch('/api/login/ispace',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,purpose:'campus-connect'})});
-      const data=await response.json();if(!response.ok)throw new Error(data.error || '学校身份验证失败。');
-      $('school-dialog').close();reset();await refreshAccount();notice('学校身份已验证，可继续申请');
+      if(account.authMode==='register')await siteAuth('register',username,password);
+      await siteAuth('login',username,password);
+      $('login-dialog').close();$('subscription').value='';reset();await refreshAccount();notice('已登录');
     } catch(error){$('login-error').textContent=error.message;$('login-error').hidden=false;}
-    finally{password=null;$('school-password').value='';account.loginBusy=false;$('login-submit').disabled=false;$('login-close').disabled=false;}
+    finally{password=null;$('login-password').value='';account.loginBusy=false;renderLogin();}
   });
   $('consent').addEventListener('change',renderAccount);
   $('refresh-status').addEventListener('click',refreshAccount);
   $('claim').addEventListener('click',async()=>{
     if(account.busy)return;
-    if(!account.data?.user?.verified){openLogin();return;}
+    if(!account.data?.user){openLogin();return;}
     if(account.data.subscription?.claimed){$('subscription-panel').scrollIntoView({behavior:'smooth'});return;}
     account.busy=true;accountError();renderAccount();
     try {const data=await accountAPI('claim',{consent:$('consent').checked});account.data={...account.data,...data};notice('测试订阅已领取');}
@@ -298,7 +315,7 @@
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
   });
-  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('school-password').value='';account.data=null;account.resetTarget=null;$('own-subscription').replaceChildren();});
+  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;$('own-subscription').replaceChildren();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
   renderClient();refreshAccount();
 })();
