@@ -63,5 +63,12 @@ async page => {
   assert((await page.locator('#client-mode').innerText()).includes('配置'), 'Shadowrocket setup lost configuration routing mode');
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();
   assert((await page.evaluate(() => window.__clientChoiceCopied)).endsWith('.txt'), 'Switching back retained YAML format');
-  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true,officialDownload:true,setupImport:true,setupFocusRestored:true,routingModes:true};
+  await page.locator('#own-client').selectOption('flclash');
+  await page.reload();await page.locator('.subscription-card').waitFor();
+  assert(await page.locator('#own-client').inputValue()==='flclash', 'Returning to the page forgot the user-selected client');
+  assert(await page.locator('input[name=client][value=flclash]').isChecked(), 'Restored client did not reach the guide');
+  await page.getByRole('button',{name:'复制订阅',exact:true}).click();
+  assert((await page.evaluate(()=>window.__clientChoiceCopied)).endsWith('.yaml'), 'Restored client copies an incompatible subscription');
+  assert(await page.evaluate(()=>localStorage.getItem('maxcourse-campus-client'))==='flclash', 'Client preference was not saved');
+  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true,officialDownload:true,setupImport:true,setupFocusRestored:true,routingModes:true,clientRemembered:true};
 }
