@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const origin = 'https://www.bnbscheduler.top';
-  let importToken=null, importSource=null;
+  let importToken=null, importSource=null, importReturnTarget=null;
   const emptyMarkup=$('subscription-empty').innerHTML;
   let ownRenderKey=null;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
@@ -89,9 +89,13 @@
       if (generation === state.generation) { state.busy = false; state.controller = null; $('validate').disabled = !$('subscription').value.trim(); $('validate').textContent = '验证订阅并继续 →'; }
     }
   }
-  async function copy(text) {
-    try { await navigator.clipboard.writeText(text); notice('订阅地址已复制'); }
-    catch (_) { notice('浏览器未允许复制。请从私人连接说明中复制订阅地址。'); }
+  async function copy(text,source='manual') {
+    try {await navigator.clipboard.writeText(text);notice('订阅地址已复制');return true;}
+    catch(_) {
+      try {showImport(parse(text),'copy',source);importReturnTarget=source==='own'?'[data-subscription-action=copy]':'#copy-subscription';$('import-url').value=text;$('import-url').focus();$('import-url').select();$('import-feedback').textContent='复制受限，请长按链接或使用复制快捷键。';}
+      catch(_) {notice('复制未完成，请重新验证订阅。');}
+      return false;
+    }
   }
   function download(text, filename) {
     const url = URL.createObjectURL(new Blob([text], {type: 'text/plain;charset=utf-8'}));
@@ -131,6 +135,8 @@
   function closeImport() {
     if($('import-dialog').open)$('import-dialog').close();
     importToken=null;importSource=null;
+    const target=importReturnTarget;importReturnTarget=null;
+    if(target)requestAnimationFrame(()=>{const element=document.querySelector(target);if(element&&!element.disabled&&element.getClientRects().length)element.focus({preventScroll:true});});
     $('import-url').value='';$('subscription-qr').replaceChildren();
     for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
   }
@@ -142,10 +148,11 @@
   }
   function renderImport(mode) {
     if(!importToken)return;
-    const qr=mode==='qr';
+    const qr=mode==='qr', copying=mode==='copy';
+    document.querySelector('.import-tabs').hidden=copying;
     $('show-native').setAttribute('aria-pressed',String(!qr));$('show-qr').setAttribute('aria-pressed',String(qr));
-    $('native-pane').hidden=qr;$('qr-pane').hidden=!qr;
-    $('import-title').textContent=qr?'扫码订阅':'导入订阅';
+    $('native-pane').hidden=qr||copying;$('qr-pane').hidden=!qr;
+    $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
     $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
     for(const link of document.querySelectorAll('[data-import-client]'))link.href=nativeURL(link.dataset.importClient,importToken);
     $('subscription-qr').replaceChildren();
@@ -153,6 +160,7 @@
       try {
         const code=qrcode(0,'M');code.addData($('import-url').value,'Byte');code.make();
         $('subscription-qr').innerHTML=code.createSvgTag({cellSize:4,margin:16,scalable:true});
+        $('subscription-qr').querySelector('svg')?.setAttribute('aria-hidden','true');
       } catch(_) {$('subscription-qr').textContent='二维码暂不可用，请复制下方地址。';}
     }
   }
@@ -168,11 +176,11 @@
     try {
       $('subscription').value=own.subscription_url;
       const ok=await validate({quiet:true,preventDefault(){}});
-      if(ok && state.token && account.data?.user?.id===user.id)showImport(state.token,mode,'own');
+      if(ok && state.token && account.data?.user?.id===user.id){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
       else accountError('订阅暂时无法验证，请刷新后再试。');
     } finally {account.busy=false;renderAccount();}
   }
-  $('manual-import').addEventListener('click',()=>{if(state.token)showImport(state.token,'native','manual');});
+  $('manual-import').addEventListener('click',()=>{if(state.token){showImport(state.token,'native','manual');importReturnTarget='#manual-import';}});
   $('import-close').addEventListener('click',closeImport);
   $('import-dialog').addEventListener('close',closeImport);
   $('show-native').addEventListener('click',()=>renderImport('native'));
@@ -182,7 +190,7 @@
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
   });
-  $('import-guide-link').addEventListener('click',()=>{closeImport();if(state.token)$('result').hidden=false;$('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+  $('import-guide-link').addEventListener('click',()=>{importReturnTarget=null;closeImport();if(state.token)$('result').hidden=false;$('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
   for(const link of document.querySelectorAll('[data-import-client]'))link.addEventListener('click',()=>{
     document.querySelector('input[name="client"][value="'+link.dataset.importClient+'"]').checked=true;renderClient();renderImport('native');
     $('import-feedback').textContent='已请求打开 '+clients[link.dataset.importClient]+'，请在客户端确认导入。';
@@ -200,35 +208,35 @@
   async function accountAPI(path, body) {
     const response = await fetch('/api/campus-connect/' + path, {method: body ? 'POST' : 'GET', credentials:'same-origin',cache:'no-store',headers:body ? {'Content-Type':'application/json','X-Campus-CSRF':account.data?.csrf_token || ''} : {},...(body ? {body:JSON.stringify(body)} : {})});
     const data=await response.json();
-    if(!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '申请服务暂时不可用。');
+    if(!response.ok) {const failure=new Error(typeof data.error==='string'?data.error:'申请服务暂时不可用。');failure.responseData=data;throw failure;}
     return data;
   }
   function renderAccount() {
     const data=account.data, user=data?.user, own=data?.subscription;
-    const active=Boolean(own?.claimed && own.active && own.subscription_url);
+    const active=Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
     $('quota-label').textContent=data?.available ? '测试名额 '+data.used+' / '+data.capacity : '名额暂时不可读取';
-    $('identity').textContent=user ? '已登录 · '+user.display_name : '尚未登录';
+    $('identity').textContent=user ? '已登录 · '+user.display_name : data?.identityUnknown ? '登录状态暂不可读取' : '尚未登录';
     $('login-open').textContent=user ? '切换账号' : '登录';
     $('login-open').disabled=account.busy;
-    $('claim').textContent=own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : '申请领取 60 天订阅 →';
-    const canClaim=data?.available && (!own?.claimed || own.active) && (own?.claimed || $('consent').checked) && (own?.claimed || own?.active || data.remaining>0);
+    $('claim').textContent=own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : account.busy?'正在领取…':user?'申请领取 60 天订阅 →':'登录后领取 →';
+    const canClaim=data?.available && (!own?.claimed || own.active) && (own?.claimed || !user || $('consent').checked) && (own?.claimed || own?.active || data.remaining>0);
     $('claim').disabled=account.busy || !canClaim;
     $('consent').disabled=account.busy;
     $('refresh-status').disabled=account.busy;
-    $('application').hidden=active;
+    $('application').hidden=Boolean(own?.claimed);
     $('subscription-badge').textContent=active ? (own.synced ? '订阅有效' : '配置准备中') : own?.claimed ? '测试已结束' : '60 天测试';
     const renderKey=JSON.stringify([user?.id,own,account.busy,active?Math.ceil((own.expires_at*1000-Date.now())/86400000):null]);
     const changed=renderKey!==ownRenderKey;ownRenderKey=renderKey;
     if(changed)$('own-subscription').replaceChildren();
     $('own-subscription').hidden=!active;
-    $('subscription-empty').hidden=active;
+    $('subscription-empty').hidden=active || !own?.claimed;
     if(own?.claimed && !own.active) {
       $('subscription-empty').replaceChildren();
-      const note=document.createElement('p');note.textContent='这份测试订阅已到期或撤销，请联系维护者。';$('subscription-empty').append(note);
+      const note=document.createElement('p');note.textContent='测试已结束，请联系维护者。';$('subscription-empty').append(note);
     }
     if(!own?.claimed && $('subscription-empty').innerHTML!==emptyMarkup)$('subscription-empty').innerHTML=emptyMarkup;
     $('account-expiry').textContent=own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个 MAXCOURSE 账号一份。';
-    $('account-expiry').hidden=active;
+    $('account-expiry').hidden=active || !own?.claimed;
     if(active && changed) {
       const card=document.createElement('article');card.className='subscription-card';
       const title=document.createElement('h3');title.textContent='个人订阅';
@@ -239,25 +247,31 @@
         const cell=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd'),small=document.createElement('small');dt.textContent=label;dd.textContent=value;dd.className=extra;small.textContent=unit?' '+unit:'';if(unit)dd.append(small);cell.append(dt,dd);metrics.append(cell);
       }
       const actions=document.createElement('div');actions.className='subscription-actions';
-      for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription))],['二维码','secondary',()=>prepareOwn('qr')]]) {
-        const button=document.createElement('button');button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced;button.addEventListener('click',handler);actions.append(button);
+      for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription),'own')],['二维码','secondary',()=>prepareOwn('qr')]]) {
+        const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
       }
       const footer=document.createElement('div');footer.className='subscription-footer';
       const note=document.createElement('p');note.textContent='同一公网出口合并计数。';
-      const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy;resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
+      const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy || !data?.available;resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
       footer.append(note,resetButton);card.append(title,status,metrics,actions,footer);$('own-subscription').append(card);
       $('claim-message').textContent=own.synced ? '已领取，同一订阅最多两个公网出口同时在线。' : '申请已保存，配置生效后即可导入。';
     } else if(!active && data?.available && data.remaining===0) $('claim-message').textContent='测试名额已满，已有订阅可继续使用。';
-    else if(!active) $('claim-message').textContent='领取后获得一个订阅链接，重复申请不会延长有效期。';
+    else if(!active) $('claim-message').textContent='每个账号领取一次。';
     const node=data?.node;
     $('node-status').dataset.state=node?.status || 'unknown';
-    $('node-status').textContent=node?.status==='ready' ? '正常' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
-    $('node-note').textContent=node?.status==='ready' ? '校内转发已连接。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
+    $('node-status').textContent=node?.status==='ready' ? '就绪' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
+    $('node-note').textContent=node?.status==='ready' ? '服务端转发通道已连接。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
   }
   async function refreshAccount() {
     const generation=++account.generation;
     try {const data=await accountAPI('status');if(generation!==account.generation)return;if((account.data?.user?.id && account.data.user.id!==data.user?.id) || (account.data?.subscription?.subscription_url && (account.data.subscription.subscription_url!==data.subscription?.subscription_url || !data.subscription?.active))){$('subscription').value='';reset();}account.data=data;accountError();}
-    catch(error){if(generation!==account.generation)return;account.data={available:false,user:null,subscription:null};accountError(error.message);}
+    catch(error){
+      if(generation!==account.generation)return;
+      if(importSource==='own'){$('subscription').value='';reset();}
+      const confirmed=error.responseData;
+      account.data={available:false,user:confirmed?.user || null,subscription:null,identityUnknown:!confirmed || !('user' in confirmed)};
+      accountError(error.message);
+    }
     renderAccount();
     clearTimeout(account.timer);
     account.timer=setTimeout(()=>{if(!document.hidden&&!account.busy)refreshAccount();},account.data?.subscription?.claimed && !account.data.subscription.synced ? 3000 : 15000);
@@ -308,6 +322,7 @@
     finally{account.busy=false;renderAccount();refreshAccount();}
   });
   $('reset-cancel').addEventListener('click',()=>{if(!account.busy)$('reset-dialog').close();});
+  $('reset-dialog').addEventListener('close',()=>requestAnimationFrame(()=>{const button=document.querySelector('.subscription-reset');if(button&&!button.disabled&&button.getClientRects().length)button.focus({preventScroll:true});}));
   $('reset-dialog').addEventListener('cancel',event=>{if(account.busy)event.preventDefault();});
   $('reset-confirm').addEventListener('click',async()=>{
     if(account.busy||!account.resetTarget||account.resetTarget.user!==account.data?.user?.id)return;
@@ -316,7 +331,15 @@
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
   });
-  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;$('own-subscription').replaceChildren();});
+  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
-  renderClient();refreshAccount();
+  window.addEventListener('pageshow',event=>{if(event.persisted)refreshAccount();});
+  const navLinks=[...document.querySelectorAll('.sidebar nav a[href^="#"]')];
+  function updateNavigation() {
+    const hash=navLinks.some(link=>link.hash===location.hash)?location.hash:'#subscription-panel';
+    for(const link of navLinks){const active=link.hash===hash;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}
+  }
+  window.addEventListener('hashchange',updateNavigation);
+  for(const link of navLinks)link.addEventListener('click',()=>{for(const item of navLinks){item.classList.toggle('active',item===link);if(item===link)item.setAttribute('aria-current','location');else item.removeAttribute('aria-current');}});
+  updateNavigation();renderClient();refreshAccount();
 })();

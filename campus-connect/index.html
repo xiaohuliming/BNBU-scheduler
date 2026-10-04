@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f1ece7">
 <meta name="description" content="MAXCOURSE 校园连接：申请60天测试订阅，复制、扫码或导入客户端，校外连接已开放的校园资源。">
-<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/campus-connect/connect.css?v=resource-tests-20261004"><script defer src="/vendor/qrcode-generator.js?v=1.4.4"></script><script defer src="/campus-connect/connect.js?v=resource-tests-20261004"></script>
+<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/campus-connect/connect.css?v=desk-20261004"><script defer src="/vendor/qrcode-generator.js?v=1.4.4"></script><script defer src="/campus-connect/connect.js?v=desk-20261004"></script>
 </head>
 <body>
 <a class="skip-link" href="#subscription-panel">跳到我的订阅</a>
@@ -12,27 +12,28 @@
   <div class="window-layout">
     <aside class="sidebar">
       <a class="brand" href="/">Maxcourse<span>Campus Toolkit</span></a>
-      <p class="sidebar-caption">校园连接</p>
+      <p class="sidebar-caption">连接工作台</p>
       <nav aria-label="校园连接导航"><a class="active" href="#subscription-panel">我的订阅 <span>60 天</span></a><a href="#setup">使用指南</a><a href="#node-panel">节点状态</a><a href="/print/">校园打印 ↗</a></nav>
 
       <a class="sidebar-help" href="/privacy/#contact" target="_blank" rel="noopener noreferrer">联系维护者 ↗</a>
     </aside>
     <div class="content">
-      <header class="page-heading"><div><h1>校园连接</h1><p class="lead">校外访问校园资源。</p></div><span id="quota-label" class="quota">正在读取名额…</span></header>
+      <header class="page-heading"><div><p class="eyebrow page-kicker">CAMPUS CONNECT</p><h1>校园连接</h1><p class="lead">校外访问校园资源。</p></div><span id="quota-label" class="quota">正在读取名额…</span></header>
       <div class="identity-row"><span id="identity">正在读取登录状态…</span><div class="account-actions"><button id="refresh-status" class="button quiet" type="button">刷新状态</button><button id="login-open" class="button secondary" type="button">登录</button></div></div>
       <p id="account-error" class="error" role="alert" hidden></p>
+      <div class="workspace-grid">
       <section class="panel subscription-panel" id="subscription-panel" aria-labelledby="subscription-title">
-        <div class="panel-heading"><h2 id="subscription-title">我的订阅</h2><span id="subscription-badge" class="badge">60 天测试</span></div>
-        <div id="subscription-empty" class="empty-subscription"><div><h3>尚未领取</h3><p>登录 MAXCOURSE，即可领取。</p><a class="button secondary" href="#application">申请领取 →</a></div></div>
+        <div class="panel-heading"><h2 id="subscription-title" tabindex="-1">我的订阅</h2><span id="subscription-badge" class="badge">60 天测试</span></div>
+        <div id="subscription-empty" class="empty-subscription"><div><p>登录 MAXCOURSE，即可领取。</p></div></div>
         <div id="own-subscription" hidden></div>
-        <p id="account-expiry" class="small-note">领取后显示有效期</p>
-      </section>
-      <section class="panel application" id="application" aria-labelledby="apply-title">
-        <div class="panel-heading"><div><p class="eyebrow">申请领取</p><h2 id="apply-title">60 天测试订阅</h2></div><span class="tag">小范围测试</span></div>
+      <section class="application" id="application" aria-labelledby="apply-title">
+        <div class="trial-heading"><h3 id="apply-title">60 天测试订阅</h3><span class="tag">申请领取</span></div>
         <div class="metrics"><div><strong>60<span>天</span></strong><p>首次领取起计算</p></div><div><strong>10<span>份</span></strong><p>有效个人订阅上限</p></div><div><strong>2<span>台</span></strong><p>同时连接上限</p></div></div>
         <label class="consent"><input id="consent" type="checkbox"><span>本人使用，已阅读规则与隐私说明。</span></label>
         <details class="terms"><summary>申请规则与信息处理说明</summary><p>每个 MAXCOURSE 账号领取一份测试订阅，有效期为首次领取起 60 天。重复申请不会延长期限，过期或撤销后需联系维护者。最多保留 10 份有效个人订阅。</p><p>领取只需要 MAXCOURSE 账号，不验证学校身份，不收集学校账号密码。订阅凭据与期限用于提供和管理访问；公网出口信息仅用于在线限制，不读取内部 HTTPS 页面内容。</p><p>一个订阅可在本人多台设备导入，最多两个公网出口会话同时在线。同一出口的多条连接合并计数。通用客户端不提供硬件设备 ID，同一 Wi-Fi 下的物理设备无法精确区分。</p><p>MAXCOURSE 并非学校官方 VPN，学校资源仍需本人学校账号登录。<a href="/privacy/" target="_blank" rel="noopener noreferrer">完整隐私说明 ↗</a></p></details>
         <button id="claim" class="button primary" type="button" disabled>申请领取 60 天订阅 →</button><p id="claim-message" class="status-note" role="status"></p>
+      </section>
+        <p id="account-expiry" class="small-note">领取后显示有效期</p>
       </section>
       <section class="panel node-panel" id="node-panel" aria-labelledby="node-title">
         <div class="panel-heading"><h2 id="node-title">节点状态</h2><span id="node-status" class="node-state">正在检测</span></div>
@@ -40,9 +41,10 @@
         <div class="resource-chips"><a href="https://lrcs.bnbu.edu.cn/if/vpn_enter.aspx?target=ctv" target="_blank" rel="noopener noreferrer">图书馆访问检查 ↗</a><a href="http://172.31.12.111/" target="_blank" rel="noopener noreferrer">AutoLab ↗</a></div>
         <details class="terms help"><summary>访问范围</summary><p>图书馆入口校内访问会跳转到资源认证页，出现认证提示不代表节点断开。AutoLab 可直接检查登录页是否能打开。</p><p>已开放图书馆资源入口与影音资源、AutoLab、PaperCut、iSpace 和学校打印队列的 TCP 访问。学校资源仍使用自己的登录方式。</p></details>
       </section>
+      </div>
       <section class="panel connector" id="setup" aria-labelledby="connect-title">
         <div class="panel-heading"><h2 id="connect-title">使用指南</h2><span class="muted">选择你的客户端</span></div>
-        <fieldset class="client-choice"><legend>客户端</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span>Shadowrocket<small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span>Clash Verge Rev<small>Windows / macOS / Linux</small></span></label><label><input type="radio" name="client" value="flclash"><span>FlClash<small>Android / 桌面</small></span></label><label><input type="radio" name="client" value="stash"><span>Stash<small>iOS / macOS</small></span></label></div></fieldset>
+        <fieldset class="client-choice"><legend>客户端</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span><span class="client-name"><img src="/campus-connect/assets/clients/shadowrocket.jpg" width="22" height="22" alt="" loading="lazy"><b>Shadowrocket</b></span><small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span><span class="client-name"><img src="/campus-connect/assets/clients/clash-verge-rev.png" width="22" height="22" alt="" loading="lazy"><b>Clash Verge Rev</b></span><small>Windows / macOS / Linux</small></span></label><label><input type="radio" name="client" value="flclash"><span><span class="client-name"><img src="/campus-connect/assets/clients/flclash.png" width="22" height="22" alt="" loading="lazy"><b>FlClash</b></span><small>Android / 桌面</small></span></label><label><input type="radio" name="client" value="stash"><span><span class="client-name"><img src="/campus-connect/assets/clients/stash.jpg" width="22" height="22" alt="" loading="lazy"><b>Stash</b></span><small>iOS / macOS</small></span></label></div></fieldset>
         <p id="client-guide" class="field-hint"></p>
         <details class="existing"><summary>手动订阅</summary><form id="connect-form" method="post" action="#" novalidate><label class="field-label" for="subscription">私人订阅地址</label><div class="input-row"><input id="subscription" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴你的 HTTPS 订阅地址"><button id="clear-key" class="clear-button" type="button">清除</button></div><p class="field-hint">链接不会写入浏览器本地存储。</p><p id="form-error" class="error" role="alert" hidden></p><button id="validate" class="button secondary" type="submit" disabled>验证订阅并继续 →</button></form></details>
         <div id="result" class="result" hidden aria-labelledby="result-title"><div class="panel-heading"><h3 id="result-title" tabindex="-1">订阅可用</h3><button id="manual-import" class="button primary" type="button">导入客户端</button></div><p class="field-hint" id="expiry-note"></p>
