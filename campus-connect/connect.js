@@ -15,6 +15,14 @@
     stash:'https://stash.ws/zh/download',
   };
   const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
+  const clientPreferenceKey='maxcourse-campus-client';
+  function preferredClient() {
+    try {const saved=localStorage.getItem(clientPreferenceKey);if(Object.keys(clients).includes(saved))return saved;} catch (_) { /* Preference storage is optional. */ }
+    const platform=navigator.userAgent;
+    if(/Android/i.test(platform))return 'flclash';
+    if(/Windows|Linux/i.test(platform))return 'clash';
+    return 'shadowrocket';
+  }
   const selected = () => document.querySelector('input[name="client"]:checked').value;
   const subscriptionActive = own => Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
@@ -285,7 +293,7 @@
   $('import-dialog').addEventListener('close',closeImport);
   $('show-native').addEventListener('click',()=>renderImport('native'));
   $('show-qr').addEventListener('click',()=>renderImport('qr'));
-  $('import-client').addEventListener('change',()=>{chooseClient($('import-client').value);renderImport('native');});
+  $('import-client').addEventListener('change',()=>{chooseClient($('import-client').value,true);renderImport('native');});
   $('qr-format').addEventListener('change',()=>renderImport('qr'));
   $('copy-import').addEventListener('click',async()=>{
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
@@ -318,8 +326,9 @@
   $('connect-form').addEventListener('submit', validate);
   $('subscription').addEventListener('input', reset);
   $('clear-key').addEventListener('click', () => { $('subscription').value = ''; reset(); $('subscription').focus(); });
-  function chooseClient(client) {
-    if(!clients[client])return;
+  function chooseClient(client,remember=false) {
+    if(!Object.keys(clients).includes(client))return;
+    if(remember)try {localStorage.setItem(clientPreferenceKey,client);} catch (_) { /* Keep the current choice without persistence. */ }
     document.querySelector('input[name="client"][value="'+client+'"]').checked=true;
     if(state.busy || state.mergeBusy)reset();
     renderClient();
@@ -338,7 +347,7 @@
       (account.data.subscription?.claimed?$('subscription-title'):$('consent')).focus({preventScroll:true});
     }
   });
-  for (const input of document.querySelectorAll('input[name="client"]')) input.addEventListener('change', () => chooseClient(input.value));
+  for (const input of document.querySelectorAll('input[name="client"]')) input.addEventListener('change', () => chooseClient(input.value,true));
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
@@ -402,7 +411,7 @@
       const clientLabel=document.createElement('label');clientLabel.htmlFor='own-client';clientLabel.textContent='客户端';
       const clientSelect=document.createElement('select');clientSelect.id='own-client';clientSelect.disabled=account.busy || !own.synced || !data?.available;
       for(const [value,label] of Object.entries(clients)){const option=document.createElement('option');option.value=value;option.textContent=label;clientSelect.append(option);}
-      clientSelect.value=selected();clientSelect.addEventListener('change',()=>chooseClient(clientSelect.value));clientControl.append(clientLabel,clientSelect);
+      clientSelect.value=selected();clientSelect.addEventListener('change',()=>chooseClient(clientSelect.value,true));clientControl.append(clientLabel,clientSelect);
       const actions=document.createElement('div');actions.className='subscription-actions';
       for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription),'own')],['二维码','secondary',()=>prepareOwn('qr')]]) {
         const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
@@ -501,5 +510,6 @@
   }
   window.addEventListener('hashchange',updateNavigation);
   for(const link of navLinks)link.addEventListener('click',()=>{for(const item of navLinks){item.classList.toggle('active',item===link);if(item===link)item.setAttribute('aria-current','location');else item.removeAttribute('aria-current');}});
+  document.querySelector('input[name="client"][value="'+preferredClient()+'"]').checked=true;
   updateNavigation();renderClient();refreshAccount();
 })();
