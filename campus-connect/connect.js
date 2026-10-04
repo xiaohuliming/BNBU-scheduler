@@ -5,7 +5,6 @@
   let importToken=null, importSource=null, importReturnTarget=null;
   let qrLibraryPromise=null, importRenderGeneration=0, lifecycleEpoch=0;
   const pendingJSONRequests=new Set();
-  const emptyMarkup=$('subscription-empty').innerHTML;
   let ownRenderKey=null;
   let routingChoiceExplicit=false;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
@@ -17,6 +16,7 @@
   };
   const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
   const selected = () => document.querySelector('input[name="client"]:checked').value;
+  const subscriptionActive = own => Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
   const path = suffix => '/campus-connect/subscriptions/' + state.token + '.' + suffix;
   const publicURL = suffix => origin + path(suffix);
@@ -98,7 +98,7 @@
   document.querySelector('.route-guide').addEventListener('click',async event=>{
     event.preventDefault();
     if(account.busy)return;
-    if(!state.token && account.data?.subscription?.active && account.data.subscription.synced){
+    if(!state.token && subscriptionActive(account.data?.subscription) && account.data.subscription.synced){
       const link=event.currentTarget, client=selected(), epoch=lifecycleEpoch;let verified=false;
       link.setAttribute('aria-busy','true');$('route-guide-status').textContent='正在验证订阅…';
       try{verified=await prepareOwn('guide');}
@@ -257,7 +257,7 @@
   }
   async function prepareOwn(mode) {
     const own=account.data?.subscription,user=account.data?.user;
-    if(account.busy || !user || !own?.active || !own?.synced)return false;
+    if(account.busy || !user || !subscriptionActive(own) || !own.synced)return false;
     const client=selected(),epoch=lifecycleEpoch;
     account.busy=true;accountError();renderAccount();
     try {
@@ -265,7 +265,7 @@
       const verification=validate({quiet:true,preventDefault(){}}),generation=state.generation;
       const ok=await verification;
       const unchanged=epoch===lifecycleEpoch && client===selected() && account.data?.user?.id===user.id && account.data?.subscription?.subscription_url===own.subscription_url;
-      if(ok && state.token && unchanged && account.data.available && account.data.subscription.active){
+      if(ok && state.token && unchanged && account.data.available && subscriptionActive(account.data.subscription)){
         if(mode!=='guide'){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
         return true;
       }
@@ -313,7 +313,7 @@
   }
   $('setup-start').addEventListener('click',async()=>{
     if(account.busy)return;
-    if(account.data?.subscription?.active && account.data.subscription.synced){
+    if(subscriptionActive(account.data?.subscription) && account.data.subscription.synced){
       await prepareOwn('native');
       if($('import-dialog').open)importReturnTarget='#setup-start';
     } else if(state.token){
@@ -353,7 +353,7 @@
   }
   function renderAccount() {
     const data=account.data, user=data?.user, own=data?.subscription;
-    const active=Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
+    const active=subscriptionActive(own);
     $('quota-label').textContent=data?.available ? '测试名额 '+data.used+' / '+data.capacity : '名额暂时不可读取';
     $('identity').textContent=user ? '已登录 · '+user.display_name : data?.identityUnknown ? '登录状态暂不可读取' : '尚未登录';
     $('login-open').textContent=user ? '切换账号' : '登录';
@@ -374,12 +374,7 @@
     if(changed)$('own-subscription').replaceChildren();
     $('own-subscription').hidden=!active;
     $('subscription-empty').hidden=active || !own?.claimed;
-    if(own?.claimed && !own.active) {
-      $('subscription-empty').replaceChildren();
-      const note=document.createElement('p');note.textContent='测试已结束，请联系维护者。';$('subscription-empty').append(note);
-    }
-    if(!own?.claimed && $('subscription-empty').innerHTML!==emptyMarkup)$('subscription-empty').innerHTML=emptyMarkup;
-    $('account-expiry').textContent=own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个 MAXCOURSE 账号一份。';
+    $('account-expiry').textContent=own?.claimed ? (active?'有效至 ':'原到期时间：')+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个 MAXCOURSE 账号一份。';
     $('account-expiry').hidden=active || !own?.claimed;
     if(active && changed) {
       const card=document.createElement('article');card.className='subscription-card';
@@ -414,7 +409,7 @@
   }
   async function refreshAccount() {
     const generation=++account.generation;
-    try {const data=await accountAPI('status');if(generation!==account.generation)return;if((account.data?.user?.id && account.data.user.id!==data.user?.id) || (account.data?.subscription?.subscription_url && (account.data.subscription.subscription_url!==data.subscription?.subscription_url || !data.subscription?.active))){$('subscription').value='';reset();}account.data=data;accountError();}
+    try {const data=await accountAPI('status');if(generation!==account.generation)return;if((account.data?.user?.id && account.data.user.id!==data.user?.id) || (account.data?.subscription?.subscription_url && (account.data.subscription.subscription_url!==data.subscription?.subscription_url || !subscriptionActive(data.subscription)))){$('subscription').value='';reset();}account.data=data;accountError();}
     catch(error){
       if(generation!==account.generation)return;
       if(importSource==='own'){$('subscription').value='';reset();}
