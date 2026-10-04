@@ -61,6 +61,8 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .subscription-state,.status-note,.small-note{margin:12px 0 0;color:var(--muted);font-size:.75rem;line-height:1.8}
 .subscription-state{margin-bottom:14px}
 .empty-subscription p{margin:10px 0 18px;color:var(--muted);font-size:.875rem}
+.empty-subscription{padding:14px 0 5px}
+.empty-subscription h3{font-size:1.5rem;line-height:1.4;letter-spacing:-.03em}
 
 /* The first number leads, supporting information stays quiet */
 .subscription-metrics{display:grid;grid-template-columns:1.15fr 1fr;gap:0;margin:0 0 24px;overflow:hidden;border:1px solid var(--ink);border-radius:12px;background:var(--surface);box-shadow:2px 2px 0 var(--ink)}
