@@ -8,6 +8,12 @@
   const emptyMarkup=$('subscription-empty').innerHTML;
   let ownRenderKey=null;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
+  const clientDownloads={
+    shadowrocket:'https://apps.apple.com/us/app/shadowrocket/id932747118',
+    clash:'https://github.com/clash-verge-rev/clash-verge-rev/releases',
+    flclash:'https://github.com/chen08209/FlClash/releases',
+    stash:'https://apps.apple.com/us/app/stash-rule-based-proxy/id1596063349',
+  };
   const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
   const selected = () => document.querySelector('input[name="client"]:checked').value;
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
@@ -54,7 +60,11 @@
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
     if($('own-client'))$('own-client').value=selected();
-    $('client-guide').textContent=shadowrocket ? '导入节点 → 合并分流规则 → 使用配置模式' : '导入校园配置 → 启用规则模式 → 验证访问';
+    $('client-download').href=clientDownloads[selected()];
+    $('client-download').setAttribute('aria-label','前往 '+clients[selected()]+' 官方下载页面');
+    $('client-store').textContent=selected()==='shadowrocket'||selected()==='stash'?'App Store · 付费应用':'GitHub · 免费开源';
+    $('client-guide').textContent=shadowrocket ? '导入节点并合并分流规则' : '导入完整配置或合并片段';
+    $('client-mode').textContent=shadowrocket ? '使用「配置」模式' : '使用「规则」模式';
     $('import-hint').textContent = shadowrocket
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
@@ -248,6 +258,20 @@
     if(state.busy || state.mergeBusy)reset();
     renderClient();
   }
+  $('setup-start').addEventListener('click',async()=>{
+    if(account.busy)return;
+    if(account.data?.subscription?.active && account.data.subscription.synced){
+      await prepareOwn('native');
+      if($('import-dialog').open)importReturnTarget='#setup-start';
+    } else if(state.token){
+      showImport(state.token,'native','manual');importReturnTarget='#setup-start';
+    } else if(!account.data?.user){openLogin();}
+    else {
+      if(location.hash!=='#subscription-panel')history.pushState(null,'','#subscription-panel');updateNavigation();
+      $('subscription-panel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+      (account.data.subscription?.claimed?$('subscription-title'):$('consent')).focus({preventScroll:true});
+    }
+  });
   for (const input of document.querySelectorAll('input[name="client"]')) input.addEventListener('change', () => chooseClient(input.value));
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
@@ -286,6 +310,9 @@
     $('claim').disabled=account.busy || !canClaim;
     $('consent').disabled=account.busy;
     $('refresh-status').disabled=account.busy;
+    $('setup-start').disabled=account.busy || !data?.available;
+    $('setup-start').replaceChildren(document.createTextNode(active?'导入订阅 ':own?.claimed?'查看订阅 ':user?'领取订阅 ':'登录后领取 '));
+    const setupArrow=document.createElement('span');setupArrow.textContent='→';setupArrow.setAttribute('aria-hidden','true');$('setup-start').append(setupArrow);
     $('application').hidden=Boolean(own?.claimed);
     $('subscription-badge').textContent=active ? (own.synced ? '订阅有效' : '配置准备中') : own?.claimed ? '测试已结束' : '60 天测试';
     const renderKey=JSON.stringify([user?.id,own,account.busy,active?Math.ceil((own.expires_at*1000-Date.now())/86400000):null]);

@@ -110,7 +110,8 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .node-logo{display:block;flex:none;width:52px;height:52px;padding:5px;border:1px solid #d3ddd6;border-radius:12px;object-fit:contain;background:var(--surface)}
 .resource-chips{display:grid;gap:9px;margin-top:25px}
 .resource-chips a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:10px 13px;border:1px solid #bccdc3;border-radius:8px;background:#fbfdf9;text-decoration:none;font-size:.8125rem;transition:background .15s,border-color .15s}
-.resource-chips a:hover{border-color:var(--ink);background:#deece3}
+.resource-chips a>span:last-child{display:grid;place-items:center;width:24px;height:24px;border-radius:4px;transition:background .15s,color .15s}
+.resource-chips a:hover>span:last-child{background:var(--ink);color:var(--surface)}
 .resource-chips a>span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
 .resource-chips a>span:last-child{flex:none;color:#59695f}
 .node-panel .help{border-color:#c7d8ce}
@@ -133,7 +134,18 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .client-name b{min-width:0;font-weight:650;overflow-wrap:anywhere}
 .client-name img{display:block;flex:none;width:30px;height:30px;border-radius:7px;object-fit:contain}
 .client-options small{margin-top:7px;color:var(--muted);font-size:.625rem;font-weight:450;line-height:1.5}
-.connector>.field-hint{margin:13px 0 18px;font-size:.75rem}
+.setup-path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:24px 0 18px;padding:0;list-style:none}
+.setup-path li{display:grid;grid-template-columns:29px minmax(0,1fr);gap:12px;padding:0 18px;border-left:1px solid var(--line)}
+.setup-path li:first-child{padding-left:0;border-left:0}
+.setup-path li:last-child{padding-right:0}
+.step-number{display:grid;place-items:center;width:29px;height:29px;border:1px solid var(--ink);border-radius:7px;background:var(--accent);font-size:.625rem;font-weight:650;font-variant-numeric:tabular-nums;box-shadow:1px 1px 0 var(--ink)}
+.setup-path li:nth-child(2) .step-number{background:var(--pink)}
+.setup-path li:nth-child(3) .step-number{background:var(--mint)}
+.setup-path h3{font-size:.8125rem;line-height:29px;font-weight:650}
+.setup-path p{margin:3px 0 4px;color:var(--muted);font-size:.6875rem;line-height:1.7;overflow-wrap:anywhere}
+.step-action{display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:0;border:0;background:transparent;text-decoration:none;text-align:left;font-size:.75rem;font-weight:600}
+.step-action>span{display:grid;place-items:center;flex:none;width:22px;height:22px;border-radius:4px;transition:background .15s,color .15s}
+.step-action:hover>span{background:var(--ink);color:var(--surface)}
 
 /* Controls and progressive disclosure */
 .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:11px 17px;border:1.25px solid var(--ink);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.8125rem;font-weight:650;line-height:1.5;text-decoration:none;box-shadow:2px 2px 0 var(--ink);transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
@@ -213,6 +225,14 @@ details p{margin:10px 0;font-size:.8125rem;line-height:1.85}
 .resource-chips{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:21px}
 .client-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+@media(max-width:900px){
+.setup-path{grid-template-columns:1fr;margin-top:20px;margin-bottom:12px}
+.setup-path li,.setup-path li:first-child,.setup-path li:last-child{padding:12px 0;border:0;border-top:1px solid var(--line)}
+.setup-path li>div{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center}
+.setup-path h3{grid-column:1}
+.setup-path p{grid-column:1;margin:0}
+.setup-path .step-action{grid-column:2;grid-row:1/3}
+}
 @media(max-width:760px){
 body{padding:16px 12px}
 .window-layout{display:block;min-height:0}
@@ -281,7 +301,8 @@ body{padding:12px 10px}
 .client-name{flex-direction:column;gap:7px;font-size:.75rem}
 .client-name img{width:32px;height:32px;border-radius:8px}
 .client-options small{font-size:.625rem}
-.connector>.field-hint{font-size:.6875rem}
+.setup-path p{font-size:.625rem}
+.setup-path .step-action{font-size:.6875rem}
 .terms,.existing,.full-config{font-size:.6875rem}
 .page-footer{font-size:.625rem}
 .dialog-body{padding:23px 20px}
