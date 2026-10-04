@@ -3,7 +3,7 @@ async page => {
  const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};const errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
  let user=null,own=null,used=1,claims=0,logins=0,resets=0,registers=0,node='ready';
  const tokenA='A'.repeat(43),tokenC='C'.repeat(43);
- const url=(t,format='txt')=>'https://www.bnbscheduler.top/campus-connect/subscriptions/'+t+'.'+format;
+ const url=(t,format='txt')=>'https://www.bnbscheduler.top/campus-connect/subscriptions/'+t+(format==='conf'?'/MAXCOURSE-campus.conf':'.'+format);
  const status=()=>({available:true,user,csrf_token:'fixture-csrf',capacity:10,used,remaining:10-used,test_days:60,device_limit:2,subscription:own,node:{name:'MAXCOURSE Campus',status:node,checked_at:Math.floor(Date.now()/1000)}});
  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copiedForTest=text;}},configurable:true}));
  await page.route('**/api/**',async route=>{
