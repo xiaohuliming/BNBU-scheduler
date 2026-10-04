@@ -52,6 +52,7 @@
   }
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
+    if($('own-client'))$('own-client').value=selected();
     $('client-guide').textContent=shadowrocket ? '导入节点 → 合并分流规则 → 使用配置模式' : '导入校园配置 → 启用规则模式 → 验证访问';
     $('import-hint').textContent = shadowrocket
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
@@ -236,7 +237,13 @@
   $('connect-form').addEventListener('submit', validate);
   $('subscription').addEventListener('input', reset);
   $('clear-key').addEventListener('click', () => { $('subscription').value = ''; reset(); $('subscription').focus(); });
-  for (const input of document.querySelectorAll('input[name="client"]')) input.addEventListener('change', () => { if (state.busy || state.mergeBusy) reset(); renderClient(); });
+  function chooseClient(client) {
+    if(!clients[client])return;
+    document.querySelector('input[name="client"][value="'+client+'"]').checked=true;
+    if(state.busy || state.mergeBusy)reset();
+    renderClient();
+  }
+  for (const input of document.querySelectorAll('input[name="client"]')) input.addEventListener('change', () => chooseClient(input.value));
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
@@ -277,6 +284,7 @@
     $('application').hidden=Boolean(own?.claimed);
     $('subscription-badge').textContent=active ? (own.synced ? '订阅有效' : '配置准备中') : own?.claimed ? '测试已结束' : '60 天测试';
     const renderKey=JSON.stringify([user?.id,own,account.busy,active?Math.ceil((own.expires_at*1000-Date.now())/86400000):null]);
+    const restoreClientFocus=document.activeElement?.id==='own-client';
     const changed=renderKey!==ownRenderKey;ownRenderKey=renderKey;
     if(changed)$('own-subscription').replaceChildren();
     $('own-subscription').hidden=!active;
@@ -297,6 +305,11 @@
       for(const [label,value,unit,extra] of [['剩余有效期',String(days),'天',''],['在线出口',Number.isInteger(own.online_sessions)?String(own.online_sessions):'未知','/ 2',''],['到期日期',new Date(own.expires_at*1000).toLocaleDateString('en-CA',{timeZone:'Asia/Singapore'}),'','expiry-day']]) {
         const cell=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd'),small=document.createElement('small');dt.textContent=label;dd.textContent=value;dd.className=extra;small.textContent=unit?' '+unit:'';if(unit)dd.append(small);cell.append(dt,dd);metrics.append(cell);
       }
+      const clientControl=document.createElement('div');clientControl.className='subscription-client';
+      const clientLabel=document.createElement('label');clientLabel.htmlFor='own-client';clientLabel.textContent='客户端';
+      const clientSelect=document.createElement('select');clientSelect.id='own-client';clientSelect.disabled=account.busy || !own.synced || !data?.available;
+      for(const [value,label] of Object.entries(clients)){const option=document.createElement('option');option.value=value;option.textContent=label;clientSelect.append(option);}
+      clientSelect.value=selected();clientSelect.addEventListener('change',()=>chooseClient(clientSelect.value));clientControl.append(clientLabel,clientSelect);
       const actions=document.createElement('div');actions.className='subscription-actions';
       for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription),'own')],['二维码','secondary',()=>prepareOwn('qr')]]) {
         const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
@@ -304,7 +317,8 @@
       const footer=document.createElement('div');footer.className='subscription-footer';
       const note=document.createElement('p');note.textContent='同一公网出口合并计数。';
       const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy || !data?.available;resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
-      footer.append(note,resetButton);card.append(title,status,metrics,actions,footer);$('own-subscription').append(card);
+      footer.append(note,resetButton);card.append(title,status,metrics,clientControl,actions,footer);$('own-subscription').append(card);
+      if(restoreClientFocus && !clientSelect.disabled)clientSelect.focus({preventScroll:true});
       $('claim-message').textContent=own.synced ? '已领取，同一订阅最多两个公网出口同时在线。' : '申请已保存，配置生效后即可导入。';
     } else if(!active && data?.available && data.remaining===0) $('claim-message').textContent='测试名额已满，已有订阅可继续使用。';
     else if(!active) $('claim-message').textContent='每个账号领取一次。';
