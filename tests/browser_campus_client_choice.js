@@ -13,6 +13,13 @@ async page => {
   await page.locator('.subscription-card').waitFor();
   assert(await page.locator('.subscription-card #own-client').count()===1, 'Copying a subscription depends on an off-screen client selection');
   await page.locator('#own-client').selectOption('clash');
+  assert(await page.locator('#client-download').getAttribute('href')==='https://github.com/clash-verge-rev/clash-verge-rev/releases', 'Selected client has no matching official download');
+  assert((await page.locator('#client-mode').innerText()).includes('规则'), 'Clash setup suggests the wrong routing mode');
+  await page.locator('#setup-start').click();
+  await page.locator('#import-dialog').waitFor();
+  assert((await page.locator('#import-url').inputValue()).endsWith('.yaml'), 'Setup entry imports a different client format');
+  await page.locator('#import-close').click();
+  await page.waitForFunction(()=>document.activeElement?.id==='setup-start');
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();
   assert((await page.evaluate(() => window.__clientChoiceCopied)).endsWith('.yaml'), 'Visible client selection did not determine copied format');
   assert(await page.locator('input[name=client][value=clash]').isChecked(), 'Guide client selection did not synchronize');
@@ -29,7 +36,9 @@ async page => {
   assert(await page.locator('#qr-format').inputValue()==='yaml', 'QR default differs from selected client');
   await page.locator('#import-close').click();
   await page.locator('#own-client').selectOption('shadowrocket');
+  assert((await page.locator('#client-download').getAttribute('href')).includes('id932747118'), 'Shadowrocket download retained the previous client');
+  assert((await page.locator('#client-mode').innerText()).includes('配置'), 'Shadowrocket setup lost configuration routing mode');
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();
   assert((await page.evaluate(() => window.__clientChoiceCopied)).endsWith('.txt'), 'Switching back retained YAML format');
-  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true};
+  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true,officialDownload:true,setupImport:true,setupFocusRestored:true,routingModes:true};
 }
