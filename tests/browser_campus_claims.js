@@ -44,7 +44,10 @@ async page => {
  await page.getByRole('button',{name:'一键导入',exact:true}).click();await page.locator('#import-dialog').waitFor();
  assert(await page.locator('[data-import-client]:visible').count()===1,'Import asks the user to choose a client again');
  const shadowrocket=await page.locator('[data-import-client=shadowrocket]').getAttribute('href');
- assert(atob(shadowrocket.slice('shadowrocket://add/sub://'.length).split('?')[0])===url(tokenA),'Wrong Shadowrocket URI');
+ assert(shadowrocket==='shadowrocket://config/add/'+url(tokenA,'conf'),'Primary Shadowrocket action still requires manual campus rules');
+ assert((await page.locator('#import-url').inputValue())===url(tokenA,'conf'),'Manual native fallback is not the complete configuration');
+ assert(!await page.locator('#import-manual').evaluate(n=>n.open),'Private address clutters native import');
+ assert((await page.locator('#import-warning').innerText()).includes('普通网站直连'),'Complete profile hides the public routing change');
  assert(!await page.locator('#import-switch').evaluate(node=>node.open),'Alternate clients clutter the main import step');
  await page.locator('#import-switch summary').click();
  for(const [client,scheme] of [['clash','clash-verge:'],['flclash','flclash:'],['stash','stash:']]){
@@ -56,13 +59,22 @@ async page => {
  }
  await page.locator('#import-client').selectOption('shadowrocket');
  assert(await page.locator('.import-warning').isVisible(),'Full configuration warning missing');
- await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
- assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Next step leaves setup instructions collapsed');
+ await page.locator('#import-merge-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
+ assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Keep original proxy does not lead to merge steps');
+ assert(!await page.locator('.full-config').evaluate(n=>n.open),'Merge path opens an independent profile');
+ assert(await page.locator('#routing-mode').inputValue()==='merge','Routing explanation differs from the chosen guide');
  assert((await page.locator('#merge-hint').innerText()).includes('Host'),'Shadowrocket next step lost host rules');
  await page.locator('.full-config').evaluate(n=>{n.open=true;});
  assert(await page.locator('#install-full').getAttribute('href')==='shadowrocket://config/add/'+url(tokenA,'conf'),'Full Shadowrocket profile not offered through supported URL scheme');
  await page.waitForFunction(()=>document.activeElement===document.getElementById('result-title'));
  assert(await page.locator('#import-url').inputValue()==='','Closed modal retained link');
+ await page.getByRole('button',{name:'一键导入',exact:true}).click();
+ await page.locator('#import-manual summary').click();
+ assert(await page.locator('#import-url').isVisible(),'Native manual fallback is unreachable');
+ await page.locator('#import-guide-link').click();
+ assert(await page.locator('.full-config').evaluate(n=>n.open),'Complete import next step shows merge instructions');
+ assert(!await page.locator('.guide-detail').evaluate(n=>n.open),'Full profile asks for manual merge');
+ assert((await page.locator('#full-hint').innerText()).includes('全局路由'),'Full profile does not explain activation');
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();
  await page.addScriptTag({path:'tests/vendor/jsqr.js'});
  const decode=async()=>page.evaluate(async()=>{
@@ -70,12 +82,18 @@ async page => {
   const canvas=document.createElement('canvas');canvas.width=600;canvas.height=600;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,600,600);ctx.drawImage(image,0,0,600,600);const data=ctx.getImageData(0,0,600,600);return jsQR(data.data,600,600)?.data;
  });
  assert(await decode()===url(tokenA),'QR does not decode to subscription');
+ assert(await page.locator('#import-manual').evaluate(n=>n.open),'QR has no visible manual fallback');
+ assert(await page.locator('#import-merge-link').isHidden(),'QR mixes native import choices');
+ await page.locator('#import-guide-link').click();
+ assert(await page.locator('.guide-detail').evaluate(n=>n.open),'Node-only QR skips required merge');
+ await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();
  await page.locator('#qr-format').selectOption('yaml');assert(await decode()===url(tokenA,'yaml'),'QR format change failed');
  await page.locator('#copy-import').click();assert(await page.evaluate(()=>window.__copiedForTest)===url(tokenA,'yaml'),'Modal copied wrong format');
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Fixture denial');}},configurable:true}));
  await page.locator('#copy-import').click();assert((await page.locator('#import-feedback').innerText()).includes('长按'),'Clipboard denial has no fallback');
  await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
- assert((await page.locator('#import-hint').innerText()).includes('规则模式'),'YAML QR led to node-only instructions');
+ assert(await page.locator('.full-config').evaluate(n=>n.open),'YAML QR led to merge-only instructions');
+ assert((await page.locator('#full-hint').innerText()).includes('规则'),'YAML QR lost activation steps');
  assert(await page.locator('#install-full').isHidden()&&!await page.locator('#install-full').getAttribute('href'),'Other clients retained private Shadowrocket profile link');
  await page.locator('input[value=shadowrocket]').check();
  assert(!await page.locator('#subscription-qr svg').count(),'QR retained after close');

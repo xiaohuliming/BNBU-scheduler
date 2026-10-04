@@ -18,6 +18,8 @@ async page=>{
  await page.getByRole('button',{name:'复制订阅',exact:true}).click();await page.locator('#import-dialog').waitFor();
  assert(await page.locator('#import-title').innerText()==='复制订阅','Copy fallback not focused on copying');
  assert(await page.locator('#import-url').inputValue()===own.subscription_url,'No usable clipboard fallback');
+ assert(await page.locator('#import-url').isVisible(),'Clipboard recovery hides the only usable address');
+ assert(await page.locator('#import-url').evaluate(n=>n===document.activeElement && n.selectionStart===0 && n.selectionEnd===n.value.length),'Copy recovery does not focus and select the address');
  assert(await page.locator('#native-pane').isHidden(),'Copy fallback needlessly requested app launch');
  failed=true;await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#account-error').waitFor();
  assert((await page.locator('#identity').innerText()).includes('已登录'),'Service outage falsely signed user out');assert(await page.locator('#import-dialog').isHidden(),'Outage retained private import modal');
