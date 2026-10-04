@@ -50,6 +50,8 @@ async page => {
  await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
  assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Next step leaves setup instructions collapsed');
  assert((await page.locator('#merge-hint').innerText()).includes('Host'),'Shadowrocket next step lost host rules');
+ await page.locator('.full-config').evaluate(n=>{n.open=true;});
+ assert(await page.locator('#install-full').getAttribute('href')==='shadowrocket://config/add/'+url(tokenA,'conf'),'Full Shadowrocket profile not offered through supported URL scheme');
  await page.waitForFunction(()=>document.activeElement===document.getElementById('result-title'));
  assert(await page.locator('#import-url').inputValue()==='','Closed modal retained link');
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();
@@ -65,10 +67,12 @@ async page => {
  await page.locator('#copy-import').click();assert((await page.locator('#import-feedback').innerText()).includes('长按'),'Clipboard denial has no fallback');
  await page.locator('#import-guide-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
  assert((await page.locator('#import-hint').innerText()).includes('规则模式'),'YAML QR led to node-only instructions');
+ assert(await page.locator('#install-full').isHidden()&&!await page.locator('#install-full').getAttribute('href'),'Other clients retained private Shadowrocket profile link');
  await page.locator('input[value=shadowrocket]').check();
  assert(!await page.locator('#subscription-qr svg').count(),'QR retained after close');
  await page.getByRole('button',{name:'重置订阅',exact:true}).click();await page.locator('#reset-confirm').click();await page.locator('#reset-dialog').waitFor({state:'hidden'});
  assert(resets===1,'Reset not applied');assert(await page.locator('#result').isHidden(),'Old import result retained after reset');
+ assert(!await page.locator('#install-full').getAttribute('href'),'Reset retained private profile link');
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();assert(await decode()===url(tokenC),'Reset retained old QR credential');
  own.active=false;await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#import-dialog').waitFor({state:'hidden'});assert(!await page.locator('#subscription-qr svg').count(),'Revocation retained QR');
  own.active=true;node='unavailable';await page.locator('#refresh-status').click();await page.locator('#node-status').filter({hasText:'暂不可用'}).waitFor();

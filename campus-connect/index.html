@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f1ece7">
 <meta name="description" content="MAXCOURSE 校园连接：申请60天测试订阅，复制、扫码或导入客户端，校外连接已开放的校园资源。">
-<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/campus-connect/connect.css?v=desk-client-choice-20261004"><script defer src="/campus-connect/connect.js?v=desk-client-choice-20261004"></script>
+<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/vendor/fonts.css"><link rel="stylesheet" href="/campus-connect/connect.css?v=desk-profile-options-20261004"><script defer src="/campus-connect/connect.js?v=desk-profile-options-20261004"></script>
 </head>
 <body>
 <a class="skip-link" href="#subscription-panel">跳到我的订阅</a>
@@ -48,10 +48,11 @@
         <p id="client-guide" class="field-hint"></p>
         <details class="existing"><summary>手动订阅</summary><form id="connect-form" method="post" action="#" novalidate><label class="field-label" for="subscription">私人订阅地址</label><div class="input-row"><input id="subscription" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴你的 HTTPS 订阅地址"><button id="clear-key" class="clear-button" type="button">清除</button></div><p class="field-hint">链接不会写入浏览器本地存储。</p><p id="form-error" class="error" role="alert" hidden></p><button id="validate" class="button secondary" type="submit" disabled>验证订阅并继续 →</button></form></details>
         <div id="result" class="result" hidden aria-labelledby="result-title"><div class="panel-heading"><h3 id="result-title" tabindex="-1">订阅可用</h3><button id="manual-import" class="button primary" type="button">导入客户端</button></div><p class="field-hint" id="expiry-note"></p>
-          <details class="guide-detail"><summary>分流与配置</summary><div class="import-step"><span>1</span><div><h4>导入订阅</h4><p id="import-hint"></p><button id="copy-subscription" class="button secondary" type="button">复制订阅地址</button></div></div>
+          <details class="full-config"><summary>使用独立校园配置</summary><p>独立配置只含校园节点，其他流量直连。想保留原上网方式，请使用下方合并入口。</p><div class="full-config-actions"><a class="button secondary" id="install-full" hidden rel="noreferrer">在 Shadowrocket 中导入 ↗</a><a class="button secondary" id="download-full" download rel="noreferrer">下载完整配置</a></div></details>
+          <details class="guide-detail"><summary>并入现有配置</summary><div class="import-step"><span>1</span><div><h4>导入订阅</h4><p id="import-hint"></p><button id="copy-subscription" class="button secondary" type="button">复制订阅地址</button></div></div>
           <div class="import-step"><span>2</span><div><h4>保留现有上网配置</h4><p id="merge-hint"></p><button id="merge" class="button secondary" type="button">下载校园合并片段</button></div></div>
           <div class="import-step"><span>3</span><div><h4>连接并验证</h4><p>全局路由使用“配置”或“规则”模式，再打开图书馆或 AutoLab 验证。导入成功不代表已经连接。</p></div></div>
-          <details class="full-config"><summary>下载完整校园配置</summary><p>完整配置只含校园节点，其他流量直连。启用前请保留原有配置。</p><a class="button secondary" id="download-full" download rel="noreferrer">下载完整配置</a></details></details>
+          </details>
         </div>
         <details class="terms help"><summary>常见问题</summary><p><strong>为什么连上后有些网站仍打不开？</strong><br>当前订阅仅提供已开放校园资源的访问。Clash 和 Stash 的完整校园配置会让其他流量直连，需要继续使用原有上网节点时，请合并校园片段。</p><p><strong>提示在线数量已满怎么办？</strong><br>先断开另一台设备的校园连接再试。同一公网出口计为一个会话。到期、撤销或重置后旧订阅会失效。</p></details>
       </section>

@@ -37,6 +37,7 @@
     state.controller = null; state.token = null; state.busy = false; state.mergeBusy = false;
     $('result').hidden = true;
     $('download-full').removeAttribute('href');
+    $('install-full').removeAttribute('href');$('install-full').hidden=true;
     $('validate').disabled = !$('subscription').value.trim();
     $('validate').textContent = '验证订阅并继续 →';
     $('merge').disabled = false;
@@ -63,6 +64,9 @@
     if (state.token) {
       $('download-full').href = publicURL(formats().complete);
       $('download-full').download = shadowrocket ? 'Shadowrocket-campus.conf' : 'MAXCOURSE-campus.yaml';
+      $('install-full').hidden=!shadowrocket;
+      if(shadowrocket)$('install-full').href=nativeURL('shadowrocket',state.token,true);
+      else $('install-full').removeAttribute('href');
     }
   }
   async function validate(event) {
@@ -145,8 +149,9 @@
     for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
   }
   function subscriptionFor(token,suffix) {return origin+'/campus-connect/subscriptions/'+token+'.'+suffix;}
-  function nativeURL(client,token) {
-    const url=subscriptionFor(token,client==='shadowrocket'?'txt':'yaml');
+  function nativeURL(client,token,complete=false) {
+    const url=subscriptionFor(token,client==='shadowrocket'?(complete?'conf':'txt'):'yaml');
+    if(client==='shadowrocket' && complete)return 'shadowrocket://config/add/'+url;
     if(client==='shadowrocket')return 'shadowrocket://add/sub://'+btoa(url)+'?remarks='+encodeURIComponent('MAXCOURSE Campus');
     return ({clash:'clash-verge',flclash:'flclash',stash:'stash'}[client])+'://install-config?name='+encodeURIComponent('MAXCOURSE Campus')+'&url='+encodeURIComponent(url);
   }
