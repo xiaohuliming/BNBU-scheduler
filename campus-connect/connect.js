@@ -14,6 +14,7 @@
   const path = suffix => '/campus-connect/subscriptions/' + state.token + '.' + suffix;
   const publicURL = suffix => origin + path(suffix);
   const rules = [
+    'DOMAIN-SUFFIX,bnbscheduler.top,DIRECT',
     'DOMAIN,papercut.bnbu.edu.cn,校园资源', 'DOMAIN,ispace.bnbu.edu.cn,校园资源',
     'DOMAIN,lrcs.bnbu.edu.cn,校园资源', 'DOMAIN,ctv24.bnbu.edu.cn,校园资源',
     ...['172.16.244.61','192.168.111.251','172.16.244.66','172.16.242.60','61.143.62.109','10.101.24.90','61.143.62.70','172.16.242.112','172.31.12.111'].map(ip => 'IP-CIDR,' + ip + '/32,校园资源,no-resolve'),
@@ -51,12 +52,12 @@
   }
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
-    $('client-guide').textContent=shadowrocket ? '导入节点 → 合并校园规则 → 连接并验证' : '导入校园配置 → 启用规则模式 → 验证访问';
+    $('client-guide').textContent=shadowrocket ? '导入节点 → 合并分流规则 → 使用配置模式' : '导入校园配置 → 启用规则模式 → 验证访问';
     $('import-hint').textContent = shadowrocket
-      ? '在 Shadowrocket 中添加订阅，更新后找到 MAXCOURSE Campus 节点。随后完成下方校园规则配置。'
+      ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
     $('merge-hint').textContent = shadowrocket
-      ? '将片段中的校园规则放到当前规则最前面，并合并 Host 项。使用刚添加的 MAXCOURSE Campus 节点，不修改原有最终规则。片段用于合并，请勿作为完整配置导入。'
+      ? '将片段中的分流规则放到当前规则最前面，并合并 Host 项。校园规则使用 MAXCOURSE Campus 节点，保留原有最终规则。片段用于合并，请勿作为完整配置导入。'
       : '下载含校园节点与规则的合并片段，将其中的节点、分组、Host 和校园规则合并到现有配置。保留原有上网节点与最终规则，请勿把片段当成完整配置导入。';
     if (state.token) {
       $('download-full').href = publicURL(formats().complete);
@@ -169,9 +170,9 @@
     $('native-pane').hidden=qr||copying;$('qr-pane').hidden=!qr;
     const shadowrocket=(qr?$('qr-format').value:formats().subscription)==='txt';
     $('import-warning').textContent=shadowrocket
-      ? 'Shadowrocket 导入的是节点。继续配置校园规则，再开启连接。'
+      ? '导入节点后合并分流规则，全局路由选“配置”，保留原默认上网节点。'
       : '导入后启用规则模式。完整校园配置会让其他流量直连，请先保留原配置。';
-    $('qr-next-step').textContent=shadowrocket ? '扫码添加节点后，还需配置校园规则。' : '扫码导入配置后，启用规则模式。';
+    $('qr-next-step').textContent=shadowrocket ? '扫码添加节点后合并分流规则，全局路由选“配置”。' : '扫码导入配置后，启用规则模式。';
     $('import-guide-link').textContent=shadowrocket ? '下一步：配置校园规则 →' : '查看连接与验证步骤 →';
     $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
     $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
