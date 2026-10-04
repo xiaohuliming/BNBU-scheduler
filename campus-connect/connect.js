@@ -90,13 +90,24 @@
     const full=$('routing-mode').value==='full';
     $('routing-map').dataset.mode=full?'full':'merge';
     $('route-public-policy').textContent=full?'直接连接':'沿用原规则';
-    document.querySelector('.route-guide').setAttribute('aria-label','查看所选 '+clients[client]+' 的'+(full?'独立校园配置':'合并配置')+'方式');
+    const link=document.querySelector('.route-guide');
+    link.setAttribute('aria-label','查看所选 '+clients[client]+' 的'+(full?'独立校园配置':'合并配置')+'方式');
+    if(!link.hasAttribute('aria-busy'))$('route-guide-status').textContent='查看配置方式';
   }
   $('routing-mode').addEventListener('change',()=>{routingChoiceExplicit=true;renderRouting();});
   document.querySelector('.route-guide').addEventListener('click',async event=>{
     event.preventDefault();
     if(account.busy)return;
-    if(!state.token && account.data?.subscription?.active && account.data.subscription.synced)await prepareOwn('guide');
+    if(!state.token && account.data?.subscription?.active && account.data.subscription.synced){
+      const link=event.currentTarget, client=selected(), epoch=lifecycleEpoch;let verified=false;
+      link.setAttribute('aria-busy','true');$('route-guide-status').textContent='正在验证订阅…';
+      try{verified=await prepareOwn('guide');}
+      finally{
+        link.removeAttribute('aria-busy');
+        $('route-guide-status').textContent=epoch!==lifecycleEpoch || client!==selected() || verified ? '查看配置方式' : '验证未完成，请重试';
+      }
+      if(epoch!==lifecycleEpoch || client!==selected() || !verified || !state.token)return;
+    }
     if(state.token){
       $('result').hidden=false;
       document.querySelector('.full-config').open=$('routing-mode').value==='full';
@@ -246,16 +257,22 @@
   }
   async function prepareOwn(mode) {
     const own=account.data?.subscription,user=account.data?.user;
-    if(account.busy || !own?.active || !own?.synced)return;
-    account.busy=true;renderAccount();
+    if(account.busy || !user || !own?.active || !own?.synced)return false;
+    const client=selected(),epoch=lifecycleEpoch;
+    account.busy=true;accountError();renderAccount();
     try {
       $('subscription').value=own.subscription_url;
-      const ok=await validate({quiet:true,preventDefault(){}});
-      if(ok && state.token && account.data?.user?.id===user.id){
+      const verification=validate({quiet:true,preventDefault(){}}),generation=state.generation;
+      const ok=await verification;
+      const unchanged=epoch===lifecycleEpoch && client===selected() && account.data?.user?.id===user.id && account.data?.subscription?.subscription_url===own.subscription_url;
+      if(ok && state.token && unchanged && account.data.available && account.data.subscription.active){
         if(mode!=='guide'){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
+        return true;
       }
-      else accountError('订阅暂时无法验证，请刷新后再试。');
-    } finally {account.busy=false;renderAccount();}
+      if(generation===state.generation)reset();
+      if(unchanged && account.data.available)accountError('订阅暂时无法验证，请刷新后再试。');
+      return false;
+    } finally {account.busy=false;if(epoch===lifecycleEpoch)renderAccount();}
   }
   $('manual-import').addEventListener('click',()=>{if(state.token){showImport(state.token,'native','manual');importReturnTarget='#manual-import';}});
   $('import-close').addEventListener('click',closeImport);
