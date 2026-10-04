@@ -2,6 +2,10 @@
 (() => {
   const $ = id => document.getElementById(id);
   const origin = 'https://www.bnbscheduler.top';
+  let importToken=null, importSource=null;
+  const emptyMarkup=$('subscription-empty').innerHTML;
+  let ownRenderKey=null;
+  const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
   const state = { token: null, generation: 0, controller: null, busy: false, mergeBusy: false, feedbackTimer: null, nodeName: "MAXCOURSE Campus" };
   const selected = () => document.querySelector('input[name="client"]:checked').value;
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
@@ -23,6 +27,7 @@
     $('subscription').setAttribute('aria-invalid', String(!!message));
   }
   function reset() {
+    closeImport();
     state.generation++;
     state.controller?.abort();
     state.controller = null; state.token = null; state.busy = false; state.mergeBusy = false;
@@ -43,6 +48,7 @@
   }
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
+    $('client-guide').textContent=shadowrocket ? '添加订阅后，合并校园分流规则。' : '可导入校园配置，或合并片段保留原有上网节点。';
     $('import-hint').textContent = shadowrocket
       ? '在 Shadowrocket 中添加订阅，粘贴下方地址，更新后找到 MAXCOURSE Campus 节点。添加订阅会保留现有节点。'
       : '在客户端中选择添加订阅或从 URL 导入，粘贴下方地址。FlClash、Clash Verge Rev 与 Stash 使用 YAML 格式。';
@@ -70,10 +76,11 @@
       if (!response.ok) throw new Error(response.status === 404 ? '订阅不可用，可能已到期或撤销。请核对地址或联系维护者。' : '订阅服务暂时不可用，请稍后重试。');
       state.nodeName = response.headers.get("X-Campus-Node-Name") || "MAXCOURSE Campus";
       renderClient();
-      $('result').hidden = false;
+      if(!event.quiet)$('result').hidden = false;
       const expiry = /(?:^|;)\s*expire=(\d+)/.exec(response.headers.get('Subscription-Userinfo') || '');
       $('expiry-note').textContent = expiry ? '试用有效至 ' + new Date(Number(expiry[1]) * 1000).toLocaleString('zh-CN', {timeZone: 'Asia/Singapore', hour12: false}) + '，UTC+8。' : '有效期以发放信息为准，到期或撤销后将无法继续使用。';
-      $('result-title').focus();
+      if(!event.quiet)$('result-title').focus();
+      return true;
     } catch (failure) {
       if (generation === state.generation) { state.token = null; error(failure.name === 'AbortError' || failure instanceof TypeError ? '验证连接中断，请重试。本次尚未导入或修改客户端配置。' : failure.message); }
     } finally {
@@ -120,6 +127,65 @@
     } catch (_) { if (generation === state.generation) notice('暂时无法下载片段，请重新验证订阅后重试。'); }
     finally { if (generation === state.generation) { state.mergeBusy = false; state.controller = null; $('merge').disabled = false; } }
   }
+  function closeImport() {
+    if($('import-dialog').open)$('import-dialog').close();
+    importToken=null;importSource=null;
+    $('import-url').value='';$('subscription-qr').replaceChildren();
+    for(const link of document.querySelectorAll('[data-import-client]'))link.removeAttribute('href');
+  }
+  function subscriptionFor(token,suffix) {return origin+'/campus-connect/subscriptions/'+token+'.'+suffix;}
+  function nativeURL(client,token) {
+    const url=subscriptionFor(token,client==='shadowrocket'?'txt':'yaml');
+    if(client==='shadowrocket')return 'shadowrocket://add/sub://'+btoa(url)+'?remarks='+encodeURIComponent('MAXCOURSE Campus');
+    return ({clash:'clash-verge',flclash:'flclash',stash:'stash'}[client])+'://install-config?name='+encodeURIComponent('MAXCOURSE Campus')+'&url='+encodeURIComponent(url);
+  }
+  function renderImport(mode) {
+    if(!importToken)return;
+    const qr=mode==='qr';
+    $('show-native').setAttribute('aria-pressed',String(!qr));$('show-qr').setAttribute('aria-pressed',String(qr));
+    $('native-pane').hidden=qr;$('qr-pane').hidden=!qr;
+    $('import-title').textContent=qr?'扫码订阅':'导入订阅';
+    $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
+    for(const link of document.querySelectorAll('[data-import-client]'))link.href=nativeURL(link.dataset.importClient,importToken);
+    $('subscription-qr').replaceChildren();
+    if(qr) {
+      try {
+        const code=qrcode(0,'M');code.addData($('import-url').value,'Byte');code.make();
+        $('subscription-qr').innerHTML=code.createSvgTag({cellSize:4,margin:16,scalable:true});
+      } catch(_) {$('subscription-qr').textContent='二维码暂不可用，请复制下方地址。';}
+    }
+  }
+  function showImport(token,mode,source) {
+    importToken=token;importSource=source;$('qr-format').value=formats().subscription;
+    $('import-feedback').textContent='未打开客户端？复制链接手动添加。';renderImport(mode);
+    if(!$('import-dialog').open)$('import-dialog').showModal();
+  }
+  async function prepareOwn(mode) {
+    const own=account.data?.subscription,user=account.data?.user;
+    if(account.busy || !own?.active || !own?.synced)return;
+    account.busy=true;renderAccount();
+    try {
+      $('subscription').value=own.subscription_url;
+      const ok=await validate({quiet:true,preventDefault(){}});
+      if(ok && state.token && account.data?.user?.id===user.id)showImport(state.token,mode,'own');
+      else accountError('订阅暂时无法验证，请刷新后再试。');
+    } finally {account.busy=false;renderAccount();}
+  }
+  $('manual-import').addEventListener('click',()=>{if(state.token)showImport(state.token,'native','manual');});
+  $('import-close').addEventListener('click',closeImport);
+  $('import-dialog').addEventListener('close',closeImport);
+  $('show-native').addEventListener('click',()=>renderImport('native'));
+  $('show-qr').addEventListener('click',()=>renderImport('qr'));
+  $('qr-format').addEventListener('change',()=>renderImport('qr'));
+  $('copy-import').addEventListener('click',async()=>{
+    try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
+    catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
+  });
+  $('import-guide-link').addEventListener('click',()=>{closeImport();if(state.token)$('result').hidden=false;$('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+  for(const link of document.querySelectorAll('[data-import-client]'))link.addEventListener('click',()=>{
+    document.querySelector('input[name="client"][value="'+link.dataset.importClient+'"]').checked=true;renderClient();renderImport('native');
+    $('import-feedback').textContent='已请求打开 '+clients[link.dataset.importClient]+'，请在客户端确认导入。';
+  });
   const jsonSafe = data => JSON.stringify(data, null, 2);
   $('connect-form').addEventListener('submit', validate);
   $('subscription').addEventListener('input', reset);
@@ -138,44 +204,62 @@
   }
   function renderAccount() {
     const data=account.data, user=data?.user, own=data?.subscription;
-    $('quota-label').textContent = data?.available ? '已领取 '+data.used+' / '+data.capacity : '名额暂时不可读取';
-    $('identity').textContent = user?.verified ? '学校身份已验证 · '+user.display_name : '请先验证本人学校账号';
-    $('login-open').textContent = user?.verified ? '切换验证账号' : '验证学校账号';
+    const active=Boolean(own?.claimed && own.active && own.subscription_url);
+    $('quota-label').textContent=data?.available ? '测试名额 '+data.used+' / '+data.capacity : '名额暂时不可读取';
+    $('identity').textContent=user?.verified ? '学校身份已验证 · '+user.display_name : '尚未验证学校账号';
+    $('login-open').textContent=user?.verified ? '切换账号' : '验证学校账号';
     $('login-open').disabled=account.busy;
-    $('claim').textContent = own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : '申请领取 60 天订阅 →';
+    $('claim').textContent=own?.claimed ? (own.active ? '查看我的订阅 →' : '测试订阅已结束') : '申请领取 60 天订阅 →';
     const canClaim=data?.available && (!own?.claimed || own.active) && (own?.claimed || $('consent').checked) && (own?.claimed || own?.active || data.remaining>0);
     $('claim').disabled=account.busy || !canClaim;
     $('consent').disabled=account.busy;
     $('refresh-status').disabled=account.busy;
-    $('own-subscription').replaceChildren();
-    $('own-subscription').hidden=!(own?.claimed && own.active && own.subscription_url);
-    $('subscription-empty').hidden=!$('own-subscription').hidden;
-    $('subscription-empty').textContent = own?.claimed && !own.active ? '这份测试订阅已结束或撤销，请联系维护者。' : '申请后获得一个订阅链接，在你的设备上使用同一链接即可。';
-    $('account-expiry').textContent = own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '领取后显示有效期';
-    if(own?.claimed && own.active && own.subscription_url) {
-      const card=document.createElement('article'); card.className='subscription-card';
+    $('application').hidden=active;
+    $('subscription-badge').textContent=active ? (own.synced ? '订阅有效' : '配置准备中') : own?.claimed ? '测试已结束' : '60 天测试';
+    const renderKey=JSON.stringify([user?.id,own,account.busy,active?Math.ceil((own.expires_at*1000-Date.now())/86400000):null]);
+    const changed=renderKey!==ownRenderKey;ownRenderKey=renderKey;
+    if(changed)$('own-subscription').replaceChildren();
+    $('own-subscription').hidden=!active;
+    $('subscription-empty').hidden=active;
+    if(own?.claimed && !own.active) {
+      $('subscription-empty').replaceChildren();
+      const note=document.createElement('p');note.textContent='这份测试订阅已到期或撤销，请联系维护者。';$('subscription-empty').append(note);
+    }
+    if(!own?.claimed && $('subscription-empty').innerHTML!==emptyMarkup)$('subscription-empty').innerHTML=emptyMarkup;
+    $('account-expiry').textContent=own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '每个学校账号一份。';
+    $('account-expiry').hidden=active;
+    if(active && changed) {
+      const card=document.createElement('article');card.className='subscription-card';
       const title=document.createElement('h3');title.textContent='个人订阅';
-      const status=document.createElement('p');status.className='subscription-state';
-      status.textContent=!own.synced ? '配置生效中，通常一分钟内完成' : Number.isInteger(own.online_sessions) ? '当前在线会话 '+own.online_sessions+' / 2 · 所有设备共用此订阅' : '最多两台同时连接 · 所有设备共用此订阅';
+      const status=document.createElement('p');status.className='subscription-state';status.textContent=own.synced ? '' : '配置准备中';status.hidden=own.synced;
+      const metrics=document.createElement('dl');metrics.className='subscription-metrics';
+      const days=Math.max(0,Math.ceil((own.expires_at*1000-Date.now())/86400000));
+      for(const [label,value,unit,extra] of [['剩余有效期',String(days),'天',''],['在线出口',Number.isInteger(own.online_sessions)?String(own.online_sessions):'未知','/ 2',''],['到期日期',new Date(own.expires_at*1000).toLocaleDateString('en-CA',{timeZone:'Asia/Singapore'}),'','expiry-day']]) {
+        const cell=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd'),small=document.createElement('small');dt.textContent=label;dd.textContent=value;dd.className=extra;small.textContent=unit?' '+unit:'';if(unit)dd.append(small);cell.append(dt,dd);metrics.append(cell);
+      }
       const actions=document.createElement('div');actions.className='subscription-actions';
-      const use=document.createElement('button');use.className='button primary';use.type='button';use.textContent='接入订阅';use.disabled=account.busy || !own.synced;
-      use.addEventListener('click',async()=>{ $('subscription').value=own.subscription_url; reset(); await validate({preventDefault(){}}); $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); });
-      const copyButton=document.createElement('button');copyButton.className='button secondary';copyButton.type='button';copyButton.textContent='复制订阅链接';copyButton.disabled=account.busy || !own.synced;
-      copyButton.addEventListener('click',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription)));
-      const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy;
-      resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
-      actions.append(use,copyButton,resetButton);card.append(title,status,actions);$('own-subscription').append(card);
-      $('claim-message').textContent=own.synced ? '已领取。在你的设备上导入同一订阅，最多两台同时连接。' : '申请已保存，节点配置正在生效。请稍候，页面会自动刷新状态。';
-    } else if(data?.available && data.remaining===0) $('claim-message').textContent='10 个有效订阅名额已满。已有订阅仍可查看和使用。';
-    else $('claim-message').textContent='每个学校账号领取一份，重复申请不会延长有效期。';
+      for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription))],['二维码','secondary',()=>prepareOwn('qr')]]) {
+        const button=document.createElement('button');button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced;button.addEventListener('click',handler);actions.append(button);
+      }
+      const footer=document.createElement('div');footer.className='subscription-footer';
+      const note=document.createElement('p');note.textContent='同一公网出口合并计数。';
+      const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy;resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
+      footer.append(note,resetButton);card.append(title,status,metrics,actions,footer);$('own-subscription').append(card);
+      $('claim-message').textContent=own.synced ? '已领取，同一订阅最多两个公网出口同时在线。' : '申请已保存，配置生效后即可导入。';
+    } else if(!active && data?.available && data.remaining===0) $('claim-message').textContent='测试名额已满，已有订阅可继续使用。';
+    else if(!active) $('claim-message').textContent='领取后获得一个订阅链接，重复申请不会延长有效期。';
+    const node=data?.node;
+    $('node-status').dataset.state=node?.status || 'unknown';
+    $('node-status').textContent=node?.status==='ready' ? '正常' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
+    $('node-note').textContent=node?.status==='ready' ? '校内转发已连接。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
   }
   async function refreshAccount() {
     const generation=++account.generation;
-    try {const data=await accountAPI('status');if(generation!==account.generation)return;if(account.data?.user?.id && account.data.user.id!==data.user?.id){$('subscription').value='';reset();}account.data=data;accountError();}
+    try {const data=await accountAPI('status');if(generation!==account.generation)return;if((account.data?.user?.id && account.data.user.id!==data.user?.id) || (account.data?.subscription?.subscription_url && (account.data.subscription.subscription_url!==data.subscription?.subscription_url || !data.subscription?.active))){$('subscription').value='';reset();}account.data=data;accountError();}
     catch(error){if(generation!==account.generation)return;account.data={available:false,user:null,subscription:null};accountError(error.message);}
     renderAccount();
     clearTimeout(account.timer);
-    if(account.data?.subscription?.claimed && account.data.subscription.active) account.timer=setTimeout(()=>{if(!document.hidden&&!account.busy)refreshAccount();},account.data.subscription.synced?15000:3000);
+    account.timer=setTimeout(()=>{if(!document.hidden&&!account.busy)refreshAccount();},account.data?.subscription?.claimed && !account.data.subscription.synced ? 3000 : 15000);
   }
   function openLogin() { $('school-password').value='';$('login-error').hidden=true;if(!$('school-dialog').open)$('school-dialog').showModal();$('school-username').focus(); }
   $('login-open').addEventListener('click',openLogin);
@@ -215,5 +299,6 @@
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
   });
   window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('school-password').value='';account.data=null;account.resetTarget=null;$('own-subscription').replaceChildren();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
   renderClient();refreshAccount();
 })();
