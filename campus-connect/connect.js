@@ -147,24 +147,25 @@
     $('claim').disabled=account.busy || !canClaim;
     $('consent').disabled=account.busy;
     $('refresh-status').disabled=account.busy;
-    $('devices').replaceChildren();
-    $('devices').hidden=!(own?.claimed && own.active && own.devices?.length);
-    $('devices-empty').hidden=!$('devices').hidden;
-    $('devices-empty').textContent = own?.claimed && !own.active ? '这份测试订阅已结束或撤销，请联系维护者。' : '申请后可获取设备 1 和设备 2 的专属订阅链接。';
+    $('own-subscription').replaceChildren();
+    $('own-subscription').hidden=!(own?.claimed && own.active && own.subscription_url);
+    $('subscription-empty').hidden=!$('own-subscription').hidden;
+    $('subscription-empty').textContent = own?.claimed && !own.active ? '这份测试订阅已结束或撤销，请联系维护者。' : '申请后获得一个订阅链接，在你的设备上使用同一链接即可。';
     $('account-expiry').textContent = own?.claimed ? '有效至 '+new Date(own.expires_at*1000).toLocaleString('zh-CN',{timeZone:'Asia/Singapore',hour12:false})+' · UTC+8' : '领取后显示有效期';
-    if(own?.claimed && own.active) {
-      for(const device of own.devices) {
-        const card=document.createElement('article'); card.className='device-card';
-        const title=document.createElement('h3');title.textContent='设备 '+device.slot;
-        const status=document.createElement('p');status.className='device-state';status.textContent=own.synced ? (device.online ? '在线 · 使用本设备的独立链接' : '空闲 · 可导入客户端') : '配置生效中，通常一分钟内完成';
-        const actions=document.createElement('div');actions.className='device-actions';
-        const use=document.createElement('button');use.className='button primary';use.type='button';use.textContent='接入此设备';use.disabled=account.busy || !own.synced;
-        use.addEventListener('click',async()=>{ $('subscription').value=device.subscription_url; reset(); await validate({preventDefault(){}}); $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); });
-        const resetButton=document.createElement('button');resetButton.className='device-reset';resetButton.type='button';resetButton.textContent='重置链接';resetButton.disabled=account.busy;
-        resetButton.addEventListener('click',()=>{account.resetTarget={slot:device.slot,user:user.id};$('reset-title').textContent='重置设备 '+device.slot+' 的链接？';$('reset-error').hidden=true;$('reset-dialog').showModal();});
-        actions.append(use,resetButton);card.append(title,status,actions);$('devices').append(card);
-      }
-      $('claim-message').textContent=own.synced ? '已领取。每台设备选择各自的链接，普通上网继续使用原有配置。' : '申请已保存，节点配置正在生效。请稍候，页面会自动刷新状态。';
+    if(own?.claimed && own.active && own.subscription_url) {
+      const card=document.createElement('article'); card.className='subscription-card';
+      const title=document.createElement('h3');title.textContent='个人订阅';
+      const status=document.createElement('p');status.className='subscription-state';
+      status.textContent=!own.synced ? '配置生效中，通常一分钟内完成' : Number.isInteger(own.online_sessions) ? '当前在线会话 '+own.online_sessions+' / 2 · 所有设备共用此订阅' : '最多两台同时连接 · 所有设备共用此订阅';
+      const actions=document.createElement('div');actions.className='subscription-actions';
+      const use=document.createElement('button');use.className='button primary';use.type='button';use.textContent='接入订阅';use.disabled=account.busy || !own.synced;
+      use.addEventListener('click',async()=>{ $('subscription').value=own.subscription_url; reset(); await validate({preventDefault(){}}); $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); });
+      const copyButton=document.createElement('button');copyButton.className='button secondary';copyButton.type='button';copyButton.textContent='复制订阅链接';copyButton.disabled=account.busy || !own.synced;
+      copyButton.addEventListener('click',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription)));
+      const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy;
+      resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
+      actions.append(use,copyButton,resetButton);card.append(title,status,actions);$('own-subscription').append(card);
+      $('claim-message').textContent=own.synced ? '已领取。在你的设备上导入同一订阅，最多两台同时连接。' : '申请已保存，节点配置正在生效。请稍候，页面会自动刷新状态。';
     } else if(data?.available && data.remaining===0) $('claim-message').textContent='10 个有效订阅名额已满。已有订阅仍可查看和使用。';
     else $('claim-message').textContent='每个学校账号领取一份，重复申请不会延长有效期。';
   }
@@ -198,7 +199,7 @@
   $('claim').addEventListener('click',async()=>{
     if(account.busy)return;
     if(!account.data?.user?.verified){openLogin();return;}
-    if(account.data.subscription?.claimed){$('devices-panel').scrollIntoView({behavior:'smooth'});return;}
+    if(account.data.subscription?.claimed){$('subscription-panel').scrollIntoView({behavior:'smooth'});return;}
     account.busy=true;accountError();renderAccount();
     try {const data=await accountAPI('claim',{consent:$('consent').checked});account.data={...account.data,...data};notice('测试订阅已领取');}
     catch(error){accountError(error.message);}
@@ -209,10 +210,10 @@
   $('reset-confirm').addEventListener('click',async()=>{
     if(account.busy||!account.resetTarget||account.resetTarget.user!==account.data?.user?.id)return;
     account.busy=true;$('reset-confirm').disabled=true;$('reset-cancel').disabled=true;$('reset-error').hidden=true;
-    try{const data=await accountAPI('reset-device',{slot:account.resetTarget.slot});account.data={...account.data,...data};reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
+    try{const data=await accountAPI('reset-subscription',{});account.data={...account.data,...data};$('subscription').value='';reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
   });
-  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('school-password').value='';account.data=null;account.resetTarget=null;$('devices').replaceChildren();});
+  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('school-password').value='';account.data=null;account.resetTarget=null;$('own-subscription').replaceChildren();});
   renderClient();refreshAccount();
 })();
