@@ -3,6 +3,8 @@
   const $ = id => document.getElementById(id);
   const origin = 'https://www.bnbscheduler.top';
   let importToken=null, importSource=null, importReturnTarget=null;
+  let qrLibraryPromise=null, importRenderGeneration=0, lifecycleEpoch=0;
+  const pendingJSONRequests=new Set();
   const emptyMarkup=$('subscription-empty').innerHTML;
   let ownRenderKey=null;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
@@ -134,7 +136,7 @@
   }
   function closeImport() {
     if($('import-dialog').open)$('import-dialog').close();
-    importToken=null;importSource=null;
+    importToken=null;importSource=null;importRenderGeneration++;$('subscription-qr').removeAttribute('aria-busy');
     const target=importReturnTarget;importReturnTarget=null;
     if(target)requestAnimationFrame(()=>{const element=document.querySelector(target);if(element&&!element.disabled&&element.getClientRects().length)element.focus({preventScroll:true});});
     $('import-url').value='';$('subscription-qr').replaceChildren();
@@ -146,22 +148,39 @@
     if(client==='shadowrocket')return 'shadowrocket://add/sub://'+btoa(url)+'?remarks='+encodeURIComponent('MAXCOURSE Campus');
     return ({clash:'clash-verge',flclash:'flclash',stash:'stash'}[client])+'://install-config?name='+encodeURIComponent('MAXCOURSE Campus')+'&url='+encodeURIComponent(url);
   }
-  function renderImport(mode) {
+  function loadQRLibrary() {
+    if(typeof window.qrcode==='function')return Promise.resolve(window.qrcode);
+    if(qrLibraryPromise)return qrLibraryPromise;
+    qrLibraryPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src='/vendor/qrcode-generator.js?v=1.4.4';script.async=true;
+      const timer=setTimeout(()=>{script.remove();qrLibraryPromise=null;reject(new Error('QR library timeout'));},8000);
+      script.onload=()=>{clearTimeout(timer);if(typeof window.qrcode==='function')resolve(window.qrcode);else{qrLibraryPromise=null;reject(new Error('QR library unavailable'));}};
+      script.onerror=()=>{clearTimeout(timer);script.remove();qrLibraryPromise=null;reject(new Error('QR library unavailable'));};
+      document.head.append(script);
+    });
+    return qrLibraryPromise;
+  }
+  async function renderImport(mode) {
     if(!importToken)return;
     const qr=mode==='qr', copying=mode==='copy';
+    const generation=++importRenderGeneration, token=importToken;
     document.querySelector('.import-tabs').hidden=copying;
     $('show-native').setAttribute('aria-pressed',String(!qr));$('show-qr').setAttribute('aria-pressed',String(qr));
     $('native-pane').hidden=qr||copying;$('qr-pane').hidden=!qr;
     $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'导入订阅';
     $('import-url').value=subscriptionFor(importToken,qr?$('qr-format').value:formats().subscription);
     for(const link of document.querySelectorAll('[data-import-client]'))link.href=nativeURL(link.dataset.importClient,importToken);
-    $('subscription-qr').replaceChildren();
+    $('subscription-qr').replaceChildren();$('subscription-qr').removeAttribute('aria-busy');
     if(qr) {
+      $('subscription-qr').setAttribute('aria-busy','true');$('subscription-qr').textContent='二维码准备中…';
       try {
-        const code=qrcode(0,'M');code.addData($('import-url').value,'Byte');code.make();
+        const factory=await loadQRLibrary();
+        if(generation!==importRenderGeneration||token!==importToken)return;
+        const code=factory(0,'M');code.addData($('import-url').value,'Byte');code.make();
         $('subscription-qr').innerHTML=code.createSvgTag({cellSize:4,margin:16,scalable:true});
         $('subscription-qr').querySelector('svg')?.setAttribute('aria-hidden','true');
-      } catch(_) {$('subscription-qr').textContent='二维码暂不可用，请复制下方地址。';}
+      } catch(_) {if(generation===importRenderGeneration&&token===importToken)$('subscription-qr').textContent='二维码暂不可用，请复制下方地址。';}
+      finally {if(generation===importRenderGeneration)$('subscription-qr').removeAttribute('aria-busy');}
     }
   }
   function showImport(token,mode,source) {
@@ -205,10 +224,24 @@
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
   const account = { data: null, busy: false, loginBusy: false, authMode: 'login', generation: 0, timer: null, resetTarget: null };
   function accountError(message = '') { $('account-error').textContent = message; $('account-error').hidden = !message; }
+  async function jsonRequest(url,options,message) {
+    const controller=new AbortController();const epoch=lifecycleEpoch;pendingJSONRequests.add(controller);
+    const timer=setTimeout(()=>controller.abort(),12000);
+    try {
+      const response=await fetch(url,{...options,signal:controller.signal});
+      const data=await response.json();
+      if(epoch!==lifecycleEpoch)throw new Error('页面状态已变化，请重试。');
+      return {response,data};
+    } catch(error) {
+      if(error.name==='AbortError')throw new Error(message);
+      if(error instanceof SyntaxError)throw new Error('服务返回异常，请稍后重试。');
+      if(error instanceof TypeError)throw new Error('网络连接中断，请稍后重试。');
+      throw error;
+    } finally {clearTimeout(timer);pendingJSONRequests.delete(controller);}
+  }
   async function accountAPI(path, body) {
-    const response = await fetch('/api/campus-connect/' + path, {method: body ? 'POST' : 'GET', credentials:'same-origin',cache:'no-store',headers:body ? {'Content-Type':'application/json','X-Campus-CSRF':account.data?.csrf_token || ''} : {},...(body ? {body:JSON.stringify(body)} : {})});
-    const data=await response.json();
-    if(!response.ok) {const failure=new Error(typeof data.error==='string'?data.error:'申请服务暂时不可用。');failure.responseData=data;throw failure;}
+    const {response,data}=await jsonRequest('/api/campus-connect/'+path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json','X-Campus-CSRF':account.data?.csrf_token||''}:{},...(body?{body:JSON.stringify(body)}:{})},body?'请求超时，请刷新确认结果。':'状态读取超时，请重试。');
+    if(!response.ok){const failure=new Error(typeof data.error==='string'?data.error:'申请服务暂时不可用。');failure.responseData=data;throw failure;}
     return data;
   }
   function renderAccount() {
@@ -290,8 +323,8 @@
   }
   const loginErrors={'Invalid credentials':'用户名或密码不正确。','Username already exists':'用户名已存在，请登录或换一个用户名。','Username and password required':'请填写用户名和密码。','Username or password is too long':'用户名或密码过长。'};
   async function siteAuth(endpoint,username,password) {
-    const response=await fetch('/api/'+endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
-    const data=await response.json();if(!response.ok)throw new Error(loginErrors[data.error] || data.error || '暂时无法登录，请稍后重试。');
+    const {response,data}=await jsonRequest('/api/'+endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})},endpoint==='register'?'注册结果暂未确认，请先尝试登录。':'登录超时，请稍后重试。');
+    if(!response.ok)throw new Error(loginErrors[data.error]||data.error||'暂时无法登录，请稍后重试。');
   }
   $('login-open').addEventListener('click',openLogin);
   $('auth-toggle').addEventListener('click',()=>{if(account.loginBusy)return;account.authMode=account.authMode==='login'?'register':'login';$('login-password').value='';$('login-error').hidden=true;renderLogin();});
@@ -300,12 +333,14 @@
   $('login-dialog').addEventListener('close',()=>{$('login-password').value='';});
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();if(account.loginBusy)return;
-    const username=$('login-username').value.trim();let password=$('login-password').value;
+    const epoch=lifecycleEpoch;const username=$('login-username').value.trim();let password=$('login-password').value;
     if(!username||!password){$('login-error').textContent='请填写用户名和密码。';$('login-error').hidden=false;return;}
     account.loginBusy=true;renderLogin();$('login-error').hidden=true;
     try {
       if(account.authMode==='register')await siteAuth('register',username,password);
+      if(epoch!==lifecycleEpoch)return;
       await siteAuth('login',username,password);
+      if(epoch!==lifecycleEpoch)return;
       $('login-dialog').close();$('subscription').value='';reset();await refreshAccount();notice('已登录');
     } catch(error){$('login-error').textContent=error.message;$('login-error').hidden=false;}
     finally{password=null;$('login-password').value='';account.loginBusy=false;renderLogin();}
@@ -316,8 +351,8 @@
     if(account.busy)return;
     if(!account.data?.user){openLogin();return;}
     if(account.data.subscription?.claimed){$('subscription-panel').scrollIntoView({behavior:'smooth'});return;}
-    account.busy=true;accountError();renderAccount();
-    try {const data=await accountAPI('claim',{consent:$('consent').checked});account.data={...account.data,...data};notice('测试订阅已领取');}
+    const epoch=lifecycleEpoch;account.busy=true;accountError();renderAccount();
+    try {const data=await accountAPI('claim',{consent:$('consent').checked});if(epoch!==lifecycleEpoch)return;account.data={...account.data,...data};notice('测试订阅已领取');}
     catch(error){accountError(error.message);}
     finally{account.busy=false;renderAccount();refreshAccount();}
   });
@@ -326,12 +361,12 @@
   $('reset-dialog').addEventListener('cancel',event=>{if(account.busy)event.preventDefault();});
   $('reset-confirm').addEventListener('click',async()=>{
     if(account.busy||!account.resetTarget||account.resetTarget.user!==account.data?.user?.id)return;
-    account.busy=true;$('reset-confirm').disabled=true;$('reset-cancel').disabled=true;$('reset-error').hidden=true;
-    try{const data=await accountAPI('reset-subscription',{});account.data={...account.data,...data};$('subscription').value='';reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
+    const epoch=lifecycleEpoch;account.busy=true;$('reset-confirm').disabled=true;$('reset-cancel').disabled=true;$('reset-error').hidden=true;
+    try{const data=await accountAPI('reset-subscription',{});if(epoch!==lifecycleEpoch)return;account.data={...account.data,...data};$('subscription').value='';reset();$('reset-dialog').close();notice('旧链接已失效，请重新导入新链接');}
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;renderAccount();refreshAccount();}
   });
-  window.addEventListener('pagehide',()=>{clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
+  window.addEventListener('pagehide',()=>{lifecycleEpoch++;account.generation++;for(const request of pendingJSONRequests)request.abort();pendingJSONRequests.clear();clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
   window.addEventListener('pageshow',event=>{if(event.persisted)refreshAccount();});
   const navLinks=[...document.querySelectorAll('.sidebar nav a[href^="#"]')];
