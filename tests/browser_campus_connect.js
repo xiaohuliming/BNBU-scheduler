@@ -16,7 +16,7 @@ async page => {
     const payload = {hosts: {'papercut.bnbu.edu.cn': '172.16.244.61'},
       proxies: [{name: 'MAXCOURSE Campus', type: 'trojan', server: 'www.bnbscheduler.top', port: 27443, password: 'synthetic-only'}],
       'proxy-groups': [{name: '校园资源', type: 'select', proxies: ['MAXCOURSE Campus']}],
-      rules: ['DOMAIN,ispace.bnbu.edu.cn,校园资源', 'MATCH,DIRECT']};
+      rules: ['DOMAIN-SUFFIX,bnbscheduler.top,DIRECT', 'DOMAIN,ispace.bnbu.edu.cn,校园资源', 'MATCH,DIRECT']};
     try {await route.fulfill({status, contentType: 'text/plain', headers: {'Subscription-Userinfo': 'expire=' + Math.floor(Date.now()/1000+86400)}, body: route.request().method() === 'HEAD' ? '' : JSON.stringify(payload)});} catch (_) { /* Expected when an obsolete request is cancelled. */ }
   });
   await page.route('**/api/campus-connect/status',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({available:true,capacity:10,used:1,remaining:9,test_days:60,device_limit:2,user:null,csrf_token:'synthetic-csrf',subscription:null})}));
@@ -43,13 +43,21 @@ async page => {
   assert(copied === valid, 'Shadowrocket did not receive its node subscription');
   const shadowDownload = page.waitForEvent('download');
   await page.locator('#merge').click();
-  await (await shadowDownload).saveAs('output/campus-shadowrocket-merge.conf');
+  const shadowFile = await shadowDownload;
+  const shadowBody = await page.evaluate(async url => (await fetch(url)).text(), shadowFile.url());
+  assert(shadowBody.includes('DOMAIN-SUFFIX,bnbscheduler.top,DIRECT'), 'Shadowrocket merge sends the portal through the selected campus node');
+  assert(!/^FINAL,|^MATCH,/m.test(shadowBody), 'Shadowrocket fragment replaced the original final policy');
+  await shadowFile.saveAs('output/campus-shadowrocket-merge.conf');
   await page.locator('input[value=clash]').check();
   await page.locator('#copy-subscription').click();
   assert((await page.evaluate(() => window.__copiedForTest)).endsWith('.yaml'), 'Clash subscription format incorrect');
   const clashDownload = page.waitForEvent('download');
   await page.locator('#merge').click();
-  await (await clashDownload).saveAs('output/campus-clash-merge.yaml');
+  const clashFile = await clashDownload;
+  const clashBody = await page.evaluate(async url => (await fetch(url)).text(), clashFile.url());
+  assert(JSON.parse(clashBody).rules.includes('DOMAIN-SUFFIX,bnbscheduler.top,DIRECT'), 'Clash merge lost the portal bypass');
+  assert(!JSON.parse(clashBody).rules.some(rule => rule.startsWith('MATCH,')), 'Clash fragment replaced the original final policy');
+  await clashFile.saveAs('output/campus-clash-merge.yaml');
   await page.locator('input[value=stash]').check();
   assert((await page.locator('#download-full').getAttribute('href')).endsWith('.yaml'), 'Stash full configuration incorrect');
   assert(await page.evaluate(token => !JSON.stringify(Object.entries(localStorage)).includes(token) && !JSON.stringify(Object.entries(sessionStorage)).includes(token), token), 'Credential persisted in browser storage');
