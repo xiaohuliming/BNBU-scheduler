@@ -7,6 +7,7 @@
   const pendingJSONRequests=new Set();
   const emptyMarkup=$('subscription-empty').innerHTML;
   let ownRenderKey=null;
+  let routingChoiceExplicit=false;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
   const clientDownloads={
     shadowrocket:'https://apps.apple.com/us/app/shadowrocket/id932747118',
@@ -65,6 +66,8 @@
     $('client-store').textContent=selected()==='shadowrocket'||selected()==='stash'?'App Store · 付费应用':'GitHub · 免费开源';
     $('client-guide').textContent=shadowrocket ? '导入节点并合并分流规则' : '导入完整配置或合并片段';
     $('client-mode').textContent=shadowrocket ? '使用「配置」模式' : '使用「规则」模式';
+    if(!routingChoiceExplicit)$('routing-mode').value=shadowrocket?'merge':'full';
+    renderRouting();
     $('import-hint').textContent = shadowrocket
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
@@ -79,6 +82,30 @@
       else $('install-full').removeAttribute('href');
     }
   }
+  function renderRouting() {
+    const client=selected();
+    const icon=document.querySelector('input[name="client"][value="'+client+'"]').nextElementSibling.querySelector('img');
+    $('route-client-logo').src=icon.getAttribute('src');
+    $('route-client-name').textContent=clients[client];
+    const full=$('routing-mode').value==='full';
+    $('routing-map').dataset.mode=full?'full':'merge';
+    $('route-public-policy').textContent=full?'直接连接':'沿用原规则';
+    document.querySelector('.route-guide').setAttribute('aria-label','查看所选 '+clients[client]+' 的'+(full?'独立校园配置':'合并配置')+'方式');
+  }
+  $('routing-mode').addEventListener('change',()=>{routingChoiceExplicit=true;renderRouting();});
+  document.querySelector('.route-guide').addEventListener('click',async event=>{
+    event.preventDefault();
+    if(account.busy)return;
+    if(!state.token && account.data?.subscription?.active && account.data.subscription.synced)await prepareOwn('guide');
+    if(state.token){
+      $('result').hidden=false;
+      document.querySelector('.full-config').open=$('routing-mode').value==='full';
+      document.querySelector('.guide-detail').open=$('routing-mode').value==='merge';
+    }
+    if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
+    $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    if(state.token)$('result-title').focus({preventScroll:true});
+  });
   async function validate(event) {
     event.preventDefault();
     if (state.busy) return;
@@ -224,7 +251,9 @@
     try {
       $('subscription').value=own.subscription_url;
       const ok=await validate({quiet:true,preventDefault(){}});
-      if(ok && state.token && account.data?.user?.id===user.id){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
+      if(ok && state.token && account.data?.user?.id===user.id){
+        if(mode!=='guide'){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
+      }
       else accountError('订阅暂时无法验证，请刷新后再试。');
     } finally {account.busy=false;renderAccount();}
   }

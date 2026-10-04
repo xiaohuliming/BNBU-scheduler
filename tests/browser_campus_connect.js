@@ -23,6 +23,10 @@ async page => {
   await page.goto(origin + '/campus-connect/');
   await page.locator('.existing').evaluate(node=>{node.open=true;});
   assert(calls.length === 0, 'Page requested a private subscription before user action');
+  await page.locator('#routing-mode').selectOption('full');
+  await page.locator('.route-guide').click();
+  assert(calls.length===0, 'Routing explanation fetched a private subscription without credentials');
+  assert(await page.locator('#result').isHidden(), 'Routing explanation fabricated subscription validity');
   assert(await page.locator('#result').isHidden(), 'Connection result fabricated before validation');
   assert(await page.locator('#validate').isDisabled(), 'Empty subscription accepted');
   assert(await page.locator('#login-dialog').isHidden(), 'School password requested before applying');
