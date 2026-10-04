@@ -35,8 +35,8 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .sidebar-help{position:sticky;top:calc(100dvh - 70px);display:inline-flex;align-items:center;min-height:44px;margin:35px 10px 0;color:var(--muted);font-size:.6875rem}
 
 /* A short heading and a clear primary workspace */
-.content{min-width:0;padding:38px 38px 28px}
-.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
+.content{min-width:0;padding:32px 38px 28px}
+.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px}
 .page-heading>div{min-width:0}
 .eyebrow{color:var(--muted);font-size:.625rem;font-weight:650;letter-spacing:.18em}
 .page-kicker{margin:0 0 13px}
@@ -46,7 +46,7 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .quota{flex:none;border:1px solid #b8a974;border-radius:999px;background:var(--lemon)}
 .badge{border:1px solid #b5a3c8;border-radius:6px;background:#e8ddf2}
 .tag{border:1px solid var(--line);border-radius:6px;background:var(--pink)}
-.identity-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;padding-bottom:19px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.8125rem}
+.identity-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px;padding-bottom:19px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.8125rem}
 .identity-row>span{min-width:0;overflow-wrap:anywhere}
 .account-actions{display:flex;align-items:center;gap:8px;flex:none}
 .account-actions .button{min-height:44px;padding:8px 12px;font-size:.75rem}
@@ -56,21 +56,23 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:22px}
 .panel h2{margin:0;font-size:1.1875rem;font-weight:720;letter-spacing:-.025em}
 .panel h3{margin:0;font-size:1rem;font-weight:700}
-.subscription-panel{background:#f8f3fb}
+.subscription-panel{container-type:inline-size;background:#f8f3fb}
 .subscription-card>h3{display:none}
 .subscription-state,.status-note,.small-note{margin:12px 0 0;color:var(--muted);font-size:.75rem;line-height:1.8}
 .subscription-state{margin-bottom:14px}
 .empty-subscription p{margin:10px 0 18px;color:var(--muted);font-size:.875rem}
 
 /* The first number leads, supporting information stays quiet */
-.subscription-metrics{display:grid;grid-template-columns:1.1fr .9fr 1.15fr;gap:9px;margin:0 0 24px}
-.subscription-metrics>div{min-width:0;padding:17px 14px;border:1px solid #b7a8c2;border-radius:10px;background:#e6dbf0}
-.subscription-metrics>div:nth-child(2){border-color:#afc4bb;background:#dcece5}
-.subscription-metrics>div:nth-child(3){border-color:#cdb3bd;background:#f1dfe5}
-.subscription-metrics dt{margin-bottom:13px;color:#4d4057;font-size:.75rem}
-.subscription-metrics dd{margin:0;font-size:2.5rem;font-weight:760;line-height:1.1;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.subscription-metrics{display:grid;grid-template-columns:1.15fr 1fr;gap:0;margin:0 0 24px;overflow:hidden;border:1px solid var(--ink);border-radius:12px;background:var(--surface);box-shadow:2px 2px 0 var(--ink)}
+.subscription-metrics>div{min-width:0;padding:8px 18px}
+.subscription-metrics>div:first-child{grid-row:span 2;display:flex;flex-direction:column;justify-content:center;background:var(--accent)}
+.subscription-metrics>div:nth-child(2),.subscription-metrics>div:nth-child(3){border-left:1px dashed #9c84b2}
+.subscription-metrics>div:nth-child(3){border-top:1px solid var(--line)}
+.subscription-metrics dt{margin-bottom:5px;color:#4d4057;font-size:.6875rem;line-height:1.4}
+.subscription-metrics dd{margin:0;font-size:1.875rem;font-weight:760;line-height:1.1;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.subscription-metrics>div:first-child dd{font-size:4.125rem;line-height:1.05;letter-spacing:-.065em}
 .subscription-metrics dd small{margin-left:3px;font-size:.75rem;font-weight:500;letter-spacing:0}
-.subscription-metrics .expiry-day{padding-top:12px;font-size:.875rem;line-height:1.7;letter-spacing:-.015em;overflow-wrap:anywhere}
+.subscription-metrics .expiry-day{font-size:.875rem;line-height:1.7;letter-spacing:-.015em;overflow-wrap:anywhere}
 .subscription-actions{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:10px}
 .subscription-actions .button{padding:11px 10px;font-size:.8125rem;white-space:normal}
 .subscription-client{display:flex;align-items:center;gap:12px;margin:0 0 12px}
@@ -81,15 +83,23 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .subscription-footer p{margin:0}
 .subscription-reset{min-height:44px;padding:0;border:0;background:transparent;color:var(--danger);font-size:.6875rem;text-decoration:underline}
 .application{margin:0;padding:0}
-.trial-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.trial-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
 .trial-heading h3{font-size:1.5rem;font-weight:720;letter-spacing:-.035em}
-.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 22px}
-.metrics>div{min-width:0;padding:16px 12px;border:1px solid #b5a4c4;border-radius:10px;background:#e0d2ed}
-.metrics>div:nth-child(2){border-color:#c0b27d;background:var(--lemon)}
-.metrics>div:nth-child(3){border-color:#aec3b9;background:var(--mint)}
-.metrics strong{display:block;font-size:2.5rem;font-weight:760;line-height:1.25;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.metrics{display:grid;grid-template-columns:1.15fr 1fr;gap:0;margin:0 0 22px;overflow:hidden;border:1px solid var(--ink);border-radius:12px;background:var(--surface);box-shadow:2px 2px 0 var(--ink)}
+.metrics>div{min-width:0;padding:8px 18px}
+.metrics>div:first-child{grid-row:span 2;display:flex;flex-direction:column;justify-content:center;background:var(--accent)}
+.metrics>div:nth-child(2),.metrics>div:nth-child(3){border-left:1px dashed #9c84b2}
+.metrics>div:nth-child(3){border-top:1px solid var(--line)}
+.metrics strong{display:block;font-size:1.875rem;font-weight:760;line-height:1.1;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.metrics>div:first-child strong{font-size:4.125rem;line-height:1.05;letter-spacing:-.065em}
 .metrics strong>span{margin-left:5px;font-size:.75rem;font-weight:500;letter-spacing:0}
-.metrics p{margin:8px 0 0;color:#53435f;font-size:.6875rem;line-height:1.7}
+.metrics p{margin:4px 0 0;color:#53435f;font-size:.6875rem;line-height:1.7}
+@container(max-width:14rem){
+.metrics,.subscription-metrics{grid-template-columns:minmax(0,1fr)}
+.metrics>div:first-child,.subscription-metrics>div:first-child{grid-row:auto}
+.metrics>div:nth-child(2),.metrics>div:nth-child(3),.subscription-metrics>div:nth-child(2),.subscription-metrics>div:nth-child(3){display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-left:0;border-top:1px dashed #9c84b2}
+.metrics p,.subscription-metrics dt{margin:0}
+}
 .application>#claim{width:100%;margin-top:3px}
 .application .terms{margin-bottom:8px}
 .consent{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:.8125rem;cursor:pointer}
@@ -310,17 +320,13 @@ body{padding:12px 10px}
 .panel-heading{margin-bottom:20px}
 .panel h2{font-size:1.125rem}
 .trial-heading h3{font-size:1.3125rem}
-.metrics{gap:7px}
-.metrics>div{padding:14px 9px;border-radius:8px}
-.metrics strong{font-size:2rem}
+.metrics>div,.subscription-metrics>div{padding:6px 13px}
+.metrics strong{font-size:1.5rem}
+.metrics>div:first-child strong,.subscription-metrics>div:first-child dd{font-size:3.5rem}
 .metrics strong>span{margin-left:3px;font-size:.6875rem}
 .metrics p{font-size:.625rem}
 .consent{font-size:.75rem}
-.subscription-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.subscription-metrics>div{padding:16px 13px}
-.subscription-metrics>div:nth-child(3){grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 13px}
-.subscription-metrics>div:nth-child(3) dt{margin:0}
-.subscription-metrics .expiry-day{padding:0;font-size:.875rem}
+.subscription-metrics .expiry-day{font-size:.8125rem}
 .subscription-actions{grid-template-columns:1fr 1fr}
 .subscription-actions>.primary{grid-column:1/-1}
 .subscription-actions .button{font-size:.8125rem}
@@ -355,9 +361,9 @@ body{padding:12px 10px}
 .sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}
 .content{padding-right:14px;padding-left:14px}
 .panel{padding-right:16px;padding-left:16px}
-.metrics strong{font-size:1.75rem}
-.subscription-metrics dd{font-size:2rem;overflow-wrap:anywhere}
-.metrics>div{padding-right:7px;padding-left:7px}
+.metrics strong{font-size:1.5rem}
+.subscription-metrics dd{overflow-wrap:anywhere}
+.metrics>div,.subscription-metrics>div{padding-right:10px;padding-left:10px}
 .client-options small{overflow-wrap:anywhere}
 }
 @media(prefers-reduced-motion:no-preference){
