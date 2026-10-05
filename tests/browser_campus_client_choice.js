@@ -13,6 +13,7 @@ async page => {
   await page.locator('.subscription-card').waitFor();
   assert(await page.locator('.subscription-card #own-client').count()===1, 'Copying a subscription depends on an off-screen client selection');
   await page.locator('#own-client').selectOption('clash');
+  await page.locator('.sidebar a[href="#setup"]').click();
   assert(await page.locator('#node-panel select').count()===0, 'Status card still asks for configuration choices');
   assert(await page.locator('#node-panel .resource-chips a').count()===2, 'Campus verification entries missing');
   assert(await page.locator('#client-download').getAttribute('href')==='https://github.com/clash-verge-rev/clash-verge-rev/releases', 'Selected client has no matching official download');
