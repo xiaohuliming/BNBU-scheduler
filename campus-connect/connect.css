@@ -12,6 +12,7 @@ button:disabled{cursor:not-allowed;opacity:.5}
 ::selection{background:var(--pink)}
 .skip-link{position:fixed;top:12px;left:12px;z-index:40;max-width:calc(100% - 24px);padding:10px 16px;transform:translateY(calc(-100% - 24px));border:2px solid var(--ink);background:var(--surface)}
 .skip-link:focus{transform:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 
 /* Window and navigation */
 .window{max-width:1240px;margin:auto;border:1.5px solid var(--ink);border-radius:20px;overflow:hidden;background:var(--surface);box-shadow:6px 6px 0 var(--ink)}
@@ -36,21 +37,21 @@ button:disabled{cursor:not-allowed;opacity:.5}
 
 /* A short heading and a clear primary workspace */
 .content{min-width:0;padding:32px 38px 28px}
-.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px}
-.page-heading>div{min-width:0}
+.page-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.heading-copy{min-width:0}
+.heading-tools{display:flex;flex-direction:column;align-items:flex-end;gap:14px;min-width:0;max-width:52%}
 .eyebrow{color:var(--muted);font-size:.625rem;font-weight:650;letter-spacing:.18em}
-.page-kicker{margin:0 0 13px}
-.page-heading h1{margin:0;font-size:3.875rem;font-weight:780;line-height:1.18;letter-spacing:-.045em}
-.lead{margin:12px 0 0;color:var(--muted);font-size:.9375rem}
-.quota,.badge,.tag,.node-state{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:.6875rem;line-height:1.55}
+.page-kicker{margin:0 0 8px}
+.page-heading h1{margin:0;font-size:clamp(2.5rem,4vw,3.5rem);font-weight:780;line-height:1.12;letter-spacing:-.045em}
+.lead{margin:8px 0 0;color:var(--muted);font-size:.9375rem}
+.quota,.badge,.node-state{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:.6875rem;line-height:1.55}
 .quota{flex:none;border:1px solid #b8a974;border-radius:999px;background:var(--lemon)}
 .badge{border:1px solid #b5a3c8;border-radius:6px;background:#e8ddf2}
-.tag{border:1px solid var(--line);border-radius:6px;background:var(--pink)}
-.identity-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px;padding-bottom:19px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.8125rem}
+.identity-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:.8125rem}
 .identity-row>span{min-width:0;overflow-wrap:anywhere}
 .account-actions{display:flex;align-items:center;gap:8px;flex:none}
 .account-actions .button{min-height:44px;padding:8px 12px;font-size:.75rem}
-.workspace-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start;gap:22px;margin-bottom:26px}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;margin-bottom:22px}
 .panel{min-width:0;margin-bottom:26px;padding:25px;border:1.25px solid var(--ink);border-radius:15px;background:var(--surface);box-shadow:3px 3px 0 var(--ink);scroll-margin-top:24px}
 .workspace-grid>.panel{margin-bottom:0}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:22px}
@@ -85,8 +86,6 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .subscription-footer p{margin:0}
 .subscription-reset{min-height:44px;padding:0;border:0;background:transparent;color:var(--danger);font-size:.6875rem;text-decoration:underline}
 .application{margin:0;padding:0}
-.trial-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-.trial-heading h3{font-size:1.5rem;font-weight:720;letter-spacing:-.035em}
 .metrics{display:grid;grid-template-columns:1.15fr 1fr;gap:0;margin:0 0 22px;overflow:hidden;border:1px solid var(--ink);border-radius:12px;background:var(--surface);box-shadow:2px 2px 0 var(--ink)}
 .metrics>div{min-width:0;padding:8px 18px}
 .metrics>div:first-child{grid-row:span 2;display:flex;flex-direction:column;justify-content:center;background:var(--accent)}
@@ -252,11 +251,40 @@ details p{margin:10px 0;font-size:.8125rem;line-height:1.85}
 
 @media(max-width:1120px){
 .content{padding:32px 29px 24px}
-.workspace-grid{grid-template-columns:minmax(0,1fr);gap:23px}
+.workspace-grid{gap:23px}
 .node-panel .panel-heading{margin-bottom:12px}
 .resource-chips{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:21px}
 .client-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+@media(min-width:960px){
+/* Continuous bands keep the primary workspace and resource bar on one axis. */
+.metrics,.subscription-metrics{grid-template-columns:1.2fr 1fr 1fr;min-height:126px}
+.metrics>div,.subscription-metrics>div{display:flex;flex-direction:column;justify-content:center;padding:16px 22px}
+.metrics>div:first-child,.subscription-metrics>div:first-child{grid-row:auto}
+.metrics>div:nth-child(3),.subscription-metrics>div:nth-child(3){border-top:0}
+.metrics strong,.subscription-metrics dd{font-size:2rem}
+.subscription-metrics .expiry-day{font-size:1.125rem}
+.subscription-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);column-gap:18px}
+.subscription-metrics,.subscription-state,.subscription-footer{grid-column:1/-1}
+.subscription-client{margin:0;align-self:center}
+.subscription-actions{align-self:center}
+.application{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,18rem);column-gap:24px}
+.application .metrics,.application .terms,.application .status-note{grid-column:1/-1}
+.application .consent{grid-column:1;grid-row:2;align-items:center;min-height:46px;margin-bottom:0}
+.application .consent input{margin-top:0}
+.application>#claim{grid-column:2;grid-row:2;align-self:center;margin-top:0}
+.application .terms{margin-top:8px;margin-bottom:0}
+}
+@media(min-width:760px){
+.node-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto;column-gap:24px}
+.node-panel .panel-heading{grid-column:1;grid-row:1;margin-bottom:6px}
+.node-panel .node-note{grid-column:1;grid-row:2;margin:0}
+.node-panel .resource-chips{grid-column:2;grid-row:1/3;align-self:center;margin-top:0}
+.node-panel .help{grid-column:3;grid-row:1/3;align-self:center;margin:0;padding:0;border:0}
+.node-panel .help[open]{grid-column:1/-1;grid-row:3;align-self:stretch;margin-top:16px;padding-top:10px;border-top:1px solid #c7d8ce}
+.node-panel:has(.help[open]) .resource-chips{grid-column:2/-1}
+}
+#claim-message:empty{display:none}
 @media(max-width:900px){
 .setup-path{grid-template-columns:1fr;margin-top:20px;margin-bottom:12px}
 .setup-path li,.setup-path li:first-child,.setup-path li:last-child{padding:12px 0;border:0;border-top:1px solid var(--line)}
@@ -265,7 +293,7 @@ details p{margin:10px 0;font-size:.8125rem;line-height:1.85}
 .setup-path p{grid-column:1;margin:0}
 .setup-path .step-action{grid-column:2;grid-row:1/3}
 }
-@media(max-width:760px){
+@media(max-width:959px){
 body{padding:16px 12px}
 .window-layout{display:block;min-height:0}
 .sidebar{padding:10px 20px;border-right:0;border-bottom:1px solid var(--line);background:var(--side)}
@@ -276,9 +304,9 @@ body{padding:16px 12px}
 .sidebar nav>a>span{display:none}
 .content{padding:27px 21px 18px}
 .page-heading h1{font-size:2.75rem}
-.page-heading{align-items:flex-start;gap:12px}
+.page-heading{gap:16px}
 .lead{font-size:.875rem}
-.identity-row{flex-wrap:wrap;gap:10px;padding-bottom:16px;margin-bottom:25px}
+.identity-row{flex-wrap:wrap;gap:10px}
 .identity-row>span{font-size:.75rem}
 .account-actions .button{padding:8px 10px;font-size:.75rem}
 .panel{padding:23px}
@@ -295,10 +323,12 @@ body{padding:12px 10px}
 .sidebar nav>a{font-size:.6875rem}
 .content{padding:25px 17px 17px}
 .page-heading{position:relative;display:block;margin-bottom:21px}
+.heading-tools{align-items:stretch;max-width:none;margin-top:20px}
 .page-heading h1{font-size:2.5rem}
 .page-kicker{max-width:50%;margin-bottom:16px;font-size:.5625rem}
 .lead{margin-top:10px;font-size:.8125rem}
 .quota{position:absolute;top:0;right:0;max-width:50%;font-size:.625rem;overflow-wrap:anywhere}
+.heading-tools .quota{margin-bottom:0}
 .identity-row{align-items:center}
 .account-actions{margin-left:auto}
 .account-actions .button{padding:8px 9px;font-size:.6875rem}
@@ -307,7 +337,6 @@ body{padding:12px 10px}
 .guide-body{padding:0 18px 20px}
 .panel-heading{margin-bottom:20px}
 .panel h2{font-size:1.125rem}
-.trial-heading h3{font-size:1.3125rem}
 .metrics>div,.subscription-metrics>div{padding:6px 13px}
 .metrics strong{font-size:1.5rem}
 .metrics>div:first-child strong,.subscription-metrics>div:first-child dd{font-size:3.5rem}
