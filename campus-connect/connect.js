@@ -6,7 +6,6 @@
   let qrLibraryPromise=null, importRenderGeneration=0, lifecycleEpoch=0;
   const pendingJSONRequests=new Set();
   let ownRenderKey=null;
-  let routingChoiceExplicit=false;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
   const clientDownloads={
     shadowrocket:'https://apps.apple.com/us/app/shadowrocket/id932747118',
@@ -74,8 +73,6 @@
     $('client-store').textContent=shadowrocket?'App Store · 付费应用':selected()==='stash'?'官方站点 · 付费应用':'GitHub · 免费开源';
     $('client-guide').textContent='添加校园配置，或保留原代理。';
     $('client-mode').textContent=shadowrocket ? '使用「配置」模式' : '使用「规则」模式';
-    if(!routingChoiceExplicit)$('routing-mode').value='full';
-    renderRouting();
     $('import-hint').textContent = shadowrocket
       ? '添加订阅后找到 MAXCOURSE Campus 节点。首页的全局路由选择“配置”，原上网节点仍作为默认。'
       : '从 URL 导入校园配置，启用规则模式，选择 MAXCOURSE Campus 节点。';
@@ -93,41 +90,6 @@
       else $('install-full').removeAttribute('href');
     }
   }
-  function renderRouting() {
-    const client=selected();
-    const icon=document.querySelector('input[name="client"][value="'+client+'"]').nextElementSibling.querySelector('img');
-    $('route-client-logo').src=icon.getAttribute('src');
-    $('route-client-name').textContent=clients[client];
-    const full=$('routing-mode').value==='full';
-    $('routing-map').dataset.mode=full?'full':'merge';
-    $('route-public-policy').textContent=full?'直接连接':'沿用原规则';
-    const link=document.querySelector('.route-guide');
-    link.setAttribute('aria-label','查看所选 '+clients[client]+' 的'+(full?'独立校园配置':'合并配置')+'方式');
-    if(!link.hasAttribute('aria-busy'))$('route-guide-status').textContent='查看配置方式';
-  }
-  $('routing-mode').addEventListener('change',()=>{routingChoiceExplicit=true;renderRouting();});
-  document.querySelector('.route-guide').addEventListener('click',async event=>{
-    event.preventDefault();
-    if(account.busy)return;
-    if(!state.token && subscriptionActive(account.data?.subscription) && account.data.subscription.synced){
-      const link=event.currentTarget, client=selected(), epoch=lifecycleEpoch;let verified=false;
-      link.setAttribute('aria-busy','true');$('route-guide-status').textContent='正在验证订阅…';
-      try{verified=await prepareOwn('guide');}
-      finally{
-        link.removeAttribute('aria-busy');
-        $('route-guide-status').textContent=epoch!==lifecycleEpoch || client!==selected() || verified ? '查看配置方式' : '验证未完成，请重试';
-      }
-      if(epoch!==lifecycleEpoch || client!==selected() || !verified || !state.token)return;
-    }
-    if(state.token){
-      $('result').hidden=false;
-      document.querySelector('.full-config').open=$('routing-mode').value==='full';
-      document.querySelector('.guide-detail').open=$('routing-mode').value==='merge';
-    }
-    if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
-    $('setup').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-    if(state.token)$('result-title').focus({preventScroll:true});
-  });
   async function validate(event) {
     event.preventDefault();
     if (state.busy) return;
@@ -274,20 +236,20 @@
     const own=account.data?.subscription,user=account.data?.user;
     if(account.busy || !user || !subscriptionActive(own) || !own.synced)return false;
     const client=selected(),epoch=lifecycleEpoch;
-    account.busy=true;accountError();renderAccount();
+    account.busy=true;account.importPending=mode==='qr'?'qr':'import';accountError();renderAccount();
     try {
       $('subscription').value=own.subscription_url;
       const verification=validate({quiet:true,preventDefault(){}}),generation=state.generation;
       const ok=await verification;
       const unchanged=epoch===lifecycleEpoch && client===selected() && account.data?.user?.id===user.id && account.data?.subscription?.subscription_url===own.subscription_url;
       if(ok && state.token && unchanged && account.data.available && subscriptionActive(account.data.subscription)){
-        if(mode!=='guide'){showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';}
+        showImport(state.token,mode,'own');importReturnTarget=mode==='qr'?'[data-subscription-action=qr]':'[data-subscription-action=import]';
         return true;
       }
       if(generation===state.generation)reset();
-      if(unchanged && account.data.available)accountError('订阅暂时无法验证，请刷新后再试。');
+      if(unchanged && account.data.available)accountError('订阅暂时无法验证，请重试。');
       return false;
-    } finally {account.busy=false;if(epoch===lifecycleEpoch)renderAccount();}
+    } finally {account.busy=false;account.importPending=null;if(epoch===lifecycleEpoch)renderAccount();}
   }
   $('manual-import').addEventListener('click',()=>{if(state.token){showImport(state.token,'native','manual');importReturnTarget='#manual-import';}});
   $('import-close').addEventListener('click',closeImport);
@@ -301,7 +263,7 @@
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
   });
   function openImportGuide(mode) {
-    renderClient();routingChoiceExplicit=true;$('routing-mode').value=mode;renderRouting();
+    renderClient();
     importReturnTarget=null;closeImport();
     if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
     if(state.token){
@@ -352,7 +314,7 @@
   $('copy-subscription').addEventListener('click', () => { if (state.token) copy(publicURL(formats().subscription)); });
   $('merge').addEventListener('click', merge);
   window.addEventListener('pagehide', () => { $('subscription').value = ''; reset(); });
-  const account = { data: null, busy: false, loginBusy: false, authMode: 'login', generation: 0, timer: null, resetTarget: null };
+  const account = { data: null, busy: false, importPending: null, loginBusy: false, authMode: 'login', generation: 0, timer: null, resetTarget: null };
   function accountError(message = '') { $('account-error').textContent = message; $('account-error').hidden = !message; }
   async function jsonRequest(url,options,message) {
     const controller=new AbortController();const epoch=lifecycleEpoch;pendingJSONRequests.add(controller);
@@ -415,7 +377,7 @@
       clientSelect.value=selected();clientSelect.addEventListener('change',()=>chooseClient(clientSelect.value,true));clientControl.append(clientLabel,clientSelect);
       const actions=document.createElement('div');actions.className='subscription-actions';
       for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription),'own')],['二维码','secondary',()=>prepareOwn('qr')]]) {
-        const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
+        const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=account.importPending===button.dataset.subscriptionAction?'正在验证…':label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
       }
       const footer=document.createElement('div');footer.className='subscription-footer';
       const note=document.createElement('p');note.textContent='同一公网出口合并计数。';
@@ -501,7 +463,7 @@
     catch(error){$('reset-error').textContent=error.message;$('reset-error').hidden=false;}
     finally{account.busy=false;$('reset-confirm').disabled=false;$('reset-cancel').disabled=false;if(epoch===lifecycleEpoch){renderAccount();refreshAccount();}}
   });
-  window.addEventListener('pagehide',()=>{lifecycleEpoch++;account.generation++;for(const request of pendingJSONRequests)request.abort();pendingJSONRequests.clear();clearTimeout(account.timer);$('login-password').value='';account.data=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
+  window.addEventListener('pagehide',()=>{lifecycleEpoch++;account.generation++;for(const request of pendingJSONRequests)request.abort();pendingJSONRequests.clear();clearTimeout(account.timer);$('login-password').value='';account.data=null;account.importPending=null;account.resetTarget=null;ownRenderKey=null;$('own-subscription').replaceChildren();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!account.busy)refreshAccount();});
   window.addEventListener('pageshow',event=>{if(event.persisted)refreshAccount();});
   const navLinks=[...document.querySelectorAll('.sidebar nav a[href^="#"]')];
