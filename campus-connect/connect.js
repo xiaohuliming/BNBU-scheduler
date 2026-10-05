@@ -391,7 +391,7 @@
     const node=data?.node;
     $('node-status').dataset.state=node?.status || 'unknown';
     $('node-status').textContent=node?.status==='ready' ? '服务端就绪' : node?.status==='unavailable' ? '暂不可用' : '状态未知';
-    $('node-note').textContent=node?.status==='ready' ? '客户端连接后，用下方入口验证。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
+    $('node-note').textContent=node?.status==='ready' ? '开启客户端后，打开校园资源。' : node?.status==='unavailable' ? '转发通道未就绪，请稍后再试。' : '请刷新后重试。';
   }
   async function refreshAccount() {
     const generation=++account.generation;
