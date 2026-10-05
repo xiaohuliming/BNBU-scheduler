@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f1ece7">
 <meta name="description" content="MAXCOURSE 校园连接：申请60天测试订阅，复制、扫码或导入客户端，校外连接已开放的校园资源。">
-<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/campus-connect/connect.css?v=compact-node-470d844ea919"><script defer src="/campus-connect/connect.js?v=compact-node-4ffcc5c51d92"></script>
+<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/campus-connect/connect.css?v=folded-guide-1c7d2c5bfc9b"><script defer src="/campus-connect/connect.js?v=folded-guide-6e86d2058c82"></script>
 </head>
 <body>
 <a class="skip-link" href="#subscription-panel">跳到我的订阅</a>
@@ -42,8 +42,9 @@
         <details class="terms help"><summary>访问说明</summary><p>服务端就绪不代表设备已连接。请先在客户端开启校园连接，再打开上方资源验证。</p><p>图书馆可能需要学校认证，AutoLab 可检查登录页是否打开。当前支持图书馆资源、AutoLab、PaperCut、iSpace 和校园打印，学校资源仍使用自己的登录方式。</p></details>
       </section>
       </div>
-      <section class="panel connector" id="setup" aria-labelledby="connect-title">
-        <div class="panel-heading"><h2 id="connect-title">使用指南</h2><span class="muted">选择你的客户端</span></div>
+      <details class="panel connector" id="setup" aria-labelledby="connect-title">
+        <summary class="guide-summary"><h2 id="connect-title">使用指南</h2><span class="guide-toggle"><span class="guide-show">展开</span><span class="guide-hide">收起</span><span class="guide-arrow" aria-hidden="true"></span></span></summary>
+        <div class="guide-body">
         <fieldset class="client-choice"><legend>客户端</legend><div class="client-options"><label><input type="radio" name="client" value="shadowrocket" checked><span><span class="client-name"><img src="/campus-connect/assets/clients/shadowrocket.jpg" width="22" height="22" alt="" loading="lazy"><b>Shadowrocket</b></span><small>iOS / macOS</small></span></label><label><input type="radio" name="client" value="clash"><span><span class="client-name"><img src="/campus-connect/assets/clients/clash-verge-rev.png" width="22" height="22" alt="" loading="lazy"><b>Clash Verge Rev</b></span><small>Windows / macOS / Linux</small></span></label><label><input type="radio" name="client" value="flclash"><span><span class="client-name"><img src="/campus-connect/assets/clients/flclash.png" width="22" height="22" alt="" loading="lazy"><b>FlClash</b></span><small>Android / 桌面</small></span></label><label><input type="radio" name="client" value="stash"><span><span class="client-name"><img src="/campus-connect/assets/clients/stash.jpg" width="22" height="22" alt="" loading="lazy"><b>Stash</b></span><small>iOS / macOS</small></span></label></div></fieldset>
         <ol class="setup-path" aria-label="校园连接接入步骤">
           <li><span class="step-number" aria-hidden="true">01</span><div><h3>安装客户端</h3><p id="client-store">App Store · 付费应用</p><a id="client-download" class="step-action" href="https://apps.apple.com/us/app/shadowrocket/id932747118" target="_blank" rel="noopener noreferrer" aria-label="前往 Shadowrocket 官方下载页面">官方下载 <span aria-hidden="true">↗</span></a></div></li>
@@ -59,7 +60,8 @@
           </details>
         </div>
         <details class="terms help"><summary>常见问题</summary><p><strong>为什么连上后有些网站仍打不开？</strong><br>当前订阅仅提供已开放校园资源的访问。完整校园配置让普通网站直连，MAXCOURSE 主站也保持直连。需要继续使用原代理时，请选择“保留原上网配置”。</p><p><strong>提示在线数量已满怎么办？</strong><br>先断开另一台设备的校园连接再试。同一公网出口计为一个会话。到期、撤销或重置后旧订阅会失效。</p></details>
-      </section>
+        </div>
+      </details>
       <footer class="page-footer"><a href="/privacy/">隐私与权益</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">MAXCOURSE 开源项目 ↗</a></footer>
     </div>
   </div>

@@ -263,6 +263,7 @@
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
   });
   function openImportGuide(mode) {
+    $('setup').open=true;
     renderClient();
     importReturnTarget=null;closeImport();
     if(location.hash!=='#setup')history.pushState(null,'','#setup');updateNavigation();
@@ -469,10 +470,11 @@
   const navLinks=[...document.querySelectorAll('.sidebar nav a[href^="#"]')];
   function updateNavigation() {
     const hash=navLinks.some(link=>link.hash===location.hash)?location.hash:'#subscription-panel';
+    if(hash==='#setup')$('setup').open=true;
     for(const link of navLinks){const active=link.hash===hash;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}
   }
   window.addEventListener('hashchange',updateNavigation);
-  for(const link of navLinks)link.addEventListener('click',()=>{for(const item of navLinks){item.classList.toggle('active',item===link);if(item===link)item.setAttribute('aria-current','location');else item.removeAttribute('aria-current');}});
+  for(const link of navLinks)link.addEventListener('click',()=>{if(link.hash==='#setup')$('setup').open=true;for(const item of navLinks){item.classList.toggle('active',item===link);if(item===link)item.setAttribute('aria-current','location');else item.removeAttribute('aria-current');}});
   document.querySelector('input[name="client"][value="'+preferredClient()+'"]').checked=true;
   updateNavigation();renderClient();refreshAccount();
 })();

@@ -8,8 +8,13 @@ async page=>{
  await page.route('**/api/campus-connect/status',r=>{reads++;return r.fulfill({status:failed?503:200,contentType:'application/json',body:JSON.stringify(failed?{available:false,user:{id:81,display_name:'quality-fixture'},error:'连接暂时不可用，请重试。'}:response())});});
  await page.route('**/campus-connect/subscriptions/**',r=>r.fulfill({status:200,headers:{'X-Campus-Node-Name':'MAXCOURSE Campus'},body:''}));
  await page.goto(origin+'/campus-connect/#node-panel');await page.locator('.subscription-card').waitFor();
+ assert(!await page.locator('#setup').evaluate(node=>node.open),'Guide is expanded before it is requested');
+ await page.locator('#setup > summary').focus();await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>document.getElementById('setup').open);
+ await page.keyboard.press('Space');await page.waitForFunction(()=>!document.getElementById('setup').open);
  assert(await page.locator('.sidebar a[href="#node-panel"]').getAttribute('aria-current')==='location','Deep link did not update navigation');
  await page.locator('.sidebar a[href="#setup"]').click();assert(await page.locator('.sidebar a[href="#setup"]').getAttribute('aria-current')==='location','Clicked navigation did not update');
+ assert(await page.locator('#setup').evaluate(node=>node.open),'Guide navigation leads to hidden content');
  const before=reads;
  await page.evaluate(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
  await page.locator('.subscription-card').waitFor();assert(reads>before,'Restored page did not refresh');
@@ -30,7 +35,9 @@ async page=>{
  await page.setViewportSize({width:1440,height:1000});await page.addScriptTag({path:'.codex/quality-deps/axe/package/axe.min.js'});
  const report=await page.evaluate(async()=>{const r=await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}});return r.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)}));});
  await page.evaluate(()=>document.documentElement.style.fontSize='200%');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Text scaling overflow');await page.evaluate(()=>document.documentElement.style.fontSize='');
+ await page.reload();await page.locator('.subscription-card').waitFor();
+ assert(await page.locator('#setup').evaluate(node=>node.open),'Guide deep link does not expand on reload');
  assert(!errors.length,errors.join('\n'));
  assert(!report.length,JSON.stringify(report));
- return{bfcacheRestored:true,accurateOutageIdentity:true,privateOutageCleanup:true,clipboardFallback:true,navigation:true,fiveWidths:true,reducedMotion:true,axeViolations:report};
+ return{bfcacheRestored:true,accurateOutageIdentity:true,privateOutageCleanup:true,clipboardFallback:true,navigation:true,foldedGuide:true,keyboardToggle:true,guideDeepLink:true,fiveWidths:true,reducedMotion:true,axeViolations:report};
 }

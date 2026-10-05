@@ -21,6 +21,7 @@ async page => {
   });
   await page.route('**/api/campus-connect/status',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({available:true,capacity:10,used:1,remaining:9,test_days:60,device_limit:2,user:null,csrf_token:'synthetic-csrf',subscription:null})}));
   await page.goto(origin + '/campus-connect/');
+  await page.locator('.sidebar a[href="#setup"]').click();
   await page.locator('.existing').evaluate(node=>{node.open=true;});
   assert(calls.length === 0, 'Page requested a private subscription before user action');
   assert(await page.locator('#result').isHidden(), 'Connection result fabricated before validation');

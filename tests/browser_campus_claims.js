@@ -31,6 +31,7 @@ async page => {
  assert((await page.locator('.resource-chips a').allTextContents()).join(' ').includes('AutoLab'),'Campus-only test entry missing');
  assert(!(await page.locator('.resource-chips').innerText()).includes('iSpace'),'Public iSpace used as campus access proof');
  assert(!await page.locator('#consent').isChecked(),'Consent preselected');assert(!await page.locator('#claim').isDisabled(),'Guest cannot reach login');assert(await page.locator('#login-dialog').isHidden(),'Password requested on entry');
+ await page.locator('.sidebar a[href="#setup"]').click();
  await page.locator('#setup-start').click();await page.locator('#login-dialog').waitFor();
  await page.locator('#login-username').fill('synthetic-school');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-submit').click();
  await page.locator('#login-dialog').waitFor({state:'hidden'});assert(await page.locator('#login-password').inputValue()==='','Password retained');

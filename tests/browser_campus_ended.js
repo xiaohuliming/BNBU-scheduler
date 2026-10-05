@@ -21,6 +21,7 @@ async page => {
   assert(await page.locator('[data-import-client][href]').count()===0, 'Expiry retains native import links');
   assert(await page.locator('#result').isHidden(), 'Expiry leaves a usable configuration guide');
   const before=heads;
+  await page.locator('.sidebar a[href="#setup"]').click();
   await page.locator('#setup-start').click();
   assert(heads===before, 'Known expired subscription is verified again');
   assert(await page.locator('#subscription-title').evaluate(node=>node===document.activeElement), 'Ended setup entry does not lead to recovery');

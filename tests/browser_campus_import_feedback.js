@@ -35,6 +35,7 @@ async page => {
   await page.goto(origin+'/campus-connect/');await page.locator('.subscription-card').waitFor();
   started=nextHead();
   await page.locator('[data-subscription-action=import]').click();await started;
+  await page.locator('#setup > summary').click();
   await page.locator('input[name=client][value=clash]').check();release();
   await page.locator('[data-subscription-action=import]').filter({hasText:'一键导入'}).waitFor();
   assert(await page.locator('#import-dialog').isHidden(), 'Cancelled verification opened an obsolete import');
