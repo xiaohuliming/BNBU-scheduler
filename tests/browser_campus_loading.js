@@ -10,7 +10,7 @@ async page=>{
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr').filter({hasText:'请复制下方地址'}).waitFor();assert(await page.locator('#import-url').inputValue()===own.subscription_url,'QR failure removed usable link');
  await page.locator('#import-close').click();failQR=false;
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();assert(qrRequests===2,'Failed QR library could not retry');
- await page.locator('#qr-format').selectOption('yaml');await page.locator('#import-close').click();await page.waitForTimeout(300);assert(!await page.locator('#subscription-qr svg').count(),'Closed QR resurrected from async render');
+ await page.locator('#qr-client [data-client-choice=clash]').click();await page.locator('#import-close').click();await page.waitForTimeout(300);assert(!await page.locator('#subscription-qr svg').count(),'Closed QR resurrected from async render');
  await page.locator('#login-open').click();await page.locator('#login-username').fill('synthetic-local');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-submit').click();
  assert(await page.locator('#login-submit').isDisabled(),'Pending login allowed duplicate request');
  await page.locator('#login-error').filter({hasText:'超时'}).waitFor({timeout:18000});assert(!await page.locator('#login-submit').isDisabled(),'Timed-out login stayed locked');assert(await page.locator('#login-password').inputValue()==='','Timeout retained password');

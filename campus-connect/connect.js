@@ -7,6 +7,7 @@
   const pendingJSONRequests=new Set();
   let ownRenderKey=null;
   const clients={shadowrocket:'Shadowrocket',clash:'Clash Verge Rev',flclash:'FlClash',stash:'Stash'};
+  const clientLogos={shadowrocket:'shadowrocket.jpg',clash:'clash-verge-rev.png',flclash:'flclash.png',stash:'stash.jpg'};
   const clientDownloads={
     shadowrocket:'https://apps.apple.com/us/app/shadowrocket/id932747118',
     clash:'https://github.com/clash-verge-rev/clash-verge-rev/releases',
@@ -23,6 +24,27 @@
     return 'shadowrocket';
   }
   const selected = () => document.querySelector('input[name="client"]:checked').value;
+  function syncClientPickers() {
+    for(const button of document.querySelectorAll('[data-client-choice]'))button.setAttribute('aria-pressed',String(button.dataset.clientChoice===selected()));
+  }
+  function createClientPicker(id,disabled=false) {
+    const fieldset=document.createElement('fieldset');fieldset.id=id;fieldset.className='client-switch'+(id==='own-client'?' subscription-client':'');
+    const legend=document.createElement('legend');legend.textContent='客户端';
+    const options=document.createElement('div');options.className='client-switch-options';
+    for(const [value,label] of Object.entries(clients)) {
+      const button=document.createElement('button');button.type='button';button.className='client-switch-button';button.dataset.clientChoice=value;button.disabled=disabled;button.setAttribute('aria-pressed',String(value===selected()));
+      const logo=document.createElement('img');logo.src='/campus-connect/assets/clients/'+clientLogos[value];logo.width=24;logo.height=24;logo.alt='';logo.loading='lazy';logo.decoding='async';
+      const name=document.createElement('span');name.textContent=label;button.append(logo,name);
+      button.addEventListener('click',()=>{chooseClient(value,true);if(id==='import-client')renderImport('native');else if(id==='qr-client')renderImport('qr');});options.append(button);
+    }
+    options.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      const buttons=[...options.querySelectorAll('button:not(:disabled)')],index=buttons.indexOf(document.activeElement);if(index<0)return;
+      const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+      event.preventDefault();buttons[next].focus();buttons[next].click();
+    });
+    fieldset.append(legend,options);return fieldset;
+  }
   const subscriptionActive = own => Boolean(own?.claimed && own.active && own.subscription_url && own.expires_at*1000>Date.now());
   const formats = () => selected() === 'shadowrocket' ? { subscription: 'txt', complete: 'conf' } : { subscription: 'yaml', complete: 'yaml' };
   const path = suffix => subscriptionPath(state.token,suffix);
@@ -67,7 +89,8 @@
   }
   function renderClient() {
     const shadowrocket = selected() === 'shadowrocket';
-    if($('own-client'))$('own-client').value=selected();
+    syncClientPickers();
+    $('qr-format').value=formats().subscription;
     $('client-download').href=clientDownloads[selected()];
     $('client-download').setAttribute('aria-label','前往 '+clients[selected()]+' 官方下载页面');
     $('client-store').textContent=shadowrocket?'App Store · 付费应用':selected()==='stash'?'官方站点 · 付费应用':'GitHub · 免费开源';
@@ -208,7 +231,7 @@
     $('import-guide-link').dataset.mode=nodeOnly?'merge':'full';
     $('import-title').textContent=copying?'复制订阅':qr?'扫码订阅':'添加校园配置';
     $('import-url').value=subscriptionFor(importToken,suffix);
-    $('import-client').value=selected();
+    syncClientPickers();
     for(const link of document.querySelectorAll('[data-import-client]')){
       const current=link.dataset.importClient===selected();link.hidden=!current;
       if(current)link.href=nativeURL(selected(),importToken,true);
@@ -256,8 +279,8 @@
   $('import-dialog').addEventListener('close',closeImport);
   $('show-native').addEventListener('click',()=>renderImport('native'));
   $('show-qr').addEventListener('click',()=>renderImport('qr'));
-  $('import-client').addEventListener('change',()=>{chooseClient($('import-client').value,true);renderImport('native');});
-  $('qr-format').addEventListener('change',()=>renderImport('qr'));
+  $('import-client').replaceWith(createClientPicker('import-client'));
+  $('qr-client').replaceWith(createClientPicker('qr-client'));
   $('copy-import').addEventListener('click',async()=>{
     try {await navigator.clipboard.writeText($('import-url').value);$('import-feedback').textContent='订阅地址已复制，可粘贴到客户端。';}
     catch(_) {$('import-url').focus();$('import-url').select();$('import-feedback').textContent='浏览器未允许复制，请长按或使用复制快捷键。';}
@@ -355,7 +378,7 @@
     $('application').hidden=Boolean(own?.claimed);
     $('subscription-badge').textContent=active ? (own.synced ? '订阅有效' : '配置准备中') : own?.claimed ? '测试已结束' : '60 天测试';
     const renderKey=JSON.stringify([user?.id,own,account.busy,active?Math.ceil((own.expires_at*1000-Date.now())/86400000):null]);
-    const restoreClientFocus=document.activeElement?.id==='own-client';
+    const restoreClientFocus=document.activeElement?.closest('#own-client')?document.activeElement.dataset.clientChoice:null;
     const changed=renderKey!==ownRenderKey;ownRenderKey=renderKey;
     if(changed)$('own-subscription').replaceChildren();
     $('own-subscription').hidden=!active;
@@ -371,11 +394,7 @@
       for(const [label,value,unit,extra] of [['剩余有效期',String(days),'天',''],['在线出口',Number.isInteger(own.online_sessions)?String(own.online_sessions):'未知','/ 2',''],['到期日期',new Date(own.expires_at*1000).toLocaleDateString('en-CA',{timeZone:'Asia/Singapore'}),'','expiry-day']]) {
         const cell=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd'),small=document.createElement('small');dt.textContent=label;dd.textContent=value;dd.className=extra;small.textContent=unit?' '+unit:'';if(unit)dd.append(small);cell.append(dt,dd);metrics.append(cell);
       }
-      const clientControl=document.createElement('div');clientControl.className='subscription-client';
-      const clientLabel=document.createElement('label');clientLabel.htmlFor='own-client';clientLabel.textContent='客户端';
-      const clientSelect=document.createElement('select');clientSelect.id='own-client';clientSelect.disabled=account.busy || !own.synced || !data?.available;
-      for(const [value,label] of Object.entries(clients)){const option=document.createElement('option');option.value=value;option.textContent=label;clientSelect.append(option);}
-      clientSelect.value=selected();clientSelect.addEventListener('change',()=>chooseClient(clientSelect.value,true));clientControl.append(clientLabel,clientSelect);
+      const clientControl=createClientPicker('own-client',account.busy || !own.synced || !data?.available);
       const actions=document.createElement('div');actions.className='subscription-actions';
       for(const [label,className,handler] of [['一键导入','primary',()=>prepareOwn('native')],['复制订阅','secondary',()=>copy(own.subscription_url.replace(/\.(txt|yaml|conf)$/,'.'+formats().subscription),'own')],['二维码','secondary',()=>prepareOwn('qr')]]) {
         const button=document.createElement('button');button.dataset.subscriptionAction=label==='一键导入'?'import':label==='复制订阅'?'copy':'qr';button.className='button '+className;button.type='button';button.textContent=account.importPending===button.dataset.subscriptionAction?'正在验证…':label;button.disabled=account.busy || !own.synced || !data?.available;button.addEventListener('click',handler);actions.append(button);
@@ -384,7 +403,7 @@
       const note=document.createElement('p');note.textContent='同一公网出口合并计数。';
       const resetButton=document.createElement('button');resetButton.className='subscription-reset';resetButton.type='button';resetButton.textContent='重置订阅';resetButton.disabled=account.busy || !data?.available;resetButton.addEventListener('click',()=>{account.resetTarget={user:user.id};$('reset-error').hidden=true;$('reset-dialog').showModal();});
       footer.append(note,resetButton);card.append(title,status,metrics,clientControl,actions,footer);$('own-subscription').append(card);
-      if(restoreClientFocus && !clientSelect.disabled)clientSelect.focus({preventScroll:true});
+      if(restoreClientFocus){const button=clientControl.querySelector('[data-client-choice="'+restoreClientFocus+'"]');if(button&&!button.disabled)button.focus({preventScroll:true});}
       $('claim-message').textContent=own.synced ? '已领取，同一订阅最多两个公网出口同时在线。' : '申请已保存，配置生效后即可导入。';
     } else if(!active && data?.available && data.remaining===0) $('claim-message').textContent='测试名额已满，已有订阅可继续使用。';
     else if(!active) $('claim-message').textContent='每个账号领取一次。';
