@@ -62,7 +62,6 @@ async page => {
  await page.locator('#import-merge-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
  assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Keep original proxy does not lead to merge steps');
  assert(!await page.locator('.full-config').evaluate(n=>n.open),'Merge path opens an independent profile');
- assert(await page.locator('#routing-mode').inputValue()==='merge','Routing explanation differs from the chosen guide');
  assert((await page.locator('#merge-hint').innerText()).includes('Host'),'Shadowrocket next step lost host rules');
  await page.locator('.full-config').evaluate(n=>{n.open=true;});
  assert(await page.locator('#install-full').getAttribute('href')==='shadowrocket://config/add/'+url(tokenA,'conf'),'Full Shadowrocket profile not offered through supported URL scheme');

@@ -111,42 +111,12 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .node-panel{background:#eef5f0}
 .node-panel .panel-heading{margin-bottom:12px}
 .node-note{margin:0 0 14px;color:var(--muted);font-size:.75rem;line-height:1.65}
-.routing-map{container-type:inline-size;margin-bottom:14px}
-.routing-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:17px}
-.routing-heading label{flex:none;color:var(--muted);font-size:.6875rem}
-.routing-heading select{min-width:0;max-width:100%;min-height:44px;padding:8px 9px;border:1px solid #b8cdc2;border-radius:7px;background:#f9fcf8;font-size:.6875rem}
-.route-source{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:fit-content;max-width:95%;min-height:54px;margin:0 auto 24px;padding:10px 14px;border:1px solid var(--ink);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;box-shadow:2px 2px 0 var(--ink)}
-.route-source::after{content:'';position:absolute;bottom:-17px;left:50%;height:16px;border-left:1px solid var(--ink)}
-.route-source img{display:block;flex:none;border-radius:6px;object-fit:contain}
-.route-source>span:not(.route-source-arrow){min-width:0;line-height:1.5}
-.route-source small{display:block;color:var(--muted);font-size:.5625rem}
-.route-source b{display:block;font-size:.75rem;font-weight:650;overflow-wrap:anywhere}
-.route-paths{position:relative;display:grid;grid-template-columns:1.15fr 1fr;gap:10px;padding-top:15px}
-.route-paths::before{content:'';position:absolute;top:-8px;left:25%;right:25%;height:23px;border:1px solid var(--ink);border-bottom:0;border-radius:8px 8px 0 0}
-.route-paths>div{position:relative;display:flex;align-items:center;gap:8px;min-width:0;min-height:83px;padding:12px 9px;border:1px solid #afc4bb;border-radius:10px;background:var(--mint)}
-.route-paths>div>div{min-width:0}
-.route-paths .route-public{background:var(--lemon);border-color:#c9bc87}
-.route-paths h3,.route-paths .node-row h3{font-size:.75rem;line-height:1.5;overflow-wrap:anywhere}
-.route-paths p,.route-paths .node-row p{margin:4px 0 0;color:var(--muted);font-size:.625rem;line-height:1.6;overflow-wrap:anywhere}
-.route-paths .node-logo{width:33px;height:33px;padding:3px;border-radius:8px}
-.route-symbol{display:grid;place-items:center;flex:none;width:33px;height:33px;border:1px solid #cfbf8e;border-radius:8px;background:var(--surface);font-size:20px}
-.route-source-arrow{display:grid;place-items:center;flex:none;width:22px;height:22px;border-radius:5px;font-size:13px;transition:background .15s,color .15s}
-.route-source:hover>.route-source-arrow{background:var(--ink);color:var(--surface)}
-@container(max-width:13rem){
-.route-paths{grid-template-columns:1fr;grid-auto-rows:1fr;gap:12px;padding-left:14px}
-.route-paths::before{top:-8px;bottom:calc(25% - 6.75px);left:0;right:50%;height:auto;border-right:0;border-radius:8px 0 0 0}
-.route-paths>div::before{content:'';position:absolute;top:50%;left:-15px;width:14px;border-top:1px solid var(--ink)}
-}
 .node-state{padding:5px 9px;border-radius:999px;background:#e7e2ea;font-size:.6875rem}
 .node-state::before{content:'';width:5px;height:5px;flex:none;border-radius:50%;background:currentColor;opacity:.7}
 .node-state[data-state=ready]{background:#d0e5db;color:#365549}
 .node-state[data-state=unavailable]{background:#f1d6dc;color:#813747}
-.node-row{display:flex;align-items:center;gap:13px}
-.node-row>div{flex:1;min-width:0}
-.node-row>.tag{display:none}
-.node-row h3{font-size:1rem;letter-spacing:-.025em;overflow-wrap:anywhere}
-.node-row p{margin:5px 0 0;color:var(--muted);font-size:.75rem;line-height:1.65}
-.node-logo{display:block;flex:none;width:52px;height:52px;padding:5px;border:1px solid #d3ddd6;border-radius:12px;object-fit:contain;background:var(--surface)}
+.node-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.node-logo{display:block;flex:none;width:30px;height:30px;padding:3px;border:1px solid #d3ddd6;border-radius:8px;object-fit:contain;background:var(--surface)}
 .resource-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:19px}
 .resource-chips a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:10px 13px;border:1px solid #bccdc3;border-radius:8px;background:#fbfdf9;text-decoration:none;font-size:.8125rem;transition:background .15s,border-color .15s}
 .resource-chips a>span:last-child{display:grid;place-items:center;width:24px;height:24px;border-radius:4px;transition:background .15s,color .15s}
@@ -274,11 +244,6 @@ details p{margin:10px 0;font-size:.8125rem;line-height:1.85}
 .workspace-grid{grid-template-columns:minmax(0,1fr);gap:23px}
 .node-panel .panel-heading{margin-bottom:12px}
 .resource-chips{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:21px}
-.route-source{min-width:210px}
-.route-paths>div{justify-content:center;gap:13px;padding:16px}
-.route-paths h3,.route-paths .node-row h3{font-size:.875rem}
-.route-paths .node-logo,.route-symbol{width:40px;height:40px}
-.route-paths p,.route-paths .node-row p{font-size:.6875rem}
 .client-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:900px){
@@ -306,7 +271,6 @@ body{padding:16px 12px}
 .identity-row>span{font-size:.75rem}
 .account-actions .button{padding:8px 10px;font-size:.75rem}
 .panel{padding:23px}
-.node-row h3{font-size:1.0625rem}
 .page-footer{font-size:.6875rem}
 }
 @media(max-width:480px){
@@ -342,15 +306,7 @@ body{padding:12px 10px}
 .subscription-actions>.primary{grid-column:1/-1}
 .subscription-actions .button{font-size:.8125rem}
 .subscription-footer{margin-top:21px}
-.node-logo{width:48px;height:48px}
-.node-row h3{font-size:.9375rem}
-.node-row p{font-size:.6875rem}
 .node-state{font-size:.625rem}
-.route-source{min-width:0;padding:10px 15px}
-.route-paths>div{justify-content:flex-start;gap:8px;padding:12px 9px}
-.route-paths h3,.route-paths .node-row h3{font-size:.75rem}
-.route-paths .node-logo,.route-symbol{width:30px;height:30px}
-.route-paths p,.route-paths .node-row p{font-size:.625rem}
 .resource-chips{gap:8px}
 .resource-chips a{min-height:46px;padding:10px;font-size:.75rem}
 .client-options{gap:10px}

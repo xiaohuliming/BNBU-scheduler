@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f1ece7">
 <meta name="description" content="MAXCOURSE 校园连接：申请60天测试订阅，复制、扫码或导入客户端，校外连接已开放的校园资源。">
-<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/campus-connect/connect.css?v=desk-import-324010d42bfc"><script defer src="/campus-connect/connect.js?v=desk-profile-dfef4276c5d0"></script>
+<title>校园连接 · MAXCOURSE</title><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/campus-connect/connect.css?v=compact-node-470d844ea919"><script defer src="/campus-connect/connect.js?v=compact-node-4ffcc5c51d92"></script>
 </head>
 <body>
 <a class="skip-link" href="#subscription-panel">跳到我的订阅</a>
@@ -36,18 +36,10 @@
         <p id="account-expiry" class="small-note">领取后显示有效期</p>
       </section>
       <section class="panel node-panel" id="node-panel" aria-labelledby="node-title">
-        <div class="panel-heading"><h2 id="node-title">节点状态</h2><span id="node-status" class="node-state">正在检测</span></div>
+        <div class="panel-heading"><div class="node-heading"><img class="node-logo" src="/favicon.png" width="30" height="30" alt="" loading="lazy" decoding="async"><h2 id="node-title">节点状态</h2></div><span id="node-status" class="node-state">正在检测</span></div>
         <p id="node-note" class="node-note">正在检测转发通道。</p>
-        <div class="routing-map" id="routing-map" role="group" aria-label="配置分流示意，非连接检测">
-          <div class="routing-heading"><label for="routing-mode">分流示意</label><select id="routing-mode"><option value="merge">并入现有配置</option><option value="full">独立校园配置</option></select></div>
-          <a class="route-source route-guide" href="#setup"><img id="route-client-logo" loading="lazy" fetchpriority="low" src="/campus-connect/assets/clients/shadowrocket.jpg" width="26" height="26" alt="" decoding="async"><span><small id="route-guide-status" role="status">查看配置方式</small><b id="route-client-name">Shadowrocket</b></span><span class="route-source-arrow" aria-hidden="true">→</span></a>
-          <div class="route-paths">
-            <div class="node-row route-campus"><img class="node-logo" loading="lazy" fetchpriority="low" src="/favicon.png" width="48" height="48" alt="" decoding="async"><div><h3>MAXCOURSE Campus</h3><p>校园资源</p></div></div>
-            <div class="route-public"><span class="route-symbol" aria-hidden="true">↗</span><div><h3>普通网站</h3><p id="route-public-policy">沿用原规则</p></div></div>
-          </div>
-        </div>
         <div class="resource-chips"><a href="https://lrcs.bnbu.edu.cn/if/vpn_enter.aspx?target=ctv" target="_blank" rel="noopener noreferrer"><span>图书馆资源</span><span aria-hidden="true">↗</span></a><a href="http://172.31.12.111/" target="_blank" rel="noopener noreferrer"><span>AutoLab</span><span aria-hidden="true">↗</span></a></div>
-        <details class="terms help"><summary>分流与访问范围</summary><p>示意图说明配置中的规则，不检测客户端连接，也不修改现有配置。完整校园配置让普通网站直连，合并方式保留原有上网节点与最终规则。MAXCOURSE 主站在两种方式中均保持直连。</p><p>图书馆入口校内访问会跳转到资源认证页，出现认证提示不代表节点断开。AutoLab 可直接检查登录页是否能打开。</p><p>已开放图书馆资源入口与影音资源、AutoLab、PaperCut、iSpace 和学校打印队列的 TCP 访问。学校资源仍使用自己的登录方式。</p></details>
+        <details class="terms help"><summary>访问说明</summary><p>服务端就绪不代表设备已连接。请先在客户端开启校园连接，再打开上方资源验证。</p><p>图书馆可能需要学校认证，AutoLab 可检查登录页是否打开。当前支持图书馆资源、AutoLab、PaperCut、iSpace 和校园打印，学校资源仍使用自己的登录方式。</p></details>
       </section>
       </div>
       <section class="panel connector" id="setup" aria-labelledby="connect-title">
@@ -66,7 +58,7 @@
           <div class="import-step"><span>3</span><div><h4>连接并验证</h4><p>全局路由使用“配置”或“规则”模式，再打开图书馆或 AutoLab 验证。导入成功不代表已经连接。</p></div></div>
           </details>
         </div>
-        <details class="terms help"><summary>常见问题</summary><p><strong>为什么连上后有些网站仍打不开？</strong><br>当前订阅仅提供已开放校园资源的访问。完整校园配置会让其他流量直连，需要继续使用原有上网节点时，请合并校园片段。</p><p><strong>提示在线数量已满怎么办？</strong><br>先断开另一台设备的校园连接再试。同一公网出口计为一个会话。到期、撤销或重置后旧订阅会失效。</p></details>
+        <details class="terms help"><summary>常见问题</summary><p><strong>为什么连上后有些网站仍打不开？</strong><br>当前订阅仅提供已开放校园资源的访问。完整校园配置让普通网站直连，MAXCOURSE 主站也保持直连。需要继续使用原代理时，请选择“保留原上网配置”。</p><p><strong>提示在线数量已满怎么办？</strong><br>先断开另一台设备的校园连接再试。同一公网出口计为一个会话。到期、撤销或重置后旧订阅会失效。</p></details>
       </section>
       <footer class="page-footer"><a href="/privacy/">隐私与权益</a><a href="https://github.com/xiaohuliming/BNBU-scheduler" target="_blank" rel="noopener noreferrer">MAXCOURSE 开源项目 ↗</a></footer>
     </div>

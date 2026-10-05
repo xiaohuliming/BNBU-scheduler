@@ -13,19 +13,8 @@ async page => {
   await page.locator('.subscription-card').waitFor();
   assert(await page.locator('.subscription-card #own-client').count()===1, 'Copying a subscription depends on an off-screen client selection');
   await page.locator('#own-client').selectOption('clash');
-  assert(await page.locator('.route-source.route-guide').count()===1, 'Routing diagram uses an obsolete standalone configuration action');
-  assert((await page.locator('#route-client-logo').getAttribute('src')).endsWith('clash-verge-rev.png'), 'Routing explanation shows the previous client logo');
-  assert(await page.locator('#route-client-name').innerText()==='Clash Verge Rev', 'Routing explanation does not follow selected client');
-  assert(await page.locator('#routing-mode').inputValue()==='full', 'Clash explanation defaults to a node-only subscription');
-  assert((await page.locator('#route-public-policy').innerText()).includes('直接'), 'Full configuration does not explain direct public traffic');
-  await page.locator('.route-guide').click();
-  await page.locator('#result').waitFor();
-  assert(await page.locator('#result').isVisible() && await page.locator('.full-config').evaluate(node=>node.open), 'Full configuration explanation did not lead to usable setup');
-  assert(await page.locator('#import-dialog').isHidden(), 'Reading configuration explanation unexpectedly launched import');
-  await page.locator('#routing-mode').selectOption('merge');
-  await page.locator('.route-guide').click();
-  assert(await page.locator('.guide-detail').evaluate(node=>node.open), 'Merged routing explanation did not lead to merge steps');
-  assert((await page.locator('#route-public-policy').innerText()).includes('原规则'), 'Merge explanation promises to replace public routing');
+  assert(await page.locator('#node-panel select').count()===0, 'Status card still asks for configuration choices');
+  assert(await page.locator('#node-panel .resource-chips a').count()===2, 'Campus verification entries missing');
   assert(await page.locator('#client-download').getAttribute('href')==='https://github.com/clash-verge-rev/clash-verge-rev/releases', 'Selected client has no matching official download');
   assert((await page.locator('#client-mode').innerText()).includes('规则'), 'Clash setup suggests the wrong routing mode');
   await page.locator('#setup-start').click();
@@ -58,7 +47,6 @@ async page => {
   assert(await page.locator('#qr-format').inputValue()==='yaml', 'QR default differs from selected client');
   await page.locator('#import-close').click();
   await page.locator('#own-client').selectOption('shadowrocket');
-  assert(await page.locator('#routing-mode').inputValue()==='merge', 'Client switching discarded explicit routing comparison');
   assert((await page.locator('#client-download').getAttribute('href')).includes('id932747118'), 'Shadowrocket download retained the previous client');
   assert((await page.locator('#client-mode').innerText()).includes('配置'), 'Shadowrocket setup lost configuration routing mode');
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();
@@ -70,5 +58,5 @@ async page => {
   await page.getByRole('button',{name:'复制订阅',exact:true}).click();
   assert((await page.evaluate(()=>window.__clientChoiceCopied)).endsWith('.yaml'), 'Restored client copies an incompatible subscription');
   assert(await page.evaluate(()=>localStorage.getItem('maxcourse-campus-client'))==='flclash', 'Client preference was not saved');
-  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true,officialDownload:true,setupImport:true,setupFocusRestored:true,routingModes:true,clientRemembered:true};
+  return {selectionBesideActions:true,copyFormat:true,guideSynced:true,refreshPreserved:true,qrFormat:true,officialDownload:true,setupImport:true,setupFocusRestored:true,compactNode:true,clientRemembered:true};
 }
