@@ -52,13 +52,13 @@ async page => {
  assert(!await page.locator('#import-switch').evaluate(node=>node.open),'Alternate clients clutter the main import step');
  await page.locator('#import-switch summary').click();
  for(const [client,scheme] of [['clash','clash-verge:'],['flclash','flclash:'],['stash','stash:']]){
-  await page.locator('#import-client').selectOption(client);
+  await page.locator('#import-client [data-client-choice='+client+']').click();
   assert(await page.locator('[data-import-client]:visible').count()===1,'Switching client duplicated the primary action');
   const link=new URL(await page.locator('[data-import-client='+client+']').getAttribute('href'));assert(link.protocol===scheme&&link.hostname==='install-config','Wrong client scheme '+client);assert(link.searchParams.get('url')===url(tokenA,'yaml'),'Wrong imported format '+client);
   assert(decodeURIComponent(link.search.slice(link.search.indexOf('url=')+4))===url(tokenA,'yaml'),'Clash Verge URL must be last parameter');
   assert(await page.locator('[data-import-client=shadowrocket]').getAttribute('href')===null,'Hidden client retains private URL');
  }
- await page.locator('#import-client').selectOption('shadowrocket');
+ await page.locator('#import-client [data-client-choice=shadowrocket]').click();
  assert(await page.locator('.import-warning').isVisible(),'Full configuration warning missing');
  await page.locator('#import-merge-link').click();await page.locator('#import-dialog').waitFor({state:'hidden'});
  assert(await page.locator('#result').isVisible()&&await page.locator('.guide-detail').evaluate(n=>n.open),'Keep original proxy does not lead to merge steps');
@@ -87,7 +87,7 @@ async page => {
  await page.locator('#import-guide-link').click();
  assert(await page.locator('.guide-detail').evaluate(n=>n.open),'Node-only QR skips required merge');
  await page.getByRole('button',{name:'二维码',exact:true}).click();await page.locator('#subscription-qr svg').waitFor();
- await page.locator('#qr-format').selectOption('yaml');assert(await decode()===url(tokenA,'yaml'),'QR format change failed');
+ await page.locator('#qr-client [data-client-choice=clash]').click();assert(await decode()===url(tokenA,'yaml'),'QR client switch failed');
  await page.locator('#copy-import').click();assert(await page.evaluate(()=>window.__copiedForTest)===url(tokenA,'yaml'),'Modal copied wrong format');
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Fixture denial');}},configurable:true}));
  await page.locator('#copy-import').click();assert((await page.locator('#import-feedback').innerText()).includes('长按'),'Clipboard denial has no fallback');
