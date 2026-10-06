@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="3463196697-391441+12027406">
+<html lang="en" data-compiled-sum="2817810313-394702+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=3463196697-391441+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2817810313-394702+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=3463196697-391441+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2817810313-394702+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -5238,30 +5238,44 @@
 
         // Shown once per NOTICE_VERSION on the user's first visit after an update;
         // bump the version string whenever a new announcement should appear.
-        const NOTICE_VERSION = '2026-10-04-changelog-home';
+        const NOTICE_VERSION = '2026-10-06-campus-tools';
         const UpdateNotice = () => {
             const [seen, setSeen] = useState(() => {
                 try { return localStorage.getItem('maxcourse_notice_seen') === NOTICE_VERSION; } catch (e) { return true; }
             });
+            const [open, setOpen] = useState(false);
+            const toggleRef = React.useRef(null);
             if (seen) return null;
             const dismiss = () => {
                 try { localStorage.setItem('maxcourse_notice_seen', NOTICE_VERSION); } catch (e) {}
                 setSeen(true);
             };
             return (
-                <div className="border-b-2 border-black bg-[#ff4fd8] text-black">
+                <aside className="border-b-2 border-black bg-[#ff4fd8] text-black" aria-label="近期更新" onKeyDown={e => {
+                    if (open && e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpen(false);
+                        toggleRef.current?.focus();
+                    }
+                }}>
                     <div className="max-w-6xl mx-auto px-3 md:px-8 py-2">
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <a
-                                href="/changelog/"
-                                className="group flex-1 min-w-0 min-h-11 flex items-center justify-center gap-2 sm:gap-3 px-2 font-black text-xs sm:text-sm leading-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-                                title="查看完整更新日志"
+                            <button
+                                ref={toggleRef}
+                                type="button"
+                                onClick={() => setOpen(value => !value)}
+                                aria-expanded={open}
+                                aria-controls="update-note-preview"
+                                className="group flex-1 min-w-0 min-h-11 flex items-center justify-center gap-2 sm:gap-3 px-2 font-black text-xs sm:text-sm leading-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                                title={open ? '收起更新小记' : '展开更新小记'}
                             >
                                 <span className="shrink-0">更新小记</span>
-                                <span className="min-w-0">更新日志坐到前排了</span>
-                                <span aria-hidden="true" className="shrink-0 inline-flex w-8 h-8 items-center justify-center group-hover:bg-black group-hover:text-[#ff4fd8] group-focus-visible:bg-black group-focus-visible:text-[#ff4fd8] transition-colors">→</span>
-                            </a>
+                                <span className="min-w-0">校园打印 · 校园连接</span>
+                                <span aria-hidden="true" className="shrink-0 inline-flex w-8 h-8 items-center justify-center group-hover:bg-black group-hover:text-[#ff4fd8] group-focus-visible:bg-black group-focus-visible:text-[#ff4fd8] transition-colors">{open ? '↑' : '↓'}</span>
+                            </button>
                             <button
+                                type="button"
                                 onClick={dismiss}
                                 aria-label="关闭更新公告"
                                 className="shrink-0 min-w-11 min-h-11 inline-flex items-center justify-center hover:bg-black hover:text-[#ff4fd8] focus:outline-none focus:ring-2 focus:ring-black transition-colors"
@@ -5270,8 +5284,34 @@
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
+                        <div id="update-note-preview" hidden={!open} className="mt-2 border-t border-black/20 bg-[var(--paper)] px-4 py-3 sm:px-6 text-[#1a140d]">
+                            <div className="grid gap-4 sm:grid-cols-2 sm:gap-8">
+                                <article className="min-w-0">
+                                    <h2>
+                                        <a href="/print/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold hover:underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                                            <span aria-hidden="true"><Printer className="w-4 h-4" /></span>
+                                            校园打印 <span aria-hidden="true">→</span>
+                                        </a>
+                                    </h2>
+                                    <p className="text-sm leading-6">文档与图片先预览，再看余额和预计费用，提交后到打印点刷卡取件。</p>
+                                </article>
+                                <article className="min-w-0">
+                                    <h2>
+                                        <a href="/campus-connect/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold hover:underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                                            <span aria-hidden="true"><Network className="w-4 h-4" /></span>
+                                            校园连接 <span aria-hidden="true">→</span>
+                                        </a>
+                                    </h2>
+                                    <p className="text-sm leading-6">登录后申请 60 天限量测试订阅，导入入口和指南跟着所选客户端切换。</p>
+                                </article>
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 border-t border-black/10 text-xs text-[#7a6a5d]">
+                                <time dateTime="2026-10-06">10 月 6 日 · 更新小记</time>
+                                <a href="/changelog/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-[#1a140d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">完整更新日志 <span aria-hidden="true" className="ml-1">→</span></a>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </aside>
             );
         };
 
