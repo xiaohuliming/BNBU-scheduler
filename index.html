@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2817810313-394702+12027406">
+<html lang="en" data-compiled-sum="4059433091-394652+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2817810313-394702+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=4059433091-394652+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2817810313-394702+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=4059433091-394652+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -5284,7 +5284,7 @@
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div id="update-note-preview" hidden={!open} className="mt-2 border-t border-black/20 bg-[var(--paper)] px-4 py-3 sm:px-6 text-[#1a140d]">
+                        <div id="update-note-preview" hidden={!open} className="mt-2 border-t border-black/20 px-4 py-3 sm:px-6">
                             <div className="grid gap-4 sm:grid-cols-2 sm:gap-8">
                                 <article className="min-w-0">
                                     <h2>
@@ -5305,9 +5305,9 @@
                                     <p className="text-sm leading-6">登录后申请 60 天限量测试订阅，导入入口和指南跟着所选客户端切换。</p>
                                 </article>
                             </div>
-                            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 border-t border-black/10 text-xs text-[#7a6a5d]">
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 border-t border-black/10 text-xs">
                                 <time dateTime="2026-10-06">10 月 6 日 · 更新小记</time>
-                                <a href="/changelog/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-[#1a140d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">完整更新日志 <span aria-hidden="true" className="ml-1">→</span></a>
+                                <a href="/changelog/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:decoration-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">完整更新日志 <span aria-hidden="true" className="ml-1">→</span></a>
                             </div>
                         </div>
                     </div>
