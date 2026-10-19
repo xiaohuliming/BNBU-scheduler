@@ -8,7 +8,7 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css?v=landscape-20261019" rel="stylesheet">
+<link href="print.css?v=rotate-20261019" rel="stylesheet">
 </head>
 <body class="privacy-pending">
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
@@ -267,6 +267,19 @@
               </div>
             </div>
 
+            <div class="setting" id="rotate-setting" hidden>
+              <div class="setting-head"><span class="setting-label" id="rotate-label">旋转</span><span class="setting-note" id="rotate-note"></span></div>
+              <div class="copies-input rotate-input" role="group" aria-labelledby="rotate-label">
+                <button type="button" id="rotate-left" aria-label="向左旋转 90°">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 9.5A7 7 0 1 1 5 14"/><path d="M5.5 4.5v5h5"/></svg>
+                </button>
+                <output id="rotate-value" aria-live="polite">不旋转</output>
+                <button type="button" id="rotate-right" aria-label="向右旋转 90°">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 9.5A7 7 0 1 0 19 14"/><path d="M18.5 4.5v5h-5"/></svg>
+                </button>
+              </div>
+            </div>
+
             <div class="setting setting-static">
               <span class="setting-label">打印范围</span><span id="range-summary">全部页面</span>
             </div>
@@ -409,8 +422,8 @@
   </div>
 </dialog>
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
-<script src="pdf-preview.js?v=landscape-20261019" defer></script>
+<script src="pdf-preview.js?v=rotate-20261019" defer></script>
 <script src="pricing.js?v=cost-20261003" defer></script>
-<script src="print.js?v=landscape-20261019" defer></script>
+<script src="print.js?v=rotate-20261019" defer></script>
 </body>
 </html>

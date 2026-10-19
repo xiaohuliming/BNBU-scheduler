@@ -9,6 +9,6 @@ beautifulsoup4>=4.12
 cryptography>=42.0  # encrypted opt-in iSpace credentials, mail cache and transient job inputs
 numpy>=1.26
 scipy>=1.11          # SkillPath PPR career recommender (/api/recommend)
-pypdf>=4.0           # transcript parsing (/api/parse-transcript) + course-catalog build
+pypdf>=5.0           # transcript parsing (/api/parse-transcript), course-catalog build, print rotation (incremental writes)
 # Media extraction is a public feature. Keep its tested upstream fixes installed.
 yt-dlp[default]==2026.08.19

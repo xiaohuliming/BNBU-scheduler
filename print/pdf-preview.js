@@ -27,6 +27,8 @@
       this.zoom = 'fit';
       this.scale = 1;
       this.sheet = A4;
+      this.rotation = 0;
+      this.scanGeneration = 0;
       this.landscapePages = null;
       this.last = { rendering: false, error: '' };
       this.ready = false;
@@ -43,13 +45,18 @@
       this.onChange({ page: this.page, pages: this.pages, ready: this.ready, rendering, error, zoom: this.zoom,
         landscape: this.sheet === A4_LANDSCAPE, landscapePages: this.landscapePages });
     }
+    // The user's quarter turns add to each page's own /Rotate, as the server applies them.
+    viewport(page, scale) {
+      return page.getViewport({ scale, rotation: (page.rotate + this.rotation) % 360 });
+    }
     // Count landscape pages after the first draw so large files are not held up.
     async scanOrientation(generation) {
+      const scan = ++this.scanGeneration;
       let count = 0;
       for (let number = 1; number <= this.pages; number++) {
         const page = await this.document.getPage(number);
-        if (generation !== this.generation) return;
-        if (sheetFor(page.getViewport({ scale: 1 })) === A4_LANDSCAPE) count++;
+        if (generation !== this.generation || scan !== this.scanGeneration) return;
+        if (sheetFor(this.viewport(page, 1)) === A4_LANDSCAPE) count++;
       }
       this.landscapePages = count;
       this.update(this.last.rendering, this.last.error);
@@ -66,7 +73,7 @@
       this.loadingTask = this.document = null;
       if (oldTask) oldTask.destroy().catch(() => {});
       this.page = 1; this.pages = 0; this.zoom = 'fit'; this.ready = false;
-      this.sheet = A4; this.landscapePages = null;
+      this.sheet = A4; this.rotation = 0; this.landscapePages = null;
       this.canvas.width = this.canvas.height = 0;
       this.canvas.removeAttribute('data-page');
       this.update();
@@ -131,6 +138,14 @@
       await this.render();
       this.host.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
+    async setRotation(degrees) {
+      if (!this.document || ![0, 90, 180, 270].includes(degrees) || degrees === this.rotation) return;
+      this.rotation = degrees;
+      this.landscapePages = null;
+      const generation = this.generation;
+      await this.render();
+      if (generation === this.generation) this.scanOrientation(generation).catch(() => {});
+    }
     async setZoom(value) {
       if (!['fit', '1', '1.5', '2'].includes(value)) return;
       this.zoom = value;
@@ -141,7 +156,7 @@
     async paint(number, slot, current, sheet) {
       const page = await this.document.getPage(number);
       if (!current()) return null;
-      const original = page.getViewport({ scale: 1 });
+      const original = this.viewport(page, 1);
       if (!sheet) {
         this.sheet = sheetFor(original);
         if (this.zoom === 'fit') this.scale = this.fitScale();
@@ -149,7 +164,7 @@
       sheet ||= this.sheet;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const pageFit = Math.min(sheet[0] / original.width, sheet[1] / original.height);
-      const viewport = page.getViewport({ scale: pageFit * this.scale * ratio });
+      const viewport = this.viewport(page, pageFit * this.scale * ratio);
       const target = document.createElement('canvas');
       target.width = Math.ceil(sheet[0] * this.scale * ratio);
       target.height = Math.ceil(sheet[1] * this.scale * ratio);

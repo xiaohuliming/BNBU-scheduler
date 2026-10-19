@@ -21,6 +21,7 @@
     'page-prev', 'page-next', 'page-current', 'page-total', 'flip-group', 'flip-sheet', 'sheet-caption',
     'zoom-out', 'zoom-fit', 'zoom-in', 'replace-file', 'range-summary', 'print-total', 'print-total-sheets',
     'cost-note', 'estimated-cost', 'confirm-cost', 'receipt-cost', 'copies', 'copies-dec', 'copies-inc', 'color-note', 'sides-note', 'copies-note', 'edge-setting',
+    'rotate-setting', 'rotate-left', 'rotate-right', 'rotate-value', 'rotate-note',
     'page-title', 'page-description', 'stepper', 'step-upload', 'step-preview', 'step-submit', 'confirm-specs', 'bulk-confirm', 'bulk-check', 'bulk-label', 'balance-panel', 'balance-query', 'balance-value', 'balance-status', 'receipt-balance',
   ].map(id => [id, $(id)]));
   const radios = name => Array.from(document.querySelectorAll(`input[name="${name}"]`));
@@ -42,7 +43,7 @@
     checking: false, retry: false, jobQuery: false,
     balance: null, balanceQuerying: false, balanceGeneration: 0, balanceMessage: '',
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
-    previewLandscape: false, landscapePages: null,
+    previewLandscape: false, landscapePages: null, rotation: 0,
     faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
     step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0, converting: false, converted: false,
   };
@@ -88,6 +89,10 @@
     !duplex(options) ? '单面' : options.sides === 'two-sided-short-edge' ? '双面 · 短边' : '双面 · 长边',
     options.copies + ' 份',
   ];
+  // Clockwise quarter turns applied by the MAXCOURSE server before the PDF reaches the campus device.
+  const rotateSupported = () => (state.session?.capabilities?.rotate || []).includes(90);
+  const activeRotation = () => state.intent ? state.intent.rotation || 0 : state.rotation;
+  const rotationLabel = degrees => ({ 90: '向右 90°', 180: '旋转 180°', 270: '向左 90°' })[degrees] || '';
   const sheetsFor = (pages, options) => (duplex(options) ? Math.ceil(pages / 2) : pages) * options.copies;
   const needsBulk = (pages, options) => pages * options.copies > (state.session?.limits?.bulk_confirmation_threshold || 200);
   const previewed = () => !!state.pdf && state.drawn;
@@ -372,7 +377,12 @@
     ui['receipt-cost'].hidden = !state.receipt || !receiptCost;
     ui['receipt-cost'].textContent = receiptCost ? `本次估算费用 ${receiptCost.display}，实际扣费以学校系统为准。` : '';
     ui['range-summary'].textContent = pages ? `全部 ${pages} 页` : '全部页面';
-    ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options)].filter(Boolean).join(' · ');
+    const rotation = activeRotation();
+    ui['rotate-setting'].hidden = !rotateSupported() && !rotation;
+    ui['rotate-value'].textContent = rotationLabel(rotation) || '不旋转';
+    ui['rotate-left'].disabled = ui['rotate-right'].disabled = frozen || !previewed() || !rotateSupported();
+    note('rotate-note', rotation ? '所有页面一起旋转' : '');
+    ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options), rotationLabel(activeRotation())].filter(Boolean).join(' · ');
   }
 
   function renderPreview(locked, options) {
@@ -445,6 +455,13 @@
     render();
   }
 
+  function setRotation(degrees) {
+    if (state.busy || state.receipt || state.intent) return;
+    state.rotation = (degrees + 360) % 360;
+    pdfPreview.setRotation(state.rotation).catch(previewFailure);
+    render();
+  }
+
   function reconcileOptions() {
     if (state.intent || state.busy) return;
     const next = { ...state.options };
@@ -452,6 +469,7 @@
     if (next.color !== 'grayscale' && !supports('color')) { next.color = 'grayscale'; dropped.push('彩色'); }
     if (duplex(next) && !supports('duplex')) { next.sides = 'one-sided'; dropped.push('双面'); }
     if (next.copies !== 1 && !supports('copies')) dropped.push('多份');
+    if (state.rotation && !rotateSupported()) { setRotation(0); dropped.push('旋转'); }
     applyOptions(next);
     if (dropped.length) announce(`当前打印设备暂不支持${dropped.join('、')}，已恢复默认设置。`);
   }
@@ -515,7 +533,7 @@
     const canvas = ui['preview-canvas'];
     if (!state.drawn || !canvas.width) return Promise.resolve();
     const two = duplex(activeOptions());
-    const key = [canvas.dataset.page, canvas.width, canvas.height, two].join(':');
+    const key = [canvas.dataset.page, canvas.width, canvas.height, two, activeRotation()].join(':');
     if (key === state.faceKey) return state.facePromise || Promise.resolve();
     state.faceKey = key;
     copyInto(canvas, ui['preview-tint']);
@@ -595,6 +613,7 @@
     if (state.fileURL) URL.revokeObjectURL(state.fileURL);
     state.file = state.fileURL = state.pdf = state.pages = null;
     state.reading = state.drawn = state.flipped = state.converting = state.converted = false;
+    state.rotation = 0;
     state.faceKey = '';
     state.facePromise = null;
     clearTimeout(state.demoTimer);
@@ -799,7 +818,7 @@
     const rows = [
       doc?.name && ['文档', doc.name],
       pages && ['纸张', `${pages} 页 · ${sheetsFor(pages, options)} 张 A4`],
-      ['设置', describe(options).join(' · ')],
+      ['设置', [...describe(options), rotationLabel(doc?.rotation)].filter(Boolean).join(' · ')],
       job.id && ['任务', job.id.slice(0, 8)],
     ].filter(Boolean);
     ui['receipt-details'].replaceChildren(...rows.map(([term, value], index) => {
@@ -927,13 +946,14 @@
       if (needsBulk(state.pages, options) && (!bulkApproved || confirmedPages !== state.pages || confirmedOptions !== JSON.stringify(options))) {
         throw new Error('打印总量已变化，请重新确认后提交。');
       }
-      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options };
-      state.receiptDoc = { name: state.file?.name || '', pages: state.pages, options: state.intent.options };
+      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options, rotation: state.rotation };
+      state.receiptDoc = { name: state.file?.name || '', pages: state.pages, options: state.intent.options, rotation: state.intent.rotation || 0 };
       progress('正在提交打印…', 'send'); render();
       dispatchStarted = true;
       const result = await api('/api/print/jobs', {
         pdf: state.pdf, password, inspection_token: inspection.data.inspection_token,
         idempotency_key: state.intent.key, options: state.intent.options,
+        ...(state.intent.rotation ? { rotate: state.intent.rotation } : {}),
         ...(bulkApproved ? { bulk_confirmation: { sha256: inspection.data.sha256, pages: state.pages, options: state.intent.options } } : {}),
       }, 630000);
       if (result.ok && result.data?.job && result.data.job.idempotency_key === state.intent.key &&
@@ -1108,6 +1128,8 @@
   });
   ui['copies-dec'].addEventListener('click', () => setOptions({ copies: state.options.copies - 1 }));
   ui['copies-inc'].addEventListener('click', () => setOptions({ copies: state.options.copies + 1 }));
+  ui['rotate-left'].addEventListener('click', () => setRotation(state.rotation - 90));
+  ui['rotate-right'].addEventListener('click', () => setRotation(state.rotation + 90));
   ui.copies.addEventListener('input', () => { state.copiesTyping = true; });
   const commitCopies = () => { state.copiesTyping = false; setOptions({ copies: ui.copies.value }); };
   ui.copies.addEventListener('change', commitCopies);
