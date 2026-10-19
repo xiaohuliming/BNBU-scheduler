@@ -43,7 +43,7 @@
     checking: false, retry: false, jobQuery: false,
     balance: null, balanceQuerying: false, balanceGeneration: 0, balanceMessage: '',
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
-    previewLandscape: false, landscapePages: null, rotation: 0,
+    layout: null, rotation: 0,
     faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
     step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0, converting: false, converted: false,
   };
@@ -89,8 +89,8 @@
     !duplex(options) ? '单面' : options.sides === 'two-sided-short-edge' ? '双面 · 短边' : '双面 · 长边',
     options.copies + ' 份',
   ];
-  // Clockwise quarter turns applied by the MAXCOURSE server before the PDF reaches the campus device.
-  const rotateSupported = () => (state.session?.capabilities?.rotate || []).includes(90);
+  // Clockwise quarter turns of the content on the fixed portrait paper, laid out by the MAXCOURSE server.
+  const rotateSupported = () => (state.session?.capabilities?.content_rotation || []).includes(90);
   const activeRotation = () => state.intent ? state.intent.rotation || 0 : state.rotation;
   const rotationLabel = degrees => ({ 90: '向右 90°', 180: '旋转 180°', 270: '向左 90°' })[degrees] || '';
   const sheetsFor = (pages, options) => (duplex(options) ? Math.ceil(pages / 2) : pages) * options.copies;
@@ -249,9 +249,7 @@
       ui['doc-name'].textContent = state.file.name;
       ui['file-kind'].textContent = (state.file.name.split('.').pop() || 'PDF').slice(0, 4).toUpperCase();
       ui['doc-sub'].textContent = state.converting ? '正在转换为 PDF…' : state.reading ? '正在读取文件…' :
-        [fileSize(state.file.size), state.pages && state.pages + ' 页', state.converted && '已转为 PDF',
-          state.landscapePages && (state.landscapePages === state.pages ? '横向' : state.landscapePages + ' 页横向') + ' · 打印时自动旋转',
-        ].filter(Boolean).join(' · ');
+        [fileSize(state.file.size), state.pages && state.pages + ' 页', state.converted && '已转为 PDF'].filter(Boolean).join(' · ');
     }
     ui['workspace-fields'].hidden = !!state.receipt;
     ui.receipt.hidden = !state.receipt;
@@ -363,8 +361,8 @@
     else note('color-note', options.color === 'color' ? '按彩色标准计费' : '');
     if (!supports('duplex')) note('sides-note', '设备暂不支持双面', true);
     else note('sides-note', !two || !pages ? '' : [`每份 ${Math.ceil(pages / 2)} 张纸`,
-      // Each landscape page is turned onto portrait paper, so the short edge is the book-style one.
-      state.landscapePages && (options.sides === 'two-sided-short-edge' ? '横向页左右翻' : '横向页想左右翻请选短边')].filter(Boolean).join(' · '));
+      // Content lying across the portrait paper reads book-style only when flipped on the short edge.
+      state.layout?.sideways && (options.sides === 'two-sided-short-edge' ? '横放内容左右翻' : '横放内容想左右翻请选短边')].filter(Boolean).join(' · '));
     if (!supports('copies')) note('copies-note', '设备暂不支持多份', true);
     else note('copies-note', pages && cap < COPIES_LIMIT ? `最多 ${cap} 份` : '');
     tweenNumber(ui['print-total-sheets'], pages ? sheetsFor(pages, options) : 0);
@@ -379,9 +377,11 @@
     ui['range-summary'].textContent = pages ? `全部 ${pages} 页` : '全部页面';
     const rotation = activeRotation();
     ui['rotate-setting'].hidden = !rotateSupported() && !rotation;
-    ui['rotate-value'].textContent = rotationLabel(rotation) || '不旋转';
+    ui['rotate-value'].textContent = rotationLabel(rotation) || '默认';
     ui['rotate-left'].disabled = ui['rotate-right'].disabled = frozen || !previewed() || !rotateSupported();
-    note('rotate-note', rotation ? '所有页面一起旋转' : '');
+    const wide = state.layout?.wide || 0;
+    note('rotate-note', rotation ? '所有页面一起旋转' : !wide ? '' :
+      (wide === pages ? '横向页' : `${wide} 页横向，`) + '默认转 90° 铺满纸张');
     ui['confirm-specs'].textContent = [pages ? pages + ' 页' : '', 'A4', ...describe(options), rotationLabel(activeRotation())].filter(Boolean).join(' · ');
   }
 
@@ -391,8 +391,6 @@
     const pages = state.pages || 0;
     const blankBack = two && state.previewPage + 1 > pages;
     ui.sheet.dataset.flip = two ? edge : 'none';
-    ui.sheet.dataset.orient = state.previewLandscape ? 'landscape' : 'portrait';
-    ui['page-stage'].classList.toggle('is-landscape', state.previewLandscape);
     ui.sheet.classList.toggle('is-color', options.color === 'color');
     ui.sheet.classList.toggle('is-flipped', two && state.flipped);
     ui.sheet.classList.toggle('is-loading', !state.drawn);
@@ -416,7 +414,7 @@
     ui['zoom-in'].disabled = idle || zoom >= ZOOMS.length - 1;
     ui['zoom-fit'].disabled = idle;
     ui['zoom-fit'].textContent = state.previewZoom === 'fit' ? '适合' : Math.round(Number(state.previewZoom) * 100) + '%';
-    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', state.previewLandscape ? 'A4 横向' : 'A4',
+    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', 'A4',
       ...(two ? [edge === 'short' ? '短边翻页' : '长边翻页'] : [])].join(' · ');
   }
 
@@ -582,12 +580,10 @@
     const source = ui['preview-canvas'];
     const thumb = ui['confirm-thumb'];
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    const landscape = source.width > source.height;
-    thumb.width = Math.round((landscape ? 76 : 54) * ratio);
-    thumb.height = Math.round((landscape ? 54 : 76) * ratio);
+    thumb.width = Math.round(54 * ratio);
+    thumb.height = Math.round(76 * ratio);
     if (source.width) thumb.getContext('2d').drawImage(source, 0, 0, thumb.width, thumb.height);
     ui['thumb-frame'].classList.toggle('is-gray', activeOptions().color !== 'color');
-    ui['thumb-frame'].classList.toggle('is-landscape', landscape);
   }
 
   function openAccount() {
@@ -946,14 +942,17 @@
       if (needsBulk(state.pages, options) && (!bulkApproved || confirmedPages !== state.pages || confirmedOptions !== JSON.stringify(options))) {
         throw new Error('打印总量已变化，请重新确认后提交。');
       }
-      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options, rotation: state.rotation };
+      // The server lays pages out itself when the user turned them, or when a page's own /Rotate
+      // would otherwise reach the device's inconsistent automatic turning.
+      if (!state.intent) state.intent = { key: crypto.randomUUID(), username: account, owner, options, rotation: state.rotation,
+        place: rotateSupported() && (!!state.rotation || !state.layout || state.layout.ownRotate > 0) };
       state.receiptDoc = { name: state.file?.name || '', pages: state.pages, options: state.intent.options, rotation: state.intent.rotation || 0 };
       progress('正在提交打印…', 'send'); render();
       dispatchStarted = true;
       const result = await api('/api/print/jobs', {
         pdf: state.pdf, password, inspection_token: inspection.data.inspection_token,
         idempotency_key: state.intent.key, options: state.intent.options,
-        ...(state.intent.rotation ? { rotate: state.intent.rotation } : {}),
+        ...(state.intent.place ? { content_rotation: state.intent.rotation || 0 } : {}),
         ...(bulkApproved ? { bulk_confirmation: { sha256: inspection.data.sha256, pages: state.pages, options: state.intent.options } } : {}),
       }, 630000);
       if (result.ok && result.data?.job && result.data.job.idempotency_key === state.intent.key &&
@@ -995,8 +994,7 @@
     state.previewRendering = info.rendering;
     state.previewPage = info.page;
     state.previewZoom = info.zoom;
-    state.previewLandscape = !!info.landscape;
-    state.landscapePages = info.landscapePages ?? null;
+    state.layout = info.layout ?? null;
     if (state.file && info.pages) state.pages = info.pages;
     if (state.file && info.ready) { state.drawn = true; syncFaces(); }
     ui['page-stage'].setAttribute('aria-busy', String(info.rendering));

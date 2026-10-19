@@ -3,10 +3,9 @@
 (() => {
   const ROOT = '/vendor/pdfjs-6.3.289/';
   const A4 = [595.28, 841.89];
-  // The print agent's Ghostscript -dPDFFitPage turns wider-than-tall pages a
-  // quarter turn to fill the paper, so they are previewed on a landscape sheet.
-  const A4_LANDSCAPE = [A4[1], A4[0]];
-  const sheetFor = ({ width, height }) => width > height ? A4_LANDSCAPE : A4;
+  // The paper is always portrait A4. Like the print agent's fit-page step, a page shown
+  // wider than tall is turned a quarter turn clockwise to fill it; the user's turn adds on top.
+  const wide = ({ width, height }) => width > height;
   let library;
   const getLibrary = () => library ||= import(ROOT + 'pdf.mjs').then(pdfjs => {
     pdfjs.GlobalWorkerOptions.workerSrc = ROOT + 'pdf.worker.mjs';
@@ -26,10 +25,9 @@
       this.pages = 0;
       this.zoom = 'fit';
       this.scale = 1;
-      this.sheet = A4;
       this.rotation = 0;
       this.scanGeneration = 0;
-      this.landscapePages = null;
+      this.layout = null;
       this.last = { rendering: false, error: '' };
       this.ready = false;
       this.resizer = new ResizeObserver(() => {
@@ -43,22 +41,27 @@
     update(rendering = false, error = '') {
       this.last = { rendering, error };
       this.onChange({ page: this.page, pages: this.pages, ready: this.ready, rendering, error, zoom: this.zoom,
-        landscape: this.sheet === A4_LANDSCAPE, landscapePages: this.landscapePages });
+        layout: this.layout });
     }
-    // The user's quarter turns add to each page's own /Rotate, as the server applies them.
+    // Each page's own /Rotate, its automatic turn and the user's turn, as the server lays them out.
     viewport(page, scale) {
-      return page.getViewport({ scale, rotation: (page.rotate + this.rotation) % 360 });
+      const turn = wide(page.getViewport({ scale: 1 })) ? 90 : 0;
+      return page.getViewport({ scale, rotation: (page.rotate + turn + this.rotation) % 360 });
     }
-    // Count landscape pages after the first draw so large files are not held up.
+    // Survey page orientations after the first draw so large files are not held up.
     async scanOrientation(generation) {
       const scan = ++this.scanGeneration;
-      let count = 0;
+      const layout = { wide: 0, sideways: 0, ownRotate: 0 };
       for (let number = 1; number <= this.pages; number++) {
         const page = await this.document.getPage(number);
         if (generation !== this.generation || scan !== this.scanGeneration) return;
-        if (sheetFor(this.viewport(page, 1)) === A4_LANDSCAPE) count++;
+        const shown = page.getViewport({ scale: 1 });
+        if (wide(shown)) layout.wide++;
+        if (page.rotate % 360) layout.ownRotate++;
+        // Content lying across the portrait paper reads like a landscape sheet when flipped.
+        if (((wide(shown) ? 90 : 0) + this.rotation) % 180) layout.sideways++;
       }
-      this.landscapePages = count;
+      this.layout = layout;
       this.update(this.last.rendering, this.last.error);
     }
     clear() {
@@ -73,17 +76,17 @@
       this.loadingTask = this.document = null;
       if (oldTask) oldTask.destroy().catch(() => {});
       this.page = 1; this.pages = 0; this.zoom = 'fit'; this.ready = false;
-      this.sheet = A4; this.rotation = 0; this.landscapePages = null;
+      this.rotation = 0; this.layout = null;
       this.canvas.width = this.canvas.height = 0;
       this.canvas.removeAttribute('data-page');
       this.update();
     }
     // The stage publishes how much room its chrome needs around a fitted page.
-    fitScale(sheet = this.sheet) {
+    fitScale() {
       const style = getComputedStyle(this.host);
       const padX = parseFloat(style.getPropertyValue('--fit-x')) || 48;
       const padY = parseFloat(style.getPropertyValue('--fit-y')) || 48;
-      return Math.max(.15, Math.min((this.host.clientWidth - padX) / sheet[0], (this.host.clientHeight - padY) / sheet[1], 1));
+      return Math.max(.15, Math.min((this.host.clientWidth - padX) / A4[0], (this.host.clientHeight - padY) / A4[1], 1));
     }
     // Size the empty sheet before the first draw so the page can animate into place.
     reserve() {
@@ -141,7 +144,7 @@
     async setRotation(degrees) {
       if (!this.document || ![0, 90, 180, 270].includes(degrees) || degrees === this.rotation) return;
       this.rotation = degrees;
-      this.landscapePages = null;
+      this.layout = null;
       const generation = this.generation;
       await this.render();
       if (generation === this.generation) this.scanOrientation(generation).catch(() => {});
@@ -152,22 +155,16 @@
       await this.render();
     }
     // Draw off screen, then swap, so page turns and zoom changes never flash blank.
-    // A reverse side is drawn on its front's sheet so both faces stay the same size.
-    async paint(number, slot, current, sheet) {
+    async paint(number, slot, current) {
       const page = await this.document.getPage(number);
       if (!current()) return null;
       const original = this.viewport(page, 1);
-      if (!sheet) {
-        this.sheet = sheetFor(original);
-        if (this.zoom === 'fit') this.scale = this.fitScale();
-      }
-      sheet ||= this.sheet;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const pageFit = Math.min(sheet[0] / original.width, sheet[1] / original.height);
+      const pageFit = Math.min(A4[0] / original.width, A4[1] / original.height);
       const viewport = this.viewport(page, pageFit * this.scale * ratio);
       const target = document.createElement('canvas');
-      target.width = Math.ceil(sheet[0] * this.scale * ratio);
-      target.height = Math.ceil(sheet[1] * this.scale * ratio);
+      target.width = Math.ceil(A4[0] * this.scale * ratio);
+      target.height = Math.ceil(A4[1] * this.scale * ratio);
       const task = page.render({
         canvasContext: target.getContext('2d', { alpha: false }), viewport,
         transform: [1, 0, 0, 1, (target.width - viewport.width) / 2, (target.height - viewport.height) / 2],
@@ -230,7 +227,7 @@
         return;
       }
       try {
-        const result = await this.paint(number, 'sideTask', current, this.sheet);
+        const result = await this.paint(number, 'sideTask', current);
         if (!result) return;
         this.blit(result, target);
         target.dataset.page = String(number);
