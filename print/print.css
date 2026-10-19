@@ -38,6 +38,7 @@
 html { -webkit-text-size-adjust: 100%; background: var(--paper); }
 body {
   margin: 0; min-height: 100vh; overflow-x: clip; color: var(--ink);
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   background-color: var(--paper);
   background-image: linear-gradient(rgba(16, 24, 32, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 24, 32, .035) 1px, transparent 1px);
   background-size: 28px 28px;
@@ -66,10 +67,22 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   background: color-mix(in srgb, var(--paper) 92%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
 .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; }
-.brand { display: inline-flex; flex-direction: column; gap: 3px; text-decoration: none; }
-.brand-word { font: 500 25px/1 var(--serif); letter-spacing: .01em; }
-.brand-sub { font: 500 10px/1 var(--mono); letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
-.topbar-actions { display: flex; align-items: center; gap: 10px; }
+/* One link back home: a pressable arrow block beside the wordmark. */
+.home-link { display: inline-flex; align-items: center; gap: 14px; min-width: 0; text-decoration: none; }
+.home-back {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none; height: 36px; padding: 0 12px 0 9px;
+  border: 2px solid var(--ink); background: var(--sheet); box-shadow: 3px 3px 0 var(--ink); font-size: 13px; font-weight: 700;
+  transition: transform .15s var(--ease), box-shadow .15s var(--ease), background-color .15s;
+}
+.home-back svg { width: 18px; height: 18px; stroke-width: 2.3; transition: transform .35s var(--spring); }
+.home-link:hover .home-back { background: var(--signal); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.home-link:hover .home-back svg { transform: translateX(-3px); }
+.home-link:active .home-back { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.brand { display: inline-flex; flex-direction: column; gap: 3px; min-width: 0; }
+.brand-word { font: 500 25px/1 var(--serif); letter-spacing: .01em; white-space: nowrap; }
+.brand-sub { font: 500 10px/1 var(--mono); letter-spacing: .32em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.topbar-actions { display: flex; flex: none; align-items: center; gap: 10px; }
+.service-short { display: none; }
 .service-status {
   display: inline-flex; align-items: center; gap: 9px; min-height: 36px; padding: 0 12px;
   border: 2px solid var(--ink); background: var(--sheet); box-shadow: 3px 3px 0 var(--ink);
@@ -230,6 +243,12 @@ h1 { margin: 0; font: 700 clamp(32px, 3.4vw, 44px)/1.1 var(--serif); letter-spac
 .title-drag { position: absolute; inset: 0; opacity: 0; transform: translateY(10px); }
 .dropzone.dragover .title-idle { opacity: 0; transform: translateY(-10px); }
 .dropzone.dragover .title-drag { opacity: 1; transform: none; }
+/* Phones cannot drag files in, so touch screens get a tap-first title. */
+.title-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .title-idle { display: none; }
+  .title-touch { display: block; }
+}
 .drop-sub { margin: 10px 0 28px; font-size: 15px; color: var(--ink-2); }
 .pick-btn { min-width: 172px; min-height: 52px; font-size: 16px; }
 .dz-hint { margin: 18px 0 0; font: 500 11.5px/1.4 var(--mono); letter-spacing: .06em; color: var(--muted); }
@@ -577,32 +596,54 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
   .preview-workspace { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .side { display: contents; }
   .page-stage { --fit-x: 76px; --fit-y: 156px; height: min(74vh, 720px); padding: 54px 24px 96px; }
+  /* Docked checkout stays compact so it never buries the preview: totals left, action right, fine print below. */
   .checkout {
     position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 6;
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 14px; padding: 10px 10px 10px 16px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "total go" "cost go" "fine fine";
+    align-items: center; column-gap: 14px; padding: 10px 10px 10px 16px;
   }
-  .total { display: block; padding: 0; border: 0; }
-  .total-figure strong { font-size: 30px; }
-  .total-detail { margin: 2px 0 0; font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cost-note, .go-print-note { display: none; }
-  .checkout .go-print { width: auto; min-height: 48px; padding: 0 16px; gap: 10px; }
+  .total { grid-area: total; display: flex; align-items: baseline; justify-content: flex-start; gap: 12px; min-width: 0; padding: 0; border: 0; }
+  .total-figure { flex: none; }
+  .total-figure strong { font-size: 28px; }
+  .total-detail { min-width: 0; margin: 0; font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .checkout .cost-estimate { grid-area: cost; flex-wrap: wrap; justify-content: flex-start; gap: 0 8px; margin: 2px 0 0; font-size: 12px; }
+  .checkout .cost-estimate strong { font-size: 17px; text-align: left; white-space: nowrap; }
+  .cost-fine { grid-area: fine; margin-top: 8px; padding-top: 7px; border-top: 1px dashed rgba(16, 24, 32, .3); font-size: 11px; line-height: 1.55; color: var(--muted); }
+  .cost-fine .cost-note, .cost-fine .pricing-source { display: inline; margin: 0; font-size: inherit; }
+  .cost-fine .pricing-source { margin-left: 6px; white-space: nowrap; }
+  .go-print-note { display: none; }
+  .checkout .go-print { grid-area: go; width: auto; min-height: 48px; padding: 0 16px; gap: 10px; }
   .settings-help { margin: 0; }
 }
 @media (max-width: 640px) {
   .wrap { width: calc(100% - 28px); }
   body { font-size: 14.5px; }
-  .topbar-inner { min-height: 62px; }
-  .brand-word { font-size: 21px; }
-  .help-btn span { display: none; }
-  .help-btn { padding: 0 9px; }
-  .intro { padding: 26px 0 18px; margin-bottom: 22px; }
+  /* Masthead: arrow-only home button, short service status, icon-only actions. */
+  .topbar-inner { min-height: 60px; gap: 10px; }
+  .home-link { gap: 10px; }
+  .home-back { width: 36px; padding: 0; }
+  .home-back-text, .brand-sub { display: none; }
+  .brand-word { font-size: 20px; }
+  .topbar-actions { gap: 8px; }
+  .service-status { gap: 6px; padding: 0 9px; font-size: 12px; }
+  .service-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .service-short { display: inline; }
+  .service-status:has(.service-refresh:not([hidden])) .service-short { display: none; }
+  .topbar-actions .ghost-btn { justify-content: center; width: 36px; padding: 0; }
+  .topbar-actions .ghost-btn span { display: none; }
+  .intro { gap: 16px; padding: 20px 0 16px; margin-bottom: 18px; }
+  .kicker { font-size: 14px; }
   .step-name { font-size: 12px; }
   .stepper li { gap: 6px; }
-  .dropzone { min-height: 420px; padding: 44px 18px 34px; }
+  .dropzone { min-height: 0; padding: 36px 18px 30px; }
+  .drop-visual { width: 100px; height: 132px; margin-bottom: 32px; }
+  .drop-sub { margin-bottom: 24px; }
   .file-bar { padding: 10px 8px 10px 12px; gap: 8px; }
-  .page-stage { --fit-x: 62px; --fit-y: 136px; height: min(66vh, 580px); padding: 70px 16px 46px; }
+  .page-stage { --fit-x: 62px; --fit-y: 146px; height: min(66vh, 580px); height: min(64svh, 580px); padding: 70px 16px 56px; }
   .stage-label { display: none; }
-  .stage-link { top: 12px; right: 12px; }
+  /* The dock takes the top edge on phones, so the source link moves to the bottom corner. */
+  .stage-link { top: auto; bottom: 12px; right: 12px; }
+  .total-detail { display: none; }
   .preview-dock { top: 12px; bottom: auto; animation-name: fade; }
   .dock-btn { min-width: 32px; padding: 0 6px; }
   .zoom-label { min-width: 44px; }
@@ -616,7 +657,23 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
   .ticket { padding: 34px 22px 42px; }
   .receipt-actions .btn { flex: 1 1 100%; }
 }
+@media (max-width: 380px) {
+  .step-index { display: none; }
+  .preview-dock { padding: 3px; }
+  .dock-btn { min-width: 28px; padding: 0 3px; }
+  #page-current { width: 36px; }
+  .page-total { padding: 0 2px 0 1px; }
+  .zoom-label { min-width: 38px; }
+  .dock-sep { margin: 0 1px; }
+  .checkout .go-print { padding: 0 14px; }
+  .checkout .go-print .btn-icon { display: none; }
+}
+@media (max-width: 359px) {
+  .brand { display: none; }
+}
 @media (hover: none) {
+  .home-link:hover .home-back, .home-link:hover .home-back svg { transform: none; }
+  .home-link:hover .home-back { box-shadow: 3px 3px 0 var(--ink); }
   .icon-btn:hover:not(:disabled) { transform: none; }
   .btn:hover:not(:disabled) { transform: none; box-shadow: var(--hard-sm); }
 }
@@ -643,4 +700,3 @@ dialog { max-width: none; max-height: none; padding: 0; border: 0; background: t
 .pricing-source { display: inline-block; margin: 0 0 14px; color: var(--muted); font-size: 11.5px; text-underline-offset: 3px; }
 .confirm-cost { display: block; margin-top: 7px; font-weight: 700 !important; color: var(--ink); }
 .receipt-cost { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
-@media (max-width: 640px) { .checkout .cost-note { display: block; } }
