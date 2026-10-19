@@ -42,6 +42,7 @@
     checking: false, retry: false, jobQuery: false,
     balance: null, balanceQuerying: false, balanceGeneration: 0, balanceMessage: '',
     previewReady: false, previewRendering: false, previewPage: 1, previewZoom: 'fit', drawn: false,
+    previewLandscape: false, landscapePages: null,
     faceKey: '', facePromise: null, options: { ...DEFAULT_OPTIONS }, edge: 'long', flipped: false,
     step: '', copiesTyping: false, sweepTimer: null, demoTimer: null, dragDepth: 0, converting: false, converted: false,
   };
@@ -243,7 +244,9 @@
       ui['doc-name'].textContent = state.file.name;
       ui['file-kind'].textContent = (state.file.name.split('.').pop() || 'PDF').slice(0, 4).toUpperCase();
       ui['doc-sub'].textContent = state.converting ? '正在转换为 PDF…' : state.reading ? '正在读取文件…' :
-        [fileSize(state.file.size), state.pages && state.pages + ' 页', state.converted && '已转为 PDF'].filter(Boolean).join(' · ');
+        [fileSize(state.file.size), state.pages && state.pages + ' 页', state.converted && '已转为 PDF',
+          state.landscapePages && (state.landscapePages === state.pages ? '横向' : state.landscapePages + ' 页横向') + ' · 打印时自动旋转',
+        ].filter(Boolean).join(' · ');
     }
     ui['workspace-fields'].hidden = !!state.receipt;
     ui.receipt.hidden = !state.receipt;
@@ -354,7 +357,9 @@
     if (!supports('color')) note('color-note', '设备暂不支持彩色', true);
     else note('color-note', options.color === 'color' ? '按彩色标准计费' : '');
     if (!supports('duplex')) note('sides-note', '设备暂不支持双面', true);
-    else note('sides-note', two && pages ? `每份 ${Math.ceil(pages / 2)} 张纸` : '');
+    else note('sides-note', !two || !pages ? '' : [`每份 ${Math.ceil(pages / 2)} 张纸`,
+      // Each landscape page is turned onto portrait paper, so the short edge is the book-style one.
+      state.landscapePages && (options.sides === 'two-sided-short-edge' ? '横向页左右翻' : '横向页想左右翻请选短边')].filter(Boolean).join(' · '));
     if (!supports('copies')) note('copies-note', '设备暂不支持多份', true);
     else note('copies-note', pages && cap < COPIES_LIMIT ? `最多 ${cap} 份` : '');
     tweenNumber(ui['print-total-sheets'], pages ? sheetsFor(pages, options) : 0);
@@ -376,6 +381,8 @@
     const pages = state.pages || 0;
     const blankBack = two && state.previewPage + 1 > pages;
     ui.sheet.dataset.flip = two ? edge : 'none';
+    ui.sheet.dataset.orient = state.previewLandscape ? 'landscape' : 'portrait';
+    ui['page-stage'].classList.toggle('is-landscape', state.previewLandscape);
     ui.sheet.classList.toggle('is-color', options.color === 'color');
     ui.sheet.classList.toggle('is-flipped', two && state.flipped);
     ui.sheet.classList.toggle('is-loading', !state.drawn);
@@ -399,7 +406,7 @@
     ui['zoom-in'].disabled = idle || zoom >= ZOOMS.length - 1;
     ui['zoom-fit'].disabled = idle;
     ui['zoom-fit'].textContent = state.previewZoom === 'fit' ? '适合' : Math.round(Number(state.previewZoom) * 100) + '%';
-    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', 'A4',
+    ui['preview-caption'].textContent = [options.color === 'color' ? '彩色预览' : '黑白预览', state.previewLandscape ? 'A4 横向' : 'A4',
       ...(two ? [edge === 'short' ? '短边翻页' : '长边翻页'] : [])].join(' · ');
   }
 
@@ -557,10 +564,12 @@
     const source = ui['preview-canvas'];
     const thumb = ui['confirm-thumb'];
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    thumb.width = Math.round(54 * ratio);
-    thumb.height = Math.round(76 * ratio);
+    const landscape = source.width > source.height;
+    thumb.width = Math.round((landscape ? 76 : 54) * ratio);
+    thumb.height = Math.round((landscape ? 54 : 76) * ratio);
     if (source.width) thumb.getContext('2d').drawImage(source, 0, 0, thumb.width, thumb.height);
     ui['thumb-frame'].classList.toggle('is-gray', activeOptions().color !== 'color');
+    ui['thumb-frame'].classList.toggle('is-landscape', landscape);
   }
 
   function openAccount() {
@@ -966,6 +975,8 @@
     state.previewRendering = info.rendering;
     state.previewPage = info.page;
     state.previewZoom = info.zoom;
+    state.previewLandscape = !!info.landscape;
+    state.landscapePages = info.landscapePages ?? null;
     if (state.file && info.pages) state.pages = info.pages;
     if (state.file && info.ready) { state.drawn = true; syncFaces(); }
     ui['page-stage'].setAttribute('aria-busy', String(info.rendering));
