@@ -7,7 +7,7 @@
     'privacy-notice', 'privacy-title', 'print-workspace', 'privacy-open', 'privacy-check',
     'privacy-accept', 'privacy-choice', 'privacy-review', 'privacy-return', 'privacy-revoke',
     'privacy-storage-note', 'privacy-close', 'privacy-scroll', 'help-privacy',
-    'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text',
+    'topbar', 'submit-form', 'workspace-fields', 'service-status', 'service-dot', 'service-text', 'service-short',
     'service-refresh', 'dropzone', 'drop-visual', 'pick-btn', 'file-input', 'doc-panel', 'doc-name',
     'doc-sub', 'doc-remove', 'doc-open', 'doc-progress', 'limits-hint', 'file-error', 'capability-row', 'drop-sub', 'file-kind',
     'school-username', 'school-password', 'password-toggle', 'form-error',
@@ -184,14 +184,16 @@
 
   function render() {
     const service = state.session?.service;
-    let status = '正在连接打印服务';
+    // The short label replaces the full status in the narrow mobile masthead.
+    let [status, short] = ['正在连接打印服务', '连接中'];
     let tone = 'connecting';
-    if (!navigator.onLine) { status = '网络已断开'; tone = 'offline'; }
-    else if (service?.demo) { status = '未连接真实打印设备'; tone = 'offline'; }
-    else if (service?.busy) { status = '正在处理其他任务'; tone = 'busy'; }
-    else if (ready()) { status = '打印服务已连接'; tone = 'online'; }
-    else if (!state.checking) { status = '打印服务未连接'; tone = 'offline'; }
+    if (!navigator.onLine) { [status, short] = ['网络已断开', '已断网']; tone = 'offline'; }
+    else if (service?.demo) { [status, short] = ['未连接真实打印设备', '未接设备']; tone = 'offline'; }
+    else if (service?.busy) { [status, short] = ['正在处理其他任务', '设备忙']; tone = 'busy'; }
+    else if (ready()) { [status, short] = ['打印服务已连接', '已连接']; tone = 'online'; }
+    else if (!state.checking) { [status, short] = ['打印服务未连接', '未连接']; tone = 'offline'; }
     ui['service-text'].textContent = status;
+    ui['service-short'].textContent = short;
     ui['service-status'].dataset.state = tone;
     ui['service-dot'].className = 'service-dot ' + tone;
     ui['service-refresh'].hidden = ready() || state.busy;

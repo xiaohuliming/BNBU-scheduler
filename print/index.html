@@ -8,24 +8,34 @@
 <title>校园打印 · MAXCOURSE</title>
 <link rel="icon" href="/favicon.png">
 <link href="/vendor/fonts.css" rel="stylesheet">
-<link href="print.css?v=privacy-modal-20261003" rel="stylesheet">
+<link href="print.css?v=mobile-20261019" rel="stylesheet">
 </head>
 <body class="privacy-pending">
 <div class="ambient" aria-hidden="true"><span></span><span></span></div>
 
 <header class="topbar" id="topbar">
   <div class="topbar-inner wrap">
-    <a class="brand" href="/" aria-label="返回 MAXCOURSE 首页">
-      <span class="brand-word">Maxcourse</span>
-      <span class="brand-sub">Campus Toolkit</span>
+    <a class="home-link" href="/" aria-label="返回 MAXCOURSE 首页">
+      <span class="home-back" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M18.5 12h-13M11 6.5 5.5 12l5.5 5.5"/></svg>
+        <span class="home-back-text">首页</span>
+      </span>
+      <span class="brand">
+        <span class="brand-word">Maxcourse</span>
+        <span class="brand-sub">Campus Toolkit</span>
+      </span>
     </a>
     <div class="topbar-actions">
       <div class="service-status" id="service-status" role="status" data-state="connecting" hidden>
         <span class="service-dot" id="service-dot" aria-hidden="true"></span>
         <span class="service-text" id="service-text">正在连接打印服务</span>
+        <span class="service-short" id="service-short" aria-hidden="true">连接中</span>
         <button class="service-refresh" id="service-refresh" type="button" hidden>重新连接</button>
       </div>
-      <button class="ghost-btn" id="privacy-open" type="button" hidden>隐私与权益</button>
+      <button class="ghost-btn" id="privacy-open" type="button" aria-label="隐私与权益" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 5.5 6v5.6c0 4.1 2.7 7.3 6.5 8.9 3.8-1.6 6.5-4.8 6.5-8.9V6L12 3.5Z"/><path d="m9.3 12.1 1.9 1.9 3.6-3.8"/></svg>
+        <span>隐私与权益</span>
+      </button>
       <button class="ghost-btn help-btn" id="help-open" type="button" aria-label="打印须知" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7M12 16.9v.1"/></svg>
         <span>打印须知</span>
@@ -123,7 +133,7 @@
               </span>
             </div>
           </div>
-          <h2 id="upload-title"><span class="title-idle">拖入文件</span><span class="title-drag" aria-hidden="true">松开即可预览</span></h2>
+          <h2 id="upload-title"><span class="title-idle">拖入文件</span><span class="title-touch">上传文件</span><span class="title-drag" aria-hidden="true">松开即可预览</span></h2>
           <p class="drop-sub" id="drop-sub">PDF 文件</p>
           <button class="btn btn-primary pick-btn" id="pick-btn" type="button">
             <span>选择文件</span>
@@ -268,8 +278,10 @@
               <p class="total-detail" id="print-total">正在检查页数</p>
             </div>
             <div class="cost-estimate" aria-labelledby="cost-label"><span id="cost-label">估算费用</span><strong id="estimated-cost">待选文档</strong></div>
-            <p class="cost-note" id="cost-note">依据学校公开价目表估算，实际以刷卡结算为准。</p>
-            <a class="pricing-source" href="https://itsc.bnbu.edu.cn/IT_Services/Printing.htm" target="_blank" rel="noopener">学校价目表 · 2024-08-30 ↗</a>
+            <div class="cost-fine">
+              <p class="cost-note" id="cost-note">依据学校公开价目表估算，实际以刷卡结算为准。</p>
+              <a class="pricing-source" href="https://itsc.bnbu.edu.cn/IT_Services/Printing.htm" target="_blank" rel="noopener">学校价目表 · 2024-08-30 ↗</a>
+            </div>
             <button class="btn btn-primary go-print" id="go-print" type="button" disabled>
               <span>确认打印</span>
               <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12h13M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
@@ -399,6 +411,6 @@
 <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
 <script src="pdf-preview.js" defer></script>
 <script src="pricing.js?v=cost-20261003" defer></script>
-<script src="print.js?v=privacy-modal-20261003" defer></script>
+<script src="print.js?v=mobile-20261019" defer></script>
 </body>
 </html>
