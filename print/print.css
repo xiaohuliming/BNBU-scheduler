@@ -401,6 +401,7 @@ h1 { margin: 0; font: 700 clamp(32px, 3.4vw, 44px)/1.1 var(--serif); letter-spac
 #copies:focus-visible { outline: none; }
 .copies-input:has(#copies:focus-visible) { box-shadow: 3px 3px 0 var(--ink); }
 #copies:disabled { color: var(--faint); }
+.rotate-input output { display: grid; flex: 1; place-items: center; min-width: 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .setting-static { font-size: 13px; }
 .setting-static #range-summary { grid-column: 2; font-weight: 700; text-align: right; }
 
