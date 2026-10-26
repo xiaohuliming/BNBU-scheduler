@@ -3,14 +3,17 @@
 Validates each batch output and reports missing / invalid / incomplete batches so
 they can be re-run. Safe to run repeatedly while the enrichment workflow is still
 in progress: it merges whatever is ready.
+
+Partial refresh: `--work enrich_work/refresh --update` reads <work>/manifest.json +
+<work>/out/ and overlays the results onto the existing course_enrichment.json
+instead of rebuilding it from scratch.
 """
 
+import argparse
 import json
 import os
 
 WORK = "enrich_work"
-OUT_DIR = os.path.join(WORK, "out")
-MANIFEST = os.path.join(WORK, "manifest.json")
 CATALOG = "course_catalog.json"
 RESULT = "course_enrichment.json"
 
@@ -43,17 +46,25 @@ def normalize(o):
 
 
 def main():
-    manifest = json.load(open(MANIFEST, encoding="utf-8"))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--work", default=WORK, help="work dir holding manifest.json + out/")
+    ap.add_argument("--update", action="store_true",
+                    help=f"overlay onto the existing {RESULT} instead of rebuilding it")
+    args = ap.parse_args()
+
+    manifest = json.load(open(os.path.join(args.work, "manifest.json"), encoding="utf-8"))
     catalog = json.load(open(CATALOG, encoding="utf-8"))
     valid_codes = set(catalog)
 
     enrichment = {}
+    if args.update and os.path.exists(RESULT):
+        enrichment = json.load(open(RESULT, encoding="utf-8"))
     missing, invalid, incomplete = [], [], []
 
     for entry in manifest:
         idx = entry["batch"]
         expected = entry["codes"]
-        path = os.path.join(OUT_DIR, f"batch_{idx:03d}.json")
+        path = os.path.join(args.work, "out", f"batch_{idx:03d}.json")
         if not os.path.exists(path):
             missing.append(idx)
             continue

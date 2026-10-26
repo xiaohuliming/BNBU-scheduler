@@ -29,6 +29,7 @@ Output shape (per course code):
 import json
 import re
 import sys
+from difflib import SequenceMatcher
 
 import pandas as pd
 from pypdf import PdfReader
@@ -37,7 +38,7 @@ from maximize_credits import load_timetable
 
 # cp the source PDF into /tmp/srcdata first (macOS TCC: never point python at
 # ~/Downloads or ~/Documents directly).
-PDF_PATH = "/tmp/srcdata/Course Descriptions_20260710.pdf"
+PDF_PATH = "/tmp/srcdata/Course Descriptions_20260716.pdf"
 XLSX_PATH = "Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx"
 OUT_PATH = "course_catalog.json"
 # Codes present in the previous catalog but in neither the PDF nor the new
@@ -46,6 +47,24 @@ OUT_PATH = "course_catalog.json"
 PREV_CATALOG = "course_catalog.json"
 
 CODE_RE = re.compile(r"[A-Z]{2,4}\d{4}")
+ZH_REQ_TOKEN_RE = re.compile(r"(未曾修读过|修读过)|([A-Z]{2,4}\d{4})")
+# Timetable variants carry a 4-digit section suffix (AIM20338001 -> AIM2033).
+SUFFIXED_CODE_RE = re.compile(r"([A-Z]{2,4}\d{4})\d{4}")
+
+
+def zh_prereq_codes(req_zh, code):
+    """Codes the Chinese Requirements text says must HAVE been taken.
+
+    未曾修读过X means "must NOT have taken X" -- a mutually-exclusive course,
+    not a prerequisite. A bare code after 或者 inherits the nearest predicate
+    (修读过AI2003 或者 COMP2003)."""
+    codes, predicate = [], "修读过"
+    for m in ZH_REQ_TOKEN_RE.finditer(req_zh or ""):
+        if m.group(1):
+            predicate = m.group(1)
+        elif predicate == "修读过" and m.group(2) != code:
+            codes.append(m.group(2))
+    return codes
 
 
 def clean(text):
@@ -63,7 +82,7 @@ def title_case(title):
     out = []
     for i, w in enumerate(words):
         low = w.lower()
-        if re.fullmatch(r"[IVXLC]+", w):  # roman numeral (course levels I/II/III)
+        if re.fullmatch(r"[IVXLC]+", w) or re.search(r"\d", w):  # roman numeral / 3D
             out.append(w)
         elif w.isalpha() and w.isupper() and len(w) <= 5 and not re.search(r"[AEIOU]", w):
             out.append(w)  # consonant-only acronym: CIS, IFRS, CVP, HR
@@ -74,25 +93,43 @@ def title_case(title):
     return " ".join(out)
 
 
+def loose_word(word):
+    """pypdf sometimes splits a word with a stray space ("Course Descript ion")."""
+    return r"\s?".join(re.escape(ch) for ch in word)
+
+
 def parse_pdf(path):
     reader = PdfReader(path)
-    text = "\n".join((p.extract_text() or "") for p in reader.pages)
+    return parse_pdf_text("\n".join((p.extract_text() or "") for p in reader.pages))
+
+
+def parse_pdf_text(text):
     text = re.sub(r"\n\s*\d+\s*/\s*\d+\s*\n", "\n", text)  # strip "12 / 172" headers
 
+    # Titles are upper-case, but pypdf wraps long ones across lines and some
+    # carry C++ / ? / – / ISO9001 or a stray typo (STATISTICs). So a title may
+    # hold anything except the start of another "CODE TITLE" or a lower-case
+    # word -- the two things that would let it run on through prose.
+    code_start = r"[A-Z]{2,4}\d{4}\s+[A-Z0-9]"
+    title = r"(?!" + code_start + r")[A-Z0-9](?:(?!" + code_start + r")(?![a-z]{2}).)+?"
+    units_pre = (r"\s*\(\s*(\d+)\s*(?i:" + loose_word("units") + r"?)\s*\)\s*"
+                 + loose_word("Pre") + r"-?\s?" + loose_word("requisite") + r"s?")
+    header = r"([A-Z]{2,4}\d{4})\s+(" + title + r")" + units_pre
+    next_header = r"[A-Z]{2,4}\d{4}\s+" + title + units_pre.replace(r"(\d+)", r"\d+")
+    not_past_header = r"(?:(?!" + next_header + r").)*?"
     block_re = re.compile(
-        r"([A-Z]{2,4}\d{4})\s+([A-Z][A-Z0-9 &\-\(\)/,'’.:]+?)\s*\(\s*(\d+)\s*units?\s*\)\s*"
-        r"Pre-?requisite\(s\)\s*:\s*(.*?)\s*Course Description\s*:\s*(.*?)"
-        r"(?=[A-Z]{2,4}\d{4}\s+[A-Z][A-Z0-9 &\-\(\)/,'’.:]+?\s*\(\s*\d+\s*units?\s*\)\s*Pre-?requisite|\Z)",
+        header + r"(?:\(s\))?\s*[:：]\s*(" + not_past_header + r")\s*"  # some blocks use a full-width colon
+        + loose_word("Course") + r"\s*" + loose_word("Description") + r"\s*[:：]\s*(.*?)(?=" + next_header + r"|\Z)",
         re.DOTALL,
     )
+    marker_re = re.compile(units_pre, re.IGNORECASE)
     out = {}
     for code, title, units, prereq, desc in block_re.findall(text):
-        if code in out:
-            continue
         prereq_clean = clean(prereq)
-        # "None" / "Nil" -> empty
-        prereq_codes = [c for c in CODE_RE.findall(prereq_clean) if c != code]
-        out[code] = {
+        # "None" / "Nil" -> empty; "Co-requisite(s): X" is taken alongside, not before
+        required_part = re.split(r"Co-?\s?requisite", prereq_clean, flags=re.IGNORECASE)[0]
+        prereq_codes = [c for c in CODE_RE.findall(required_part) if c != code]
+        block = {
             "code": code,
             "title_en": title_case(clean(title)),
             "units": int(units),
@@ -100,7 +137,34 @@ def parse_pdf(path):
             "prereq_text": prereq_clean,
             "prereq_codes": sorted(set(prereq_codes)),
         }
+        # Renamed courses are printed twice under one code (old + new title);
+        # keep every version so the timetable title can pick the right one.
+        out.setdefault(code, {**block, "versions": []})["versions"].append(block)
+    # A "(n units) Pre-requisite" left inside a parsed block means a header was
+    # missed and the next course got glued onto this one.
+    leaked = sorted({v["code"] for e in out.values() for v in e["versions"]
+                     if marker_re.search(v["description"]) or marker_re.search(v["prereq_text"])})
+    versioned = sum(1 for e in out.values() if len(e["versions"]) > 1)
+    print(f"pdf blocks parsed        : {sum(len(e['versions']) for e in out.values())} "
+          f"(header markers in text: {len(marker_re.findall(text))}; "
+          f"{len(out)} codes, {versioned} printed in two versions)")
+    if leaked:
+        print(f"WARNING: {len(leaked)} blocks still contain another course's header: {leaked[:20]}")
     return out
+
+
+def pick_version(entry, title):
+    """The PDF version of a course whose title is closest to the timetable's."""
+    if not entry:
+        return {}
+    if not title:
+        return entry["versions"][0]
+
+    def norm(s):
+        return re.sub(r"[^a-z0-9]", "", s.lower())
+
+    return max(entry["versions"],
+               key=lambda v: SequenceMatcher(None, norm(v["title_en"]), norm(title)).ratio())
 
 
 def parse_xlsx(path):
@@ -140,9 +204,9 @@ def parse_xlsx(path):
                     vals.append(v)
             return vals
 
-        # Requirements column mixes Chinese prereqs; harvest any codes present too.
+        # Requirements column mixes Chinese prereqs; harvest the codes it requires.
         req_zh = " / ".join(uniq("Requirements"))
-        prereq_codes_zh = [c for c in CODE_RE.findall(req_zh) if c != code]
+        prereq_codes_zh = zh_prereq_codes(req_zh, code)
 
         offered[code] = {
             "code": code,
@@ -178,11 +242,15 @@ def main():
         if code not in pdf and code not in xlsx:
             entry = dict(prev[code])
             entry.update(offered=False, sessions=[], teachers=[], unlocks=[], similar=[])
+            # re-derive from the stored texts so old parser mistakes don't linger
+            en_codes = [c for c in CODE_RE.findall(entry.get("prereq_text", "")) if c != code]
+            zh_codes = zh_prereq_codes(entry.get("prereq_text_zh", ""), code)
+            entry["prereq_codes"] = sorted(set(en_codes) | set(zh_codes))
             catalog[code] = entry
             carried.append(code)
             continue
-        p = pdf.get(code, {})
         x = xlsx.get(code, {})
+        p = pick_version(pdf.get(code), x.get("title"))
         dept = re.match(r"[A-Z]+", code)
         num = re.search(r"\d", code)
         prereq_codes = sorted(set(p.get("prereq_codes", [])) | set(x.get("prereq_codes_zh", [])))
@@ -209,6 +277,20 @@ def main():
             "teachers": x.get("teachers", []),
             "sessions": x.get("sessions", []),
         }
+
+    # Section variants (AIM20338001) have no PDF block of their own; borrow the
+    # base course's description (the version whose title matches) so their
+    # detail page isn't empty.
+    borrowed, renamed = [], []
+    for code, c in catalog.items():
+        m = SUFFIXED_CODE_RE.fullmatch(code)
+        if c["description"] or not m or m.group(1) not in pdf:
+            continue
+        base = pick_version(pdf[m.group(1)], c["title"])
+        c.update(description=base["description"], description_from=m.group(1), has_description=True)
+        borrowed.append(code)
+        if re.sub(r"\W", "", c["title"].lower()) != re.sub(r"\W", "", base["title_en"].lower()):
+            renamed.append(f"{code} {c['title']!r} <- {m.group(1)} {base['title_en']!r}")
 
     # reverse prereq graph: who unlocks off this course
     for code, c in catalog.items():
@@ -243,6 +325,9 @@ def main():
     print(f"offered this semester    : {len(offered)}")
     print(f"offered WITH description : {len(offered_desc)}")
     print(f"offered WITHOUT desc     : {len(offered) - len(offered_desc)}")
+    print(f"variants borrowing base description: {len(borrowed)}")
+    for line in renamed:
+        print(f"  title differs from base, check: {line}")
     print(f"wrote {OUT_PATH}")
 
 

@@ -1457,7 +1457,9 @@ def get_course_detail(code):
     # courses the main PDF catalog has no description for (WPEC/GE courses).
     result["textbooks"] = get_course_textbooks().get(code, [])
     if not (result.get("description") or "").strip():
-        extra = get_course_desc_extra().get(code)
+        extras = get_course_desc_extra()
+        base = re.match(r"[A-Z]{2,4}\d{4}", code)  # UCHL12038001 -> UCHL1203
+        extra = extras.get(code) or (extras.get(base.group(0)) if base else None)
         if extra:
             if extra.get("description"):
                 result["description"] = extra["description"]

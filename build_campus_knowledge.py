@@ -28,21 +28,41 @@ from maximize_credits import load_timetable, parse_session_from_title
 HANDBOOK_URL = 'https://ar.bnbu.edu.cn/current_students/student_handbook/programme_handbook.htm'
 COURSE_DESCRIPTION_URL = 'https://ar.bnbu.edu.cn/current_students/student_handbook/course_Deescription.htm'
 TIMETABLE_URL = 'https://ecm.bnbu.edu.cn/index.html#doc/enterprise/121649'
+# Pin the system curl: it uses macOS trust roots, while an anaconda/Homebrew
+# curl earlier on PATH ships its own CA bundle and intermittently fails one AR
+# backend's certificate chain (curl exit 60). Never disable TLS verification.
+CURL = '/usr/bin/curl' if os.path.exists('/usr/bin/curl') else 'curl'
 
 
 def fetch_public(url):
     parsed = urlsplit(url)
     if parsed.scheme != 'https' or parsed.hostname != 'ar.bnbu.edu.cn' or parsed.username:
         raise ValueError('Only public Academic Registry HTTPS sources are allowed')
-    # System curl uses macOS trust roots; do not disable TLS verification.
     safe = quote(url, safe=':/%?=&')
     return subprocess.check_output([
-        'curl', '-fsS', '--proto', '=https', '--connect-timeout', '10',
+        CURL, '-fsS', '--proto', '=https', '--connect-timeout', '10',
         '--max-time', '40', '--retry', '2', '--max-filesize', '16777216', safe,
     ], stderr=subprocess.PIPE)
 
 
-def refresh_handbooks(cache):
+def previous_handbook_sources(index_path):
+    """Handbook sources recorded in the last built index (none on a first build)."""
+    if not index_path.exists():
+        return []
+    conn = sqlite3.connect(f'file:{index_path}?mode=ro', uri=True)
+    try:
+        rows = conn.execute("SELECT metadata FROM documents WHERE kind='handbook'").fetchall()
+    finally:
+        conn.close()
+    sources = []
+    for (raw,) in rows:
+        meta = json.loads(raw)
+        sources.append({key: meta[key] for key in ('id', 'title', 'cohort', 'source_url', 'landing_url', 'source_file')})
+        sources[-1]['programme'] = meta['programmes'][0]
+    return sources
+
+
+def refresh_handbooks(cache, previous=()):
     cache.mkdir(parents=True, exist_ok=True)
     soup = BeautifulSoup(fetch_public(HANDBOOK_URL), 'html.parser')
     sources = []
@@ -53,6 +73,7 @@ def refresh_handbooks(cache):
         cohort = match.group(1)
         landing = urljoin(HANDBOOK_URL, link['href'])
         page = BeautifulSoup(fetch_public(landing), 'html.parser')
+        found = []
         for doc in page.find_all('a', href=True):
             title = doc.get_text(' ', strip=True)
             url = urljoin(landing, doc['href'])
@@ -62,11 +83,22 @@ def refresh_handbooks(cache):
             code = re.match(r'([A-Z]+)[ _-]', filename)
             if not code:
                 raise ValueError('Unrecognized handbook programme: ' + filename)
-            sources.append({'id': 'handbook:' + code.group(1) + ':' + cohort,
-                            'title': title + ' · ' + cohort + '级培养手册',
-                            'programme': code.group(1), 'cohort': cohort,
-                            'source_url': quote(url, safe=':/%?=&'), 'landing_url': landing,
-                            'source_file': filename})
+            found.append({'id': 'handbook:' + code.group(1) + ':' + cohort,
+                          'title': title + ' · ' + cohort + '级培养手册',
+                          'programme': code.group(1), 'cohort': cohort,
+                          'source_url': quote(url, safe=':/%?=&'), 'landing_url': landing,
+                          'source_file': filename})
+        if not found:
+            # The 2026-admission page now links to the SSO-gated ECM station, but
+            # the handbook PDFs stay public at their old AR URLs; reuse those.
+            # download() still runs them through fetch_public's AR-only check.
+            found = [s for s in previous if s['cohort'] == cohort]
+            if not found:
+                raise ValueError(f'{cohort} admission page lists no public handbook PDFs '
+                                 'and the previous index recorded none to reuse')
+            print(f'{cohort} admission page lists no public PDFs; reusing {len(found)} '
+                  'handbook URLs from the previous index', flush=True)
+        sources.extend(found)
     if len(sources) < 100 or len({x['id'] for x in sources}) != len(sources):
         raise ValueError('Incomplete or duplicated public handbook directory')
 
@@ -284,7 +316,7 @@ def main():
     root = Path(__file__).resolve().parent
     manifest_path = args.cache / 'manifest.json'
     if args.refresh_handbooks or not manifest_path.exists():
-        manifest = refresh_handbooks(args.cache)
+        manifest = refresh_handbooks(args.cache, previous_handbook_sources(root / INDEX_NAME))
     else:
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     fingerprints = {}
