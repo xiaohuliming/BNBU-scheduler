@@ -1526,7 +1526,7 @@ class AppTestCase(unittest.TestCase):
     def test_data_files_are_not_public_static_assets(self):
         for path in (
             '/course_catalog.json', '/course_enrichment.json', '/campus_docs.json',
-            '/course_equivalences.json', '/course_textbooks.json',
+            '/course_equivalences.json', '/course_textbooks.json', '/course_outlines.json',
             '/course_semester_2526S1.json', '/semesters_index.json',
             '/programme_requirements.json', '/skillpath_nodes.json',
             '/skillpath_graph.npz', '/CLAUDE.md', '/README.md',
@@ -1536,6 +1536,22 @@ class AppTestCase(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 404)
+
+    def test_course_detail_serves_lecture_outline_and_grounded_topics(self):
+        outlines = {'ACCT2003': {
+            'topics': ['记账循环', '调整分录', '存货核算'],
+            'outline': ['会计与商业', '交易的分析与记录', '调整分录'],
+            'semesters': ['2526S1', '2627S1'],
+        }}
+        enrichment = {'ACCT2003': {'code': 'ACCT2003', 'tagline': 't', 'topics': ['旧主题'], 'similar': []}}
+        with mock.patch.object(app_module, 'get_course_outlines', return_value=outlines), \
+                mock.patch.object(app_module, 'get_course_enrichment', return_value=enrichment):
+            data = self.client.get('/api/course/ACCT2003').get_json()
+            self.assertEqual(data['outline'], {'items': ['会计与商业', '交易的分析与记录', '调整分录'], 'semesters': 2})
+            self.assertEqual(data['enrichment']['topics'], ['记账循环', '调整分录', '存货核算'])
+
+            other = self.client.get('/api/course/ACCT2013').get_json()
+            self.assertIsNone(other['outline'])
 
     def test_static_guard_resists_path_normalization_tricks(self):
         # A trailing slash / '/.' / doubled slash must not let the static handler

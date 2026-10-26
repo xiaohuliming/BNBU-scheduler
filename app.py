@@ -169,7 +169,7 @@ SENSITIVE_STATIC_SUFFIXES = (
 BLOCKED_STATIC_FILES = (
     '/campus_docs.json', '/course_catalog.json', '/course_descriptions_extra.json',
     '/course_enrichment.json', '/course_equivalences.json', '/course_textbooks.json',
-    '/programme_requirements.json', '/semesters_index.json',
+    '/course_outlines.json', '/programme_requirements.json', '/semesters_index.json',
     '/requirements.txt', '/precompile.js',
 )
 BLOCKED_STATIC_FILE_PREFIXES = ('/course_semester_', '/skillpath_')
@@ -1294,6 +1294,16 @@ def get_course_textbooks():
     return _load_json_cached(COURSE_TEXTBOOKS_PATH, _textbooks_cache)
 
 
+# Lecture outline + grounded topics distilled from past iSpace lecture titles
+# (build_course_outlines.py). Only the AI-written Chinese text is shipped.
+COURSE_OUTLINES_PATH = os.path.join(APP_ROOT, 'course_outlines.json')
+_outlines_cache = {"mtime": None, "data": None}
+
+
+def get_course_outlines():
+    return _load_json_cached(COURSE_OUTLINES_PATH, _outlines_cache)
+
+
 # Campus file center (工具箱 > 校园文件中心): curated high-frequency student
 # documents. Hosted PDFs live under /docs/, external entries link to the
 # official AR pages / the SSO-gated ECM station. Regenerate by hand-editing
@@ -1466,9 +1476,18 @@ def get_course_detail(code):
             result["description_cn"] = extra.get("description_cn", "")
             result["description_source"] = extra.get("source", "")
 
+    outline = get_course_outlines().get(code)
+    result["outline"] = {
+        "items": outline.get("outline", []),
+        "semesters": len(outline.get("semesters", [])),
+    } if outline else None
+
     enrichment = enrichment_map.get(code)
     if enrichment:
         enrichment = dict(enrichment)
+        if outline and outline.get("topics"):
+            # Topics grounded in real lecture titles beat ones inferred from the blurb.
+            enrichment["topics"] = outline["topics"]
         resolved_similar = []
         for item in enrichment.get("similar", []):
             ref = catalog.get(item.get("code"))
