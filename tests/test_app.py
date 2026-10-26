@@ -1527,6 +1527,7 @@ class AppTestCase(unittest.TestCase):
         for path in (
             '/course_catalog.json', '/course_enrichment.json', '/campus_docs.json',
             '/course_equivalences.json', '/course_textbooks.json', '/course_outlines.json',
+            '/course_teacher_outlines.json',
             '/course_semester_2526S1.json', '/semesters_index.json',
             '/programme_requirements.json', '/skillpath_nodes.json',
             '/skillpath_graph.npz', '/CLAUDE.md', '/README.md',
@@ -1545,13 +1546,31 @@ class AppTestCase(unittest.TestCase):
         }}
         enrichment = {'ACCT2003': {'code': 'ACCT2003', 'tagline': 't', 'topics': ['旧主题'], 'similar': []}}
         with mock.patch.object(app_module, 'get_course_outlines', return_value=outlines), \
+                mock.patch.object(app_module, 'get_course_teacher_outlines', return_value={}), \
                 mock.patch.object(app_module, 'get_course_enrichment', return_value=enrichment):
             data = self.client.get('/api/course/ACCT2003').get_json()
-            self.assertEqual(data['outline'], {'items': ['会计与商业', '交易的分析与记录', '调整分录'], 'semesters': 2})
+            self.assertEqual(data['outline'], {'items': ['会计与商业', '交易的分析与记录', '调整分录'], 'semesters': 2, 'by_teacher': []})
             self.assertEqual(data['enrichment']['topics'], ['记账循环', '调整分录', '存货核算'])
 
             other = self.client.get('/api/course/ACCT2013').get_json()
             self.assertIsNone(other['outline'])
+
+    def test_course_detail_lists_teacher_outlines_with_current_teachers_first(self):
+        catalog = {'MKT2003': {'code': 'MKT2003', 'title': 'Principles of Marketing Management', 'offered': True,
+                               'teachers': ['Dr. Vei Cheng YU'], 'prereq_codes': [], 'unlocks': []}}
+        teacher_outlines = {'MKT2003': [
+            {'teacher': 'Dr. Former TEACHER', 'semesters': ['2425S1'], 'outline': ['甲', '乙', '丙'], 'focus': '按教材章节推进'},
+            {'teacher': 'Dr. Veicheng YU', 'semesters': ['2526S1', '2627S1'], 'outline': ['一', '二', '三'], 'focus': ''},
+        ]}
+        with mock.patch.object(app_module, 'get_course_catalog', return_value=catalog), \
+                mock.patch.object(app_module, 'get_course_outlines', return_value={}), \
+                mock.patch.object(app_module, 'get_course_teacher_outlines', return_value=teacher_outlines):
+            outline = self.client.get('/api/course/MKT2003').get_json()['outline']
+        self.assertEqual(outline['items'], [])
+        self.assertEqual([t['teacher'] for t in outline['by_teacher']], ['Dr. Veicheng YU', 'Dr. Former TEACHER'])
+        self.assertEqual([t['teaching_now'] for t in outline['by_teacher']], [True, False])
+        self.assertEqual(outline['by_teacher'][0]['semesters'], 2)
+        self.assertEqual(outline['by_teacher'][1]['focus'], '按教材章节推进')
 
     def test_static_guard_resists_path_normalization_tricks(self):
         # A trailing slash / '/.' / doubled slash must not let the static handler

@@ -15,6 +15,12 @@ topics end up in the committed course_outlines.json.
      or {"code", "skip": true} when the titles are too thin to ground anything.
   3. python build_course_outlines.py merge
      -> course_outlines.json (validated; prints batch ids that still need work)
+
+Per-teacher outlines (courses offered now that 2+ teachers have taught) follow the
+same three steps with extract-teachers / merge-teachers, working in
+enrich_work/outline_teachers/ and writing course_teacher_outlines.json. Each AI
+output item is {"code", "same": true} when all teachers cover the same ground, or
+{"code", "teachers": [{"teacher", "outline": [...], "focus": "..."} | {"teacher", "skip": true}]}.
 """
 
 import argparse
@@ -103,7 +109,7 @@ def session_index(catalog):
 
 
 def map_shells(con, catalog):
-    """Course shell id -> (code, semester key) for shells we can tie to one catalog code."""
+    """Course shell id -> (code, semester key, teacher) for shells we can tie to one catalog code."""
     by_title = collections.defaultdict(set)
     for code, entry in catalog.items():
         for key in ("title", "title_en"):
@@ -116,7 +122,7 @@ def map_shells(con, catalog):
         sem = semester_key(name)
         if not sem:
             continue
-        code = None
+        code, teacher = None, None
         m = SHELL_RE.match(name)
         if m:
             code = sessions.get((sem, norm_title(m["title"]), m["sess"]))
@@ -125,13 +131,14 @@ def map_shells(con, catalog):
                 code = next(iter(codes))
             if code not in catalog:
                 code = None
+            teacher = " ".join(m["teacher"].split()) or None
         if not code:
             for prefix, digits in CODE_RE.findall(name):
                 if prefix + digits in catalog:
                     code = prefix + digits
                     break
         if code:
-            shells[cid] = (code, sem)
+            shells[cid] = (code, sem, teacher)
     return shells
 
 
@@ -159,7 +166,7 @@ def natural_key(title):
 
 
 def collect_titles(con, shells, catalog):
-    """code -> {sem: [titles]} per shell, keeping lecture-like content files only."""
+    """code -> [(sem, titles, teacher)] per shell, keeping lecture-like content files only."""
     per_shell = collections.defaultdict(list)
     query = (
         "select course_id, filename, mimetype from files "
@@ -190,8 +197,8 @@ def collect_titles(con, shells, catalog):
             if key not in seen:
                 seen.add(key)
                 uniq.append(t)
-        code, sem = shells[cid]
-        by_code[code].append((sem, sorted(uniq, key=natural_key)))
+        code, sem, teacher = shells[cid]
+        by_code[code].append((sem, sorted(uniq, key=natural_key), teacher))
     return by_code
 
 
@@ -199,7 +206,7 @@ def pick_versions(versions, max_versions=3, max_titles=40):
     """Prefer recent, well-populated shells; drop near-duplicate sections of one offering."""
     versions = sorted(versions, key=lambda v: (v[0], len(v[1])), reverse=True)
     picked = []
-    for sem, titles in versions:
+    for sem, titles, *_ in versions:
         if len(titles) < 3:
             continue
         sig = set(re.sub(r"\W+", "", t.lower()) for t in titles)
@@ -222,7 +229,7 @@ def extract(args):
         versions = pick_versions(by_code[code])
         if not versions:
             continue
-        sems = sorted({sem for sem, titles in by_code[code] if len(titles) >= 3})
+        sems = sorted({sem for sem, titles, _ in by_code[code] if len(titles) >= 3})
         c = catalog[code]
         courses.append({
             "code": code,
@@ -318,16 +325,160 @@ def merge(args):
         print(f"TODO batches ({len(todo)}): {todo}")
 
 
+TEACHER_RESULT = "course_teacher_outlines.json"
+TEACHER_WORK = os.path.join("enrich_work", "outline_teachers")
+TEACHER_BATCH_SIZE = 10
+MAX_TEACHERS = 4
+
+
+def norm_person(name):
+    """iSpace and the timetable spell names differently ("Veicheng" vs "Vei Cheng", "Dr." vs "Ms.")."""
+    name = re.sub(r"^\s*(dr|prof|professor|mr|ms|mrs|miss)\.?\s+", "", (name or "").lower())
+    return re.sub(r"[^a-z]", "", name)
+
+
+def teacher_versions(by_code, catalog):
+    """code -> per-teacher lecture titles, for courses offered now that 2+ teachers have taught."""
+    result = {}
+    for code, versions in by_code.items():
+        entry = catalog[code]
+        if not entry.get("offered"):
+            continue
+        current = {norm_person(t): t for t in entry.get("teachers") or []}
+        per = collections.defaultdict(list)
+        for sem, titles, teacher in versions:
+            if teacher and len(titles) >= 3:
+                per[norm_person(teacher)].append((sem, titles, teacher))
+        rows = []
+        for key, shells in per.items():
+            sem, titles, spelled = max(shells, key=lambda v: (v[0], len(v[1])))  # latest, fullest section
+            rows.append({"teacher": current.get(key, spelled), "semesters": sorted({v[0] for v in shells}),
+                         "titles": titles[:40], "now": key in current})
+        # Teachers on this semester's timetable first, then the most recent ones.
+        rows.sort(key=lambda r: (r["now"], r["semesters"][-1], len(r["titles"])), reverse=True)
+        if len(rows) >= 2:
+            result[code] = rows[:MAX_TEACHERS]
+    return result
+
+
+def extract_teachers(args):
+    catalog = json.load(open(CATALOG, encoding="utf-8"))
+    con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
+    by_teacher = teacher_versions(collect_titles(con, map_shells(con, catalog), catalog), catalog)
+
+    courses = [{
+        "code": code,
+        "title": catalog[code]["title"],
+        "description": (catalog[code].get("description") or "")[:300],
+        "teachers": [{"teacher": r["teacher"], "titles": r["titles"]} for r in rows],
+    } for code, rows in sorted(by_teacher.items())]
+
+    batch_dir = os.path.join(args.work, "batches")
+    os.makedirs(batch_dir, exist_ok=True)
+    for old in os.listdir(batch_dir):
+        os.remove(os.path.join(batch_dir, old))
+    manifest = []
+    for idx in range(0, len(courses), TEACHER_BATCH_SIZE):
+        chunk = courses[idx:idx + TEACHER_BATCH_SIZE]
+        n = idx // TEACHER_BATCH_SIZE
+        path = os.path.join(batch_dir, f"batch_{n:03d}.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"batch": n, "courses": chunk}, f, ensure_ascii=False, indent=1)
+        manifest.append({"batch": n, "file": path, "codes": [c["code"] for c in chunk],
+                         "teachers": {c["code"]: {r["teacher"]: r["semesters"] for r in by_teacher[c["code"]]}
+                                      for c in chunk}})
+    with open(os.path.join(args.work, "manifest.json"), "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=1)
+
+    teaching_now = sum(r["now"] for rows in by_teacher.values() for r in rows)
+    print(f"courses w/ 2+ teachers: {len(courses)} (teacher versions {sum(len(c['teachers']) for c in courses)}, "
+          f"{teaching_now} teaching now)")
+    print(f"batches               : {len(manifest)} (size {TEACHER_BATCH_SIZE}) -> {batch_dir}")
+
+
+def merge_teachers(args):
+    """AI output per course: {"code", "same": true} when every teacher covers the same ground, else
+    {"code", "teachers": [{"teacher", "outline": [...], "focus": "..."} | {"teacher", "skip": true}]}."""
+    catalog = json.load(open(CATALOG, encoding="utf-8"))
+    manifest = json.load(open(os.path.join(args.work, "manifest.json"), encoding="utf-8"))
+    result, missing, invalid, incomplete = {}, [], [], []
+    same = thin = 0
+    for entry in manifest:
+        idx = entry["batch"]
+        path = os.path.join(args.work, "out", f"batch_{idx:03d}.json")
+        if not os.path.exists(path):
+            missing.append(idx)
+            continue
+        try:
+            data = json.load(open(path, encoding="utf-8"))
+        except ValueError:
+            invalid.append(idx)
+            continue
+        if not isinstance(data, list):
+            invalid.append(idx)
+            continue
+        got = 0
+        for o in data:
+            code = o.get("code") if isinstance(o, dict) else None
+            if code not in entry["codes"] or code not in catalog:
+                continue
+            if o.get("same") is True:
+                same += 1
+                got += 1
+                continue
+            known = entry["teachers"][code]
+            rows = {}
+            for t in o.get("teachers") or []:
+                name = t.get("teacher") if isinstance(t, dict) else None
+                if name not in known or t.get("skip") is True or not valid_items(t.get("outline"), 3, 20):
+                    continue
+                focus = t.get("focus")
+                focus = focus.strip() if isinstance(focus, str) and len(focus) <= TEXT_MAX and not PII_RE.search(focus) else ""
+                rows[name] = {"teacher": name, "semesters": known[name],
+                              "outline": [s.strip() for s in t["outline"]], "focus": focus}
+            if not isinstance(o.get("teachers"), list):
+                continue
+            got += 1
+            people, ordered = set(), []
+            for n in known:  # keep the extract's ordering; one entry per person
+                if n in rows and norm_person(n) not in people:
+                    people.add(norm_person(n))
+                    ordered.append(rows[n])
+            sets = [set(r["outline"]) for r in ordered]
+            if len(ordered) >= 2 and all(len(a & b) / len(a | b) >= 0.7 for i, a in enumerate(sets) for b in sets[i + 1:]):
+                same += 1  # the AI split it, but the outlines themselves barely differ
+            elif len(ordered) >= 2:
+                result[code] = ordered
+            else:
+                thin += 1
+        if got < len(entry["codes"]):
+            incomplete.append((idx, got, len(entry["codes"])))
+
+    with open(TEACHER_RESULT, "w", encoding="utf-8") as f:
+        json.dump(dict(sorted(result.items())), f, ensure_ascii=False, indent=1)
+    print(f"courses w/ per-teacher outlines: {len(result)} (same content: {same}, <2 usable teachers: {thin})")
+    print(f"missing batches : {len(missing)} {missing[:20]}")
+    print(f"invalid batches : {len(invalid)} {invalid[:20]}")
+    print(f"incomplete      : {len(incomplete)} {incomplete[:20]}")
+    print(f"wrote {TEACHER_RESULT}")
+    todo = sorted(set(missing) | set(invalid) | {i for i, _, _ in incomplete})
+    if todo:
+        print(f"TODO batches ({len(todo)}): {todo}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("extract")
-    p.add_argument("--db", required=True, help="courseware_metadata.sqlite3 (copied to /tmp/srcdata/)")
-    p.add_argument("--work", default=WORK)
-    p = sub.add_parser("merge")
-    p.add_argument("--work", default=WORK)
+    for name in ("extract", "extract-teachers"):
+        p = sub.add_parser(name)
+        p.add_argument("--db", required=True, help="courseware_metadata.sqlite3 (copied to /tmp/srcdata/)")
+        p.add_argument("--work", default=TEACHER_WORK if name.endswith("teachers") else WORK)
+    for name in ("merge", "merge-teachers"):
+        p = sub.add_parser(name)
+        p.add_argument("--work", default=TEACHER_WORK if name.endswith("teachers") else WORK)
     args = ap.parse_args()
-    (extract if args.cmd == "extract" else merge)(args)
+    {"extract": extract, "merge": merge,
+     "extract-teachers": extract_teachers, "merge-teachers": merge_teachers}[args.cmd](args)
 
 
 if __name__ == "__main__":

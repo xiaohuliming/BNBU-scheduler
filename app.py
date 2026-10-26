@@ -169,7 +169,7 @@ SENSITIVE_STATIC_SUFFIXES = (
 BLOCKED_STATIC_FILES = (
     '/campus_docs.json', '/course_catalog.json', '/course_descriptions_extra.json',
     '/course_enrichment.json', '/course_equivalences.json', '/course_textbooks.json',
-    '/course_outlines.json', '/programme_requirements.json', '/semesters_index.json',
+    '/course_outlines.json', '/course_teacher_outlines.json', '/programme_requirements.json', '/semesters_index.json',
     '/requirements.txt', '/precompile.js',
 )
 BLOCKED_STATIC_FILE_PREFIXES = ('/course_semester_', '/skillpath_')
@@ -1304,6 +1304,22 @@ def get_course_outlines():
     return _load_json_cached(COURSE_OUTLINES_PATH, _outlines_cache)
 
 
+# Per-teacher variants of the outline, for courses offered now that 2+ teachers
+# have taught differently (same pipeline: extract-teachers / merge-teachers).
+COURSE_TEACHER_OUTLINES_PATH = os.path.join(APP_ROOT, 'course_teacher_outlines.json')
+_teacher_outlines_cache = {"mtime": None, "data": None}
+
+
+def get_course_teacher_outlines():
+    return _load_json_cached(COURSE_TEACHER_OUTLINES_PATH, _teacher_outlines_cache)
+
+
+def _person_key(name):
+    # iSpace and the timetable spell names differently ("Veicheng" vs "Vei Cheng", "Dr." vs "Ms.").
+    name = re.sub(r'^\s*(dr|prof|professor|mr|ms|mrs|miss)\.?\s+', '', (name or '').lower())
+    return re.sub(r'[^a-z]', '', name)
+
+
 # Campus file center (工具箱 > 校园文件中心): curated high-frequency student
 # documents. Hosted PDFs live under /docs/, external entries link to the
 # official AR pages / the SSO-gated ECM station. Regenerate by hand-editing
@@ -1477,10 +1493,20 @@ def get_course_detail(code):
             result["description_source"] = extra.get("source", "")
 
     outline = get_course_outlines().get(code)
+    teacher_outlines = get_course_teacher_outlines().get(code) or []
+    teaching_now = {_person_key(t) for t in course.get("teachers") or []}
+    by_teacher = sorted(({
+        "teacher": t.get("teacher", ""),
+        "outline": t.get("outline", []),
+        "focus": t.get("focus", ""),
+        "semesters": len(t.get("semesters", [])),
+        "teaching_now": _person_key(t.get("teacher")) in teaching_now,
+    } for t in teacher_outlines), key=lambda t: not t["teaching_now"])
     result["outline"] = {
-        "items": outline.get("outline", []),
-        "semesters": len(outline.get("semesters", [])),
-    } if outline else None
+        "items": outline.get("outline", []) if outline else [],
+        "semesters": len(outline.get("semesters", [])) if outline else 0,
+        "by_teacher": by_teacher,
+    } if outline or by_teacher else None
 
     enrichment = enrichment_map.get(code)
     if enrichment:

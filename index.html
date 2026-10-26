@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-compiled-sum="2830327908-385212+12027406">
+<html lang="en" data-compiled-sum="2894794431-387766+12027406">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +9,11 @@
     <link href="/vendor/fonts.css" rel="stylesheet">
     <!-- 预加载预编译产物:它在页尾才被引导脚本引用,不预加载的话要等整份
          HTML 下完解析完才开始下,跨境高延迟下白白串行一轮 -->
-    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2830327908-385212+12027406" as="script">
+    <link id="preload-app" rel="preload" href="/app.compiled.js?v=2894794431-387766+12027406" as="script">
     <!-- Tailwind 静态化:precompile.js 用 JIT 把 index.html 里的类扫成
          tailwind.static.css(gzip 后 ~9KB),替代 138KB(gz)的 play CDN 脚本
          和每次加载的运行时扫描;样式表 404 时回退加载本地 play CDN 脚本 -->
-    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2830327908-385212+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
+    <link id="tailwind-css" rel="stylesheet" href="/tailwind.static.css?v=2894794431-387766+12027406" onerror="var s=document.createElement('script');s.src='/vendor/tailwind.js';document.head.appendChild(s);">
     <script>
     // vendor 兜底:老写法 onerror 里改 this.src 不会重新抓取(死代码)。
     // onerror 在解析期同步触发,document.write 注入的镜像脚本保持阻塞顺序。
@@ -1067,6 +1067,7 @@
             const [error, setError] = useState(null);
             const [showEnglish, setShowEnglish] = useState(false);
             const [showFullOutline, setShowFullOutline] = useState(false);
+            const [outlineTeacher, setOutlineTeacher] = useState(null);
             const bodyRef = useRef(null);
             const dialogRef = useRef(null);
             const closeRef = useRef(null);
@@ -1101,7 +1102,7 @@
 
             useEffect(() => {
                 let alive = true;
-                setLoading(true); setError(null); setShowFullOutline(false);
+                setLoading(true); setError(null); setShowFullOutline(false); setOutlineTeacher(null);
                 fetch(`/api/course/${encodeURIComponent(code)}`)
                     .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
                     .then(d => { if (alive) { setData(d); setLoading(false); if (bodyRef.current) bodyRef.current.scrollTop = 0; } })
@@ -1197,13 +1198,30 @@
                                     )}
                                 </InsightSection>
 
-                                {/* Typical lecture outline, distilled from past iSpace lecture titles */}
-                                {data.outline && data.outline.items && data.outline.items.length > 0 && (() => {
-                                    const items = data.outline.items;
+                                {/* Typical lecture outline, distilled from past iSpace lecture titles; per teacher when they differ */}
+                                {data.outline && ((data.outline.items || []).length > 0 || (data.outline.by_teacher || []).length > 0) && (() => {
+                                    const merged = data.outline.items || [];
+                                    const byTeacher = data.outline.by_teacher || [];
+                                    const active = byTeacher.find(t => t.teacher === outlineTeacher) || (merged.length > 0 ? null : byTeacher[0]);
+                                    const items = active ? active.outline : merged;
                                     const OUTLINE_PREVIEW = 8;
                                     const shown = showFullOutline ? items : items.slice(0, OUTLINE_PREVIEW);
+                                    const pick = (teacher) => { setOutlineTeacher(teacher); setShowFullOutline(false); };
+                                    const chipClass = (on) => `inline-flex items-center gap-1.5 border-2 border-black px-2 py-1 font-bold text-xs transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${on ? 'bg-[#d6ff62]' : 'bg-white hover:bg-gray-100'}`;
                                     return (
                                         <InsightSection icon={ListOrdered} title="往届讲义大纲" accent="#ffd6a5">
+                                            {byTeacher.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mb-3" role="group" aria-label="按老师查看讲义大纲">
+                                                    {merged.length > 0 && <button type="button" aria-pressed={!active} onClick={() => pick(null)} className={chipClass(!active)}>综合</button>}
+                                                    {byTeacher.map(t => (
+                                                        <button key={t.teacher} type="button" aria-pressed={active === t} onClick={() => pick(t.teacher)} className={chipClass(active === t)}>
+                                                            <User className="w-3.5 h-3.5" />{t.teacher}
+                                                            {t.teaching_now && <span className="bg-black text-[#d6ff62] text-[10px] font-black px-1 py-px">本学期</span>}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {active && active.focus && <p className="text-sm font-bold text-gray-700 mb-2 border-l-4 border-[#ffd6a5] pl-2">{active.focus}</p>}
                                             <ol className="grid md:grid-cols-2 gap-x-6 gap-y-1.5">
                                                 {shown.map((t, i) => (
                                                     <li key={i} className="flex items-baseline gap-2 text-[15px] leading-snug">
@@ -1217,7 +1235,11 @@
                                                     <ChevronDown className={`w-3 h-3 transition-transform ${showFullOutline ? 'rotate-180' : ''}`} /> {showFullOutline ? '收起' : `展开全部 ${items.length} 讲`}
                                                 </button>
                                             )}
-                                            <p className="text-[11px] text-gray-400 mt-2 font-medium">由 AI 根据往届{data.outline.semesters > 1 ? ` ${data.outline.semesters} 个学期` : ''}的 iSpace 讲义标题整理{e && e.topics && e.topics.length > 0 ? '，上方主题标签同源' : ''}；不同老师、学期的安排可能不同</p>
+                                            <p className="text-[11px] text-gray-400 mt-2 font-medium">
+                                                {active
+                                                    ? `由 AI 根据这位老师往届${active.semesters > 1 ? ` ${active.semesters} 个学期` : ''}的 iSpace 讲义标题整理；本学期安排以课上为准`
+                                                    : `由 AI 根据往届${data.outline.semesters > 1 ? ` ${data.outline.semesters} 个学期` : ''}的 iSpace 讲义标题整理${e && e.topics && e.topics.length > 0 ? '，上方主题标签同源' : ''}；${byTeacher.length > 0 ? '不同老师讲法不同，可点上方老师切换' : '不同老师、学期的安排可能不同'}`}
+                                            </p>
                                         </InsightSection>
                                     );
                                 })()}
