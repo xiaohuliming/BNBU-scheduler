@@ -3,7 +3,6 @@ import re
 import secrets
 from flask import Blueprint, jsonify, redirect, request, session
 from ispace_credentials import decrypt_ispace_password, ISpaceCredentialError
-from .summary import configured
 from .weekly import WeeklyBriefService, init_tables
 
 
@@ -13,7 +12,10 @@ def clear_session():
 
 
 def register_mail_brief(app, get_db):
-    enabled = lambda: configured() and (not app.testing or app.config.get('MAIL_BRIEF_TEST_JOBS', False))
+    # The weekly mail brief is retired from the site: the endpoints and the
+    # unlink / logout / account-deletion cleanup stay so old cached data can
+    # still be cleared, but no mailbox read is ever scheduled again.
+    enabled = lambda: False
     service = WeeklyBriefService(get_db, app.secret_key, enabled)
     app.extensions['mail_brief'] = service
     bp = Blueprint('mail_brief', __name__)

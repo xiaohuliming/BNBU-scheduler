@@ -335,6 +335,23 @@ class BriefRoutesTests(unittest.TestCase):
         self.assertFalse(self.client.get('/api/mail-brief').json['enabled'])
 
 
+    def test_retired_brief_never_reads_mail_even_when_configured(self):
+        service=app_module.mail_brief_service
+        app_module.app.config['MAIL_BRIEF_TEST_JOBS']=True
+        try:
+            with mock.patch.dict(os.environ,{'MAXCOURSE_MAIL_BRIEF_TOKEN':'configured-token'}),\
+                    mock.patch('app.fetch_timeline',return_value=[]),\
+                    mock.patch.object(service.executor,'submit') as submit:
+                self.assertFalse(service.enabled())
+                response=self.client.post('/api/login/ispace',json={'username':'s123456789','password':'one-off-password'})
+                self.assertEqual(response.status_code,200)
+                token=self.client.get('/api/mail-brief').json['csrf']
+                refresh=self.client.post('/api/mail-brief/refresh',json={'visit_id':'retired-visit-123456'},headers={'X-Mail-CSRF':token})
+                self.assertEqual(refresh.status_code,200)
+                submit.assert_not_called()
+        finally:
+            app_module.app.config.pop('MAIL_BRIEF_TEST_JOBS',None)
+
 class SummaryBoundaryTests(unittest.TestCase):
     def test_service_auth_instead_of_user_billing_and_validated_sources(self):
         response=mock.Mock(status_code=200)
