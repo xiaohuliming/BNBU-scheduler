@@ -97,6 +97,7 @@ class HumanVerificationTests(unittest.TestCase):
 
     def test_rate_challenge_remains_accessible_and_does_not_reset_shared_ip(self):
         self.headers['User-Agent'] = 'Mozilla/5.0'
+        self.assertEqual(self.get('/').status_code, 200)  # page load mints the browser session
         with mock.patch.object(module, 'RATE_LIMIT_VISITOR_PER_MIN', 1), mock.patch.object(module, 'RATE_LIMIT_IP_PER_MIN', 1000):
             self.assertEqual(self.get('/api/semesters').status_code, 200)
             limited = self.get('/api/semesters')

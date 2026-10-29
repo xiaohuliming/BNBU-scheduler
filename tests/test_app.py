@@ -20,7 +20,18 @@ class AppTestCase(unittest.TestCase):
         app_module.df_cache = None
         app_module.init_db()
         app_module.app.config.update(TESTING=True)
+        app_module._course_views.clear()
         self.client = app_module.app.test_client()
+        # A real browser loads a page (which mints the session) before any data API call.
+        with self.client.session_transaction() as sess:
+            sess['analytics_visitor_id'] = 'test-browser-visitor'
+
+    def browser_client(self):
+        """A fresh browser whose page load already minted the session the data APIs need."""
+        client = app_module.app.test_client()
+        with client.session_transaction() as sess:
+            sess['analytics_visitor_id'] = os.urandom(16).hex()
+        return client
 
     def tearDown(self):
         app_module.DB_PATH = self.original_db_path
@@ -1236,7 +1247,7 @@ class AppTestCase(unittest.TestCase):
                 '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=11:50',
                 headers={'User-Agent': self.BROWSER_UA},
             )
-            public_view = app_module.app.test_client().get(
+            public_view = self.browser_client().get(
                 '/api/free-classrooms?day=Mon&date=2026-08-24&start=10:00&end=11:50',
                 headers={'User-Agent': self.BROWSER_UA},
             )
@@ -1659,7 +1670,9 @@ class AppTestCase(unittest.TestCase):
 
     def test_scraper_user_agents_are_rejected_on_api_only(self):
         for ua in ('python-requests/2.31.0', 'Scrapy/2.11 (+https://scrapy.org)',
-                   'node-fetch/1.0', 'Go-http-client/2.0', ''):
+                   'node-fetch/1.0', 'Go-http-client/2.0', '', 'curl/8.7.1', 'Wget/1.21.4',
+                   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/130.0 Safari/537.36',
+                   'Mozilla/5.0 (compatible; SomeBot/2.0; +https://example.com/bot)'):
             with self.subTest(ua=ua):
                 r = self.client.get('/api/semesters', headers={'User-Agent': ua})
                 self.assertEqual(r.status_code, 403)
@@ -1676,6 +1689,10 @@ class AppTestCase(unittest.TestCase):
             # Freeze time so all requests share one 60s window (no boundary flake).
             with mock.patch('time.time', return_value=1_000_000.0), \
                  mock.patch.object(app_module, 'RATE_LIMIT_IP_PER_MIN', 3):
+                # Re-mint the page session under the frozen clock (a cookie signed
+                # "in the future" would not verify).
+                self.client.get('/', headers={'User-Agent': self.BROWSER_UA},
+                                environ_overrides={'REMOTE_ADDR': '203.0.113.9'})
                 responses = [
                     self.client.get('/api/semesters',
                                     headers={'User-Agent': self.BROWSER_UA},
@@ -1692,8 +1709,8 @@ class AppTestCase(unittest.TestCase):
         finally:
             app_module._rate_counters.clear()
 
-    def test_first_browser_api_request_is_covered_by_visitor_limit(self):
-        """A bot cannot skip /analytics/track to escape the visitor bucket."""
+    def test_data_api_needs_a_page_session_and_then_counts_against_the_visitor(self):
+        """A cookieless client gets no data and no fresh session; a page load provides one."""
         app_module._rate_counters.clear()
         try:
             now = 1_800_000_000.0
@@ -1705,15 +1722,66 @@ class AppTestCase(unittest.TestCase):
                     'headers': {'User-Agent': self.BROWSER_UA},
                     'environ_overrides': {'REMOTE_ADDR': '203.0.113.56'},
                 }
-                responses = [
-                    client.get('/api/semesters', **kwargs)
-                    for _ in range(3)
-                ]
+                cold = client.get('/api/semesters', **kwargs)
+                self.assertEqual(cold.status_code, 403)
+                self.assertEqual(cold.get_json()['code'], 'human_verification_required')
+                self.assertEqual(cold.get_json()['reason'], 'no_browser_session')
+                self.assertNotIn('session=', cold.headers.get('Set-Cookie', ''))
+
+                page = client.get('/', **kwargs)
+                self.assertEqual(page.status_code, 200)
+                self.assertIn('session=', page.headers.get('Set-Cookie', ''))
+                responses = [client.get('/api/semesters', **kwargs) for _ in range(3)]
 
             self.assertEqual([r.status_code for r in responses], [200, 200, 429])
-            self.assertIn('session=', responses[0].headers.get('Set-Cookie', ''))
         finally:
             app_module._rate_counters.clear()
+
+    def test_ai_crawlers_are_refused_even_with_a_browser_session(self):
+        for ua in ('Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)',
+                   'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)',
+                   'Mozilla/5.0 (compatible; Bytespider; spider-feedback@bytedance.com)',
+                   'Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)'):
+            with self.subTest(ua=ua):
+                r = self.client.get('/api/course/ACCT2003', headers={'User-Agent': ua})
+                self.assertEqual(r.status_code, 403)
+                self.assertEqual(r.get_json()['code'], 'ai_crawler_blocked')
+        robots = self.client.get('/robots.txt').get_data(as_text=True)
+        gpt_block = robots.split('User-agent: *')[0]
+        self.assertIn('User-agent: GPTBot', gpt_block)
+        self.assertIn('Disallow: /\n', gpt_block)
+
+    def test_bulk_course_detail_browsing_is_challenged_then_capped(self):
+        codes = ['ACCT2003', 'ACCT2013', 'ACCT2043', 'ACCT2053']
+        headers = {'User-Agent': self.BROWSER_UA}
+        with mock.patch.object(app_module, 'COURSE_BROWSE_VISITOR_10M', 2), \
+                mock.patch.object(app_module, 'COURSE_BROWSE_VISITOR_6H', 3), \
+                mock.patch.object(app_module, 'COURSE_BROWSE_IP_10M', 100):
+            first, second = (self.client.get(f'/api/course/{c}', headers=headers) for c in codes[:2])
+            self.assertEqual((first.status_code, second.status_code), (200, 200))
+            third = self.client.get(f'/api/course/{codes[2]}', headers=headers)
+            self.assertEqual(third.status_code, 403)
+            self.assertEqual(third.get_json()['reason'], 'course_browsing')
+            # Re-opening a course already seen is free.
+            self.assertEqual(self.client.get(f'/api/course/{codes[0]}', headers=headers).status_code, 200)
+            # A verified browser skips the 10-minute limit but not the 6-hour ceiling.
+            with mock.patch.object(app_module.human_verification, 'verified', return_value=True):
+                self.assertEqual(self.client.get(f'/api/course/{codes[2]}', headers=headers).status_code, 200)
+                capped = self.client.get(f'/api/course/{codes[3]}', headers=headers)
+            self.assertEqual(capped.status_code, 429)
+            self.assertEqual(capped.get_json()['code'], 'course_browse_limit')
+
+    def test_rotating_sessions_on_one_ip_hit_the_shared_course_limit(self):
+        headers = {'User-Agent': self.BROWSER_UA}
+        env = {'REMOTE_ADDR': '203.0.113.77'}
+        with mock.patch.object(app_module, 'COURSE_BROWSE_IP_10M', 2), \
+                mock.patch.object(app_module, 'COURSE_BROWSE_VISITOR_10M', 100):
+            statuses = []
+            for code in ('ACCT2003', 'ACCT2013', 'ACCT2043'):
+                client = app_module.app.test_client()  # fresh cookie jar every time
+                client.get('/', headers=headers, environ_overrides=env)
+                statuses.append(client.get(f'/api/course/{code}', headers=headers, environ_overrides=env).status_code)
+        self.assertEqual(statuses, [200, 200, 403])
 
     def test_rate_limit_does_not_reset_at_minute_boundary(self):
         """Crossing :00 must not grant a second full burst immediately."""
@@ -1721,7 +1789,7 @@ class AppTestCase(unittest.TestCase):
         try:
             now = 1_800_000_000.0
             minute = int(now // 60) * 60
-            client = app_module.app.test_client()
+            client = self.browser_client()
             kwargs = {
                 'headers': {'User-Agent': self.BROWSER_UA},
                 'environ_overrides': {'REMOTE_ADDR': '203.0.113.57'},

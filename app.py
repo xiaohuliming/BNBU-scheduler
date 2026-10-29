@@ -210,7 +210,46 @@ SCRAPER_UA_MARKERS = (
     'python-requests', 'python-urllib', 'python/', 'aiohttp', 'httpx',
     'scrapy', 'go-http-client', 'okhttp', 'apache-httpclient', 'libwww',
     'node-fetch', 'axios', 'guzzlehttp', 'java/', 'phantomjs',
+    # command-line / scripted clients
+    'curl/', 'wget/', 'libcurl', 'httpie', 'postmanruntime', 'insomnia',
+    'powershell', 'undici', 'deno/', 'bun/',
+    # headless browsers and browser-automation drivers
+    'headless', 'puppeteer', 'playwright', 'selenium', 'webdriver',
 )
+# Self-declared AI crawlers / AI-assistant fetchers never get /api data, verified
+# or not (robots.txt also disallows them site-wide). Generic crawlers that put a
+# contact URL in their UA ("…bot/1.0; +https://…") are challenged instead.
+AI_CRAWLER_UA_MARKERS = (
+    'gptbot', 'chatgpt-user', 'oai-searchbot', 'claudebot', 'claude-web',
+    'claude-user', 'claude-searchbot', 'anthropic-ai', 'ccbot', 'bytespider',
+    'perplexitybot', 'perplexity-user', 'google-extended', 'googleother',
+    'google-cloudvertexbot', 'applebot-extended', 'meta-externalagent',
+    'meta-externalfetcher', 'facebookbot', 'amazonbot', 'diffbot', 'cohere-ai',
+    'cohere-training', 'youbot', 'mistralai-user', 'duckassistbot', 'ai2bot',
+    'timpibot', 'omgili', 'imagesiftbot', 'petalbot', 'chatglm-spider',
+    'firecrawl', 'crawl4ai', 'jina-reader',
+)
+_DECLARED_CRAWLER_RE = re.compile(r'(bot|spider|crawl)')
+_CRAWLER_CONTACT_RE = re.compile(r'https?://|\+http|@')
+# Curated-data endpoints. They require a browser session that was minted by a
+# page load (see apply_response_optimizations), so a client that never keeps
+# cookies can't get a fresh per-visitor quota on every request.
+DATA_API_PREFIXES = (
+    '/api/course/', '/api/courses', '/api/careers', '/api/recommend',
+    '/api/programmes', '/api/programme-map', '/api/programme-courses',
+    '/api/semesters', '/api/teachers', '/api/campus-docs', '/api/free-classrooms',
+    '/api/classroom/', '/api/optimize',
+)
+# Bulk course-detail enumeration: distinct course codes per window. Revisiting
+# a course already seen is free. Unverified visitors are challenged past the
+# visitor or per-IP limit (the IP one catches cookie rotation; campus NAT users
+# clear it with one verification); nobody passes the 6-hour visitor ceiling.
+COURSE_DETAIL_PREFIX = '/api/course/'
+COURSE_BROWSE_VISITOR_10M = int(os.getenv('MAXCOURSE_COURSE_VISITOR_10M', '60'))
+COURSE_BROWSE_IP_10M = int(os.getenv('MAXCOURSE_COURSE_IP_10M', '400'))
+COURSE_BROWSE_VISITOR_6H = int(os.getenv('MAXCOURSE_COURSE_VISITOR_6H', '300'))
+_COURSE_BROWSE_KEYS_CAP = 20000
+_course_views = {}  # (rule, key) -> {course_code: last_seen}
 # Every /api request is charged to a per-IP bucket (the hard ceiling that bounds
 # any single egress IP, generous so a whole campus NAT never trips it) AND, for an
 # established session, a tighter per-visitor bucket. Charging the IP bucket even on
@@ -227,7 +266,8 @@ _RATE_COUNTER_HARD_CAP = 20000  # fail open (stop tracking new keys) beyond this
 
 _rate_lock = threading.Lock()
 _rate_counters = {}  # bucket key -> [remaining_tokens, last_refill_timestamp]
-antiscrape_stats = {"uaBlocked": 0, "rateLimited": 0}
+antiscrape_stats = {"uaBlocked": 0, "rateLimited": 0, "aiBlocked": 0,
+                    "noSession": 0, "browseChallenged": 0, "browseLimited": 0}
 
 
 def _client_ip():
@@ -268,11 +308,28 @@ def throttle_api_scrapers():
     if not path.startswith('/api/') or path in RATE_LIMIT_EXEMPT_PATHS or path in HUMAN_PATHS:
         return None
 
-    if 'user_id' not in session and 'analytics_visitor_id' not in session:
-        get_analytics_visitor_id()
-    human_verified = human_verification.verified()
     ua = (request.headers.get('User-Agent') or '').strip().lower()
-    if not human_verified and (not ua or any(marker in ua for marker in SCRAPER_UA_MARKERS)):
+    if any(marker in ua for marker in AI_CRAWLER_UA_MARKERS):
+        with _rate_lock:
+            antiscrape_stats['aiBlocked'] += 1
+        response = jsonify({"error": "AI crawlers are not allowed to access this API.",
+                            "code": "ai_crawler_blocked"})
+        response.status_code = 403
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    human_verified = human_verification.verified()
+    has_session = bool(session.get('user_id') or session.get('analytics_visitor_id'))
+    if path.startswith(DATA_API_PREFIXES) and not has_session and not human_verified:
+        # Don't mint one here either: the session has to come from a page load.
+        with _rate_lock:
+            antiscrape_stats['noSession'] += 1
+        return human_verification.required('no_browser_session')
+    if not has_session:
+        get_analytics_visitor_id()
+    automated = (not ua or any(marker in ua for marker in SCRAPER_UA_MARKERS)
+                 or bool(_DECLARED_CRAWLER_RE.search(ua) and _CRAWLER_CONTACT_RE.search(ua)))
+    if not human_verified and automated:
         with _rate_lock:
             antiscrape_stats['uaBlocked'] += 1
         return human_verification.required('automated_client')
@@ -321,7 +378,7 @@ def throttle_api_scrapers():
             antiscrape_stats['rateLimited'] += 1
 
     if not over:
-        return None
+        return _limit_course_browsing(path, human_verified)
     if not human_verified:
         return human_verification.required('request_rate', status=429, retry_after=retry_after)
     if request.method == 'GET' and path.startswith('/api/media-dl/'):
@@ -333,6 +390,55 @@ def throttle_api_scrapers():
     response.status_code = 429
     response.headers['Retry-After'] = str(retry_after)
     return response
+
+
+def _limit_course_browsing(path, human_verified):
+    """Bound how many distinct courses one browser / one IP can pull from /api/course/."""
+    if request.method != 'GET' or not path.startswith(COURSE_DETAIL_PREFIX):
+        return None
+    code = path[len(COURSE_DETAIL_PREFIX):].strip().upper()[:24]
+    if not code:
+        return None
+    visitor = (f"u:{session['user_id']}" if session.get('user_id')
+               else f"v:{session.get('analytics_visitor_id', '')}")
+    rules = [(('v6h', visitor), COURSE_BROWSE_VISITOR_6H, 21600, 'ceiling')]
+    if not human_verified:
+        rules += [(('v10m', visitor), COURSE_BROWSE_VISITOR_10M, 600, 'challenge'),
+                  (('ip10m', _client_ip()), COURSE_BROWSE_IP_10M, 600, 'challenge')]
+    now = time.time()
+    verdict = None
+    with _rate_lock:
+        if len(_course_views) >= _COURSE_BROWSE_KEYS_CAP:
+            for key in [k for k, seen in _course_views.items() if not seen or now - max(seen.values()) > 21600]:
+                _course_views.pop(key, None)
+        tracked = []
+        for key, limit, window, kind in rules:
+            if limit <= 0:
+                continue
+            seen = _course_views.get(key)
+            if seen is None:
+                if len(_course_views) >= _COURSE_BROWSE_KEYS_CAP:
+                    continue  # fail open for new keys rather than grow without bound
+                seen = _course_views[key] = {}
+            for stale in [c for c, t in seen.items() if now - t > window]:
+                del seen[stale]
+            if code not in seen and len(seen) >= limit and verdict != 'ceiling':
+                verdict = kind
+            tracked.append(seen)
+        if verdict is None:
+            for seen in tracked:
+                seen[code] = now
+        else:
+            antiscrape_stats['browseLimited' if verdict == 'ceiling' else 'browseChallenged'] += 1
+    if verdict == 'ceiling':
+        response = jsonify({"error": "短时间内查看的课程太多了，请过一段时间再来。",
+                            "code": "course_browse_limit"})
+        response.status_code = 429
+        response.headers['Retry-After'] = '3600'
+        return response
+    if verdict == 'challenge':
+        return human_verification.required('course_browsing')
+    return None
 
 
 def _reset_verified_visitor_bucket():
@@ -350,6 +456,9 @@ human_verification = HumanVerification(app, _client_ip, _reset_verified_visitor_
 @app.after_request
 def apply_response_optimizations(response):
     response = inject_client(response)
+    if request.method == 'GET' and response.status_code == 200 and response.mimetype == 'text/html':
+        # Page loads mint the browser session that the data APIs require.
+        get_analytics_visitor_id()
     path = request.path or ''
     api_cache_seconds = None
     if request.method in ('GET', 'HEAD'):
