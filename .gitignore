@@ -8,3 +8,13 @@ enrich_work/
 backups/
 .playwright-cli/
 output/playwright/print-portal/
+
+# Curated datasets live in the private `private_data` submodule (see data_paths.py).
+# Never commit them at the repo root again: the public repo is cloneable by anyone.
+/course_*.json
+/semesters_index.json
+/programme_requirements.json
+/skillpath_*
+/campus_docs.json
+/campus_knowledge*.sqlite
+/*Course List*.xls*
