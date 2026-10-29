@@ -17,9 +17,10 @@ import argparse
 import json
 import os
 import re
+from data_paths import data_path
 
 BATCH_SIZE = 10
-CATALOG = "course_catalog.json"
+CATALOG = data_path("course_catalog.json")
 WORK = "enrich_work"
 DESC_CAP = 700
 

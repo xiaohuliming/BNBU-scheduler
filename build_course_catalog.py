@@ -35,16 +35,17 @@ import pandas as pd
 from pypdf import PdfReader
 
 from maximize_credits import load_timetable
+from data_paths import data_path
 
 # cp the source PDF into /tmp/srcdata first (macOS TCC: never point python at
 # ~/Downloads or ~/Documents directly).
 PDF_PATH = "/tmp/srcdata/Course Descriptions_20260716.pdf"
-XLSX_PATH = "Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx"
-OUT_PATH = "course_catalog.json"
+XLSX_PATH = data_path("Course List and Timetable_Semester 1 of AY2026-27_20260709.xlsx")
+OUT_PATH = data_path("course_catalog.json")
 # Codes present in the previous catalog but in neither the PDF nor the new
 # timetable are carried over (offered=False) so historical-semester browsing,
 # enrichment and prereq links never lose entries across semester swaps.
-PREV_CATALOG = "course_catalog.json"
+PREV_CATALOG = data_path("course_catalog.json")
 
 CODE_RE = re.compile(r"[A-Z]{2,4}\d{4}")
 ZH_REQ_TOKEN_RE = re.compile(r"(未曾修读过|修读过)|([A-Z]{2,4}\d{4})")

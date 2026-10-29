@@ -20,6 +20,7 @@ from pathlib import Path
 from flask import Blueprint, g, jsonify, request, session
 
 from campus_knowledge import INDEX_NAME, KnowledgeIndex
+from data_paths import DATA_DIR
 from campus_classrooms import CLASSROOM_TOOL_DEFINITIONS
 
 PUBLIC_PATHS = {'/api/knowledge/info', '/api/knowledge/openapi.json'}
@@ -107,7 +108,7 @@ def _json_body():
 
 def register_campus_agent(app, get_db, client_ip, public_base, classroom_tools):
     bp = Blueprint('campus_agent', __name__)
-    index = KnowledgeIndex(Path(app.root_path) / INDEX_NAME)
+    index = KnowledgeIndex(Path(DATA_DIR) / INDEX_NAME)
     # Tests can supply a small independent fixture without touching the corpus.
     app.extensions['campus_knowledge'] = index
 

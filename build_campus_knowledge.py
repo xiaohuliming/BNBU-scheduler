@@ -23,6 +23,7 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from campus_knowledge import INDEX_NAME, PROGRAMME_ZH, SCHEMA_VERSION, sha256_file, tokens
+from data_paths import DATA_DIR
 from maximize_credits import load_timetable, parse_session_from_title
 
 HANDBOOK_URL = 'https://ar.bnbu.edu.cn/current_students/student_handbook/programme_handbook.htm'
@@ -159,7 +160,7 @@ def pdf_pages(path, handbook=False):
 
 
 def campus_documents(root, fingerprints):
-    path = root / 'campus_docs.json'
+    path = Path(DATA_DIR) / 'campus_docs.json'  # fingerprinted by bare name: a private_data file
     data = json.loads(path.read_text(encoding='utf-8'))
     fingerprints[path.name] = sha256_file(path)
     for category in data['categories']:
@@ -217,7 +218,8 @@ def handbook_documents(cache, manifest):
 
 
 def course_documents(root, fingerprints):
-    paths = sorted(p for p in root.glob('*.xlsx') if 'Course List' in p.name and not p.name.startswith('~$'))
+    data = Path(DATA_DIR)
+    paths = sorted(p for p in data.glob('*.xlsx') if 'Course List' in p.name and not p.name.startswith('~$'))
     if len(paths) != 1:
         raise ValueError('Expected exactly one current Course List workbook')
     path = paths[0]
@@ -226,7 +228,7 @@ def course_documents(root, fingerprints):
         raise ValueError('Cannot identify timetable semester')
     semester = match.group(2)[2:] + match.group(3) + 'S' + match.group(1)
     fingerprints[path.name] = sha256_file(path)
-    catalogue_path = root / 'course_catalog.json'
+    catalogue_path = data / 'course_catalog.json'
     fingerprints[catalogue_path.name] = sha256_file(catalogue_path)
     catalogue = json.loads(catalogue_path.read_text(encoding='utf-8'))
     df = load_timetable(str(path))
@@ -314,9 +316,10 @@ def main():
     parser.add_argument('--cache', type=Path, default=Path('/tmp/maxcourse-knowledge-sources'))
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
+    index_path = Path(DATA_DIR) / INDEX_NAME
     manifest_path = args.cache / 'manifest.json'
     if args.refresh_handbooks or not manifest_path.exists():
-        manifest = refresh_handbooks(args.cache, previous_handbook_sources(root / INDEX_NAME))
+        manifest = refresh_handbooks(args.cache, previous_handbook_sources(index_path))
     else:
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     fingerprints = {}
@@ -327,13 +330,13 @@ def main():
         if len(documents) % 20 == 0:
             print('Extracted:', record['id'], flush=True)
     documents.extend(course_documents(root, fingerprints))
-    summary = write_index(root / INDEX_NAME, documents, {
+    summary = write_index(index_path, documents, {
         'built_at': datetime.now(timezone.utc).isoformat(), 'local_sources': fingerprints,
         'handbook_source': HANDBOOK_URL, 'handbook_retrieved_at': manifest['retrieved_at'],
         'retrieval': 'BM25 full-text with Chinese bigrams and bilingual query expansion',
     })
     print(json.dumps({k: v for k, v in summary.items() if k not in ('local_sources', 'programmes')}, ensure_ascii=False, indent=2))
-    print('Index bytes:', (root / INDEX_NAME).stat().st_size)
+    print('Index bytes:', index_path.stat().st_size)
 
 
 if __name__ == '__main__':

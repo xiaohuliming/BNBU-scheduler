@@ -13,6 +13,7 @@ import app as app_module
 import campus_agent
 from build_campus_knowledge import write_index
 from campus_knowledge import INDEX_NAME, KnowledgeIndex, query_tokens, sha256_file
+from data_paths import DATA_DIR
 
 
 class CampusKnowledgeTest(unittest.TestCase):
@@ -230,16 +231,18 @@ class CampusKnowledgeTest(unittest.TestCase):
 
 class CampusCorpusTest(unittest.TestCase):
     def test_index_tracks_all_current_courses_and_exact_local_sources(self):
-        root = Path(app_module.APP_ROOT)
-        index = KnowledgeIndex(root / INDEX_NAME)
+        root, data = Path(app_module.APP_ROOT), Path(DATA_DIR)
+        index = KnowledgeIndex(data / INDEX_NAME)
         metadata = index.metadata()
         from maximize_credits import load_timetable
-        path = next(root.glob('*Course List*.xlsx'))
+        path = next(data.glob('*Course List*.xlsx'))
         frame = load_timetable(str(path))
         self.assertEqual(metadata['counts']['course'], frame['Course Code'].nunique())
         self.assertEqual(metadata['meeting_rows'], len(frame))
         for name, digest in metadata['local_sources'].items():
-            self.assertEqual(sha256_file(root / name), digest, 'Rebuild campus knowledge after changing ' + name)
+            # Bare names are private_data files; relative paths (docs/...) are public repo files.
+            source = (root if '/' in name else data) / name
+            self.assertEqual(sha256_file(source), digest, 'Rebuild campus knowledge after changing ' + name)
         self.assertEqual(metadata['cohorts'], ['2023', '2024', '2025', '2026'])
         self.assertEqual(metadata['semesters'], [f'{app_module.CURRENT_SEMESTER_AY_START % 100:02d}{(app_module.CURRENT_SEMESTER_AY_START + 1) % 100:02d}S{app_module.CURRENT_SEMESTER_NO}'])
         self.assertGreaterEqual(metadata['counts']['handbook'], 120)

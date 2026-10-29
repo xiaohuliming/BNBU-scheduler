@@ -24,13 +24,14 @@ from collections import defaultdict
 
 import numpy as np
 from scipy import sparse
+from data_paths import data_path
 
 SK = "/Users/xhlm/Desktop/Study/大数据/小组项目/output"
 COURSES_SKILLS = f"{SK}/courses_skills.csv"
 SKILL_TAXONOMY = f"{SK}/skill_taxonomy.csv"
 JOBS_SKILLS = f"{SK}/jobs_sample_skills.csv"
 JOBS_CLEAN = f"{SK}/jobs_clean.csv"
-CATALOG = "course_catalog.json"
+CATALOG = data_path("course_catalog.json")
 
 # Curated target careers relevant to UIC programmes. keywords match LinkedIn
 # job titles (case-insensitive substring). Grouped by faculty for the UI.
@@ -297,9 +298,9 @@ def main():
             ],
         }
 
-    json.dump(courses_out, open("skillpath_courses.json", "w", encoding="utf-8"), ensure_ascii=False)
-    json.dump(careers, open("skillpath_careers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    json.dump(skills_out, open("skillpath_skills.json", "w", encoding="utf-8"), ensure_ascii=False)
+    json.dump(courses_out, open(data_path("skillpath_courses.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    json.dump(careers, open(data_path("skillpath_careers.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    json.dump(skills_out, open(data_path("skillpath_skills.json"), "w", encoding="utf-8"), ensure_ascii=False)
 
     # 7. Build PPR graph -> column-normalised transition matrix
     #    Nodes: all catalog courses, all skills used, all careers.
@@ -368,7 +369,7 @@ def main():
     D = sparse.diags(inv)
     M = (A @ D).tocsr()
 
-    sparse.save_npz("skillpath_graph.npz", M)
+    sparse.save_npz(data_path("skillpath_graph.npz"), M)
     json.dump({
         "node_ids": node_ids,
         "node_type": node_type,
@@ -376,7 +377,7 @@ def main():
         "course_index": { nid.split("course:", 1)[1]: i for i, nid in enumerate(node_ids) if nid.startswith("course:") },
         "career_index": { nid.split("career:", 1)[1]: i for i, nid in enumerate(node_ids) if nid.startswith("career:") },
         "dangling": [i for i in range(n) if colsum[i] == 0],
-    }, open("skillpath_nodes.json", "w", encoding="utf-8"), ensure_ascii=False)
+    }, open(data_path("skillpath_nodes.json"), "w", encoding="utf-8"), ensure_ascii=False)
 
     # ---- validation summary ----
     print(f"course->skills : {len(course_skills)} courses")

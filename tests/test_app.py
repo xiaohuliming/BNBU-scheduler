@@ -1534,6 +1534,9 @@ class AppTestCase(unittest.TestCase):
             '/requirements.txt', '/precompile.js',
             '/deploy/nginx/maxcourse-antibot-zones.conf',
             '/Course%20List%20and%20Timetable_Semester%201%20of%20AY2026-27_20260709.xlsx',
+            '/private_data/', '/private_data/course_catalog.json', '/private_data/course_outlines.json',
+            '/private_data/campus_knowledge.sqlite', '/private_data/README.md', '/private_data/.git',
+            '/Private_Data/course_catalog.json', '/private_data/../private_data/course_enrichment.json',
         ):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 404)

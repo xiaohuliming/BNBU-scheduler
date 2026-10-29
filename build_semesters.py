@@ -16,6 +16,7 @@ import json
 import os
 
 import pandas as pd
+from data_paths import data_path
 
 # (key, label, source file in /tmp/sem)
 SEMESTERS = [
@@ -66,13 +67,13 @@ def main():
             continue
         df = load_timetable_any(src)
         courses = group_courses(df)
-        out = f"course_semester_{key}.json"
+        out = data_path(f"course_semester_{key}.json")
         with open(out, "w", encoding="utf-8") as f:
             json.dump(courses, f, ensure_ascii=False)
         index.append({"key": key, "label": label})
         print(f"{key} ({label}): {len(courses)} courses, {sum(len(c['details']) for c in courses)} sessions -> {out} ({os.path.getsize(out)//1024}KB)")
 
-    with open("semesters_index.json", "w", encoding="utf-8") as f:
+    with open(data_path("semesters_index.json"), "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False, indent=1)
     print(f"semesters_index.json: {len(index)} semesters")
 

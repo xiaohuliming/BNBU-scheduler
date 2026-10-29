@@ -18,9 +18,10 @@ Output: course_equivalences.json  {code: [equivalent codes...]}  (symmetric)
 
 import json
 import re
+from data_paths import data_path
 
-CATALOG = "course_catalog.json"
-OUT = "course_equivalences.json"
+CATALOG = data_path("course_catalog.json")
+OUT = data_path("course_equivalences.json")
 
 CODE = r"[A-Z]{2,4}\d{4}"
 

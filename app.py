@@ -33,6 +33,7 @@ from ispace_credentials import (
 )
 from mail_digest import register_mail_brief, init_tables as init_mail_brief_tables, clear_session as clear_mail_digest_session
 from media_dl import media_dl_bp
+from data_paths import data_path, timetable_workbook
 try:
     from campus_print import create_print_blueprint
 except ImportError as exc:
@@ -153,6 +154,7 @@ API_BROWSER_CACHE_PREFIXES = (
 SENSITIVE_STATIC_PREFIXES = (
     '/.git', '/.hg', '/.svn', '/__pycache__', '/backups', '/instance',
     '/tests', '/venv', '/.venv', '/logs', '/deploy', '/cap_service', '/campus_print',
+    '/private_data',  # curated datasets submodule: only ever served through /api/*
 )
 SENSITIVE_STATIC_SUFFIXES = (
     '.py', '.pyc', '.pyo', '.db', '.sqlite', '.sqlite3', '.env', '.pem',
@@ -973,14 +975,7 @@ def sync_ispace_todos_for_user(conn, user_id, items):
     }
 
 def get_excel_file():
-    files = glob.glob("*.xlsx") + glob.glob("*.xls")
-    files = [f for f in files if not f.startswith("~$")]
-    if not files:
-        return None
-    for f in files:
-        if "Course List" in f:
-            return f
-    return files[0] if files else None
+    return timetable_workbook()
 
 def get_df():
     global df_cache
@@ -989,7 +984,7 @@ def get_df():
     
     file_path = get_excel_file()
     if not file_path:
-        raise FileNotFoundError("No Excel file found in directory")
+        raise FileNotFoundError("No timetable workbook in private_data/ (git submodule update --init private_data)")
     
     print(f"Loading data from {file_path}...")
     df_cache = load_timetable(file_path)
@@ -1252,8 +1247,8 @@ def build_classroom_index():
     return rooms, room_entries
 
 # --- Course catalog + AI enrichment (static JSON, regenerated per semester) ---
-COURSE_CATALOG_PATH = os.path.join(APP_ROOT, 'course_catalog.json')
-COURSE_ENRICHMENT_PATH = os.path.join(APP_ROOT, 'course_enrichment.json')
+COURSE_CATALOG_PATH = data_path('course_catalog.json')
+COURSE_ENRICHMENT_PATH = data_path('course_enrichment.json')
 _catalog_cache = {"mtime": None, "data": None}
 _enrichment_cache = {"mtime": None, "data": None}
 
@@ -1284,8 +1279,8 @@ def get_course_enrichment():
 
 # Extra data extracted from the official ECM files (textbook list per semester,
 # WPEC/GE course descriptions that the main PDF catalog is missing).
-COURSE_TEXTBOOKS_PATH = os.path.join(APP_ROOT, 'course_textbooks.json')
-COURSE_DESC_EXTRA_PATH = os.path.join(APP_ROOT, 'course_descriptions_extra.json')
+COURSE_TEXTBOOKS_PATH = data_path('course_textbooks.json')
+COURSE_DESC_EXTRA_PATH = data_path('course_descriptions_extra.json')
 _textbooks_cache = {"mtime": None, "data": None}
 _desc_extra_cache = {"mtime": None, "data": None}
 
@@ -1296,7 +1291,7 @@ def get_course_textbooks():
 
 # Lecture outline + grounded topics distilled from past iSpace lecture titles
 # (build_course_outlines.py). Only the AI-written Chinese text is shipped.
-COURSE_OUTLINES_PATH = os.path.join(APP_ROOT, 'course_outlines.json')
+COURSE_OUTLINES_PATH = data_path('course_outlines.json')
 _outlines_cache = {"mtime": None, "data": None}
 
 
@@ -1306,7 +1301,7 @@ def get_course_outlines():
 
 # Per-teacher variants of the outline, for courses offered now that 2+ teachers
 # have taught differently (same pipeline: extract-teachers / merge-teachers).
-COURSE_TEACHER_OUTLINES_PATH = os.path.join(APP_ROOT, 'course_teacher_outlines.json')
+COURSE_TEACHER_OUTLINES_PATH = data_path('course_teacher_outlines.json')
 _teacher_outlines_cache = {"mtime": None, "data": None}
 
 
@@ -1324,7 +1319,7 @@ def _person_key(name):
 # documents. Hosted PDFs live under /docs/, external entries link to the
 # official AR pages / the SSO-gated ECM station. Regenerate by hand-editing
 # campus_docs.json; the loader picks up changes by mtime without a restart.
-CAMPUS_DOCS_PATH = os.path.join(APP_ROOT, 'campus_docs.json')
+CAMPUS_DOCS_PATH = data_path('campus_docs.json')
 _campus_docs_cache = {"mtime": None, "data": None}
 
 
@@ -1334,7 +1329,7 @@ def get_campus_docs():
 
 # Course equivalences derived from prereq exclusion/alternative texts
 # (build_equivalences.py). Symmetric pairs, no transitive closure.
-COURSE_EQUIV_PATH = os.path.join(APP_ROOT, 'course_equivalences.json')
+COURSE_EQUIV_PATH = data_path('course_equivalences.json')
 _equiv_cache = {"mtime": None, "data": None}
 
 
@@ -1343,7 +1338,7 @@ def get_course_equivalences():
 
 
 # Programme handbooks (four-year study plans) parsed by build_programmes.py
-PROGRAMME_REQ_PATH = os.path.join(APP_ROOT, 'programme_requirements.json')
+PROGRAMME_REQ_PATH = data_path('programme_requirements.json')
 _programme_req_cache = {"mtime": None, "data": None}
 GE_CODE_PREFIX = re.compile(r'^(GC|GT|GF)')
 
@@ -1551,10 +1546,10 @@ def get_course_detail(code):
 # --- SkillPath: course skills, target careers, and a live PPR recommender ---
 # Data + graph are precomputed by build_skillpath.py from the Big-Data project's
 # LinkedIn + course-skill extraction. Salary/jobs reflect a 2023-24 US dataset.
-SKILLPATH_COURSES_PATH = os.path.join(APP_ROOT, 'skillpath_courses.json')
-SKILLPATH_CAREERS_PATH = os.path.join(APP_ROOT, 'skillpath_careers.json')
-SKILLPATH_GRAPH_PATH = os.path.join(APP_ROOT, 'skillpath_graph.npz')
-SKILLPATH_NODES_PATH = os.path.join(APP_ROOT, 'skillpath_nodes.json')
+SKILLPATH_COURSES_PATH = data_path('skillpath_courses.json')
+SKILLPATH_CAREERS_PATH = data_path('skillpath_careers.json')
+SKILLPATH_GRAPH_PATH = data_path('skillpath_graph.npz')
+SKILLPATH_NODES_PATH = data_path('skillpath_nodes.json')
 SKILLPATH_SALARY_CAVEAT = "岗位与薪资来自 2023-24 LinkedIn 公开数据集（以美国市场为主，USD/年），仅供参考，非大湾区本地行情。"
 _skillpath_courses_cache = {"mtime": None, "data": None}
 _skillpath_careers_cache = {"mtime": None, "data": None}
@@ -4038,7 +4033,7 @@ def _classroom_schedule_data(room):
 
 # Historical semester offerings baked by build_semesters.py; the current
 # semester always comes live from the timetable xlsx (get_df).
-SEMESTERS_INDEX_PATH = os.path.join(APP_ROOT, 'semesters_index.json')
+SEMESTERS_INDEX_PATH = data_path('semesters_index.json')
 CURRENT_SEMESTER_LABEL = '26-27 第一学期'
 # Academic-year start + semester number of the current timetable; used by the
 # frontend to map an admission cohort to its current study year (Y = ay_start -
@@ -4056,7 +4051,7 @@ def get_semesters_index():
 
 def get_semester_courses(key):
     cache = _semester_caches.setdefault(key, {"mtime": None, "data": None})
-    path = os.path.join(APP_ROOT, f'course_semester_{key}.json')
+    path = data_path(f'course_semester_{key}.json')
     data = _load_json_cached(path, cache)
     return data if isinstance(data, list) else []
 

@@ -14,9 +14,10 @@ import json
 import re
 
 import pandas as pd
+from data_paths import data_path
 
 SRC = "/tmp/srcdata/textbook.xls"
-OUT = "course_textbooks.json"
+OUT = data_path("course_textbooks.json")
 SHEETS = ["Required Courses ", "Elective Courses"]
 CODE_RE = re.compile(r"^[A-Z]{2,4}\d{4}$")
 
@@ -61,7 +62,7 @@ def main():
           f"{sum(len(v) for v in textbooks.values())} books -> {OUT}")
 
     try:
-        cat = json.load(open("course_catalog.json", encoding="utf-8"))
+        cat = json.load(open(data_path("course_catalog.json"), encoding="utf-8"))
         offered = {c for c in cat if cat[c]["offered"]}
         print(f"offered courses covered: {len(set(textbooks) & offered)} / {len(offered)}")
     except OSError:

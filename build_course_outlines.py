@@ -29,9 +29,10 @@ import json
 import os
 import re
 import sqlite3
+from data_paths import data_path
 
-CATALOG = "course_catalog.json"
-RESULT = "course_outlines.json"
+CATALOG = data_path("course_catalog.json")
+RESULT = data_path("course_outlines.json")
 WORK = os.path.join("enrich_work", "outline")
 BATCH_SIZE = 20
 
@@ -87,10 +88,10 @@ def session_index(catalog):
     """
     index = {}
     current = None
-    if os.path.exists("semesters_index.json"):
-        keys = [s["key"] for s in json.load(open("semesters_index.json", encoding="utf-8"))]
+    if os.path.exists(data_path("semesters_index.json")):
+        keys = [s["key"] for s in json.load(open(data_path("semesters_index.json"), encoding="utf-8"))]
         for key in keys:
-            path = f"course_semester_{key}.json"
+            path = data_path(f"course_semester_{key}.json")
             if not os.path.exists(path):
                 continue
             for course in json.load(open(path, encoding="utf-8")):
@@ -325,7 +326,7 @@ def merge(args):
         print(f"TODO batches ({len(todo)}): {todo}")
 
 
-TEACHER_RESULT = "course_teacher_outlines.json"
+TEACHER_RESULT = data_path("course_teacher_outlines.json")
 TEACHER_WORK = os.path.join("enrich_work", "outline_teachers")
 TEACHER_BATCH_SIZE = 10
 MAX_TEACHERS = 4

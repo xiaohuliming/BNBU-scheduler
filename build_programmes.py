@@ -34,9 +34,10 @@ import os
 import re
 
 import pdfplumber
+from data_paths import data_path
 
 HB_ROOT = "/tmp/hb"
-OUT = "programme_requirements.json"
+OUT = data_path("programme_requirements.json")
 
 FACULTY_SHORT = {
     "Faculty of Science and Technology": "FST",

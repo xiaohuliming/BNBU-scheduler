@@ -12,10 +12,11 @@ instead of rebuilding it from scratch.
 import argparse
 import json
 import os
+from data_paths import data_path
 
 WORK = "enrich_work"
-CATALOG = "course_catalog.json"
-RESULT = "course_enrichment.json"
+CATALOG = data_path("course_catalog.json")
+RESULT = data_path("course_enrichment.json")
 
 # Fields the UI relies on structurally; everything else is optional prose that we
 # coerce to a sensible default if an agent occasionally omits it.

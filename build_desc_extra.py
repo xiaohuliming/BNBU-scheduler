@@ -16,10 +16,11 @@ import re
 import pdfplumber
 
 from build_course_catalog import parse_pdf  # CFL uses the same block format
+from data_paths import data_path
 
 WPEC_PDF = "/tmp/srcdata/wpec.pdf"
 CFL_PDF = "/tmp/srcdata/cfl.pdf"
-OUT = "course_descriptions_extra.json"
+OUT = data_path("course_descriptions_extra.json")
 
 CODE_RE = re.compile(r"^[A-Z]{2,4}\d{4}$")
 
@@ -89,7 +90,7 @@ def main():
 
     # coverage: how many offered-without-description courses these fill
     try:
-        cat = json.load(open("course_catalog.json", encoding="utf-8"))
+        cat = json.load(open(data_path("course_catalog.json"), encoding="utf-8"))
         missing = {c for c in cat if cat[c]["offered"] and not cat[c]["has_description"]}
         print(f"fills offered-without-desc: {len(missing & set(extra))} / {len(missing)}")
     except OSError:

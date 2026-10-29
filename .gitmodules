@@ -1,3 +1,6 @@
 [submodule "campus_print"]
 	path = campus_print
 	url = ../maxcourse-print.git
+[submodule "private_data"]
+	path = private_data
+	url = ../maxcourse-data.git
